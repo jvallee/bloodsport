@@ -436,3 +436,13 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 /* Gods' Days (phase B2) */
 .festival { font-size: 13px; color: var(--muted); margin: 6px 0; }
 .festival.now { color: var(--gold); border: 1px solid var(--gold); border-radius: 8px; padding: 6px 10px; background: rgba(217, 180, 90, 0.08); }
+
+/* Rival houses (phase B3) */
+.standings { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+.standings th { text-align: left; color: var(--muted); font-weight: 400; font-size: 12px; padding: 2px 4px; }
+.standings td { padding: 3px 4px; border-top: 1px solid var(--line); }
+.standings tr.you td { color: var(--gold); font-weight: 600; }
+.house-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.standings .feud, .standings .vengeance { font-size: 11px; padding: 0 5px; border-radius: 9px; margin-left: 4px; }
+.standings .feud { border: 1px solid var(--blood); color: #f1b3ad; }
+.standings .vengeance { border: 1px solid var(--good); color: #b7d8b3; }

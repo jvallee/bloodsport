@@ -130,6 +130,7 @@ export function computePower(c, opp, round, raw = false) {
   if (c.overtrained) mods.push({ source: 'Overtrained', value: -1 });
   if (c.scouted) mods.push({ source: 'Scouted', value: c.scouted });
   if (c.challenger) mods.push({ source: 'Challenger', value: c.challenger });
+  if (c.grudge) mods.push({ source: 'Feud', value: c.grudge });
   if (c.boost?.round === round && c.boost.power) mods.push({ source: c.boost.name, value: c.boost.power });
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
   if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
@@ -197,6 +198,7 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (t?.injure) enemy.push({ source: t.name, value: t.injure });
   if (t?.self) self.push({ source: t.name, value: t.self });
   if (c.stance && COUNTERS[c.stance] === opp.stance) win.push({ source: `Counter (${t.name} beats ${TACTICS[opp.stance].name})`, value: COUNTER_WIN });
+  if (c.vengeance) win.push({ source: 'Vengeance', value: 5000 });
   if (c.festival?.tactic?.[c.stance]) win.push({ source: c.festival.name, value: c.festival.tactic[c.stance] });
   const h = humorOf(c);
   if (h?.win?.[round]) win.push({ source: h.name, value: h.win[round] });
@@ -292,7 +294,7 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
 // Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favorite boosts the opponent (B).
 const BOTH_SIDES = ['bloodMoon', 'crowdFavorite'];
 
-export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null }) {
+export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false }) {
   const m = {
     a: makeCombatant(a, 'A', debuff),
     b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
@@ -303,6 +305,9 @@ export function createMatch({ a, b, rng, debuff = null, overtrained = false, sco
     m.festival = festival;
     m.a.festival = m.b.festival = FESTIVAL_BY_ID[festival];
   }
+  // Feuds between houses: theirs fights you harder after you killed one of them; yours fights for vengeance.
+  if (grudge) m.b.grudge = grudge;
+  if (vengeance) m.a.vengeance = true;
   // Scouted: opponents who have studied your fighter fight them with extra Power.
   if (scouted) m.b.scouted = scouted;
   // Challenger: famous fighters draw tougher opponents in your top arena.

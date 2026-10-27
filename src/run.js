@@ -6,7 +6,7 @@
 import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
-  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID,
+  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks } from './fight.js';
 import { Refused } from './errors.js';
@@ -132,6 +132,8 @@ function newOpponent(run, tier) {
   const f = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower, decorLevel: bout.oppDecor, takenNames: takenNames(run) });
   f.speed = opponentSpeed(run, bout);
   seasonOpponent(run, f, bout);
+  // Every opponent fights for a rival house; the Grand Tournament's champion is the leading rival's.
+  f.house = tier === GRAND_TIER ? [...run.houses].sort((a, b) => b.glory - a.glory)[0].id : pick(run.rng.houses, run.houses).id;
   arena.opponent = f;
 }
 
@@ -156,6 +158,8 @@ export function matchOptions(run, f, tier = run.topTier) {
     overtrained: f.stress >= STRESS.overtrained,
     scouted: tier === run.topTier ? Math.min(ECONOMY.scoutedMax, f.topStreak ?? 0) : 0,
     challenger: tier === run.topTier && tier >= ECONOMY.challengerFromTier ? Math.min(ECONOMY.challengerMax, Math.floor((f.renown ?? 0) / ECONOMY.challengerRenown)) : 0,
+    grudge: houseOf(run, run.arenas[tier]?.opponent)?.feud > 0 ? 1 : 0,
+    vengeance: houseOf(run, run.arenas[tier]?.opponent)?.vengeance > 0,
   };
 }
 
@@ -208,7 +212,36 @@ export function buildRoom(run, type) {
 
 // ---------- Career setup ----------
 
+// Three rival houses with their own seeded stream (so they never shift the fights).
+function makeHouses(rng) {
+  const pool = [...HOUSES.names];
+  return Array.from({ length: HOUSES.rivals }, (_, i) => {
+    const h = pool.splice(int(rng, 0, pool.length - 1), 1)[0];
+    return { id: `h${i + 1}`, ...h, glory: int(rng, 0, 4), tier: 1, feud: 0, vengeance: 0 };
+  });
+}
+
+export const houseOf = (run, f) => run.houses?.find((h) => h.id === f?.house) ?? null;
+
+// Every house by Glory, yours included.
+export function standings(run) {
+  const rows = [{ name: 'Your house', glory: run.glory ?? 0, tier: run.topTier, you: true, color: '#d9b45a' }, ...(run.houses ?? []).map((h) => ({ ...h, you: false }))];
+  return rows.sort((a, b) => b.glory - a.glory || (a.you ? -1 : 1));
+}
+
+// After each tournament week the rivals fight their own bouts, climb, and their feuds cool.
+function rivalsCompete(run) {
+  const r = run.rng.houses;
+  for (const h of run.houses) {
+    if (next(r) < 0.5) h.glory += HOUSES.glory.win * h.tier;
+    h.tier = 1 + HOUSES.climb.filter((g) => h.glory >= g).length;
+    h.feud = Math.max(0, h.feud - 1);
+    h.vengeance = Math.max(0, h.vengeance - 1);
+  }
+}
+
 export function createRun(seed = randomSeed()) {
+  const housesRng = createRng(deriveSeed(seed, 6));
   const run = {
     version: SAVE_VERSION,
     seed,
@@ -243,7 +276,10 @@ export function createRun(seed = randomSeed()) {
       fight: createRng(deriveSeed(seed, 3)),
       growth: createRng(deriveSeed(seed, 4)),
       events: createRng(deriveSeed(seed, 5)),
+      houses: housesRng,
     },
+    houses: makeHouses(housesRng),
+    glory: 0,
     event: null, // this week's event card: { id, f, g } (fighter ids), decided before the week can end
   };
   for (const type of STARTING_BUILDINGS) run.buildings.push({ id: newId(run, 'b'), type, level: 1 });
@@ -409,6 +445,7 @@ export function advanceBlocker(run) {
 // Runs one week of jobs, then moves the calendar forward.
 export function advanceWeek(run) {
   assertOk(advanceBlocker(run));
+  const tournamentEnds = Boolean(run.bouts);
   const relief = stressRelief(run);
   for (const f of run.roster) {
     // Training that can't happen counts as Rest, and the card says why (it normally can't be chosen at all).
@@ -481,6 +518,7 @@ export function advanceWeek(run) {
     run.boutPending = true;
     log(run, `Tournament week in ${unlockedTiers(run).length > 1 ? `${unlockedTiers(run).length} arenas` : arenaName(run.topTier)}.`, 'event');
   }
+  if (tournamentEnds) rivalsCompete(run);
   checkLoss(run);
   if (run.status === 'active') rollEvent(run);
 }
@@ -1024,6 +1062,28 @@ export function finishMatch(run, match) {
     if (bout.top && bout.boss) changeFavor(run, bossLossFavor(tier), `lost ${bout.name}`);
     else if (bout.top && match.result.reason === 'towel' && !bribed) changeFavor(run, FAVOR.topTowel, 'capitulated in your top arena');
   }
+  // Rival houses: Glory changes hands; kills start feuds.
+  const house = houseOf(run, opp);
+  if (house) {
+    summary.house = house.name;
+    const t = tier === GRAND_TIER ? 0 : tier;
+    if (won) {
+      run.glory += tier === GRAND_TIER ? HOUSES.glory.grand : (bout.boss ? HOUSES.glory.boss : HOUSES.glory.win) * t;
+      house.glory = Math.max(0, house.glory - HOUSES.glory.beaten);
+      if (match.result.reason === 'death') {
+        house.feud = HOUSES.feudMonths;
+        summary.feud = `${house.name} swears revenge: their fighters get +1 Power against you for ${HOUSES.feudMonths} months.`;
+        log(run, summary.feud, 'warn');
+      }
+    } else {
+      house.glory += (bout.boss ? HOUSES.glory.boss : HOUSES.glory.win) * Math.max(1, t);
+      if (!fighter.alive) {
+        house.vengeance = HOUSES.feudMonths;
+        summary.feud = `Your house wants vengeance on ${house.name}: +5% win chance against their fighters for ${HOUSES.feudMonths} months.`;
+        log(run, summary.feud, 'event');
+      }
+    }
+  }
   summary.favor = run.favor - favorBefore;
   summary.morale = fighter.morale - moraleBefore;
   run.gold += summary.gold;
@@ -1150,6 +1210,11 @@ export function deserialize(text) {
   run.inventory.items = { ...emptyItems(), ...(run.inventory.items ?? {}) }; // saves from before consumables
   run.rng.events ??= createRng(deriveSeed(run.seed, 5)); // saves from before events
   run.event ??= null;
+  if (!run.houses) { // saves from before rival houses
+    run.rng.houses = createRng(deriveSeed(run.seed, 6));
+    run.houses = makeHouses(run.rng.houses);
+    run.glory = 0;
+  }
   run.inventory.decor = { ...emptyDecor(), ...run.inventory.decor }; // saves from before new decor
   for (const f of run.roster) f.decor = { ...emptyDecor(), ...f.decor };
   for (const f of [...run.roster, ...run.market, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : [])]) f.humor ??= humorFor(f);

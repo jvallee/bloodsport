@@ -191,7 +191,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}) {
           <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the math'}</button></div>
           <div class="feed" id="feed">${feed(m, ui)}</div>
         </div>
-        <div><div class="side-label b">Opponent</div>${fighterCard(m.b.f, { combatant: m.b, compact: true, stress: false })}${statLine(stats, 'B')}</div>
+        <div><div class="side-label b">${m.house ? `Opponent · <span style="color:${esc(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div>${fighterCard(m.b.f, { combatant: m.b, compact: true, stress: false })}${statLine(stats, 'B')}</div>
       </div>
       ${tutorial}
       <div class="controls${hold(DICE_TIME + 1.4)}">${controls(m, ui, bout, items)}</div>

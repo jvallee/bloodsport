@@ -2,7 +2,7 @@
 
 import { ECONOMY, FAVOR, MORALE, STRESS } from './data.js';
 import { computePower, computeSpeed } from './fight.js';
-import { boutFor, matchOptions, effectivePower, isChampionOf, bossLossFavor, GRAND_TIER } from './run.js';
+import { boutFor, matchOptions, effectivePower, isChampionOf, bossLossFavor, GRAND_TIER, houseOf } from './run.js';
 
 // Warnings about sending this fighter to this arena. Each has text and a tone ('warn' | 'bad' | 'info').
 export function fighterWarnings(run, f, tier) {
@@ -19,6 +19,8 @@ export function fighterWarnings(run, f, tier) {
   }
   const opts = matchOptions(run, f, tier);
   if (opts.scouted) out.push({ tone: 'warn', text: `Scouted: opponent +${opts.scouted} Power (they fought here last month; a month out of the top arena resets it)` });
+  if (opts.grudge) out.push({ tone: 'bad', text: `Feud: ${houseOf(run, opp).name} wants revenge (opponent +${opts.grudge} Power)` });
+  if (opts.vengeance) out.push({ tone: 'info', text: `Vengeance on ${houseOf(run, opp).name}: +5% win chance` });
   if (opts.challenger) out.push({ tone: 'warn', text: `Challenger: opponent +${opts.challenger} Power (famous fighters draw tougher opponents)` });
   return out;
 }

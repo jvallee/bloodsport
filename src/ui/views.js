@@ -5,7 +5,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFesti
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, eventNames, eventChoiceBlocker, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, eventNames, eventChoiceBlocker, standings, houseOf, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -102,6 +102,7 @@ export function summaryBanner(s) {
   if (s.title) bits.push(`🏆 ${s.fighter} earns the title "${s.title}"${s.title === 'Master of the Games' ? '' : ' (+1 Power)'}`);
   if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favor, Renown, XP and Morale)`);
   if (s.kill) bits.push(`💀 A kill${s.mark ? `: ${s.fighter} earns the mark "${s.mark}"` : ''}`);
+  if (s.feud) bits.push(`⚔ ${s.feud}`);
   if (s.loot) bits.push(`⚒ Claimed a ${GEAR[s.loot].name}`);
   if (s.injuries?.length) bits.push(`🩸 ${s.fighter} is now ${s.injuries.join(' and ')}: send them to the Medbay`);
   if (s.crushing) bits.push('The crowd jeered the mismatch');
@@ -173,11 +174,30 @@ function weekPanel(run) {
       ${blocked && !run.boutPending ? `<div class="why-not">${esc(blocked)}</div>` : ''}
       <p class="sub">Each fighter does their job once per week. Jobs stay set until you change them.
         ${tributePaid(run) ? 'This year\'s tribute is paid.' : `Tribute of <b>${tributeDue(run)} Gold</b> is due in ${toTribute} week${toTribute === 1 ? '' : 's'}. ${buttonWhy('Pay now', 'pay-tribute', {}, payTributeBlocker(run), 'btn small')}`}</p>
+      ${standingsTable(run)}
       <h3 class="mini">House log</h3>
       <ul class="log">${recent}</ul>
       ${run.log.length > 9 ? `<details class="more" data-key="full-log"><summary>Full house log (${run.log.length} entries)</summary>
         <ul class="log full">${[...run.log].reverse().map((l) => `<li class="${l.tone}"><small>${esc(formatDate(l.week))}</small> ${esc(l.text)}</li>`).join('')}</ul></details>` : ''}
     </section>`;
+}
+
+// "Opponent · House Varro", in the house's colour.
+export function houseTag(run, f) {
+  const h = houseOf(run, f);
+  return h ? `Opponent · <span style="color:${esc(h.color)}">${esc(h.name)}</span>` : 'Opponent';
+}
+
+// The rival houses and your place among them.
+export function standingsTable(run) {
+  if (!run.houses) return '';
+  const rows = standings(run).map((h, i) => {
+    const notes = [h.feud ? `<span class="feud" title="You killed one of theirs: their fighters get +1 Power against you">feud ${h.feud}</span>` : '',
+      h.vengeance ? `<span class="vengeance" title="They killed one of yours: your fighters get +5% win chance against them">vengeance ${h.vengeance}</span>` : ''].join('');
+    return `<tr class="${h.you ? 'you' : ''}"><td>${i + 1}</td><td><span class="house-dot" style="background:${esc(h.color)}"></span>${esc(h.name)}${h.motto ? `<small title="${esc(h.motto)}"> ❝</small>` : ''} ${notes}</td><td>${esc(arenaName(Math.min(h.tier, 4)).replace('The ', ''))}</td><td><b>${h.glory}</b></td></tr>`;
+  }).join('');
+  return `<h3 class="mini" title="Glory: a win is worth its arena tier (three times that for a Boss); rivals fight their own bouts every tournament week">The houses</h3>
+    <table class="standings"><thead><tr><th>#</th><th>House</th><th>Arena</th><th>Glory</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function perkChooser(run, f) {
@@ -273,7 +293,7 @@ function arenaBlock(run, tier, oddsFor) {
   const body = `<p class="sub"><b>${esc(bout.name)}</b> · ${buyIn} · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
       ${stakes ? `<p class="sub">${stakes}</p>` : ''}${rival}${debuffNote}
       ${bout.festival ? `<div class="festival now">🏛 <b>${esc(FESTIVAL_BY_ID[bout.festival].name)}</b>: ${esc(FESTIVAL_BY_ID[bout.festival].desc)}</div>` : ''}
-      ${fighterCard(arena.opponent, { compact: true, stress: false, tag: 'Opponent' })}
+      ${fighterCard(arena.opponent, { compact: true, stress: false, tag: houseTag(run, arena.opponent) })}
       ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
       ${choice}`;
   if (bout.top) return `<div class="arena-block top"><h3>${esc(arenaName(tier))} <small>your top arena</small></h3>${body}</div>`;

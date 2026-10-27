@@ -80,6 +80,25 @@ export const HUMORS = {
   phlegmatic: { name: 'Phlegmatic', tell: 'Guards first, then counters your last tactic', desc: 'Studies the opponent: +5% win chance in Rounds 2 and 3. Guards first, then counters the tactic you used last round.', win: { 2: 5000, 3: 5000 }, leans: { guard: 50, press: 25, feint: 25 }, adapts: 70 },
 };
 
+// Rival houses (roadmap v3, phase B3). Every opponent fights for one. Glory ranks the houses: a win is worth
+// `win` × the arena tier (`boss` × tier for a Boss, `grand` for the Grand Tournament); a house loses `beaten` when you beat its fighter.
+// Rivals climb an arena tier at each `climb` threshold of Glory. Kills start feuds that last `feudMonths` tournament weeks.
+export const HOUSES = {
+  rivals: 3,
+  names: [
+    { name: 'House Varro', color: '#b5543c', motto: 'Blood pays its debts.' },
+    { name: 'The Red Hand', color: '#c0362c', motto: 'We do not forget.' },
+    { name: 'The Silver Wolves', color: '#9fb3c8', motto: 'The pack hunts together.' },
+    { name: 'House Corvinus', color: '#5a6b8a', motto: 'Ravens feast on the proud.' },
+    { name: 'The Brass Lions', color: '#d9b45a', motto: 'Roar, and the crowd roars back.' },
+    { name: 'House Severa', color: '#7a5a8a', motto: 'Discipline before glory.' },
+  ],
+  glory: { win: 1, boss: 3, grand: 20, beaten: 1 },
+  climb: [8, 20, 40],
+  feudMonths: 3,
+  vengeanceWin: 5000,
+};
+
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
 export const KILL_MARKS = [
   { id: 'dreaded', at: 3, name: 'Dreaded', desc: '+5% win chance: opponents fear a proven killer.' },
@@ -185,10 +204,10 @@ export const CIRCUITS = [
   { tier: 1, name: 'The Dirt Pits', oppPower: [6, 6, 7], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
   { tier: 2, name: 'The Bronze Arena', oppPower: [9, 10, 11], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
   { tier: 3, name: 'The Silver Coliseum', oppPower: [13, 14, 15], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
-  { tier: 4, name: 'The Imperial Coliseum', oppPower: [19, 20, 21], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
+  { tier: 4, name: 'The Imperial Coliseum', oppPower: [20, 21, 22], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
 ];
 
-export const GRAND = { name: 'The Grand Tournament', oppPower: 24, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
+export const GRAND = { name: 'The Grand Tournament', oppPower: 25, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
 
 // House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
 export const PRESTIGE_LEVELS = [

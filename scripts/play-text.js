@@ -14,7 +14,7 @@ import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, 
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, recruitBlocker, fightBlocker, GRAND_TIER,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, recruitBlocker, fightBlocker, GRAND_TIER,
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
@@ -51,6 +51,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).join(', ')}
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
   pay-tribute                   pay this year's tribute early
+  houses                        the rival houses' standings
   choose <n>                    decide this week's event (the week can't end until you do)
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
   next [tactic] | capitulate    during a fight: play the next round with a tactic (steady, press, guard, feint; default: the suggestion), or capitulate ("towel" also works)
@@ -133,7 +134,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
 
   function opponentBlock(f) {
     const bits = [`Power ${f.power}`, `Speed ${f.speed}`, `Renown ${f.renown}`, ...extras(f)];
-    return [`     Opponent: ${identity(f)}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
+    const house = houseOf(run, f);
+    return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ' (FEUD: +1 Power against you)' : ''}${house.vengeance ? ' (your VENGEANCE: +5% win chance)' : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
   }
 
   function arenaBlock(tier) {
@@ -478,6 +480,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       return ['You capitulate.', '', endFight(), '', look()].join('\n');
     },
     capitulate: (...args) => commands.towel(...args),
+    houses: () => ['-- The houses (Glory: a win is worth its arena tier, ×3 for a Boss) --', ...standings(run).map((h, i) => `  ${i + 1}. ${h.name}${h.you ? ' (you)' : ''} · ${arenaName(Math.min(h.tier, 4))} · Glory ${h.glory}${h.feud ? ` · feud ${h.feud} months` : ''}${h.vengeance ? ` · vengeance ${h.vengeance} months` : ''}`)].join('\n'),
     choose: ([i]) => {
       need([i].filter(Boolean), 1, 'choose <number>');
       idle();
