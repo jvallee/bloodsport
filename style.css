@@ -58,6 +58,9 @@ h2 small, h3 small { font-family: var(--body); font-size: 12px; color: var(--mut
 .topbar h1 { font-size: 20px; color: var(--blood); letter-spacing: 0.18em; }
 .stat { display: flex; align-items: center; gap: 5px; cursor: help; }
 .stat b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.stat.due small { color: var(--muted); font-size: 12px; }
+.stat.due.short b { color: #f1b3ad; }
+.stat.due.paid b { color: var(--muted); font-size: 14px; }
 .lvl { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); margin-left: 4px; }
 .lvlbar { width: 54px; height: 5px; background: #0f0b0a; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; display: inline-block; }
 .lvlbar span { display: block; height: 100%; background: var(--gold); }

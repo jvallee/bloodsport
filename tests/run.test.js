@@ -10,6 +10,7 @@ import {
   startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker, choosePerk, perkBlocker,
   currentBout, boutFor, marketPrice, serialize, deserialize, moraleTarget, moraleState, xpFor, GRAND_TIER, SAVE_VERSION,
   matchOptions, bossLossFavor, buildRoom, recordMatchProgress, buyItem, buyItemBlocker, useItem, useItemBlocker,
+  payTribute, payTributeBlocker, tributeDue,
 } from '../src/run.js';
 import { computePower, computeSpeed, computePhase2, playRound, throwTowel } from '../src/fight.js';
 
@@ -1056,4 +1057,25 @@ test('a busy Trainer Room says who is using it and what to do', () => {
   setJob(run, a.id, 'trainPower');
   assert.match(jobBlocker(run, b.id, 'trainPower'), new RegExp(`${a.name} is training`));
   assert.match(jobBlocker(run, b.id, 'trainPower'), /Rest|another Trainer Room/);
+});
+
+test('tribute can be paid early, and is then not collected again that winter', () => {
+  const run = createRun(1);
+  recruit(run, run.market[0].id);
+  run.week = 10;
+  run.gold = 3;
+  assert.match(payTributeBlocker(run), /Needs 15 Gold/);
+  run.gold = 40;
+  payTribute(run);
+  assert.equal(run.gold, 40 - TRIBUTE.perYear);
+  assert.match(payTributeBlocker(run), /already paid/);
+  run.week = 39;
+  advanceWeek(run);
+  assert.equal(run.gold, 40 - TRIBUTE.perYear);
+  assert.equal(run.favor, FAVOR.start);
+  // In winter the next tribute is next year's (and bigger).
+  assert.equal(tributeDue(run), TRIBUTE.perYear * 2);
+  assert.match(payTributeBlocker(run), /Needs 30 Gold/);
+  run.gold = 30;
+  assert.equal(payTributeBlocker(run), null);
 });

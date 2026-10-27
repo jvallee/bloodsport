@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
-import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk } from '../src/run.js';
+import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute } from '../src/run.js';
 import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager } from '../src/ui/views.js';
 import { TRIBUTE } from '../src/data.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
@@ -131,4 +131,16 @@ test('the next-step bar renders the hint and a shortcut reminder', async () => {
   assert.match(html, /Next:/);
   assert.match(html, /data-tab="market"/);
   assert.equal(nextBar(null), '');
+});
+
+test('the top bar always counts down to tribute, and the week panel can pay it early', () => {
+  const run = createRun(4);
+  recruit(run, run.market[0].id);
+  run.week = 10;
+  run.gold = 40;
+  assert.match(topbar(run), new RegExp(`class="stat due"[^>]*>⚖ <b>${TRIBUTE.perYear}</b> <small>in 30 wks</small>`));
+  assert.match(ludusTab(run, fakeOdds), /data-action="pay-tribute"\s*>Pay now/);
+  payTribute(run);
+  assert.match(topbar(run), /⚖ <b>Paid<\/b>/);
+  assert.doesNotMatch(ludusTab(run, fakeOdds), /data-action="pay-tribute"/);
 });

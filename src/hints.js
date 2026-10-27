@@ -1,7 +1,7 @@
 // "What should I do next?": the single most useful prompt for the current state. Pure.
 
 import { STRESS, MORALE } from './data.js';
-import { arenaName, unlockedTiers, fightBlocker, jobBlocker, tributeDue, marketPrice } from './run.js';
+import { arenaName, unlockedTiers, fightBlocker, jobBlocker, tributeDue, tributePaid, marketPrice } from './run.js';
 import { weeksUntilWinter } from './calendar.js';
 
 export function nextHint(run) {
@@ -22,7 +22,7 @@ export function nextHint(run) {
   if (injured) return { text: `${injured.name} is injured: set their job to Medbay so they heal.`, tone: 'warn' };
   const due = tributeDue(run);
   const weeks = weeksUntilWinter(run.week);
-  if (weeks > 0 && weeks <= 4 && run.gold < due) return { text: `Save Gold: the ${due} Gold tribute is due in ${weeks} week${weeks === 1 ? '' : 's'} and you have ${run.gold}.`, tone: 'bad' };
+  if (weeks > 0 && weeks <= 4 && run.gold < due && !tributePaid(run)) return { text: `Save Gold: the ${due} Gold tribute is due in ${weeks} week${weeks === 1 ? '' : 's'} and you have ${run.gold}.`, tone: 'bad' };
   const restless = run.roster.find((f) => f.morale < MORALE.restless);
   if (restless) return { text: `${restless.name} is Restless (Morale ${restless.morale}): place decor or upgrade their quarters.`, tone: 'warn' };
   const idle = run.roster.find((f) => f.job === 'rest' && f.stress + STRESS.train < STRESS.overtrained && !jobBlocker(run, f.id, 'trainPower'));

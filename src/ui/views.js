@@ -5,7 +5,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter } from '..
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, tributeDue, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -47,12 +47,22 @@ export function topbar(run, tab, codexNew = 0) {
         <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${next.at}</small>` : ''}</span></div>
       <div class="favor${low ? ' low' : ''}" title="Imperial Favor: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
         <span>Favor</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
+      ${tributeStat(run)}
       <div class="track" title="Arena tiers">${tiers}</div>
       <div class="spacer"></div>
       <button class="btn small" data-action="help">How to play</button>
       <button class="btn small" data-action="new-run">New career</button>
     </header>
     <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
+}
+
+// Always-visible countdown to the Emperor's tribute.
+function tributeStat(run) {
+  const due = tributeDue(run);
+  const weeks = weeksUntilWinter(run.week);
+  if (tributePaid(run)) return `<div class="stat due paid" title="This year's tribute is paid.">⚖ <b>Paid</b></div>`;
+  const short = run.gold < due && weeks <= 4;
+  return `<div class="stat due${short ? ' short' : ''}" title="The Emperor's tribute: ${due} Gold, collected at the start of winter. You can pay early from the week panel. If you can't pay, he takes all your Gold and ${-FAVOR.unpaidTribute} Favor (it only ends the career if Favor hits 0).">⚖ <b>${due}</b> <small>in ${weeks} wk${weeks === 1 ? '' : 's'}</small></div>`;
 }
 
 // ---------- Banners ----------
@@ -132,8 +142,8 @@ function weekPanel(run) {
   const blocked = advanceBlocker(run);
   const toTribute = weeksUntilWinter(run.week);
   const due = tributeDue(run);
-  const tribute = toTribute > 0 && toTribute <= 4
-    ? `<div class="tribute${run.gold < due ? ' short' : ''}">⚖ The Emperor's tribute of <b>${due} Gold</b> is due in <b>${toTribute}</b> week${toTribute === 1 ? '' : 's'}. You have ${run.gold}.${run.gold < due ? ` Short by ${due - run.gold}: unpaid tribute costs 25 Favor.` : ''}</div>`
+  const tribute = toTribute > 0 && toTribute <= 4 && !tributePaid(run)
+    ? `<div class="tribute${run.gold < due ? ' short' : ''}">⚖ The Emperor's tribute of <b>${due} Gold</b> is due in <b>${toTribute}</b> week${toTribute === 1 ? '' : 's'}. You have ${run.gold}.${run.gold < due ? ` Short by ${due - run.gold}: if you can't pay, the Emperor takes all your Gold and ${-FAVOR.unpaidTribute} Favor.` : ''}</div>`
     : '';
   const recent = run.log.slice(-9).reverse().map((l) => `<li class="${l.tone}">${esc(l.text)}</li>`).join('');
   return `
@@ -146,7 +156,8 @@ function weekPanel(run) {
         ${button('Skip to tournament', 'advance-tournament', {}, blocked, 'btn')}
       </div>
       ${blocked && !run.boutPending ? `<div class="why-not">${esc(blocked)}</div>` : ''}
-      <p class="sub">Each fighter does their job once per week. Jobs stay set until you change them. Tribute of <b>${tributeDue(run)} Gold</b> is due each winter.</p>
+      <p class="sub">Each fighter does their job once per week. Jobs stay set until you change them.
+        ${tributePaid(run) ? 'This year\'s tribute is paid.' : `Tribute of <b>${tributeDue(run)} Gold</b> is due in ${toTribute} week${toTribute === 1 ? '' : 's'}. ${button('Pay now', 'pay-tribute', {}, payTributeBlocker(run), 'btn small')}`}</p>
       <h3 class="mini">House log</h3>
       <ul class="log">${recent}</ul>
     </section>`;

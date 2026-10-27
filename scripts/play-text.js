@@ -13,7 +13,7 @@ import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries }
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, recruitBlocker, fightBlocker, GRAND_TIER,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, recruitBlocker, fightBlocker, GRAND_TIER,
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
@@ -49,6 +49,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armor>
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).join(', ')}
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
+  pay-tribute                   pay this year's tribute early
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
   next | capitulate             during a fight: play the next round, or capitulate ("towel" also works)
   math                          toggle the round-by-round math in fight narration
@@ -162,7 +163,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const next = PRESTIGE_LEVELS[run.prestigeLevel];
     const due = tributeDue(run);
     const toTribute = weeksUntilWinter(run.week);
-    const tribute = toTribute > 0 ? `Tribute ${due} Gold due at the start of winter (in ${plural(toTribute, 'week')})${toTribute <= 4 && run.gold < due ? ` · SHORT by ${due - run.gold}: unpaid tribute costs ${-FAVOR.unpaidTribute} Favor` : ''}` : 'Tribute collected for this year';
+    const tribute = tributePaid(run) ? 'Tribute paid for this year' : toTribute > 0 ? `Tribute ${due} Gold due at the start of winter (in ${plural(toTribute, 'week')})${toTribute <= 4 && run.gold < due ? ` · SHORT by ${due - run.gold}: unpaid tribute takes all your Gold and ${-FAVOR.unpaidTribute} Favor` : ''} (\`pay-tribute\` to pay early)` : 'Tribute collected for this year';
     const when = run.boutPending ? 'TOURNAMENT WEEK: settle your top arena before ending the week.'
       : run.bouts ? 'Your top arena is settled. Send fighters to other open arenas, or end the week.'
         : `${isWinter(run.week) ? 'Winter Dead Season: no tournaments. ' : ''}Next tournament in ${plural(weeksUntilTournament(run.week), 'week')}.`;
@@ -454,6 +455,11 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       return ['You capitulate.', '', endFight(), '', look()].join('\n');
     },
     capitulate: (...args) => commands.towel(...args),
+    'pay-tribute': () => {
+      idle();
+      payTribute(run);
+      return `${run.log.at(-1).text}\n\n${look()}`;
+    },
     skip: () => {
       idle();
       skipBout(run);

@@ -456,8 +456,8 @@ export function advanceWeek(run) {
     refreshLiaison(run);
     refreshArmourer(run);
   }
-  if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
-  if (run.week % WEEKS_PER_YEAR === WEEKS_PER_YEAR - 4) payTribute(run);
+  if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) if (!tributePaid(run)) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
+  if (run.week % WEEKS_PER_YEAR === WEEKS_PER_YEAR - 4) collectTribute(run);
   if (isTournamentWeek(run.week)) {
     run.bouts = Object.fromEntries(unlockedTiers(run).map((t) => [t, 'open']));
     run.boutPending = true;
@@ -478,11 +478,34 @@ export function advanceToTournament(run) {
 
 // ---------- Tribute and Favor ----------
 
-export const tributeDue = (run) => TRIBUTE.perYear * dateOf(run.week).year;
+// The year whose tribute comes next: in winter this year's is already settled, so it's next year's.
+const tributeYear = (run) => dateOf(run.week).year + (dateOf(run.week).winter ? 1 : 0);
+export const tributeDue = (run) => TRIBUTE.perYear * tributeYear(run);
+export const tributePaid = (run) => run.tributePaid === tributeYear(run);
 
-function payTribute(run) {
+export function payTributeBlocker(run) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (tributePaid(run)) return 'This year\'s tribute is already paid.';
+  if (run.gold < tributeDue(run)) return `Needs ${tributeDue(run)} Gold.`;
+  return null;
+}
+
+// Pay this year's tribute early, so the Gold can't be spent by accident.
+export function payTribute(run) {
+  assertOk(payTributeBlocker(run));
   const due = tributeDue(run);
-  if (run.gold >= due) {
+  run.gold -= due;
+  run.tributePaid = tributeYear(run);
+  log(run, `You pay the Emperor's tribute early: ${due} Gold.`, 'event');
+}
+
+function collectTribute(run) {
+  const year = dateOf(run.week).year;
+  const due = TRIBUTE.perYear * year;
+  if (run.tributePaid === year) {
+    log(run, 'The Emperor\'s collectors find your tribute already paid.', 'event');
+  } else if (run.gold >= due) {
     run.gold -= due;
     log(run, `You pay the Emperor's tribute: ${due} Gold.`, 'event');
   } else {
