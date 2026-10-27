@@ -27,6 +27,15 @@ test('a scripted text career prints cleanly: intro, shops, jobs, a fight, the Co
   assert.equal(s.run.inMatch, false);
 });
 
+test('a tutorial card is printed by the command that makes it appear, so `ok` never dismisses an unseen card', () => {
+  const s = createSession(7, { oddsSamples: 20 });
+  s.intro();
+  const out = s.exec(`recruit ${s.run.market[0].id}`);
+  assert.match(out, /Tutorial: Give everyone a weekly job/);
+  assert.match(s.exec('ok'), /Dismissed "Give everyone a weekly job"/);
+  assert.doesNotMatch(s.exec('look'), /Tutorial: Give everyone/);
+});
+
 test('the text interface replays a career exactly from the seed', () => {
   const play = () => {
     const s = createSession(3, { oddsSamples: 20 });

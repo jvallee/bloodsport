@@ -51,6 +51,13 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   let match = null;
   let showMath = false;
   let quiet = false; // replaying unshown commands: skip the (slow) odds simulations
+  let shownStep = null; // the tutorial card the player last saw, so a new one is announced when it appears
+
+  function tutorialCard() {
+    const step = run.status === 'active' ? nextStep(STEPS, done, run) : null;
+    shownStep = step?.id ?? null;
+    return step ? `-- Tutorial: ${step.title} (\`ok\` to dismiss) --\n${plain(step.body)}` : '';
+  }
 
   // ---------- Views ----------
 
@@ -118,8 +125,9 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   function arenaBlock(tier) {
     const bout = boutFor(run, tier);
     const arena = run.arenas[tier];
-    const state = run.bouts?.[tier];
-    const lines = [`${bout.name} · tier ${tier}${bout.top ? ' (your top arena)' : ' (lower arena)'}${state ? ` · ${state === 'open' ? 'OPEN this week' : 'settled'}` : ''}`];
+    const state = run.status === 'active' ? run.bouts?.[tier] : null;
+    const name = state === 'done' ? `${arenaName(tier)} · settled this week · next month: ${bout.name.split(' · ')[1] ?? bout.name}` : `${bout.name}${state ? ' · OPEN this week' : ''}`;
+    const lines = [`${name} · tier ${tier}${bout.top ? ' (your top arena)' : ' (lower arena)'}`];
     lines.push(`     Buy-in ${bout.buyIn} Prestige · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold`);
     if (bout.top && bout.boss) lines.push(`     Stakes: ${tier === GRAND_TIER ? 'win the career' : `win a Title (+1 Power), +${FAVOR.bossWin} Favor and the next arena`}. Lose: ${FAVOR.bossLoss} Favor.`);
     if (!bout.top) lines.push('     Lower arena: no Favor at stake, half Prestige per tier below, and the crowd jeers crushing mismatches.');
@@ -128,7 +136,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       lines.push(`     ${bout.boss ? 'Boss arena rule' : 'The Oracle foresees the Boss arena rule'}: ${d.name}. ${d.desc}`);
     }
     lines.push(opponentBlock(arena.opponent));
-    if (state === 'done' || quiet) return lines.join('\n');
+    if (state === 'done' || quiet || run.status !== 'active') return lines.join('\n');
     for (const f of run.roster) {
       const o = describeOdds(oddsFor(f, tier), oracleLevel(run));
       const pct = (p) => (p ? ` ${p}` : '');
@@ -173,8 +181,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     out.push(unlockedTiers(run).sort((a, b) => b - a).map(arenaBlock).join('\n'));
     if (!oracleLevel(run)) out.push('(Build an Oracle to see exact percentages.)');
     out.push(`\nMarket: ${run.market.length} fighters at ${marketPrice(run)} Gold${run.liaisonOffer ? ', plus a Liaison offer' : ''} · Estate: ${run.buildings.length}/${plotCount(run)} plots · Storeroom: ${run.inventory.gear.length} gear`);
-    const step = nextStep(STEPS, done, run);
-    if (step && run.status === 'active') out.push(`\n-- Tutorial: ${step.title} (\`ok\` to dismiss) --\n${plain(step.body)}`);
+    const card = tutorialCard();
+    if (card) out.push(`\n${card}`);
     out.push(`\n-- House log --\n${run.log.slice(-8).map((l) => `  ${l.text}`).join('\n')}`);
     const blocked = advanceBlocker(run);
     if (blocked && run.status === 'active' && !run.boutPending) out.push(`(Can't end the week: ${blocked})`);
@@ -329,8 +337,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       const step = nextStep(STEPS, done, run);
       if (!step) return 'No tutorial card to dismiss.';
       done.push(step.id);
-      const after = nextStep(STEPS, done, run);
-      return `Dismissed "${step.title}".${after ? `\n-- Tutorial: ${after.title} (\`ok\` to dismiss) --\n${plain(after.body)}` : ''}`;
+      const card = tutorialCard();
+      return `Dismissed "${step.title}".${card ? `\n${card}` : ''}`;
     },
     recruit: ([id]) => {
       need([id], 1, 'recruit <id>');
@@ -380,7 +388,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     'buy-gear': ([i]) => {
       need([i].filter(Boolean), 1, 'buy-gear <stock#>');
       const key = buyGear(run, Number(i));
-      return `Bought a ${GEAR[key].name} (now in the storeroom). Gold ${run.gold}.`;
+      return `Bought a ${GEAR[key].name}: storeroom #${run.inventory.gear.length - 1}. Gold ${run.gold}.`;
     },
     equip: ([id, i]) => {
       need([id, i].filter(Boolean), 2, 'equip <id> <storeroom#>');
@@ -396,7 +404,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     build: ([type]) => {
       need([type].filter(Boolean), 1, 'build <type>');
       const b = build(run, type);
-      return `Built a ${BUILDINGS[type].name} [${b.id}]. Gold ${run.gold}.`;
+      return `Built: ${BUILDINGS[type].name} [${b.id}]. Gold ${run.gold}.`;
     },
     upgrade: ([id]) => {
       need([id].filter(Boolean), 1, 'upgrade <buildingId>');
@@ -457,6 +465,11 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     }
     const fresh = discover(codex, run);
     if (fresh.length) out += `\n(New in the Codex: ${fresh.join(', ')})`;
+    const step = run.status === 'active' ? nextStep(STEPS, done, run) : null;
+    if ((step?.id ?? null) !== shownStep) {
+      const card = tutorialCard();
+      if (card) out += `\n${card}`;
+    }
     return out;
   }
 
@@ -482,7 +495,7 @@ async function main() {
   for await (const line of createInterface({ input: process.stdin })) {
     if (line.trim() && !line.trim().startsWith('#')) lines.push(line.trim());
   }
-  if (last >= lines.length) console.log(session.intro());
+  if (last === Infinity) console.log(session.intro());
   lines.forEach((line, i) => {
     const shown = i >= lines.length - last;
     const out = session.exec(line, { quiet: !shown });
