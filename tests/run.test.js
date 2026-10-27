@@ -9,7 +9,7 @@ import {
   buyDecor, assignDecor, assignDecorBlocker, removeDecor, buyGear, equip, unequip, surgeon, surgeonBlocker,
   startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker, choosePerk, perkBlocker,
   currentBout, boutFor, marketPrice, serialize, deserialize, moraleTarget, moraleState, xpFor, GRAND_TIER, SAVE_VERSION,
-  matchOptions, bossLossFavor, buildRoom,
+  matchOptions, bossLossFavor, buildRoom, recordMatchProgress,
 } from '../src/run.js';
 import { computePower } from '../src/fight.js';
 
@@ -554,13 +554,14 @@ test('lower arenas pay half Prestige per tier below, and only the top arena must
   assert.equal(advanceBlocker(run), null, 'the lower arena can be left alone');
 });
 
-test('a crushing win in a lower arena angers the crowd: no Renown, −Morale, −Favor', () => {
-  const { run, a } = twoArenas();
-  a.power = run.arenas[1].opponent.power + ECONOMY.crushingGap;
-  const [favor, morale, renown] = [run.favor, a.morale, a.renown];
-  const s = playBout(run, a.id, { tier: 1 });
+test('a known fighter crushing a weaker opponent in a lower arena angers the crowd: no Renown, −Morale, −Favor', () => {
+  const { run, b } = twoArenas(); // b is not a champion of the Dirt Pits
+  b.renown = ECONOMY.knownRenown;
+  b.power = run.arenas[1].opponent.power + ECONOMY.crushingGap;
+  const [favor, morale, renown] = [run.favor, b.morale, b.renown];
+  const s = playBout(run, b.id, { tier: 1 });
   assert.equal(s.crushing, true);
-  assert.deepEqual([a.renown, a.morale, run.favor], [renown, morale + MORALE.crowdJeers, favor + FAVOR.crushingWin]);
+  assert.deepEqual([b.renown, b.morale, run.favor], [renown, morale + MORALE.crowdJeers, favor + FAVOR.crushingWin]);
 });
 
 test('losing a lower-arena Boss costs no Favor and no title is re-awarded', () => {
@@ -735,6 +736,7 @@ test('lower-arena Bosses drop gear only by chance; only the top Boss always drop
   for (let i = 0; i < 40; i++) {
     pickPerks(run);
     a.morale = b.morale = 60; // 40 crushing wins in a row would (rightly) make them mutinous
+    run.favor = 100; // and a champion re-fighting the pits 20 times would (rightly) get you executed
     run.arenas[1].stage = 2;
     run.arenas[1].opponent.gear.weapon = 'gladius';
     run.bouts = { 1: 'open', 2: 'open' };
@@ -777,6 +779,7 @@ test('Boss losses cost Favor by tier: 15 / 20 / 25 / 30', () => {
 test('crushing and upsets count gear Power', () => {
   const { run, f } = atBout();
   const opp = run.arenas[1].opponent;
+  f.renown = ECONOMY.knownRenown; // rookies are never jeered; this checks the Power comparison
   f.power = opp.power + 2;
   f.gear.weapon = 'gladius'; // +1 Power: now 3 above the opponent
   run.arenas[1].conquered = true;
@@ -793,4 +796,80 @@ test('an Armourer has stock as soon as it is built', () => {
   run.prestigeLevel = 2;
   buildRoom(run, 'armourer');
   assert.equal(run.armourerStock.length, 3);
+});
+
+test('reloading mid-match keeps the injuries taken in the rounds already played (no erasing a bad round)', () => {
+  const { run, f } = atBout();
+  const m = startMatch(run, f.id);
+  m.a.f.injuries = [{ tag: 'concussed', weight: 1 }];
+  recordMatchProgress(run, m);
+  const loaded = deserialize(serialize(run));
+  assert.deepEqual(loaded.roster[0].injuries.map((i) => i.tag), ['concussed']);
+  assert.equal(loaded.roster[0].injuries[0].weeksLeft, 2);
+});
+
+// ---------- Championships and rookies ----------
+
+const lowerArenaSetup = () => {
+  const run = createRun(3);
+  run.gold = 300;
+  run.prestige = 300;
+  const a = recruit(run, run.market[0].id);
+  const b = recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  conquerTop(run, a.id); // a beats the Dirt Pits Boss: Champion of the Dirt Pits
+  nextBout(run);
+  return { run, a, b };
+};
+const refight = (run, f, tier, opts = {}) => {
+  pickPerks(run);
+  f.morale = 60;
+  run.bouts = { ...run.bouts, [tier]: 'open' };
+  run.history = run.history.filter((h) => h.fighterId !== f.id);
+  return playBout(run, f.id, { tier, ...opts });
+};
+
+test('three wins in an arena make a fighter its Champion (+1 Power, once per arena)', () => {
+  const { run, b } = lowerArenaSetup();
+  run.arenas[1].stage = 0;
+  const power = b.power;
+  refight(run, b, 1);
+  run.arenas[1].stage = 0;
+  refight(run, b, 1);
+  run.arenas[1].stage = 0;
+  const s = refight(run, b, 1);
+  assert.match(s.title, /Champion of the Dirt Pits/);
+  assert.equal(b.power, power + 1);
+  run.arenas[1].stage = 0;
+  assert.equal(refight(run, b, 1).title, null, 'only one title per arena');
+});
+
+test('a Champion fighting back in a lower arena gets no Prestige or Renown and loses Morale and Favor', () => {
+  const { run, a } = lowerArenaSetup();
+  assert.ok(a.titles.some((t) => /Dirt Pits/.test(t)));
+  const [favor, renown] = [run.favor, a.renown];
+  const s = refight(run, a, 1);
+  assert.equal(s.champion, true);
+  assert.equal(s.prestige, 0);
+  assert.equal(a.renown, renown);
+  assert.equal(a.morale, 60 + MORALE.crowdJeers);
+  assert.equal(run.favor, favor + FAVOR.championReturn);
+});
+
+test('a rookie (under 5 Renown, no title there) is never jeered, even in a mismatch', () => {
+  const { run, b } = lowerArenaSetup();
+  b.renown = 0;
+  b.power = run.arenas[1].opponent.power + 6;
+  const favor = run.favor;
+  const s = refight(run, b, 1);
+  assert.equal(s.crushing, false);
+  assert.equal(run.favor, favor + (s.favor ?? 0));
+  assert.ok(s.renown > 0);
+});
+
+test('a known fighter (5+ Renown) crushing a weak opponent is still jeered', () => {
+  const { run, b } = lowerArenaSetup();
+  b.renown = 6;
+  b.power = run.arenas[1].opponent.power + 6;
+  assert.equal(refight(run, b, 1).crushing, true);
 });

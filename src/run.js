@@ -56,6 +56,8 @@ const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, t
 const findFighter = (run, id) => run.roster.find((f) => f.id === id);
 // Power as the card shows it: trained Power plus gear.
 export const effectivePower = (f) => f.power + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].power ?? 0), 0);
+export const championTitle = (tier) => `Champion of ${arenaName(tier).replace(/^The /, 'the ')}`;
+export const isChampionOf = (f, tier) => (f.titles ?? []).includes(championTitle(tier));
 export const bossLossFavor = (tier) => FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1];
 
 // ---------- Arenas and bouts ----------
@@ -657,6 +659,11 @@ export function startMatch(run, id, tier = run.topTier) {
   return createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, ...matchOptions(run, fighter, tier) });
 }
 
+// Remember the fight so far (call after every round), so a reload mid-match keeps what already happened.
+export function recordMatchProgress(run, match) {
+  if (run.matchInfo) run.matchInfo.progress = { injuries: structuredClone(match.a.f.injuries), alive: match.a.f.alive };
+}
+
 export function skipBlocker(run) {
   const idle = idleBlocker(run);
   if (idle) return idle;
@@ -720,7 +727,11 @@ export function finishMatch(run, match) {
 
   const won = match.result.winner === 'A';
   const upset = effectivePower(opp) > effectivePower(fighter);
-  const crushing = won && !bout.top && effectivePower(fighter) - effectivePower(opp) >= ECONOMY.crushingGap;
+  const champion = tier !== GRAND_TIER && !bout.top && isChampionOf(fighter, tier);
+  // Rookies are never jeered: only a known name (5+ Renown) crushing a weak opponent, or a returning champion.
+  const crushing = won && !bout.top && !champion && fighter.renown >= ECONOMY.knownRenown && effectivePower(fighter) - effectivePower(opp) >= ECONOMY.crushingGap;
+  const moraleBefore = fighter.morale;
+  const levelBefore = fighter.level;
   if (bout.top) {
     fighter.topStreak = (fighter.topStreak ?? 0) + 1;
     fighter.foughtTopWeek = run.week;
@@ -729,18 +740,22 @@ export function finishMatch(run, match) {
   const summary = {
     week: run.week, tier, name: bout.name, boss: bout.boss, top: bout.top, won, reason: match.result.reason,
     fighter: fighter.name, fighterId: fighter.id, died: !fighter.alive, gold: 0, prestige: -bout.buyIn, bloodFaith: false,
-    title: null, favor: 0, xp: 0, renown: 0, loot: null, levelUp: null, crushing, injuries: fighter.alive ? newInjuries : [],
+    title: null, favor: 0, xp: 0, renown: 0, loot: null, levelUp: null, crushing, champion: won && champion,
+    injuries: fighter.alive ? newInjuries : [], morale: 0, levels: 0,
   };
   const favorBefore = run.favor;
 
   if (won) {
     summary.gold = bout.winGold + Math.floor(fighter.renown / RENOWN.goldPer);
-    summary.prestige += bout.buyIn + bout.winPrestige;
-    if (!crushing) {
+    summary.prestige += bout.buyIn + (champion ? 0 : bout.winPrestige);
+    if (!crushing && !champion) {
       summary.renown = RENOWN.win + (bout.boss ? RENOWN.bossWin : 0) + (upset ? RENOWN.upset : 0) + (fighter.perks.includes('crowdPleaser') ? 1 : 0);
     }
-    bumpMorale(fighter, crushing ? MORALE.crowdJeers : MORALE.win);
-    if (crushing) {
+    bumpMorale(fighter, crushing || champion ? MORALE.crowdJeers : MORALE.win);
+    if (champion) {
+      log(run, `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn');
+      changeFavor(run, FAVOR.championReturn, 'a champion fighting back in a lower arena');
+    } else if (crushing) {
       log(run, `The crowd jeers ${fighter.name} for crushing a much weaker opponent.`, 'warn');
       changeFavor(run, FAVOR.crushingWin, 'a crushing win in a lower arena');
     }
@@ -755,11 +770,15 @@ export function finishMatch(run, match) {
       run.inventory.gear.push(summary.loot);
       log(run, `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good');
     }
-    if (bout.boss && !bout.conquered && tier !== GRAND_TIER) {
-      const title = `Champion of ${arenaName(tier).replace(/^The /, 'the ')}`;
-      fighter.titles.push(title);
-      fighter.power += 1;
-      summary.title = title;
+    // Championships: beat an arena's Boss, or win there 3 times. One Title (+1 Power) per arena.
+    if (tier !== GRAND_TIER) {
+      fighter.arenaWins = { ...(fighter.arenaWins ?? {}), [tier]: (fighter.arenaWins?.[tier] ?? 0) + 1 };
+      if (!isChampionOf(fighter, tier) && (bout.boss || fighter.arenaWins[tier] >= ECONOMY.titleWins)) {
+        const title = championTitle(tier);
+        fighter.titles.push(title);
+        fighter.power += 1;
+        summary.title = title;
+      }
     }
     if (tier === GRAND_TIER) {
       fighter.titles.push('Master of the Games');
@@ -777,6 +796,7 @@ export function finishMatch(run, match) {
     else if (bout.top && match.result.reason === 'towel') changeFavor(run, FAVOR.topTowel, 'threw in the towel in your top arena');
   }
   summary.favor = run.favor - favorBefore;
+  summary.morale = fighter.morale - moraleBefore;
   run.gold += summary.gold;
   run.prestige += summary.prestige + bout.buyIn; // buy-in was already paid in startMatch
   fighter.renown = Math.max(0, fighter.renown + summary.renown);
@@ -790,6 +810,7 @@ export function finishMatch(run, match) {
     log(run, `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad');
   } else {
     gainXp(run, fighter, summary.xp);
+    summary.levels = fighter.level - levelBefore;
   }
   if (fighter.job === 'medbay' && !fighter.injuries.length) fighter.job = 'rest';
   run.inMatch = false;
@@ -900,8 +921,10 @@ export function deserialize(text) {
   // A match in progress isn't saved. Reloading mid-fight counts as throwing in the towel,
   // so quitting can't be used to escape a losing fight for free.
   if (run.inMatch) {
-    const f = findFighter(run, run.matchInfo.fighterId);
-    finishMatch(run, { over: true, round: 0, result: { winner: 'B', reason: 'towel' }, a: { f: structuredClone(f) } });
+    const f = structuredClone(findFighter(run, run.matchInfo.fighterId));
+    const progress = run.matchInfo.progress;
+    if (progress) Object.assign(f, { injuries: progress.injuries, alive: progress.alive });
+    finishMatch(run, { over: true, round: 0, result: { winner: 'B', reason: progress?.alive === false ? 'death' : 'towel' }, a: { f } });
   }
   return run;
 }

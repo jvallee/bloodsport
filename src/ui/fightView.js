@@ -1,6 +1,8 @@
 // The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, towel decision, breakdown.
 
-import { BOSS_DEBUFFS } from '../data.js';
+import { BOSS_DEBUFFS, GEAR } from '../data.js';
+
+const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 import { effectiveInjuries, mortalDanger, canThrowTowel } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, fighterCard } from './components.js';
@@ -20,15 +22,64 @@ function tagPills(r) {
   return pills.filter((p) => !seen.has(p.side + p.text) && seen.add(p.side + p.text));
 }
 
+// The dice tumble for this long before the round plays out (seconds).
+export const DICE_TIME = 1.4;
+
+// Who strikes first: two dice tumble, then land. Footwork and Concussed skip the roll.
+function initiativeRoll(m, r, animate) {
+  const init = r.initiative;
+  const name = (side) => esc((side === 'A' ? m.a : m.b).f.name);
+  const cls = animate ? '' : ' still';
+  if (init.reason === 'footwork' || init.reason === 'concussed') {
+    const why = init.reason === 'footwork' ? `${name(init.first)} is faster and darts in first (Footwork).` : `${name(init.first === 'A' ? 'B' : 'A')} is Concussed and must strike second.`;
+    return `<div class="initiative${cls}"><div class="init-title">Who strikes first?</div><div class="init-auto">${why}</div></div>`;
+  }
+  const side = (s) => {
+    const speed = init.speed[s].total;
+    const roll = init.rolls[s];
+    return `<div class="init-side ${s.toLowerCase()}${init.first === s ? ' first' : ''}">
+      <div class="init-name">${name(s)}</div>
+      <div class="init-math">Speed ${speed} + <span class="die${cls}" role="img" aria-label="rolled ${roll}"><span class="face">${DIE_FACES[roll - 1]}</span></span> = <b class="reveal${cls}">${speed + roll}</b></div>
+    </div>`;
+  };
+  const tie = init.reason === 'tiebreak' ? ' (tied: a coin flip decides)' : '';
+  return `<div class="initiative${cls}"><div class="init-title">Who strikes first? Speed + a die</div>
+    <div class="init-sides">${side('A')}<span class="vs">vs</span>${side('B')}</div>
+    <div class="init-result reveal${cls}">⚡ ${name(init.first)} strikes first${tie}: +10% to win the round and the first chance to wound.</div></div>`;
+}
+
 function feed(m, ui) {
   const narrate = ui.showMath ? narrateRound : narrateStory;
   const pre = m.preMatch.map((p) => `<div class="line warn static">${esc(m.a.f.name)} is overtrained and loses ${esc(p.disabled.map((s) => slotName(m.a.f, s)).join(', ') || 'focus')} for this match.</div>`).join('');
   return pre + m.rounds.map((r) => {
     const animate = r.round === ui.animateRound;
     const lines = narrate(m, r).map((l, i) =>
-      `<div class="line ${l.type}${animate ? '' : ' static'}" style="${animate ? `animation-delay:${0.3 + i * 0.4}s` : ''}">${esc(l.text)}</div>`).join('');
+      `<div class="line ${l.type}${animate ? '' : ' static'}" style="${animate ? `animation-delay:${DICE_TIME + 0.3 + i * 0.45}s` : ''}">${esc(l.text)}</div>`).join('');
     return `<h4>Round ${r.round}</h4>${lines}`;
   }).join('');
+}
+
+// After the match: everything it changed, in one place.
+function report(s) {
+  if (!s) return '';
+  const row = (label, value, tone = '') => `<div class="rep-row ${tone}"><span>${label}</span><b>${value}</b></div>`;
+  const plus = (n) => `${n > 0 ? '+' : ''}${n}`;
+  const tone = (n) => (n > 0 ? 'good' : n < 0 ? 'bad' : '');
+  const rows = [
+    row('Gold', plus(s.gold), tone(s.gold)),
+    row('Prestige', plus(s.prestige), tone(s.prestige)),
+    s.favor ? row('Imperial Favor', plus(s.favor), tone(s.favor)) : '',
+    s.died ? '' : row('XP', `${plus(s.xp)}${s.levels ? ` · ⭐ level up! Choose a perk on their card` : ''}`, 'good'),
+    s.died ? '' : row('Renown', plus(s.renown), tone(s.renown)),
+    s.died ? '' : row('Morale', plus(s.morale), tone(s.morale)),
+    s.injuries?.length ? row('New injuries', `${esc(s.injuries.join(', '))}: heal them in the Medbay`, 'bad') : '',
+    s.loot ? row('Loot', `${esc(GEAR[s.loot].name)} → storeroom`, 'good') : '',
+    s.title ? row('Title', `🏆 ${esc(s.title)}${s.title === 'Master of the Games' ? '' : ' (+1 Power)'}`, 'good') : '',
+    s.champion ? row('The crowd', 'boos a champion back in the pits', 'bad') : s.crushing ? row('The crowd', 'jeers the mismatch', 'bad') : '',
+    s.bloodFaith ? row('Blood Faith', 'buy-in refunded', 'good') : '',
+    s.died ? row('Fallen', `${esc(s.fighter)}'s gear returns to the storeroom`, 'bad') : '',
+  ].join('');
+  return `<div class="report"><h3>After the fight</h3>${rows}</div>`;
 }
 
 function whyTable(m) {
@@ -55,8 +106,10 @@ function controls(m, ui, bout) {
   if (m.over) {
     const won = m.result.winner === 'A';
     const advice = adviceFor(m);
-    return `<div class="result ${won ? 'win' : 'loss'}">${won ? 'Victory' : m.result.reason === 'towel' ? 'Towel thrown' : m.result.reason === 'death' ? 'Slain' : 'Defeat'}</div>
-      <div>${esc(resultText(m))}</div>
+    const late = m.rounds.at(-1)?.round === ui.animateRound ? ` late" style="animation-delay:${DICE_TIME + 1.8}s` : '';
+    return `<div class="result ${won ? 'win' : 'loss'}${late}">${won ? 'Victory' : m.result.reason === 'towel' ? 'Towel thrown' : m.result.reason === 'death' ? 'Slain' : 'Defeat'}</div>
+      <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${DICE_TIME + 1.9}s"` : ''}>${esc(resultText(m))}</div>
+      <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${DICE_TIME + 2.1}s"` : ''}>${report(m.summary)}</div>
       ${advice ? `<div class="advice">💡 ${esc(advice)}</div>` : ''}
       ${whyTable(m)}
       <button class="btn primary big" data-action="leave-fight">Return to the Ludus</button>`;
@@ -81,21 +134,25 @@ export function fightView(m, ui, bout, tutorial = '') {
   const last = m.rounds.at(-1);
   const delta = last ? last.delta : 0;
   const pills = last ? tagPills(last) : [];
-  const shook = last && last.round === ui.animateRound && last.checks.some((c) => c.injury) ? ' shake' : '';
+  const animate = Boolean(last) && last.round === ui.animateRound;
+  const shook = animate && last.checks.some((c) => c.injury) ? ' shake' : '';
   const debuff = m.debuff ? BOSS_DEBUFFS[m.debuff] : null;
+  // While the dice roll, hold back the score and the round winner so the result isn't spoiled.
+  const hold = (delay) => (animate ? ` late" style="animation-delay:${delay}s` : '');
   return `
     <div class="fight">
       <div class="fight-head">
         <div><h2>${esc(bout.name)}</h2>${debuff ? `<div class="debuff" title="${esc(debuff.desc)}">☠ ${esc(debuff.name)}: ${esc(debuff.desc)}</div>` : ''}</div>
-        <div class="score" aria-label="Score"><span class="a">${m.a.roundsWon}</span> – <span class="b">${m.b.roundsWon}</span></div>
+        <div class="score${hold(DICE_TIME + 1.2)}" aria-label="Score"><span class="a">${m.a.roundsWon}</span> – <span class="b">${m.b.roundsWon}</span></div>
       </div>
       <div class="arena${shook}">
         <div><div class="side-label a">Your gladiator</div>${fighterCard(m.a.f, { combatant: m.a, compact: true })}</div>
         <div class="center">
           <div class="gauge-labels"><span>They're stronger</span><span>Power Delta ${last ? signed(delta) : '0'}</span><span>You're stronger</span></div>
           <div class="gauge"><div class="needle" style="left:${((delta + 10) / 20) * 100}%"></div></div>
-          ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span><span>Round ${last.round} → <b>${esc((last.winner === 'A' ? m.a : m.b).f.name)}</b></span></div>` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
-          <div class="tags">${pills.map((p, i) => `<span class="tag ${p.side.toLowerCase()}" style="animation-delay:${last.round === ui.animateRound ? i * 0.25 : 0}s">${esc(p.text)}</span>`).join('')}</div>
+          ${last ? initiativeRoll(m, last, animate) : ''}
+          ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span><span class="${hold(DICE_TIME + 1.2)}">Round ${last.round} → <b>${esc((last.winner === 'A' ? m.a : m.b).f.name)}</b></span></div>` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
+          <div class="tags">${pills.map((p, i) => `<span class="tag ${p.side.toLowerCase()}" style="animation-delay:${animate ? DICE_TIME + i * 0.2 : 0}s">${esc(p.text)}</span>`).join('')}</div>
           <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the math'}</button></div>
           <div class="feed" id="feed">${feed(m, ui)}</div>
         </div>

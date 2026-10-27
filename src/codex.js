@@ -39,7 +39,8 @@ const LORE = {
 const BASICS = [
   ['power', 'Power', 'Decides who wins each round. What matters is the difference (Delta): +1 gives 55%, +3 gives 70%, +5 gives 95% per round. Being out-powered also makes injuries worse.'],
   ['speed', 'Speed', 'Decides who strikes first each round (Speed + a d6 roll). The first striker gets +10% to win the round and rolls to injure before the other can hit back. Speed trains at +3 a week, and every point faster than your opponent is −4% to be injured (up to −20%).'],
-  ['rounds', 'Rounds and matches', 'A match is best of 3 rounds. Each round: strike order, then Power, then trait bonuses, then a roll for the round winner, then each fighter tries to injure the other.'],
+  ['rounds', 'Rounds and matches', 'A match is best of 3 rounds. Each round: strike order (Speed + a die), then Power, then trait bonuses, then a roll for the round winner. Then BOTH fighters try to injure each other, whoever won: the round loser is much easier to hurt (25% vs 10% at even Power, more as the gap grows), and the first striker swings first.'],
+  ['champions', 'Championships', 'A fighter becomes Champion of an arena by beating its Boss or winning 3 matches there (+1 Power, one Title per arena). Champions are too famous for lower arenas: a Champion who fights back in one earns no Prestige or Renown, loses Morale, and costs a little Favor. Rookies (under 5 Renown) are never jeered.'],
   ['deathGate', 'The Death Gate', 'A fighter with fewer than 2 injuries can never die. At 2 or more (Poisoned counts as 2), losing a round and being hit can be fatal. Throw in the towel between rounds to guarantee survival.'],
   ['towel', 'Throwing in the towel', 'Between rounds you can forfeit the match. You lose the buy-in and the match, but your fighter is guaranteed to survive.'],
   ['stress', 'Stress', `Training (+${STRESS.train}) and fighting (+${STRESS.fight}) raise it; rest (${STRESS.rest}) lowers it. At ${STRESS.overtrained}+ a fighter is overtrained: no training, and −1 Power with one ability lost in the arena.`],
@@ -69,7 +70,7 @@ function ruleText(cat, id) {
     return `${i.desc} Injury roll ${i.min}–${i.max}. Heals in ${HEAL_WEEKS[id]} Medbay week${HEAL_WEEKS[id] > 1 ? 's' : ''}.`;
   }
   if (cat === 'debuff') return BOSS_DEBUFFS[id].desc;
-  if (cat === 'perk') return `${PERKS[id].desc}${PERKS[id].reqText ? ` Requires ${PERKS[id].reqText}.` : ''}`;
+  if (cat === 'perk') return `${PERKS[id].desc}${PERKS[id].reqText ? ` Requires ${PERKS[id].reqText}.` : ''}${PERKS[id].repeatable ? ' Can be taken again: it stacks.' : ' Once only: never offered again after you take it.'}`;
   if (cat === 'gear') return `${gearText(GEAR[id])} ${GEAR[id].slot === 'weapon' ? 'Weapon' : 'Armor'}, ${GEAR[id].price} Gold.`;
   if (cat === 'building') {
     const b = BUILDINGS[id];

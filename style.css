@@ -328,3 +328,53 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 
 .tribute { margin: 8px 0; padding: 8px 10px; border-radius: 8px; border: 1px solid #6b5a2a; background: #2b2416; font-size: 13px; }
 .tribute.short { border-color: var(--blood); background: #2a1614; color: #f1b3ad; }
+
+/* Who strikes first: tumbling dice, then the reveal */
+.initiative { margin: 8px 0 10px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #15110f; text-align: center; }
+.init-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 6px; }
+.init-sides { display: flex; justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; }
+.init-side { padding: 6px 10px; border-radius: 8px; border: 1px solid transparent; }
+.init-side.a .init-name { color: var(--a); }
+.init-side.b .init-name { color: var(--b); }
+.init-name { font-family: var(--display); font-size: 14px; }
+.init-math { font-size: 14px; display: flex; align-items: center; gap: 6px; justify-content: center; }
+.vs { color: var(--muted); font-family: var(--display); }
+.die { position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; font-size: 34px; line-height: 1; color: #f4ead6; }
+.die::before { content: '⚂'; grid-area: 1 / 1; animation: dice-faces 0.42s steps(1) 3, fade-out 0s 1.3s forwards; }
+.die .face { grid-area: 1 / 1; opacity: 0; animation: fade-in 0.15s 1.3s forwards; }
+.die:not(.still) { animation: tumble 1.3s cubic-bezier(.2, .7, .3, 1); }
+.die.still::before { content: none; }
+.die.still .face { opacity: 1; animation: none; }
+.reveal { opacity: 0; animation: fade-in 0.3s 1.35s forwards; }
+.reveal.still { opacity: 1; animation: none; }
+.init-side.first { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; animation: glow-first 0.6s 1.4s both; }
+.initiative.still .init-side.first { animation: none; }
+.init-result { margin-top: 6px; font-size: 13px; color: var(--gold); }
+.init-auto { font-size: 14px; color: var(--gold); }
+@keyframes dice-faces { 0% { content: '⚂'; } 16% { content: '⚄'; } 33% { content: '⚀'; } 50% { content: '⚅'; } 66% { content: '⚁'; } 83% { content: '⚃'; } }
+@keyframes tumble { 0% { transform: translateY(-14px) rotate(-200deg) scale(0.7); } 60% { transform: translateY(2px) rotate(20deg) scale(1.1); } 80% { transform: rotate(-8deg); } 100% { transform: none; } }
+@keyframes fade-in { to { opacity: 1; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes glow-first { from { box-shadow: 0 0 0 0 var(--gold); } 50% { box-shadow: 0 0 18px 2px rgba(217, 180, 90, 0.6); } to { box-shadow: 0 0 0 1px var(--gold) inset; } }
+.late { opacity: 0; animation: fade-in 0.35s forwards; }
+
+/* After-fight report */
+.report { width: 100%; max-width: 520px; margin: 6px auto; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--panel); text-align: left; }
+.report h3 { font-size: 15px; color: var(--gold); margin-bottom: 6px; }
+.rep-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+.rep-row:last-child { border-bottom: none; }
+.rep-row.good b { color: var(--good); }
+.rep-row.bad b { color: #f1b3ad; }
+
+/* Notification pager */
+.notices { margin-bottom: 14px; }
+.notices > .banner, .notices > .tip { margin-bottom: 0; }
+.pager { display: flex; align-items: center; gap: 8px; justify-content: flex-end; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.banner.hurt { border-color: var(--blood); }
+.stacks { color: var(--gold); font-weight: 400; font-family: var(--body); }
+
+@media (prefers-reduced-motion: reduce) {
+  .die::before { content: none; }
+  .die .face, .reveal, .late { opacity: 1; animation: none; }
+  .die:not(.still), .init-side.first { animation: none; }
+}

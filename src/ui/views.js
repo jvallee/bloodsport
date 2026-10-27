@@ -6,6 +6,7 @@ import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, tributeDue, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  isChampionOf,
 } from '../run.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel,
@@ -81,8 +82,20 @@ export function summaryBanner(s) {
   if (s.crushing) bits.push('The crowd jeered the mismatch');
   if (s.bloodFaith) bits.push('Blood Faith refunded the buy-in');
   if (s.levelUp) bits.push(`⭐ House Prestige level ${s.levelUp}! Visit the Estate.`);
-  return `<div class="banner ${s.won ? 'win' : 'loss'}${s.injuries?.length ? ' hurt' : ''}"><button class="close" data-action="dismiss-summary" aria-label="Dismiss">×</button>
+  return `<div class="banner ${s.won ? 'win' : 'loss'}${s.injuries?.length ? ' hurt' : ''}"><button class="close" data-action="dismiss-summary" data-key="${s.week}-${s.tier}-${s.fighterId}" aria-label="Dismiss">×</button>
     <h2>${esc(s.name)}: ${esc(s.fighter)} ${verdict}</h2><div>${bits.map(esc).join(' · ')}</div></div>`;
+}
+
+// Several notifications share one slot; arrows page through them.
+export function noticePager(items, page = 0) {
+  if (!items.length) return '';
+  if (items.length === 1) return items[0];
+  const p = Math.min(page, items.length - 1);
+  const nav = `<div class="pager" role="navigation" aria-label="Notifications">
+    <button class="btn small" data-action="notice-page" data-page="${(p - 1 + items.length) % items.length}" aria-label="Previous">‹</button>
+    <span>${p + 1} / ${items.length} notifications</span>
+    <button class="btn small" data-action="notice-page" data-page="${(p + 1) % items.length}" aria-label="Next">›</button></div>`;
+  return `<div class="notices">${nav}${items[p]}</div>`;
 }
 
 export function tutorialCard(step, where = 'ludus') {
@@ -141,7 +154,7 @@ function weekPanel(run) {
 function perkChooser(run, f) {
   if (!f.pendingPerks.length) return '';
   const offer = f.pendingPerks[0].map((p) => `<button class="perk-opt" data-action="perk" data-id="${f.id}" data-perk="${p}" ${perkBlocker(run, f.id, p) ? 'disabled' : ''}>
-    <b>${esc(PERKS[p].name)}</b><small>${esc(PERKS[p].desc)}</small></button>`).join('');
+    <b>${esc(PERKS[p].name)}${PERKS[p].repeatable ? ' <small class="stacks">(stacks: can be taken again)</small>' : ''}${f.perks.includes(p) ? ` <small class="stacks">you have ×${f.perks.filter((x) => x === p).length}</small>` : ''}</b><small>${esc(PERKS[p].desc)}</small></button>`).join('');
   return `<div class="perk-choice"><div class="label">⭐ Level ${f.level - f.pendingPerks.length + 1}! Choose a perk:</div><div class="perk-list">${offer}</div></div>`;
 }
 
@@ -198,7 +211,9 @@ function oddsRow(run, f, tier, oddsFor) {
   const warn = [];
   if (f.stress >= STRESS.overtrained) warn.push('Overtrained');
   if (f.injuries.length) warn.push(`${f.injuries.length} injur${f.injuries.length === 1 ? 'y' : 'ies'}`);
-  if (effectivePower(f) - effectivePower(run.arenas[tier].opponent) >= ECONOMY.crushingGap && !bout.top) warn.push(`Crushing mismatch (${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale if they win)`);
+  if (!bout.top && tier !== GRAND_TIER && isChampionOf(f, tier)) warn.push(`Champion here: a win earns no Prestige or Renown, and costs ${FAVOR.championReturn} Favor and ${-MORALE.crowdJeers} Morale`);
+  else if (!bout.top && f.renown >= ECONOMY.knownRenown && effectivePower(f) - effectivePower(run.arenas[tier].opponent) >= ECONOMY.crushingGap) warn.push(`Crushing mismatch (${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale if they win)`);
+  else if (!bout.top && f.renown < ECONOMY.knownRenown) warn.push('Rookie: the crowd won\'t jeer them here');
   const scouted = matchOptions(run, f, tier).scouted;
   if (scouted) warn.push(`Scouted: opponent +${scouted} Power (they've studied ${esc(f.name)}; a month out of the top arena resets it)`);
   const tone = odds.win === 'Strong favorite' || odds.win === 'Favored' ? 'good' : odds.win === 'Even fight' ? '' : 'bad';
@@ -222,7 +237,7 @@ function arenaBlock(run, tier, oddsFor) {
     : '';
   const stakes = bout.top
     ? bout.boss ? `Win: ${tier === GRAND_TIER ? 'the career' : `a Title (+1 Power), +${FAVOR.bossWin} Favor and the next arena`}. Loss: ${bossLossFavor(tier)} Favor.` : ''
-    : `Lower arena: winning earns no Favor and Prestige is halved per tier below your top arena. A <b>crushing win</b> (your fighter has ${ECONOMY.crushingGap}+ more Power than the opponent, gear included) makes the crowd jeer: ${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale, no Renown.`;
+    : `Lower arena: winning earns no Favor and Prestige is halved per tier below your top arena. Rookies (under ${ECONOMY.knownRenown} Renown) fight here freely. A <b>known fighter</b> who wins with ${ECONOMY.crushingGap}+ more Power (gear included) is jeered: ${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale, no Renown. A <b>Champion of this arena</b> gets no Prestige or Renown and costs ${FAVOR.championReturn} Favor. Win ${ECONOMY.titleWins} times here (or beat the Boss) to become its Champion.`;
   const rival = arena.opponent.rival ? '<div class="warn">⚔ A rival returns: this Boss beat you before, and has grown stronger.</div>' : '';
   const rows = state === 'open' || !run.bouts ? run.roster.map((f) => oddsRow(run, f, tier, oddsFor)).join('') : '';
   const choice = bout.top && run.boutPending
@@ -346,7 +361,7 @@ export function helpModal() {
     <h2>How to play</h2>
     <ol>
       <li><b>Recruit</b> gladiators in the Market.</li>
-      <li><b>Give each a weekly job</b>: train Power or Speed, rest, or heal in the Medbay. Training builds Stress; at 50+ a fighter is overtrained.</li>
+      <li><b>Give each a weekly job</b>: train Power or Speed, rest, or heal in the Medbay. Training builds Stress; at 50+ Stress a fighter is overtrained.</li>
       <li><b>End the week.</b> The last week of each month is a tournament. Every arena you've reached holds a bout; send one fighter to each, after checking the odds.</li>
       <li><b>Fight</b> best-of-3 rounds. Between rounds you can throw in the towel to save a badly hurt fighter.</li>
       <li><b>Grow your fighters.</b> Matches give XP; each level lets you pick a perk. Wins bring Renown, and famous fighters want better rooms: keep their Morale up with decor, Quarters and entertainment.</li>

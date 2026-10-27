@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
 import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk } from '../src/run.js';
-import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard } from '../src/ui/views.js';
+import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager } from '../src/ui/views.js';
 import { TRIBUTE } from '../src/data.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
 import { INTRO, STEPS, FIGHT_STEPS } from '../src/tutorial.js';
@@ -19,7 +19,8 @@ function checkScreens(run) {
   discover(codex, run);
   const codexHtml = codexTab(codex, ENTRIES, SECTIONS, codex.fresh, progress(codex), isUnlocked, hasLore);
   for (const html of [topbar(run, 'ludus', 3), ludusTab(run, fakeOdds), estateTab(run), marketTab(run), helpModal(), codexHtml]) {
-    assert.doesNotMatch(html, BAD, html.match(new RegExp(`.{0,80}(${BAD.source}).{0,40}`))?.[0]);
+    // Build the failure snippet only on failure: the snippet regex is slow on large pages.
+    if (BAD.test(html)) assert.fail(html.slice(Math.max(0, html.search(BAD) - 80), html.search(BAD) + 40));
   }
   if (run.status !== 'active') assert.doesNotMatch(endBanner(run), BAD);
 }
@@ -89,4 +90,36 @@ test('the week panel warns about tribute in the last month, in red when you are 
   assert.match(html, /class="tribute short"/);
   run.week = 10;
   assert.doesNotMatch(ludusTab(run, fakeOdds), /class="tribute/);
+});
+
+test('the notification pager shows one item at a time with page controls', () => {
+  assert.equal(noticePager([]), '');
+  assert.equal(noticePager(['<b>a</b>']), '<b>a</b>');
+  const html = noticePager(['<b>a</b>', '<b>b</b>', '<b>c</b>'], 1);
+  assert.match(html, /2 \/ 3 notifications/);
+  assert.match(html, /<b>b<\/b>/);
+  assert.doesNotMatch(html, /<b>a<\/b>|<b>c<\/b>/);
+  assert.match(html, /data-page="0"/);
+  assert.match(html, /data-page="2"/);
+});
+
+test('each round shows who strikes first with dice, and the end of a match shows a full report', () => {
+  const run = createRun(8);
+  const f = recruit(run, run.market[0].id);
+  for (let i = 0; i < 6 && !run.bouts; i++) advanceWeek(run);
+  const bout = boutFor(run, run.topTier);
+  const m = startMatch(run, f.id);
+  m.bout = bout;
+  playRound(m);
+  const round = fightView(m, { ...ui, animateRound: 1 }, bout);
+  assert.match(round, /Who strikes first/);
+  if (m.rounds[0].initiative.rolls) assert.match(round, /class="die"/);
+  assert.doesNotMatch(round, BAD);
+  autoPlay(m);
+  m.summary = finishMatch(run, m);
+  const end = fightView(m, ui, bout);
+  assert.match(end, /After the fight/);
+  for (const label of ['Gold', 'Prestige']) assert.match(end, new RegExp(`<span>${label}</span>`));
+  if (!m.summary.died) for (const label of ['XP', 'Renown', 'Morale']) assert.match(end, new RegExp(`<span>${label}</span>`));
+  assert.doesNotMatch(end, BAD);
 });

@@ -49,7 +49,7 @@ export const STEPS = [
   { id: 'levelup', when: (r) => r.roster.some((f) => f.pendingPerks.length), title: 'Level up!',
     body: 'Every match earns XP. When a fighter levels up, pick <b>one of three perks</b> on their card. Some perks need both Power and Speed, which is a reason to build balanced fighters.' },
   { id: 'arenas', when: (r) => Object.keys(r.arenas).length > 1, title: 'More arenas, more fights',
-    body: 'Your old arenas still hold bouts every tournament week. Send a <b>different fighter to each</b> to earn Gold, XP and Renown. Only your <b>top arena</b> can win you Favor or Titles. Opponents <b>scout</b> a fighter who fights in your top arena month after month (+1 Power after a month in a row there), so rotate your stars.' },
+    body: 'Your old arenas still hold bouts every tournament week. Send a <b>different fighter to each</b> to earn Gold, XP and Renown. Only your <b>top arena</b> can win you Favor. Win 3 times in an arena (or beat its Boss) to become its <b>Champion</b>; Champions are booed if they go back, but rookies fight there freely. Opponents <b>scout</b> a fighter who fights in your top arena month after month (+1 Power after a month in a row there), so rotate your stars.' },
   { id: 'morale', when: (r) => r.roster.some((f) => f.renown >= 4 || f.morale < 45), title: 'Keep your stars happy',
     body: 'Winning makes fighters famous (<b>Renown</b>), and famous fighters expect better rooms. Their <b>Morale</b> drifts toward comfort minus expectations: place decor, upgrade Quarters, build an Entertainment Room. Inspired fighters fight better; restless ones won\'t train.' },
   { id: 'estate', when: (r) => r.prestigeLevel >= 2, title: 'Your house has grown',

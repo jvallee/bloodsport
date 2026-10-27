@@ -105,6 +105,8 @@ export const ECONOMY = {
   lowerArenaPrestige: 0.5, // Prestige from a win shrinks by half for each tier below your top arena
   crushingGap: 3, // a win with this much more Power than the opponent is a "crushing" win
   lootChance: 0.35, // chance to claim a beaten opponent's gear (Bosses always drop theirs)
+  titleWins: 3, // wins in an arena that make a fighter its Champion (beating its Boss does too)
+  knownRenown: 5, // fighters below this Renown (rookies) are never jeered for mismatches
   scoutedMax: 1, // opponents gain +1 Power per consecutive top-arena month a fighter has fought, up to this (swept: 2+ is too punishing)
 };
 
@@ -112,7 +114,7 @@ export const ECONOMY = {
 export const FAVOR = {
   start: 50, max: 100, warning: 25,
   bossWin: 15, upsetWin: 5, spectacleWin: 5,
-  bossLoss: [-15, -20, -25, -30], forfeitExtra: -5, topTowel: -5, crushingWin: -2, unpaidTribute: -25,
+  bossLoss: [-15, -20, -25, -30], forfeitExtra: -5, topTowel: -5, crushingWin: -2, championReturn: -3, unpaidTribute: -25,
 };
 
 // Tribute is due at the start of each winter: perYear × the year number. Warning a month ahead.

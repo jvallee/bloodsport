@@ -5,11 +5,11 @@ import { playRound, throwTowel, mortalDanger, canThrowTowel } from './fight.js';
 import {
   createRun, boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, matchOptions, buildRoom,
   assignDecor, removeDecor, buyGear, equip, unequip,
-  startMatch, finishMatch, skipBout, forfeitBout, serialize, deserialize,
+  startMatch, finishMatch, skipBout, forfeitBout, serialize, deserialize, recordMatchProgress,
 } from './run.js';
 import { upgrade } from './ludus.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager } from './ui/views.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
 import { fightView } from './ui/fightView.js';
@@ -22,7 +22,8 @@ const CODEX_KEY = 'bloodsport.codex';
 
 let run = null;
 let match = null;
-let lastSummary = null;
+let summaries = []; // this week's match results, newest last
+let noticePage = 0;
 let tab = 'ludus';
 let showHelp = false;
 let autoTimer = null;
@@ -82,8 +83,23 @@ function render() {
   else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore);
   else body = ludusTab(run, oddsFor);
   const modal = introPage !== null ? introModal(introPage, INTRO) : showHelp ? helpModal() : '';
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run) : ''}${summaryBanner(lastSummary)}${tutorialCard(tutorialStep())}${body}</main>${modal}`;
+  // Notifications: the tutorial step first, then this week's results (newest first), one page at a time.
+  const notices = [tutorialCard(tutorialStep()), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
+  noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run) : ''}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   renderFight();
+}
+
+// A finished match is settled at once, so the fight screen can show the full report.
+function afterRound() {
+  if (!match) return;
+  recordMatchProgress(run, match);
+  if (match.over && !match.summary) {
+    if (discoverMatch(codex, match).length) saveCodex();
+    match.summary = finishMatch(run, match);
+    summaries.push(match.summary);
+    noticePage = 0;
+  }
 }
 
 function renderFight() {
@@ -93,7 +109,7 @@ function renderFight() {
     return;
   }
   fightEl.hidden = false;
-  fightEl.innerHTML = fightView(match, ui, boutFor(run, run.matchInfo.tier), tutorialCard(fightTutorial(), 'fight'));
+  fightEl.innerHTML = fightView(match, ui, match.bout, tutorialCard(fightTutorial(), 'fight'));
   const feed = document.getElementById('feed');
   if (feed) feed.scrollTop = feed.scrollHeight;
 }
@@ -106,10 +122,11 @@ function scheduleAuto() {
   autoTimer = setTimeout(() => {
     if (!match || match.over) return;
     ui.animateRound = playRound(match).round;
+    afterRound();
     save();
-    renderFight();
+    render();
     scheduleAuto();
-  }, match.round === 0 ? 300 : 2600);
+  }, match.round === 0 ? 300 : 3600);
 }
 
 // ---------- Careers ----------
@@ -117,7 +134,7 @@ function scheduleAuto() {
 function newRun(seed) {
   run = createRun(seed ?? undefined);
   match = null;
-  lastSummary = null;
+  summaries = [];
   tab = 'market';
   oddsCache.clear();
   if (!prefs.introSeen) introPage = 0;
@@ -171,7 +188,10 @@ const actions = {
   'intro-back': () => { introPage = Math.max(0, introPage - 1); },
   'intro-close': () => { introPage = null; prefs.introSeen = true; savePrefs(); },
   'intro-replay': () => { introPage = 0; showHelp = false; },
-  'dismiss-summary': () => { lastSummary = null; },
+  'dismiss-summary': (d) => {
+    summaries = summaries.filter((s) => `${s.week}-${s.tier}-${s.fighterId}` !== d.key);
+  },
+  'notice-page': (d) => { noticePage = Number(d.page); },
   recruit: (d) => recruit(run, d.id),
   release: (d) => { if (confirm('Release this fighter for good?')) release(run, d.id); },
   job: (d) => setJob(run, d.id, d.job),
@@ -185,16 +205,25 @@ const actions = {
   surgeon: (d) => surgeon(run, d.id, Number(d.index)),
   build: (d) => buildRoom(run, d.type),
   upgrade: (d) => upgrade(run, d.id),
-  advance: () => { lastSummary = null; advanceWeek(run); },
-  'advance-tournament': () => { lastSummary = null; advanceToTournament(run); },
+  advance: () => { summaries = []; advanceWeek(run); },
+  'advance-tournament': () => { summaries = []; advanceToTournament(run); },
   skip: () => skipBout(run),
-  forfeit: () => { if (confirm('Forfeit the Boss? You get an Imperial Strike.')) forfeitBout(run); },
+  forfeit: () => { if (confirm('Forfeit the Boss? It costs more Imperial Favor than losing the fight.')) forfeitBout(run); },
   fight: (d) => {
-    match = startMatch(run, d.id, Number(d.tier) || run.topTier);
+    const tier = Number(d.tier) || run.topTier;
+    const bout = boutFor(run, tier); // snapshot before the match changes the arena
+    match = startMatch(run, d.id, tier);
+    match.bout = bout;
     ui.animateRound = 0;
   },
-  'next-round': () => { ui.animateRound = playRound(match).round; },
-  towel: () => throwTowel(match),
+  'next-round': () => {
+    ui.animateRound = playRound(match).round;
+    afterRound();
+  },
+  towel: () => {
+    throwTowel(match);
+    afterRound();
+  },
   'auto-play': () => { ui.auto = !ui.auto; },
   'toggle-math': () => {
     ui.showMath = !ui.showMath;
@@ -202,8 +231,7 @@ const actions = {
     savePrefs();
   },
   'leave-fight': () => {
-    if (discoverMatch(codex, match).length) saveCodex();
-    lastSummary = finishMatch(run, match);
+    afterRound(); // settles the match if it somehow isn't yet
     match = null;
     tab = 'ludus';
     window.scrollTo(0, 0);
