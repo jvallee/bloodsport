@@ -159,6 +159,6 @@ export function fightView(m, ui, bout, tutorial = '') {
         <div><div class="side-label b">Opponent</div>${fighterCard(m.b.f, { combatant: m.b, compact: true, stress: false })}</div>
       </div>
       ${tutorial}
-      <div class="controls">${controls(m, ui, bout)}</div>
+      <div class="controls${hold(DICE_TIME + 1.4)}">${controls(m, ui, bout)}</div>
     </div>`;
 }
