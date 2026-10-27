@@ -1,7 +1,7 @@
 // The Codex: an unlockable glossary that persists across careers. Pure.
 // Rules entries unlock the first time you see something; lore unlocks when you defeat it.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE, FAVOR, BLOODIED, KILL_MARKS, TACTICS, HUMORS, FESTIVALS } from './data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE, FAVOR, BLOODIED, KILL_MARKS, TACTICS, HUMORS, FESTIVALS, SCARS, AUGMENTS } from './data.js';
 import { oracleLevel } from './ludus.js';
 import { boutFor, unlockedTiers } from './run.js';
 
@@ -51,6 +51,9 @@ const BASICS = [
   ['events', 'Weekly events', 'About one week in three, something happens in or around the Ludus: a brawl, a senator\'s offer, a fever, a wandering trainer. Each card offers a choice with visible stakes; some are a gamble. The week can\'t end until you decide.'],
   ['festivals', "Gods' Days", `Some months end in a festival tournament that favours a style or pays out more. ${Object.entries(FESTIVALS).map(([month, f]) => `${f.name} (${f.god}, end of ${month}): ${f.desc}`).join(' ')}`],
   ['houses', 'Rival houses', 'Three rival houses climb the same arenas, and every opponent fights for one of them. Glory ranks the houses: a win is worth its arena tier (three times that for a Boss). Kill a house\'s fighter and they feud with you: +1 Power against you for 3 months. Lose a fighter to them and your house fights for vengeance: +5% win chance against them for 3 months. The Grand Tournament\'s champion fights for the leading rival.'],
+  ['scars', 'Scars', `Surviving a severe wound (Concussed or worse) can leave a lasting scar against the style of fighter who caused it, melee or ranged. ${Object.values(SCARS).map((x) => `${x.name}: ${x.desc}`).join(' ')} Choleric fighters turn Enraged; Melancholic ones Afeared.`],
+  ['cyborg', 'Cyborg surgery', `With a Medbay level 2+, a Maimed limb or a Blinded eye can be replaced for good. ${Object.values(AUGMENTS).map((x) => `${x.name}: ${x.desc}`).join(' ')} It costs Gold and 2 Renown: the crowd distrusts machines.`],
+  ['retire', 'Retirement', 'A veteran (level 4+ or holding a Title) can retire to the Hall of Champions: the house gains Prestige and the roster takes heart. The Hall remembers them across careers.'],
   ['towel', 'Capitulating', 'Between rounds you can forfeit the match. You lose the buy-in and the match, but your fighter is guaranteed to survive.'],
   ['stress', 'Stress', `Training (+${STRESS.train}) and fighting (+${STRESS.fight}) raise it; rest (${STRESS.rest}) lowers it. At ${STRESS.overtrained}+ a fighter is overtrained: no training, and −1 Power with one ability lost in the arena.`],
   ['armor', 'Armor', 'Alloyed Skin and Ego Armour lower your chance to be injured. Gun (rounds 1 and 3) and Flail ignore armor, but not Speed evasion.'],

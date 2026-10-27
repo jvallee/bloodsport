@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER_WIN, HUMORS, FESTIVAL_BY_ID } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER_WIN, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS } from './data.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -75,11 +75,17 @@ export function suggestTactic(m) {
   return beats(favourite);
 }
 
+// Scars that apply against this opponent's style, and Battle-Hardened (always).
+const styleOf = (c) => (meleeOnly(c) ? 'melee' : 'ranged');
+function activeScars(c, opp) {
+  return (c.f.scars ?? []).filter((sc) => !sc.vs || sc.vs === styleOf(opp)).map((sc) => ({ ...SCARS[sc.id], label: sc.vs ? `${SCARS[sc.id].name} (${sc.vs})` : SCARS[sc.id].name }));
+}
+
 // Iron Rules: decor gives no bonus.
 const decorOf = (c, item) => (c.arena === 'ironRules' ? 0 : c.f.decor[item]);
 
 const RANGED_WEAPONS = ['bow', 'gun', 'spear'];
-const meleeOnly = (c) => c.f.cls !== 'sagittarius' && !(c.f.cls === 'fighter' && RANGED_WEAPONS.includes(c.f.weapon));
+export const meleeOnly = (c) => c.f.cls !== 'sagittarius' && !(c.f.cls === 'fighter' && RANGED_WEAPONS.includes(c.f.weapon));
 
 // Step 1 — Speed and strike order.
 export function computeSpeed(c, round) {
@@ -139,6 +145,8 @@ export function computePower(c, opp, round, raw = false) {
   if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
   if (humorOf(c)?.power?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).power[round] });
   if (c.festival?.ranged && !meleeOnly(c)) mods.push({ source: c.festival.name, value: c.festival.ranged });
+  for (const sc of activeScars(c, opp)) if (sc.power) mods.push({ source: sc.label, value: sc.power });
+  for (const a of f.augments ?? []) if (AUGMENTS[a]?.power) mods.push({ source: AUGMENTS[a].name, value: AUGMENTS[a].power });
   if (!raw && kindActive(c, 'underdog', round) && computePower(opp, c, round, true).total >= f.power + sum(mods)) mods.push({ source: 'Underdog', value: 2 });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
@@ -202,6 +210,10 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (t?.self) self.push({ source: t.name, value: t.self });
   if (c.stance && COUNTERS[c.stance] === opp.stance) win.push({ source: `Counter (${t.name} beats ${TACTICS[opp.stance].name})`, value: COUNTER_WIN });
   if (c.vengeance) win.push({ source: 'Vengeance', value: 5000 });
+  for (const sc of activeScars(c, opp)) {
+    if (sc.enemy) enemy.push({ source: sc.label, value: sc.enemy });
+    if (sc.self) self.push({ source: sc.label, value: sc.self });
+  }
   if (c.festival?.tactic?.[c.stance]) win.push({ source: c.festival.name, value: c.festival.tactic[c.stance] });
   const h = humorOf(c);
   if (h?.win?.[round]) win.push({ source: h.name, value: h.win[round] });
@@ -245,6 +257,11 @@ function inflictInjury(m, X, Y, r) {
   if (result.tag === 'death') {
     Y.f.alive = false;
     return result;
+  }
+  // A cyborg eye can't be Blinded: the blow lands as a Flesh Wound.
+  if (result.tag === 'blinded' && Y.f.augments?.includes('eye')) {
+    Object.assign(result, { tag: 'fleshWound', name: 'Flesh Wound', deflected: 'Cyborg Eye' });
+    sev.injury = INJURY_BY_TAG.fleshWound;
   }
   let weight = sev.injury.weight;
   if (Y.arena === 'firstInjuryDouble' && !Y.firstInjuryTaken) {

@@ -459,3 +459,11 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .legacy .achievements li.got b { color: var(--gold); }
 .modal.setup .opt { display: block; padding: 6px 0; border-top: 1px solid var(--line); }
 .modal.setup .opt small { color: var(--muted); }
+
+/* Fighter stories (phase C) */
+.chip.scar { border-color: #8a5a4a; }
+.chip.augment { border-color: #6fd3ff; color: #bfe9ff; }
+.story { list-style: none; padding: 0; margin: 6px 0; font-size: 13px; }
+.story li { padding: 2px 0; }
+.hall { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 10px; }
+.hall .legend { display: flex; gap: 8px; align-items: center; }

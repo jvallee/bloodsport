@@ -7,7 +7,7 @@ import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { estimateOdds } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice } from './ui/views.js';
-import { loadLegacy, checkAchievements, recordCareer, unlockedPatrons, unlockedClasses, decreesUnlocked } from './legacy.js';
+import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
@@ -93,7 +93,7 @@ function render() {
     achieved.push(...fresh);
     noticePage = 0;
   }
-  if (fresh.length + (recordCareer(legacy, run) ? 1 : 0)) saveLegacy();
+  if (fresh.length + (recordCareer(legacy, run) ? 1 : 0) + recordLegends(legacy, run).length) saveLegacy();
   let body;
   if (tab === 'estate') body = estateTab(run);
   else if (tab === 'market') body = marketTab(run);
@@ -249,6 +249,7 @@ const actions = {
 // Game actions: the page's extras around each one (confirmations, animation, tabs).
 const before = {
   release: () => confirm('Release this fighter for good?'),
+  retire: () => confirm('Retire this fighter to the Hall of Champions? They leave your roster for good.'),
   forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favor than losing the fight.'),
   advance: () => { summaries = []; achieved = []; return true; },
   'advance-tournament': () => { summaries = []; achieved = []; return true; },

@@ -6,15 +6,15 @@
 
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
-import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS } from '../src/data.js';
+import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel } from '../src/events.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic } from '../src/fight.js';
+import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, recruitBlocker, fightBlocker, GRAND_TIER,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, recruitBlocker, fightBlocker, GRAND_TIER,
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
@@ -52,6 +52,8 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
   pay-tribute                   pay this year's tribute early
   houses                        the rival houses' standings
+  story <id> | retire <id>      a fighter's chronicle; retire a veteran (level 4+ or a Title) to the Hall of Champions
+  augment <id> <injury#>        cyborg surgery on a Maimed or Blinded wound (Medbay level 2+)
   choose <n>                    decide this week's event (the week can't end until you do)
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
   next [tactic] | capitulate    during a fight: play the next round with a tactic (steady, press, guard, feint; default: the suggestion), or capitulate ("towel" also works)
@@ -121,7 +123,9 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const lines = [
       `[${f.id}] ${identity(f)} (XP ${f.xp}${nextXp ? `/${nextXp}` : ', max level'})`,
       `     Power ${f.power} · Speed ${f.speed} · Stress ${f.stress}${f.stress >= STRESS.overtrained ? ' OVERTRAINED' : ''} · Morale ${f.morale} ${moraleState(f).label} (heading to ${target}) · Renown ${f.renown}`,
-      `     Job: ${f.job} · trained ${f.trained}/${trainCap(run)} · Injuries: ${injuriesText(f)} · Death Gate ${Math.min(gate, 2)}/2${gate >= 2 ? ' OPEN' : ''}`,
+      `     Job: ${f.job} · trained ${f.trained}/${trainCap(run)} · Injuries: ${injuriesText(f)} · Death Gate ${Math.min(gate, deathGateAt(f))}/${deathGateAt(f)}${gate >= deathGateAt(f) ? ' OPEN' : ''}`,
+      ...(f.humor ? [`     Humor: ${HUMORS[f.humor].name} (${HUMORS[f.humor].desc})`] : []),
+      ...((f.scars?.length || f.augments?.length) ? [`     Scars: ${(f.scars ?? []).map((sc) => `${SCARS[sc.id].name}${sc.vs ? ` vs ${sc.vs}` : ''}`).join(', ') || 'none'} · Augments: ${(f.augments ?? []).map((k) => AUGMENTS[k].name).join(', ') || 'none'}`] : []),
       `     ${abilities(f)}`,
       ...extras(f).map((x) => `     ${x}`),
     ];
@@ -397,6 +401,22 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       need([id, perk].filter(Boolean), 2, 'perk <id> <perk>');
       choosePerk(run, id, perk);
       return run.log.at(-1).text;
+    },
+    story: ([id]) => {
+      need([id].filter(Boolean), 1, 'story <id>');
+      const f = run.roster.find((x) => x.id === id) ?? run.fallen.find((x) => x.id === id);
+      if (!f) throw new Error('No such fighter.');
+      return [`-- The story of ${f.name} --`, ...(f.story ?? []).map((e) => `  ${formatDate(e.week)}: ${e.text}`)].join('\n');
+    },
+    augment: ([id, i = '0']) => {
+      need([id].filter(Boolean), 1, 'augment <id> <injury#>');
+      augment(run, id, Number(i));
+      return `${run.log.at(-1).text} Gold ${run.gold}.`;
+    },
+    retire: ([id]) => {
+      need([id].filter(Boolean), 1, 'retire <id>');
+      const legend = retire(run, id);
+      return `${legend.name} retires to the Hall of Champions. ${run.log.at(-1).text}`;
     },
     surgeon: ([id, i = '0']) => {
       need([id].filter(Boolean), 1, 'surgeon <id> <injury#>');

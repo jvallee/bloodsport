@@ -1,12 +1,12 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES } from '../data.js';
+import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, eventNames, eventChoiceBlocker, standings, houseOf, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -129,8 +129,10 @@ export function legacyPanel(legacy) {
     return `<li class="${got ? 'got' : ''}"><b>${got ? '★' : '☆'} ${esc(a.name)}</b>: ${esc(a.desc)} <small>${esc(unlockText(a))}</small></li>`;
   }).join('');
   const past = legacy.past.map((p) => `<li>${p.won ? '👑' : '⚰'} Seed ${p.seed}: score <b>${p.score}</b>, ${p.weeks} weeks${p.endReason ? ` · ${esc(p.endReason)}` : ''}</li>`).join('');
+  const hall = (legacy.hall ?? []).map((l) => `<div class="legend" title="${esc((l.story ?? []).map((e) => e.text).join(' '))}">${portrait(l, 48)}<div><b>${esc(l.name)}</b><br><small>${l.wins} win${l.wins === 1 ? '' : 's'} · ${l.kills} kill${l.kills === 1 ? '' : 's'}${l.titles?.length ? ` · ${esc(l.titles.join(', '))}` : ''}</small></div></div>`).join('');
   return `<section class="panel legacy"><h2>Legacy <small>${legacy.achievements.length}/${ACHIEVEMENTS.length} · ${legacy.careers} career${legacy.careers === 1 ? '' : 's'} · best score ${legacy.best}</small></h2>
     <p class="sub">Achievements carry over between careers and unlock patrons, new classes and the Emperor's Decrees.</p>
+ ${hall ? `<h3 class="mini">Hall of Champions</h3><div class="hall">${hall}</div>` : ''}
     <ul class="achievements">${rows}</ul>${past ? `<h3 class="mini">Past careers</h3><ul class="past">${past}</ul>` : ''}</section>`;
 }
 
@@ -150,6 +152,8 @@ export function summaryBanner(s) {
   if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favor, Renown, XP and Morale)`);
   if (s.kill) bits.push(`💀 A kill${s.mark ? `: ${s.fighter} earns the mark "${s.mark}"` : ''}`);
   if (s.feud) bits.push(`⚔ ${s.feud}`);
+  if (s.scar) bits.push(`🩹 ${s.fighter} is scarred: ${s.scar}`);
+  if (s.eulogy) bits.push(`⚰ ${s.eulogy}`);
   if (s.loot) bits.push(`⚒ Claimed a ${GEAR[s.loot].name}`);
   if (s.injuries?.length) bits.push(`🩸 ${s.fighter} is now ${s.injuries.join(' and ')}: send them to the Medbay`);
   if (s.crushing) bits.push('The crowd jeered the mismatch');
@@ -285,13 +289,17 @@ function rosterPanel(run) {
       return `<button class="seg${f.job === job ? ' on' : ''}" data-action="job" data-id="${f.id}" data-job="${job}" ${reason ? `disabled title="${esc(reason)}"` : `title="${esc(JOB_HELP[job])}"`}>${JOB_LABELS[job]}</button>`;
     }).join('');
     const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(inj.tag === 'fleshWound' ? 'Flesh Wound' : inj.tag)} (${surgeonPrice(run)}g)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
+    const augments = f.injuries.map((inj, i) => (['maimed', 'blinded'].includes(inj.tag) ? buttonWhy(`Replace the ${inj.tag === 'maimed' ? 'Maimed limb' : 'Blinded eye'}: ${AUGMENTS[inj.tag === 'maimed' ? 'arm' : 'eye'].name}`, 'augment', { id: f.id, index: i }, augmentBlocker(run, f.id, i)) : '')).join('');
     const actions = `${perkChooser(run, f)}<div class="actions">
       <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week</small></div>
       <div class="segs">${jobs}</div>
       ${f.job === 'rest' && jobBlocker(run, f.id, 'trainPower') && jobBlocker(run, f.id, 'trainSpeed') ? `<div class="why-not">Can't train this week: ${esc(jobBlocker(run, f.id, 'trainPower'))}</div>` : ''}
       <details class="more" data-key="room-${f.id}"><summary>Room, decor &amp; gear${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f)}</details>
-      <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, release</summary>
+      ${f.story?.length ? `<details class="more" data-key="story-${f.id}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
+      <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, cyborg surgery, retire, release</summary>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
+        ${augments ? `<div class="label">Cyborg surgery: replace the wound for good (${augmentPrice(run)} Gold, −2 Renown)</div><div class="row">${augments}</div>` : ''}
+        <div class="row">${buttonWhy(`Retire to the Hall of Champions (+${RETIRE.prestige} Prestige, roster +${RETIRE.morale} Morale)`, 'retire', { id: f.id }, retireBlocker(run, f.id), 'btn small')}</div>
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>
     </div>`;

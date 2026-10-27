@@ -116,6 +116,26 @@ export const DECREES = {
   harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favor.', score: 20 },
 };
 
+// Fighter stories (roadmap v3, phase C). Scars come from surviving severe wounds (`vs`: 'melee' or 'ranged', the style
+// of the opponent who caused it); Battle-Hardened from a Bloodied Victory. Values: power, enemy (to injure), self (to be injured).
+export const SCARS = {
+  afeared: { name: 'Afeared', desc: 'Against this style: −1 Power and −10% chance to injure, but fights warily (−10% chance to be injured).', power: -1, enemy: -10000, self: -10000 },
+  enraged: { name: 'Enraged', desc: 'Against this style: +1 Power and +15% chance to injure, but reckless (+15% chance to be injured).', power: 1, enemy: 15000, self: 15000 },
+  hardened: { name: 'Battle-Hardened', desc: 'Won bloodied and lived: −5% chance to be injured.', self: -5000 },
+};
+export const SCAR_CHANCE = 0.5; // chance a survived severe wound (Concussed or worse) leaves a scar
+export const SEVERE = ['concussed', 'poisoned', 'maimed', 'senseless', 'blinded'];
+
+// Cyborg surgery (Medbay Lv 2+): replace a Maimed limb or Blinded eye. The crowd distrusts machines.
+export const AUGMENTS = {
+  arm: { name: 'Cyborg Arm', from: 'maimed', desc: '+1 Power. Replaces a Maimed limb.', power: 1 },
+  eye: { name: 'Cyborg Eye', from: 'blinded', desc: '+1 Power, and can never be Blinded again. Replaces a Blinded eye.', power: 1 },
+};
+export const SURGERY = { cost: 15, perTier: 5, renown: -2, medbay: 2 };
+
+// Retiring a veteran (level 4+ or a Title) to the Hall of Champions.
+export const RETIRE = { level: 4, prestige: 5, morale: 10 };
+
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
 export const KILL_MARKS = [
   { id: 'dreaded', at: 3, name: 'Dreaded', desc: '+5% win chance: opponents fear a proven killer.' },

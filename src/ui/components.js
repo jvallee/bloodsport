@@ -1,6 +1,6 @@
 // Shared UI pieces: escaping, buttons, icons, the fighter card. Returns HTML strings.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS } from '../data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS } from '../data.js';
 
 const HUMOR_ICON = { choleric: '🔥', sanguine: '💨', melancholic: '🪨', phlegmatic: '💧' };
 import { effectiveInjuries, mortalDanger, deathGateAt, killMarks } from '../fight.js';
@@ -61,6 +61,8 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
   const decor = Object.entries(f.decor).filter(([, n]) => n > 0)
     .map(([k, n]) => `<span class="chip decor" title="${esc(DECOR[k].effect)}">${DECOR[k].name} ×${n}</span>`).join('');
   const titles = (f.titles ?? []).map((t) => `<span class="chip title" title="+1 Power">🏆 ${esc(t)}</span>`).join('');
+  const scars = (f.scars ?? []).map((sc) => `<span class="chip scar" title="${esc(SCARS[sc.id].desc)}">🩹 ${esc(SCARS[sc.id].name)}${sc.vs ? ` (${sc.vs})` : ''}</span>`).join('');
+  const augs = (f.augments ?? []).map((k) => `<span class="chip augment" title="${esc(AUGMENTS[k].desc)}">⚙ ${esc(AUGMENTS[k].name)}</span>`).join('');
   const perks = (f.perks ?? []).map((p) => `<span class="chip perk" title="${esc(PERKS[p].desc)}">⭐ ${esc(PERKS[p].name)}</span>`).join('');
   const gear = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => `<span class="chip gear" title="${esc(gearSummary(GEAR[k]))}">⚒ ${esc(GEAR[k].name)}</span>`).join('');
   const nextXp = XP.levels[(f.level ?? 1) - 1];
@@ -82,7 +84,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
         ${trait ? `<span class="chip trait${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
         ${f.cls ? `<span class="chip ability${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
         ${f.humor ? `<span class="chip humor" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
-        ${titles}${marks}${perks}${gear}${kills}
+        ${titles}${marks}${scars}${augs}${perks}${gear}${kills}
       </div>
       ${compact ? '' : `<div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div>`}
       ${f.notice ? `<div class="notice">⚠ ${esc(f.notice)}</div>` : ''}

@@ -7,8 +7,9 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE,
 } from './data.js';
-import { createMatch, kindActive, effectiveInjuries, killMarks } from './fight.js';
+import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly } from './fight.js';
 import { Refused } from './errors.js';
 import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, choiceLabel } from './events.js';
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament } from './calendar.js';
@@ -310,8 +311,14 @@ function applyPatron(run) {
     if (p === 'veteran') Object.assign(f, { level: 3, xp: XP.levels[1], perks: ['thickSkin', 'killer'], speed: f.speed + 3, renown: 4 });
     else Object.assign(f, { renown: 5, origin: pick(rng, run.houses).name });
     run.roster.push(f);
+    chronicle(run, f, p === 'veteran' ? 'A veteran sent by your patron.' : `Defected from ${f.origin}.`);
   }
   log(run, `Your patron: ${PATRONS[p].name}. ${PATRONS[p].desc}`, 'event');
+}
+
+// A fighter's chronicle: the moments that make their story (shown on their card, read at their funeral).
+function chronicle(run, f, text) {
+  f.story = [...(f.story ?? []), { week: run.week, text }].slice(-12);
 }
 
 // ---------- Shared checks ----------
@@ -365,6 +372,7 @@ export function recruit(run, id) {
   }
   delete fighter.price;
   run.roster.push(fighter);
+  chronicle(run, fighter, `Joined the Ludus${fighter.origin ? ` (${fighter.origin})` : ''}.`);
   log(run, `${fighter.name} joins the Ludus.`);
   return fighter;
 }
@@ -869,6 +877,60 @@ export function surgeon(run, id, index) {
   if (f.job === 'medbay' && !f.injuries.length) f.job = 'rest';
 }
 
+// Cyborg surgery: replace a Maimed limb or Blinded eye with an augment (Medbay Lv 2+).
+export const augmentPrice = (run) => SURGERY.cost + SURGERY.perTier * (Math.min(run.topTier, 4) - 1);
+const augmentFor = (tag) => Object.keys(AUGMENTS).find((k) => AUGMENTS[k].from === tag);
+
+export function augmentBlocker(run, id, index) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  const inj = f.injuries[index];
+  if (!inj || !augmentFor(inj.tag)) return 'Only a Maimed or Blinded wound can be replaced.';
+  if (maxLevel(run, 'medbay') < SURGERY.medbay) return `Cyborg surgery needs a Medbay level ${SURGERY.medbay}.`;
+  if (f.augments?.includes(augmentFor(inj.tag))) return `${f.name} already has a ${AUGMENTS[augmentFor(inj.tag)].name}.`;
+  if (run.gold < augmentPrice(run)) return `Needs ${augmentPrice(run)} Gold.`;
+  return null;
+}
+
+export function augment(run, id, index) {
+  assertOk(augmentBlocker(run, id, index));
+  const f = findFighter(run, id);
+  const [inj] = f.injuries.splice(index, 1);
+  const key = augmentFor(inj.tag);
+  run.gold -= augmentPrice(run);
+  f.augments = [...(f.augments ?? []), key];
+  f.renown = Math.max(0, f.renown + SURGERY.renown);
+  if (f.job === 'medbay' && !f.injuries.length) f.job = 'rest';
+  chronicle(run, f, `Rebuilt with a ${AUGMENTS[key].name}.`);
+  log(run, `${f.name} wakes with a ${AUGMENTS[key].name}. The crowd mutters about machines.`, 'event');
+}
+
+// Retirement: a veteran leaves for the Hall of Champions; the house gains Prestige and the roster takes heart.
+export function retireBlocker(run, id) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (f.level < RETIRE.level && !f.titles?.length) return `Only veterans retire: level ${RETIRE.level} or a Title.`;
+  return null;
+}
+
+export function retire(run, id) {
+  assertOk(retireBlocker(run, id));
+  const f = findFighter(run, id);
+  chronicle(run, f, 'Retired to the Hall of Champions.');
+  stripFighter(run, f);
+  run.roster = run.roster.filter((x) => x !== f);
+  run.prestige += RETIRE.prestige;
+  for (const x of run.roster) bumpMorale(x, RETIRE.morale);
+  const legend = { name: f.name, kind: f.kind, humor: f.humor, id: f.id, cls: f.cls, titles: f.titles, kills: f.kills ?? 0, renown: f.renown, level: f.level, wins: run.history.filter((h) => h.won && h.fighterId === f.id).length, story: f.story, seed: run.seed };
+  run.retired = [...(run.retired ?? []), legend];
+  log(run, `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good');
+  return legend;
+}
+
 // ---------- Tournaments ----------
 
 export const foughtThisWeek = (run) => run.history.filter((h) => h.week === run.week && h.fighterId).map((h) => h.fighterId);
@@ -1116,7 +1178,35 @@ export function finishMatch(run, match) {
   fighter.renown = Math.max(0, fighter.renown + summary.renown);
   summary.xp = xpFor(won, bout.boss, upset) + (bloodied ? BLOODIED.xp : 0);
 
+  // The chronicle, scars and a eulogy.
+  if (won) {
+    if (!run.history.some((h) => h.won && h.fighterId === fighter.id)) chronicle(run, fighter, `First win, in ${bout.name}.`);
+    if (summary.kill && fighter.kills === 1) chronicle(run, fighter, `First kill: ${opp.name}${house ? ` of ${house.name}` : ''}.`);
+    if (summary.title) chronicle(run, fighter, `Became ${summary.title}.`);
+    if (summary.mark) chronicle(run, fighter, `Earned the mark ${summary.mark}.`);
+    if (bout.boss && !summary.title) chronicle(run, fighter, `Beat the Boss ${opp.name}.`);
+  }
+  if (fighter.alive && bloodied && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
+    fighter.scars = [...(fighter.scars ?? []), { id: 'hardened' }];
+    summary.scar = 'Battle-Hardened';
+    chronicle(run, fighter, `Won bloodied and became Battle-Hardened.`);
+  }
+  const severe = fighter.alive && newInjuries.length && match.a.f.injuries.some((i) => i.weeksLeft === undefined && SEVERE.includes(i.tag));
+  if (severe && next(run.rng.growth) < SCAR_CHANCE) {
+    const vs = meleeOnly(match.b ?? { f: opp }) ? 'melee' : 'ranged';
+    const enraged = fighter.humor === 'choleric' || (fighter.humor !== 'melancholic' && next(run.rng.growth) < 0.5);
+    const id = enraged ? 'enraged' : 'afeared';
+    if (!(fighter.scars ?? []).some((sc) => sc.vs === vs)) {
+      fighter.scars = [...(fighter.scars ?? []), { id, vs }];
+      summary.scar = `${SCARS[id].name} (${vs})`;
+      chronicle(run, fighter, `${opp.name}'s blow left a scar: ${SCARS[id].name} against ${vs} fighters.`);
+      log(run, `${fighter.name} is scarred: ${SCARS[id].name} against ${vs} fighters.`, 'warn');
+    }
+  }
   if (!fighter.alive) {
+    chronicle(run, fighter, `Fell in ${bout.name}, killed by ${opp.name}.`);
+    const fWins = run.history.filter((h) => h.won && h.fighterId === fighter.id).length;
+    summary.eulogy = `Here lies ${fighter.name}: ${fWins} win${fWins === 1 ? '' : 's'}${fighter.kills ? `, ${fighter.kills} kill${fighter.kills === 1 ? '' : 's'}` : ''}${fighter.titles.length ? `, ${fighter.titles.join(', ')}` : ''}.`;
     stripFighter(run, fighter);
     run.roster = run.roster.filter((f) => f !== fighter);
     run.fallen.push({ ...fighter, diedWeek: run.week });

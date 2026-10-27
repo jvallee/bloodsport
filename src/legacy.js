@@ -21,7 +21,7 @@ export const ACHIEVEMENTS = [
 ];
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 
-export const createLegacy = () => ({ achievements: [], careers: 0, best: 0, past: [] });
+export const createLegacy = () => ({ achievements: [], careers: 0, best: 0, past: [], hall: [] });
 
 export function loadLegacy(text) {
   try {
@@ -74,4 +74,13 @@ export function recordCareer(legacy, run) {
   legacy.best = Math.max(legacy.best, entry.score);
   legacy.past = [entry, ...legacy.past].slice(0, 10);
   return entry;
+}
+
+// Retired legends join the Hall of Champions, which outlives every career.
+export function recordLegends(legacy, run) {
+  const hall = legacy.hall ?? (legacy.hall = []);
+  const fresh = (run.retired ?? []).filter((l) => !hall.some((h) => h.seed === l.seed && h.id === l.id));
+  hall.unshift(...fresh);
+  legacy.hall = hall.slice(0, 24);
+  return fresh;
 }
