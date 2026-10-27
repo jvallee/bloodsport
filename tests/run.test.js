@@ -95,6 +95,14 @@ test('training gives +1 stat per week, costs Gold and adds Stress', () => {
   assert.deepEqual([f.power, f.trained, f.stress, run.gold], [power + 1, 1, STRESS.train, gold - 1]);
 });
 
+test('Speed trains twice as fast: +2 Speed for one training point', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  setJob(run, f.id, 'trainSpeed');
+  advanceWeek(run);
+  assert.deepEqual([f.speed, f.trained], [5, 1]);
+});
+
 test('training stops at the trainer cap and the fighter switches to rest', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
@@ -124,14 +132,44 @@ test('training without Gold falls back to rest', () => {
   assert.deepEqual([f.power, f.job], [power, 'rest']);
 });
 
-test('rest lowers Stress; Stress stays within 0–100', () => {
+test('rest lowers Stress by 40; Stress stays within 0–100', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
-  f.stress = 50;
+  f.stress = 60;
   advanceWeek(run);
   assert.equal(f.stress, 20);
   advanceWeek(run);
   assert.equal(f.stress, 0);
+});
+
+test('an overtrained fighter cannot train and rests instead, keeping the job for later', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  setJob(run, f.id, 'trainPower');
+  f.stress = 50;
+  const power = f.power;
+  advanceWeek(run);
+  assert.deepEqual([f.power, f.stress, f.job], [power, 10, 'trainPower']);
+  advanceWeek(run);
+  assert.equal(f.power, power + 1);
+});
+
+test('train, train, rest is a stable rhythm below the overtrained line', () => {
+  const run = createRun(1);
+  run.gold = 100;
+  const f = recruit(run, run.market[0].id);
+  run.buildings.find((b) => b.type === 'trainer').level = 1;
+  const seen = [];
+  for (let i = 0; i < 3; i++) {
+    for (const job of ['trainPower', 'trainPower', 'rest']) {
+      f.trained = 0;
+      setJob(run, f.id, job);
+      run.boutPending = false;
+      advanceWeek(run);
+      seen.push(f.stress);
+    }
+  }
+  assert.ok(seen.every((s) => s < STRESS.overtrained), seen.join(','));
 });
 
 test('the Medbay heals injuries over weeks, then sends the fighter to rest', () => {
@@ -164,14 +202,16 @@ test('the Medbay has limited beds', () => {
   assert.match(jobBlocker(run, b.id, 'medbay'), /full/);
 });
 
-test('the Emergency Surgeon heals one injury instantly for 5 Gold', () => {
+test('the Emergency Surgeon heals one injury instantly for 8 Gold in tier 1, +4 per tier', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
   f.injuries = [{ tag: 'blinded', weight: 1, weeksLeft: 3 }];
   surgeon(run, f.id, 0);
-  assert.deepEqual([f.injuries.length, run.gold], [0, 12 - 3 - 5]);
+  assert.deepEqual([f.injuries.length, run.gold], [0, 12 - 3 - 8]);
   f.injuries = [{ tag: 'blinded', weight: 1, weeksLeft: 3 }];
-  assert.match(surgeonBlocker(run, f.id, 0), /needs 5 Gold/);
+  assert.match(surgeonBlocker(run, f.id, 0), /needs 8 Gold/);
+  run.tier = 3;
+  assert.match(surgeonBlocker(run, f.id, 0), /needs 16 Gold/);
 });
 
 test('decor is capped by the Quarters level', () => {
@@ -238,7 +278,7 @@ test('a win pays Gold and Prestige, adds fight Stress and moves to Tournament 2'
   const [gold, prestige] = [run.gold, run.prestige];
   const s = playBout(run, f.id);
   assert.deepEqual([s.gold, s.prestige], [CIRCUITS[0].winGold[0], CIRCUITS[0].winPrestige[0]]);
-  assert.deepEqual([run.gold, run.prestige, run.stage, run.boutPending], [gold + 4, prestige + 2, 1, false]);
+  assert.deepEqual([run.gold, run.prestige, run.stage, run.boutPending], [gold + CIRCUITS[0].winGold[0], prestige + CIRCUITS[0].winPrestige[0], 1, false]);
   assert.equal(f.stress, STRESS.fight);
   assert.equal(run.opponent.power, CIRCUITS[0].oppPower[1]);
 });
@@ -260,6 +300,18 @@ test('skipping Tournament 1 gives Gold and rest, but Bosses cannot be skipped', 
   assert.equal(currentBout(run).boss, true);
   assert.match(skipBlocker(run), /cannot be skipped/);
   assert.equal(forfeitBlocker(run), null);
+});
+
+test('opponents get faster: +1 Speed per tier and +1 for Bosses', () => {
+  const { run, f } = atBout();
+  assert.equal(run.opponent.speed, 3);
+  playBout(run, f.id);
+  nextBout(run);
+  playBout(run, f.id);
+  assert.equal(run.opponent.speed, 4, 'Tier 1 Boss');
+  nextBout(run);
+  playBout(run, f.id);
+  assert.equal(run.opponent.speed, 4, 'Tier 2, Tournament 1');
 });
 
 test('beating a Boss grants a Title (+1 Power) and opens the next tier', () => {

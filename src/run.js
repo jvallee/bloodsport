@@ -3,7 +3,7 @@
 
 import { createRng, deriveSeed, int, pick, randomSeed } from './rng.js';
 import {
-  ECONOMY, STRESS, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS, STARTING_BUILDINGS,
+  ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS, STARTING_BUILDINGS,
 } from './data.js';
 import { createMatch, kindActive } from './fight.js';
 import { isTournamentWeek, isMonthStart, formatDate } from './calendar.js';
@@ -90,9 +90,13 @@ function refreshLiaison(run) {
   run.liaisonOffer = f;
 }
 
+// Opponents get faster as you climb (+1 Speed per tier, +1 more for Bosses), so Speed stays worth training.
+export const opponentSpeed = (run, bout = currentBout(run)) => 3 + (run.grand ? CIRCUITS.length : run.tier) - 1 + (bout.boss ? 1 : 0);
+
 function newOpponent(run) {
   const bout = currentBout(run);
   run.opponent = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower, decorLevel: bout.oppDecor, takenNames: takenNames({ ...run, opponent: null }) });
+  run.opponent.speed = opponentSpeed(run, bout);
 }
 
 function newCircuit(run) {
@@ -238,7 +242,9 @@ export function advanceWeek(run) {
   assertOk(advanceBlocker(run));
   const relief = stressRelief(run);
   for (const f of run.roster) {
-    if (isTraining(f.job)) {
+    const tooStressed = isTraining(f.job) && f.stress >= STRESS.overtrained;
+    if (tooStressed) log(run, `${f.name} is too stressed to train and rests this week.`, 'warn');
+    if (isTraining(f.job) && !tooStressed) {
       const cost = trainCost(run);
       if (f.trained >= trainCap(run)) {
         f.job = 'rest';
@@ -248,11 +254,11 @@ export function advanceWeek(run) {
         log(run, `Not enough Gold to pay the trainer; ${f.name} rests instead.`, 'warn');
       } else {
         const stat = f.job === 'trainPower' ? 'power' : 'speed';
-        f[stat] += 1;
+        f[stat] += TRAIN_GAIN[stat];
         f.trained += 1;
         run.gold -= cost;
         f.stress = clampStress(f.stress + STRESS.train);
-        log(run, `${f.name} trains: +1 ${stat === 'power' ? 'Power' : 'Speed'}.`, 'good');
+        log(run, `${f.name} trains: +${TRAIN_GAIN[stat]} ${stat === 'power' ? 'Power' : 'Speed'}.`, 'good');
       }
     }
     if (f.job === 'medbay') {
@@ -272,7 +278,7 @@ export function advanceWeek(run) {
         f.job = 'rest';
         log(run, `${f.name} leaves the Medbay fully healed.`, 'good');
       }
-    } else if (f.job === 'rest') {
+    } else if (f.job === 'rest' || tooStressed) {
       f.stress = clampStress(f.stress + STRESS.rest);
     }
     f.stress = clampStress(f.stress - relief);
@@ -319,13 +325,15 @@ export function buyDecor(run, id, item) {
   run.gold -= ECONOMY.decorCost;
 }
 
+export const surgeonPrice = (run) => ECONOMY.surgeonCost + ECONOMY.surgeonPerTier * ((run.grand ? CIRCUITS.length : run.tier) - 1);
+
 export function surgeonBlocker(run, id, index) {
   const idle = idleBlocker(run);
   if (idle) return idle;
   const f = findFighter(run, id);
   if (!f) return 'No such fighter.';
   if (!f.injuries[index]) return 'No such injury.';
-  if (run.gold < ECONOMY.surgeonCost) return `The Emergency Surgeon needs ${ECONOMY.surgeonCost} Gold.`;
+  if (run.gold < surgeonPrice(run)) return `The Emergency Surgeon needs ${surgeonPrice(run)} Gold.`;
   return null;
 }
 
@@ -333,7 +341,7 @@ export function surgeon(run, id, index) {
   assertOk(surgeonBlocker(run, id, index));
   const f = findFighter(run, id);
   f.injuries.splice(index, 1);
-  run.gold -= ECONOMY.surgeonCost;
+  run.gold -= surgeonPrice(run);
   if (f.job === 'medbay' && !f.injuries.length) f.job = 'rest';
 }
 

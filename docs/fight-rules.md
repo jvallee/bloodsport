@@ -63,5 +63,73 @@ Each fighter has **1 Kind trait + 1 Class**, rolled at recruitment:
 - **Boss debuff** applies only to your fighter, not the Boss.
 - **Healing** costs 2 Gold per injury, is instant, and is available any time outside a match.
 
-### Deferred from MVP
-Four Humors, Cowardly/Afeared/Enraged, Prestige levels, calendar and holidays, auctions beyond fixed price, Oracle fog of war (all opponent info is shown), buildings beyond Trainer/Medbay/decor, cyborgism, Morale.
+## Career rules (M5–M8; supersede sections 2–4 above where they differ)
+
+All numbers live in `src/data.js` and were tuned with `npm run career` (see `docs/roadmap.md`, "Balance snapshot").
+
+### Calendar
+- 10 Roman months × 4 weeks, then a 4-week **Winter Dead Season** (no tournaments): 44 weeks a year.
+- **Week 4 of every month is a tournament week.** You must fight, skip (Tournament 1/2 only) or forfeit (Boss) before the week can end.
+- The market and Liaison refresh at the start of each month.
+
+### Weekly jobs (one per fighter, kept until changed)
+| Job | Effect |
+| :--- | :--- |
+| Train Power | +1 Power, +20 Stress, costs the Trainer level in Gold (1–5); needs a free Trainer Room and room under the trainer cap |
+| Train Speed | +2 Speed (counts as 1 training point), same cost and Stress |
+| Rest | −40 Stress |
+| Medbay | Heals the oldest injury by 1 week per week (2 at Medbay Lv 2+), −10 Stress; needs a free bed |
+
+- **Overtrained (Stress ≥ 50):** can't train (rests instead, job kept), and in the arena fights at **−1 Power** with one random ability disabled. A fight adds +15 Stress. Train, train, rest stays under the line.
+- **Injury healing times (Medbay weeks):** Distracted 1, Flesh Wound 1, Concussed 2, Poisoned 2, Senseless 2, Maimed 3, Blinded 3. Injuries don't heal outside the Medbay.
+- **Emergency Surgeon:** heals one injury instantly for 8 Gold (+4 per tier above 1).
+
+### Fight changes
+- **First Strike:** the first striker gets +10% win chance that round.
+- **Injury roll:** d100 + **20** per prior effective injury + 5 per point of opponent Power advantage (the design doc used +15; raised so fighting on at the Death Gate is a real risk). Fatal at 100+ with 2+ injuries on a round loss, as before.
+- **Boss debuff pool** (one per circuit, drawn at random): First Blood Counts Double, Rainy Mud (−2 Speed), Stripped of Armor, Iron Rules (no decor), Blood Moon (+10% injury both sides), Crowd Favorite (Boss +1 Power).
+- **Cestus** nerfed to +3/6/9% win chance (injure bonus unchanged).
+
+### Circuits and career
+| Tier | Arena | Opponent Power (T1 / T2 / Boss) | Buy-in | Win Gold | Win Prestige | Market price |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: |
+| 1 | The Dirt Pits | 5 / 6 / 7 | 1 / 1 / 2 | 6 / 8 / 12 | 2 / 3 / 5 | 3 |
+| 2 | The Bronze Arena | 8 / 9 / 10 | 2 / 2 / 4 | 10 / 13 / 18 | 4 / 6 / 10 | 5 |
+| 3 | The Silver Coliseum | 11 / 12 / 13 | 3 / 3 / 6 | 14 / 18 / 25 | 6 / 9 / 15 | 7 |
+| 4 | The Imperial Coliseum | 15 / 16 / 17 | 4 / 4 / 8 | 18 / 23 / 32 | 8 / 12 / 20 | 9 |
+| — | The Grand Tournament | 20 | 10 | 40 | 30 | — |
+
+- Losses pay 2 Gold × tier (10 for the Grand Tournament). The buy-in is lost on a loss, towel or forfeit, and returned with the win Prestige on a win.
+- Opponent Speed is 3 + (tier − 1), +1 for Bosses. Opponent decor is 1 / 2 / 3 / 3 by tier. Market fighters get +0 / 2 / 4 / 6 Power by tier.
+- **Skip** (Tournament 1/2): no buy-in, +2 Gold, the whole roster −20 Stress, and the circuit moves on.
+- **Boss win:** the fighter earns a **Title** (+1 Power, permanent) and the next tier opens. After Tier 4 comes the Grand Tournament; winning it wins the career.
+- **Boss loss or forfeit:** an **Imperial Strike**, and that tier's circuit restarts with new opponents and a new debuff. Losing the Grand Tournament is also a Strike, and you try again next month. **Three Strikes: executed (career lost).**
+- **Also lost:** no fighters and not enough Gold to buy the cheapest one.
+
+### House Prestige levels (kept once reached)
+| Level | Prestige | Room plots | Max fighters |
+| :---: | :---: | :---: | :---: |
+| 1 | 0 | 3 | 3 |
+| 2 | 10 | 5 | 6 |
+| 3 | 25 | 8 | 12 |
+| 4 | 50 | 13 | 24 |
+| 5 | 90 | 21 | 48 |
+
+### Estate (start: Fighter Quarters, Trainer Room, Medbay; all 3 plots used)
+| Building | Build / upgrade Gold | Prestige level needed | Effect per level |
+| :--- | :--- | :--- | :--- |
+| Fighter Quarters | 6 / 6 / 10 | 1 / 1 / 3 | Houses 2 / 3 / 4 fighters; decor cap per item = best Quarters level |
+| Trainer Room | 8 / 10 / 16 / 26 / 40 | 1 / 2 / 3 / 4 / 5 | Trainer cap 3 / 5 / 8 / 13 / 21 points; each room trains one fighter a week |
+| Medbay | 8 / 8 / 14 | 1 / 2 / 4 | 1 / 2 / 3 beds; Lv 2+ heals 2 weeks per week |
+| Oracle *(one only)* | 8 / 12 | 2 / 3 | Odds shown as words → ~10% → exact; Lv 2 reveals the Boss debuff early |
+| Liaison *(one only)* | 6 / 10 | 2 / 4 | Monthly convict (1 Gold, weaker, Flesh Wound) → POW (4 Gold, stronger, Concussed) |
+| Entertainment Room *(one only)* | 8 / 12 | 2 / 3 | All fighters −15 / −30 Stress a week |
+
+- Roster cap = total Quarters capacity, limited by the Prestige level's max fighters.
+- *One only* buildings are capped because only the best one would count; a second would be a trap.
+
+### Saves
+- The career autosaves to the browser after every action. Reloading during a match counts as throwing in the towel, so quitting can't undo a bad fight.
+
+### Still deferred
+Four Humors, Cowardly/Afeared/Enraged traumas, Gods' Days and the Temple, blind auctions and rival houses, Oracle fog of war on opponent traits (opponent cards are always shown in full), cyborg surgery, Morale, fighter XP, save export/import.

@@ -2,11 +2,12 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_ROLL } from './data.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export const other = (side) => (side === 'A' ? 'B' : 'A');
+export const FIRST_STRIKE = 10000;
 
 export const effectiveInjuries = (f) => f.injuries.reduce((s, i) => s + i.weight, 0);
 export const hasInjury = (f, tag) => f.injuries.some((i) => i.tag === tag);
@@ -85,6 +86,7 @@ export function computePower(c, opp, round) {
   const blinded = countInjury(f, 'blinded');
   if (blinded) mods.push({ source: 'Blinded', value: -2 * blinded });
   if (c.side === 'B' && c.arena === 'crowdFavorite') mods.push({ source: 'Crowd Favorite', value: 1 });
+  if (c.overtrained) mods.push({ source: 'Overtrained', value: -1 });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
 
@@ -129,7 +131,7 @@ export function computePhase2(c, opp, round, volley = {}) {
 
 // Escalating Injury Table roll with the 2-Injury Death Gate.
 export function injurySeverity(roll, priorInjuries, opponentAdvantage, defenderWonRound) {
-  const raw = roll + 15 * priorInjuries + 5 * opponentAdvantage;
+  const raw = roll + INJURY_ROLL.perInjury * priorInjuries + INJURY_ROLL.perPowerGap * opponentAdvantage;
   const canDie = priorInjuries >= 2 && !defenderWonRound;
   const score = canDie ? raw : Math.min(raw, 99);
   return { roll, raw, score, canDie, injury: injuryForScore(score) };
@@ -214,8 +216,11 @@ export function createMatch({ a, b, rng, debuff = null, overtrained = false }) {
     b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
     rng, debuff, round: 0, rounds: [], over: false, result: null, preMatch: [],
   };
-  // Stress: an overtrained fighter starts Distracted (one random slot disabled).
-  if (overtrained) m.preMatch.push({ side: 'A', source: 'Overtrained', disabled: disableRandom(m.a, 1, rng) });
+  // Stress: an overtrained fighter loses one random ability and fights at −1 Power.
+  if (overtrained) {
+    m.a.overtrained = true;
+    m.preMatch.push({ side: 'A', source: 'Overtrained', disabled: disableRandom(m.a, 1, rng) });
+  }
   return m;
 }
 
@@ -267,6 +272,8 @@ export function playRound(m) {
     if (classActive(c, 'sagittarius', round) && !hasInjury(c.f, 'blinded')) r.volley[c.side] = next(rng) < 0.5 ? 'win' : 'injury';
   }
   const p2 = { A: computePhase2(A, B, round, r.volley), B: computePhase2(B, A, round, r.volley) };
+  // First Strike: striking first is worth +10% to win the round, which is what makes Speed matter.
+  p2[r.initiative.first].win.push({ source: 'First Strike', value: FIRST_STRIKE });
   r.win = { base: r.row.win, modsA: p2.A.win, modsB: p2.B.win };
   r.win.chance = clamp(r.row.win + sum(p2.A.win) - sum(p2.B.win), 1, 99999);
 

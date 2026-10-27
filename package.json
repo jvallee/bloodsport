@@ -5,6 +5,7 @@
   "scripts": {
     "test": "node --test",
     "simulate": "node scripts/simulate.js",
+    "career": "node scripts/career-sim.js",
     "serve": "python3 -m http.server 8000"
   }
 }

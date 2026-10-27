@@ -1,5 +1,7 @@
 # Roadmap — From MVP Toward the Final Game
 
+**Status (2026-10-26):** M5–M8 are built and live. M9–M11 are next. See "Balance snapshot" for where the tuning stands.
+
 The MVP (`docs/implementation-plan.md`) proves the fight engine. This plan adds the **Ludus buildings**, **progression** across a full career, and the work needed to keep the game **fun and easy to understand** as it grows.
 
 Each milestone is playable on its own and ships to GitHub Pages when it's done. Numbers marked *placeholder* are starting points for the simulator and playtests to tune.
@@ -142,3 +144,24 @@ Improve what exists before adding systems.
 6. **Cestus: nerfed now to +3/6/9% win chance** (injure bonus stays +5/10/15%). It led every Kind by a wide margin, and a dominant pick narrows the choices players feel they have. The change gets re-checked with the simulator.
 
 Detailed placeholder numbers for M5–M8 live in `docs/fight-rules.md` ("Career rules").
+
+## Balance snapshot (2026-10-26, after M5–M8)
+
+`npm run career 300` (whole careers by bots) and `npm run simulate 2000`:
+
+| Bot | Career wins | Reach the Grand Tournament | Fighter deaths per career | Strikes per career | Weeks |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| Careful (rests, heals, builds, towels, skips bad matchups) | 33% | 51% | 0.14 | 2.6 | 69 |
+| Reckless (trains one star nonstop, Surgeon only, never towels) | 47% | 55% | 1.01 | 2.0 | 63 |
+
+What the simulator caught, and what changed as a result:
+1. **Stress didn't matter** (losing one ability was a weak penalty), so nonstop training was strictly best. Overtrained fighters now can't train and fight at −1 Power; rest went to −40.
+2. **Speed was a trap** (+1 Power ≈ +2 Speed). Added First Strike (+10% win chance), made Speed train at +2, and gave opponents more Speed at higher tiers.
+3. **Buildings were a trap:** Gold was too scarce, and duplicate Oracles/Liaisons/Entertainment Rooms silently did nothing. Purses were roughly doubled, those three became one per estate, and Entertainment and Medbay Lv 2 unlock earlier.
+4. **Death wasn't scary enough** (about 5% per round at the Death Gate), so throwing in the towel was usually wrong. Injury rolls now add +20 per prior injury, and the Surgeon costs 8 Gold +4 per tier.
+5. **The finale was an anticlimax** (a capped fighter beat the Tier 4 Boss 91% of the time). Raised Tier 4 and the Grand Tournament.
+
+Still open (next tuning pass):
+- **The reckless style still wins more often**, though it pays in fighters and has the only total wipeouts. Careful play should edge ahead. Candidates: more injury carry-over into the next fight, Boss debuffs that punish a single overtrained star, or making Titles transferable to the house.
+- **Power is king.** Bots that never train Speed still do as well or better; Speed's value levels off.
+- **Bots don't value the Oracle or Liaison** (they read exact odds and don't need cheap recruits). Their value to human players needs playtesting.

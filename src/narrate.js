@@ -127,7 +127,7 @@ export function adviceFor(m) {
   if (m.result.winner === 'A') return null;
   const you = m.a.f.name;
   if (m.result.reason === 'death') return `${you} fought on with 2+ injuries. When the Death Gate is open, throwing in the towel or healing first keeps fighters alive.`;
-  if (m.preMatch.some((p) => p.source === 'Overtrained')) return `${you} entered overtrained and lost an ability. Rest the week before a fight to keep Stress under 50.`;
+  if (m.preMatch.some((p) => p.source === 'Overtrained')) return `${you} entered overtrained (−1 Power, one ability lost). Rest the week before a fight to keep Stress under 50.`;
   const worst = Math.min(...m.rounds.map((r) => r.delta));
   if (worst <= -2) return `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.`;
   if (m.rounds.some((r) => r.checks.some((c) => c.pierced && c.defender === 'A'))) return `Their weapon pierced your armor. Against Gun or Flail fighters, armor won't save you; win the rounds instead.`;

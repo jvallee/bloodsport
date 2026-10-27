@@ -3,7 +3,7 @@
 import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS } from '../data.js';
 import { formatDate, weeksUntilTournament, isWinter } from '../calendar.js';
 import {
-  currentBout, circuitInfo, marketPrice, recruitBlocker, jobBlocker, decorBlocker, surgeonBlocker, fightBlocker,
+  currentBout, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, decorBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker,
 } from '../run.js';
 import {
@@ -12,11 +12,11 @@ import {
 import { describeOdds } from '../odds.js';
 import { esc, button, fighterCard, ICON, BUILDING_ICON } from './components.js';
 
-const JOB_LABELS = { rest: 'Rest', trainPower: '+Power', trainSpeed: '+Speed', medbay: 'Medbay' };
+const JOB_LABELS = { rest: 'Rest', trainPower: '+1 Power', trainSpeed: '+2 Speed', medbay: 'Medbay' };
 const JOB_HELP = {
   rest: `Rest: −${-STRESS.rest} Stress.`,
   trainPower: `Train Power: +1 Power this week, +${STRESS.train} Stress.`,
-  trainSpeed: `Train Speed: +1 Speed this week, +${STRESS.train} Stress.`,
+  trainSpeed: `Train Speed: +2 Speed this week, +${STRESS.train} Stress. Speed decides who strikes first (+10% to win that round).`,
   medbay: 'Medbay: heals injuries over weeks.',
 };
 
@@ -108,7 +108,7 @@ function rosterPanel(run) {
       return `<button class="seg${f.job === job ? ' on' : ''}" data-action="job" data-id="${f.id}" data-job="${job}" ${reason ? `disabled title="${esc(reason)}"` : `title="${esc(JOB_HELP[job])}"`}>${JOB_LABELS[job]}</button>`;
     }).join('');
     const decor = Object.keys(DECOR).map((k) => button(`+${DECOR[k].name}`, 'decor', { id: f.id, item: k }, decorBlocker(run, f.id, k))).join('');
-    const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(inj.tag === 'fleshWound' ? 'Flesh Wound' : inj.tag)} (${ECONOMY.surgeonCost}g)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
+    const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(inj.tag === 'fleshWound' ? 'Flesh Wound' : inj.tag)} (${surgeonPrice(run)}g)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
     const actions = `<div class="actions">
       <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week</small></div>
       <div class="segs">${jobs}</div>
@@ -246,7 +246,7 @@ export function helpModal() {
     <h2>How to play</h2>
     <ol>
       <li><b>Recruit</b> gladiators in the Market.</li>
-      <li><b>Give each a weekly job</b>: train Power or Speed, rest, or heal in the Medbay. Training builds Stress; fighters at 50+ Stress enter the arena overtrained.</li>
+      <li><b>Give each a weekly job</b>: train Power or Speed, rest, or heal in the Medbay. Training builds Stress. At 50+ Stress a fighter is overtrained: they can't train, and they fight at −1 Power with one ability lost.</li>
       <li><b>End the week.</b> The last week of each month is a tournament. Check the odds, then send a fighter or skip.</li>
       <li><b>Fight</b> best-of-3 rounds. Between rounds you can throw in the towel to save a badly hurt fighter.</li>
       <li><b>Climb</b> four arena tiers: Tournament 1 → Tournament 2 → Boss. Win the Grand Tournament to win the game. Each Boss loss is an Imperial Strike; three and you're executed.</li>
@@ -255,9 +255,9 @@ export function helpModal() {
     <h2>Glossary</h2>
     <dl>
       <dt>Power</dt><dd>Decides who wins rounds. The difference (Delta) matters: +1 is 55%, +3 is 70%, +5 is 95% per round.</dd>
-      <dt>Speed</dt><dd>Decides who strikes first. The first striker rolls to injure before the other can hit back.</dd>
+      <dt>Speed</dt><dd>Decides who strikes first (Speed + a d6 roll). The first striker gets +10% to win the round and rolls to injure before the other can hit back. Speed trains at +2 a week, but its value levels off once you're much faster.</dd>
       <dt>Death Gate</dt><dd>Fighters with fewer than 2 injuries can't die. At 2+ injuries, losing a round can be fatal. Poisoned counts as 2.</dd>
-      <dt>Stress</dt><dd>Training and fighting raise it; rest lowers it. At 50+ the fighter starts the next fight Distracted.</dd>
+      <dt>Stress</dt><dd>Training (+20) and fighting (+15) raise it; rest (−40) lowers it. At 50+ the fighter is overtrained: no training, and −1 Power and one lost ability in the arena. Train, train, rest is a safe rhythm.</dd>
       <dt>Armor</dt><dd>Alloyed Skin and Ego Armour lower your chance to be injured. Gun and Flail ignore it.</dd>
       <dt>Prestige</dt><dd>Your reputation. Staked as buy-ins, won back with interest. Thresholds raise your House level for good.</dd>
       <dt>Imperial Strike</dt><dd>Given for every Boss loss or forfeit. Three ends your career.</dd>

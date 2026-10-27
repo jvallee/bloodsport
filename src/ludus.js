@@ -21,7 +21,7 @@ export const trainerRooms = (run) => ofType(run, 'trainer').length;
 export const trainCap = (run) => effectAt('trainer', maxLevel(run, 'trainer'));
 export const trainCost = (run) => Math.max(1, maxLevel(run, 'trainer'));
 export const medbaySlots = (run) => ofType(run, 'medbay').reduce((s, b) => s + effectAt('medbay', b.level), 0);
-export const healRate = (run) => (maxLevel(run, 'medbay') >= 3 ? 2 : 1);
+export const healRate = (run) => (maxLevel(run, 'medbay') >= 2 ? 2 : 1);
 export const decorCap = (run) => maxLevel(run, 'quarters');
 export const oracleLevel = (run) => maxLevel(run, 'oracle');
 export const liaisonLevel = (run) => maxLevel(run, 'liaison');
@@ -33,6 +33,7 @@ export function buildBlocker(run, type) {
   if (run.status !== 'active') return 'The run is over.';
   if (run.inMatch) return 'A match is in progress.';
   if (run.prestigeLevel < def.req[0]) return `Unlocks at Prestige level ${def.req[0]}.`;
+  if (def.unique && ofType(run, type).length) return 'You already have one. Upgrade it instead.';
   if (plotsFree(run) <= 0) return 'No free plots. Raise your Prestige level for more.';
   if (run.gold < def.cost[0]) return `Needs ${def.cost[0]} Gold.`;
   return null;

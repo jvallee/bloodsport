@@ -34,7 +34,7 @@ export function deathGate(f) {
 
 function stressBar(f) {
   const hot = f.stress >= STRESS.overtrained;
-  return `<div class="stress${hot ? ' hot' : ''}" title="Stress ${f.stress}/100. At ${STRESS.overtrained}+ a fighter enters the arena overtrained (loses an ability). Rest lowers it.">
+  return `<div class="stress${hot ? ' hot' : ''}" title="Stress ${f.stress}/100. At ${STRESS.overtrained}+ a fighter is overtrained: can't train, and fights at −1 Power with one ability lost. Rest lowers it.">
     ${ICON.stress}<div class="bar"><span style="width:${f.stress}%"></span></div><small>${hot ? 'Overtrained' : f.stress}</small></div>`;
 }
 
@@ -59,7 +59,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
         <div class="who"><h3>${esc(f.name)}</h3><div class="kind">${KINDS[f.kind].name} · ${clsName}</div></div>
         <div class="badges">
           <div class="badge power" title="Power decides who wins rounds. Each point of difference shifts the odds a lot.">${ICON.power}<b>${f.power}</b></div>
-          <div class="badge speed" title="Speed decides who strikes first. Striking first lets you injure them before they can hit back.">${ICON.speed}<b>${f.speed}</b></div>
+          <div class="badge speed" title="Speed decides who strikes first (Speed + d6). The first striker gets +10% to win the round and injures first.">${ICON.speed}<b>${f.speed}</b></div>
         </div>
       </div>
       <div class="traits">

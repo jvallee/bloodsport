@@ -63,7 +63,7 @@ const TIPS = [
   { id: 'jobs', when: (r) => r.roster.length > 0 && !r.boutPending && r.week < 3, text: 'Give each fighter a <b>weekly job</b>, then press <b>End week</b>. Training raises a stat but adds Stress. Rest them the week before a fight.' },
   { id: 'bout', when: (r) => r.boutPending, text: '<b>Fight day!</b> Check each fighter\'s odds, then send one. Tournaments 1 and 2 can be skipped; Bosses can\'t.' },
   { id: 'injury', when: (r) => r.roster.some((f) => f.injuries.length), text: 'Injuries stay until healed. Put the fighter in the <b>Medbay</b> job. Two injuries open the <b>Death Gate</b>.' },
-  { id: 'stress', when: (r) => r.roster.some((f) => f.stress >= STRESS.overtrained), text: 'A fighter is <b>overtrained</b> (Stress 50+). Fighting now costs them an ability. Set them to Rest.' },
+  { id: 'stress', when: (r) => r.roster.some((f) => f.stress >= STRESS.overtrained), text: 'A fighter is <b>overtrained</b> (Stress 50+): they can\'t train, and they\'d fight at −1 Power with an ability lost. Let them Rest.' },
   { id: 'estate', when: (r) => r.prestigeLevel >= 2, text: 'Your house grew! New <b>plots</b> and buildings are open in the <b>Estate</b> tab.' },
 ];
 const currentTip = () => (run.status === 'active' ? TIPS.find((t) => !prefs.tips.includes(t.id) && t.when(run)) : null);

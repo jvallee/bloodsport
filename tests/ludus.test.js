@@ -58,10 +58,11 @@ test('trainer levels raise the cap and the weekly cost', () => {
   assert.deepEqual([trainCap(run), trainCost(run)], [21, 5]);
 });
 
-test('Medbay Lv 3 treats 3 fighters and heals 2 weeks per week', () => {
+test('Medbay Lv 2 heals 2 weeks per week; Lv 3 treats 3 fighters', () => {
   const run = richRun(4);
   const m = idOf(run, 'medbay');
   upgrade(run, m);
+  assert.deepEqual([medbaySlots(run), healRate(run)], [2, 2]);
   upgrade(run, m);
   assert.deepEqual([medbaySlots(run), healRate(run)], [3, 2]);
 });
@@ -75,14 +76,24 @@ test('roster cap is limited by the Prestige level fighter cap', () => {
   assert.equal(rosterCap(run), 3);
 });
 
-test('Entertainment Room relieves Stress', () => {
-  const run = richRun(3);
+test('Entertainment Room relieves 15 Stress a week', () => {
+  const run = richRun(2);
   run.buildings = run.buildings.filter((b) => b.type !== 'medbay');
   build(run, 'entertainment');
-  assert.equal(stressRelief(run), 10);
+  assert.equal(stressRelief(run), 15);
 });
 
 test('Prestige levels are reached at 10 / 25 / 50 / 90 and never lost', () => {
   assert.deepEqual([0, 9, 10, 25, 50, 90, 500].map((p) => prestigeLevelFor(p)), [1, 1, 2, 3, 4, 5, 5]);
   assert.equal(prestigeLevelFor(3, 4), 4);
+});
+
+test('Oracle, Liaison and Entertainment Room are one per estate (a second would do nothing)', () => {
+  const run = richRun(3);
+  for (const type of ['oracle', 'liaison', 'entertainment']) {
+    run.buildings = run.buildings.slice(0, 3);
+    build(run, type);
+    assert.match(buildBlocker(run, type), /already have one/);
+  }
+  assert.equal(buildBlocker(run, 'trainer'), null, 'extra Trainer Rooms train more fighters');
 });

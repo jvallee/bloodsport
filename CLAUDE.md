@@ -16,10 +16,14 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 ## Commands
 - `npm test`: run all tests (no install needed).
 - `npm run serve`: play locally at http://localhost:8000 (ES modules don't load from `file://`).
-- `npm run simulate`: balance report (build win rates and circuit difficulty).
+- `npm run simulate`: build win rates at equal Power, and trained fighters vs each Boss.
+- `npm run career [n]`: whole-career balance with a careful and a reckless bot (targets in `docs/roadmap.md`).
 
 ## Layout
-- `src/rng.js` seeded RNG · `src/data.js` tables · `src/fight.js` fight engine · `src/run.js` run loop · `src/narrate.js` text · `src/main.js` DOM only.
+- Pure logic: `src/rng.js` seeded RNG · `src/data.js` all tables and tunable numbers · `src/fight.js` fight engine · `src/calendar.js` weeks · `src/ludus.js` estate · `src/run.js` career coordinator · `src/odds.js` pre-fight odds · `src/narrate.js` text.
+- UI: `src/ui/components.js`, `src/ui/views.js`, `src/ui/fightView.js` return HTML strings; `src/main.js` holds state, saving and events.
+- `scripts/bots.js`: careful and reckless career bots used by `career-sim.js` and tests.
+- Every rules change gets re-checked with `npm run career` before it ships; record the numbers in `docs/roadmap.md`.
 - `tests/`: one file per module, plus `tests/helpers.js` (blank fighters, scripted RNG).
 
 ## Working practices

@@ -13,7 +13,7 @@ const sources = (mods) => mods.map((m) => `${m.source}:${m.value}`);
 
 // ---- Statistical checks against the Power Delta table (fixed seeds, ±1.5%) ----
 
-test('round-1 win rate matches the Power Delta table for Delta -10..+10', () => {
+test('round-1 win rate matches the Power Delta table (plus First Strike) for Delta -10..+10', () => {
   const N = 10000;
   for (let delta = -10; delta <= 10; delta++) {
     const rng = createRng(1000 + delta);
@@ -22,7 +22,10 @@ test('round-1 win rate matches the Power Delta table for Delta -10..+10', () => 
       const m = createMatch({ a: blank({ power: 15 + delta }), b: blank({ power: 15 }), rng });
       if (playRound(m).winner === 'A') wins++;
     }
-    const expected = deltaRow(delta).win / 100000;
+    // Equal Speed: each side strikes first half the time, and First Strike is worth +10%.
+    const clampWin = (x) => Math.min(99999, Math.max(1, x));
+    const base = deltaRow(delta).win;
+    const expected = (clampWin(base + 10000) + clampWin(base - 10000)) / 2 / 100000;
     assert.ok(Math.abs(wins / N - expected) <= 0.015, `Delta ${delta}: ${wins / N} vs ${expected}`);
   }
 });
@@ -57,8 +60,8 @@ test('the same seed replays the same match exactly', () => {
 
 // ---- Death gate ----
 
-test('severity adds +15 per prior injury and +5 per point of opponent advantage', () => {
-  assert.equal(injurySeverity(40, 2, 3, false).raw, 40 + 30 + 15);
+test('severity adds +20 per prior injury and +5 per point of opponent advantage', () => {
+  assert.equal(injurySeverity(40, 2, 3, false).raw, 40 + 40 + 15);
 });
 
 test('fighters with fewer than 2 injuries are clamped to 99 (never die)', () => {
@@ -71,7 +74,7 @@ test('fighters with fewer than 2 injuries are clamped to 99 (never die)', () => 
 });
 
 test('2+ injuries and a round loss can kill at 100+', () => {
-  const s = injurySeverity(70, 2, 0, false);
+  const s = injurySeverity(60, 2, 0, false);
   assert.equal(s.score, 100);
   assert.equal(s.injury.tag, 'death');
 });
@@ -352,21 +355,21 @@ test('Distracted disables 1 slot; Maimed disables one per effective injury', () 
   const d = matchOf({}, { kindTrait: 'hateful', cls: 'cestus' }, [e5(1), pct(10), 0]);
   injuryCheck(d, d.a, d.b, roundRecord({ winner: 'A' }), 'x');
   assert.equal(d.b.disabled.length, 1);
-  const mm = matchOf({}, { kindTrait: 'hateful', cls: 'cestus', injuries: injuries('concussed') }, [e5(1), pct(60), 0, 0]); // 60 + 15 = 75 → Maimed
+  const mm = matchOf({}, { kindTrait: 'hateful', cls: 'cestus', injuries: injuries('concussed') }, [e5(1), pct(55), 0, 0]); // 55 + 20 = 75 → Maimed
   injuryCheck(mm, mm.a, mm.b, roundRecord({ winner: 'B' }), 'x');
   assert.deepEqual([...mm.b.disabled].sort(), ['class', 'kind']);
   assert.equal(computePhase2(mm.b, mm.a, 1).enemy.length, 0, 'disabled traits stop firing');
 });
 
 test('a fatal roll kills a fighter on 2+ injuries who lost the round', () => {
-  const m = matchOf({}, { injuries: injuries('poisoned') }, [e5(1), pct(70)]);
+  const m = matchOf({}, { injuries: injuries('poisoned') }, [e5(1), pct(60)]); // 60 + 40 = 100
   const check = injuryCheck(m, m.a, m.b, roundRecord({ winner: 'A' }), 'x');
   assert.equal(check.injury.tag, 'death');
   assert.equal(m.b.f.alive, false);
 });
 
 test('Boss debuff: the player fighter’s first injury counts double, later ones do not', () => {
-  const m = matchOf({}, {}, [e5(1), pct(30), e5(1), pct(30)], 'firstInjuryDouble');
+  const m = matchOf({}, {}, [e5(1), pct(30), e5(1), pct(10)], 'firstInjuryDouble'); // 2nd: 10 + 40 = 50 → Concussed
   injuryCheck(m, m.b, m.a, roundRecord({ winner: 'B' }), 'x');
   assert.deepEqual(m.a.f.injuries, [{ tag: 'fleshWound', weight: 2 }]);
   assert.equal(effectiveInjuries(m.a.f), 2);
@@ -424,10 +427,19 @@ test('Crowd Favorite gives the opponent +1 Power', () => {
   assert.equal(computePower(m.a, m.b, 1).total, 5);
 });
 
-test('an overtrained fighter starts the match with one slot disabled', () => {
+test('an overtrained fighter starts the match with one slot disabled and −1 Power', () => {
   const m = createMatch({ a: blank({ kindTrait: 'hateful', cls: 'cestus' }), b: blank(), rng: createRng(1), overtrained: true });
   assert.equal(m.a.disabled.length, 1);
+  assert.deepEqual(sources(computePower(m.a, m.b, 1).mods), ['Overtrained:-1']);
   assert.equal(m.preMatch[0].source, 'Overtrained');
   const calm = createMatch({ a: blank({ kindTrait: 'hateful' }), b: blank(), rng: createRng(1) });
   assert.equal(calm.a.disabled.length, 0);
+});
+
+test('First Strike gives the first striker +10% win chance for the round', () => {
+  const m = createMatch({ a: blank({ speed: 9, kindTrait: 'footwork' }), b: blank(), rng: createRng(1) });
+  const r = playRound(m);
+  assert.equal(r.initiative.first, 'A');
+  assert.deepEqual(sources(r.win.modsA), ['First Strike:10000']);
+  assert.equal(r.win.chance, 60000);
 });

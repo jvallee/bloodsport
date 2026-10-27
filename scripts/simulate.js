@@ -1,9 +1,9 @@
 // Balance simulator. Usage: node scripts/simulate.js [matchesPerBuild]
 // 1. Win rate of every Kind trait × Class build vs random opponents at equal Power (design target: 30–70%).
-// 2. Match win and death rates for a fresh fighter against each tournament's opponent Power.
+// 2. Match win and death rates for a trained fighter against each tier's Boss (no debuff).
 
 import { createRng } from '../src/rng.js';
-import { KINDS, CLASSES, WEAPONS, TRAITS, TOURNAMENTS } from '../src/data.js';
+import { KINDS, CLASSES, WEAPONS, TRAITS, CIRCUITS } from '../src/data.js';
 import { createMatch, autoPlay } from '../src/fight.js';
 import { createFighter } from '../src/run.js';
 
@@ -53,20 +53,20 @@ for (const r of rows) {
 const outside = rows.filter((r) => r.win > 0.7 || r.win < 0.3).length;
 console.log(`\n${outside} of ${rows.length} builds outside the 30–70% target.`);
 
-console.log('\nFresh Power 5 build (random) vs each tournament, with 0 and 3 training points in Power');
-for (const trained of [0, 3]) {
-  for (const t of TOURNAMENTS) {
-    let wins = 0;
-    let deaths = 0;
-    for (let i = 0; i < N; i++) {
-      const f = createFighter(rng, { id: 'p', kind: 'human' });
-      f.power += trained;
-      const opp = createFighter(rng, { id: 'o', power: t.oppPower, decorLevel: t.oppDecor });
-      const m = createMatch({ a: f, b: opp, rng, bossDebuff: t.bossDebuff });
-      autoPlay(m);
-      if (m.result.winner === 'A') wins++;
-      if (!m.a.f.alive) deaths++;
-    }
-    console.log(`  +${trained} Power vs ${t.name.padEnd(30)} win ${pct(wins / N)}  death ${pct(deaths / N)}`);
+console.log('\nHuman fighter trained to the tier\'s Trainer cap (all Power, +1 Power per earlier Title) vs each Boss');
+const caps = [3, 5, 8, 13];
+for (const c of CIRCUITS) {
+  let wins = 0;
+  let deaths = 0;
+  for (let i = 0; i < N; i++) {
+    const f = createFighter(rng, { id: 'p', kind: 'human' });
+    f.power += caps[c.tier - 1] + (c.tier - 1);
+    const opp = createFighter(rng, { id: 'o', power: c.oppPower[2], decorLevel: c.oppDecor });
+    opp.speed = 3 + c.tier;
+    const m = createMatch({ a: f, b: opp, rng });
+    autoPlay(m);
+    if (m.result.winner === 'A') wins++;
+    if (!m.a.f.alive) deaths++;
   }
+  console.log(`  Power ${5 + caps[c.tier - 1] + c.tier - 1} vs ${c.name} Boss (Power ${c.oppPower[2]})`.padEnd(54) + `win ${pct(wins / N)}  death ${pct(deaths / N)}`);
 }
