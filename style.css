@@ -383,3 +383,10 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .trait-text > div + div { margin-top: 3px; }
 
 .items-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
+
+.nextbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: #1a1513; font-size: 14px; }
+.nextbar b { color: var(--gold); }
+.nextbar .keys { margin-left: auto; font-size: 11px; color: var(--muted); }
+.nextbar.event { border-color: var(--gold); }
+.nextbar.warn { border-color: #6b5a2a; }
+.nextbar.bad { border-color: var(--blood); }

@@ -372,6 +372,7 @@ export function helpModal() {
       <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favor</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
     </ol>
+    <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or ends the week · T skips to the tournament · 1–4 switch tabs · ? opens this page.</p>
     <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>
     <div class="row"><button class="btn small" data-action="intro-replay">Replay the intro</button><button class="btn small" data-action="tutorial-replay">Restart the tutorial</button><button class="btn small" data-action="tab" data-tab="codex">Open the Codex</button></div>
   </div></div>`;
@@ -397,3 +398,11 @@ export function codexTab(codex, entries, sections, fresh, prog, isUnlocked, hasL
 }
 
 export { XP };
+
+// ---------- Next step ----------
+
+export function nextBar(hint) {
+  if (!hint) return '';
+  const go = hint.action === 'tab' ? `<button class="btn small primary" data-action="tab" data-tab="${hint.tab}">${esc(hint.label)}</button>` : '';
+  return `<div class="nextbar ${hint.tone ?? ''}" role="status"><span>➜ <b>Next:</b> ${esc(hint.text)}</span>${go}<span class="keys" title="Keyboard shortcuts">Space · T · 1–4 · ?</span></div>`;
+}

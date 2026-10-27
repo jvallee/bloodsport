@@ -9,7 +9,8 @@ import {
 } from './run.js';
 import { upgrade } from './ludus.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar } from './ui/views.js';
+import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
 import { fightView } from './ui/fightView.js';
@@ -86,7 +87,7 @@ function render() {
   // Notifications: the tutorial step first, then this week's results (newest first), one page at a time.
   const notices = [tutorialCard(tutorialStep()), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run) : ''}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run) : ''}${nextBar(nextHint(run))}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
   renderFight();
@@ -264,12 +265,31 @@ document.addEventListener('toggle', (e) => {
   if (e.target.matches?.('details[data-key]')) ui.open[e.target.dataset.key] = e.target.open;
 }, true);
 
+// Keyboard shortcuts: Space = the main action (next round / leave the fight / end the week),
+// T = skip to the tournament, 1–4 = tabs, ? = How to play, Escape = close dialogs.
+const pressButton = (selector) => {
+  const b = document.querySelector(selector);
+  if (b && !b.disabled) b.click();
+  return Boolean(b && !b.disabled);
+};
+
 document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select')) return;
   if (e.key === 'Escape' && (showHelp || introPage !== null)) {
     showHelp = false;
     if (introPage !== null) actions['intro-close']();
     render();
+    return;
   }
+  if (introPage !== null) return;
+  if (e.key === ' ' || e.key === 'Enter') {
+    if (e.target.closest?.('button, summary')) return; // let focused buttons and fold-outs work as usual
+    const done = match ? pressButton('#fight [data-action=next-round]') || pressButton('#fight [data-action=leave-fight]') : pressButton('#app [data-action=advance]');
+    if (done) e.preventDefault();
+  } else if ((e.key === 't' || e.key === 'T') && !match) pressButton('#app [data-action=advance-tournament]');
+  else if (/^[1-4]$/.test(e.key) && !match) pressButton(`#app [data-action=tab][data-tab=${['ludus', 'estate', 'market', 'codex'][Number(e.key) - 1]}]`);
+  else if (e.key === '?') pressButton('#app [data-action=help]');
 });
+
 
 boot();

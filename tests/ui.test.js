@@ -123,3 +123,12 @@ test('each round shows who strikes first with dice, and the end of a match shows
   if (!m.summary.died) for (const label of ['XP', 'Renown', 'Morale']) assert.match(end, new RegExp(`<span>${label}</span>`));
   assert.doesNotMatch(end, BAD);
 });
+
+test('the next-step bar renders the hint and a shortcut reminder', async () => {
+  const { nextBar } = await import('../src/ui/views.js');
+  const { nextHint } = await import('../src/hints.js');
+  const html = nextBar(nextHint(createRun(3)));
+  assert.match(html, /Next:/);
+  assert.match(html, /data-tab="market"/);
+  assert.equal(nextBar(null), '');
+});
