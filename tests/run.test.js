@@ -697,3 +697,47 @@ test('simple-bot careers always end, and the state stays valid every week', () =
     assert.ok(['won', 'lost'].includes(run.status), `seed ${seed} never ended`);
   }
 });
+
+test('a returning rival is the arena\'s Boss Power +1, never compounding', () => {
+  const { run, f } = atBout();
+  run.prestige = 100;
+  run.arenas[1].stage = 2;
+  run.arenas[1].opponent.power = CIRCUITS[0].oppPower[2];
+  for (let i = 0; i < 3; i++) {
+    pickPerks(run);
+    run.arenas[1].stage = 2;
+    run.arenas[1].opponent = run.arenas[1].rival ?? run.arenas[1].opponent;
+    run.bouts = { 1: 'open' };
+    run.boutPending = true;
+    run.history = [];
+    playBout(run, f.id, { winner: 'B' });
+    assert.equal(run.arenas[1].rival.power, CIRCUITS[0].oppPower[2] + 1, `loss ${i + 1}`);
+  }
+});
+
+test('lower-arena Bosses drop gear only by chance; only the top Boss always drops', () => {
+  const { run, a, b } = (() => {
+    const r = createRun(3);
+    r.gold = 200;
+    r.prestige = 200;
+    const x = recruit(r, r.market[0].id);
+    const y = recruit(r, r.market[0].id);
+    advanceToTournament(r);
+    conquerTop(r, x.id);
+    nextBout(r);
+    return { run: r, a: x, b: y };
+  })();
+  let drops = 0;
+  for (let i = 0; i < 40; i++) {
+    pickPerks(run);
+    a.morale = b.morale = 60; // 40 crushing wins in a row would (rightly) make them mutinous
+    run.arenas[1].stage = 2;
+    run.arenas[1].opponent.gear.weapon = 'gladius';
+    run.bouts = { 1: 'open', 2: 'open' };
+    run.history = [];
+    const s = playBout(run, (i % 2 ? a : b).id, { tier: 1 });
+    pickPerks(run);
+    if (s.loot) drops++;
+  }
+  assert.ok(drops > 0 && drops < 40, `lower Boss dropped ${drops}/40`);
+});

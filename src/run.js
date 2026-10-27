@@ -721,7 +721,8 @@ export function finishMatch(run, match) {
     if (atDeathGate) changeFavor(run, FAVOR.spectacleWin, 'won at the Death Gate');
     // Loot: claim the loser's gear.
     const drops = [opp.gear.weapon, opp.gear.armor].filter(Boolean);
-    if (drops.length && (bout.boss || next(run.rng.growth) < ECONOMY.lootChance)) {
+    // Only your top arena's Boss always drops gear; anything else is a chance (no farming conquered Bosses).
+    if (drops.length && ((bout.boss && bout.top) || next(run.rng.growth) < ECONOMY.lootChance)) {
       summary.loot = pick(run.rng.growth, drops);
       run.inventory.gear.push(summary.loot);
       log(run, `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good');
@@ -803,7 +804,9 @@ function advanceArena(run, tier, won, opp) {
     restartCircuit(run, tier);
   } else {
     if (tier === run.topTier) {
-      arena.rival = { ...structuredClone(opp), power: opp.power + 1, renown: opp.renown + 2, rival: true };
+      // The rival returns at the arena's Boss Power +1, however often they beat you: no compounding death spiral.
+      const basePower = tier === GRAND_TIER ? GRAND.oppPower : CIRCUITS[tier - 1].oppPower[2];
+      arena.rival = { ...structuredClone(opp), power: basePower + 1, renown: opp.renown + 2, rival: true, injuries: [], alive: true };
       log(run, `${opp.name} will remember this, and will be waiting for you.`, 'warn');
     }
     restartCircuit(run, tier);
