@@ -132,11 +132,13 @@ Improve what exists before adding systems.
 - Icons: inline SVG. *Note:* game-icons.net is **CC BY 3.0** (attribution required), not CC0 as the design doc says, so we'd add a credits page.
 - Each milestone updates `docs/fight-rules.md` (rules and placeholders) and adds tests before UI.
 
-## 6. Decisions needed before M6–M8
+## 6. Decisions (made 2026-10-26)
 
-1. **Calendar unit:** weeks (recommended) or days, as in the design doc?
-2. **Career length:** 4 tiers + Grand Tournament (~60–90 min, recommended) or a shorter 2-tier version first?
-3. **Losing a Boss:** repeat the circuit at a Prestige cost (recommended, friendlier) or end the run (harsher, more roguelike)?
-4. **Estate look:** villa cross-section grid of rooms (recommended) or a simpler department list?
-5. **Instant healing:** remove it (recommended once healing takes time) or keep it as an expensive emergency option?
-6. **Cestus nerf:** it leads every Kind at 57–63%. Tune it now (e.g. +3/6/9%) or wait for playtests?
+1. **Calendar unit: weeks.** Each week is one meaningful decision per fighter. Days would mean many clicks with nothing changing, a classic pacing trap in management games. Assignments persist from week to week, and a **"Skip to tournament"** button covers quiet stretches, so time costs clicks only when something can happen. Roman months stay as labels (4 weeks each, 10 months), followed by a 4-week **Winter Dead Season** with no tournaments.
+2. **Career length: 4 tiers + Grand Tournament.** A long arc gives buildings and progression time to matter. To keep it from dragging, there's one tournament every 4 active weeks (≈13 tournaments, ~50 weeks), skip-to-tournament, and autosave so a career can be played across sessions.
+3. **Losing a Boss: a Strike, then the circuit repeats.** Losing an hour of play to one unlucky roll feels unfair, but a loss with no consequence feels pointless. A Boss loss gives an **Imperial Strike**, costs the buy-in, and restarts that tier's circuit against new opponents and a new debuff. **Three Strikes and you're executed** (the design doc's "fall behind and you're executed"). Losing hurts and the stakes build, but there's always a way back.
+4. **Estate look: villa cross-section grid.** Seeing rooms as places, not rows, is what makes management games feel like *yours* (Darkest Dungeon's Hamlet, Book of Hours). Plots are a limited, visible resource, so each build choice is a real trade-off.
+5. **Instant healing: kept, as an expensive Emergency Surgeon (5 Gold per injury).** Removing it entirely would cost the player a choice, and choices are what make a strategy game fun. At 5 Gold it's a deliberate trade between Gold and time, not the default. The Medbay (free, takes weeks) is the normal way to heal.
+6. **Cestus: nerfed now to +3/6/9% win chance** (injure bonus stays +5/10/15%). It led every Kind by a wide margin, and a dominant pick narrows the choices players feel they have. The change gets re-checked with the simulator.
+
+Detailed placeholder numbers for M5–M8 live in `docs/fight-rules.md` ("Career rules").
