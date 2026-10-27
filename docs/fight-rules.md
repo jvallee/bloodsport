@@ -156,6 +156,11 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Rivals:** a top-arena Boss who beats you returns as that arena's next Boss at the arena's Boss Power +1 (never more, however often they win).
 - **Scouted:** a fighter who fought in your top arena last tournament week faces +1 opponent Power there this week. Sitting out the top arena for one tournament week resets it. Lower arenas never scout.
 - **Crushing wins and upsets** compare Power including gear (the number on the fighter card).
+- **Championships:** a fighter becomes Champion of an arena by beating its Boss *or* winning 3 matches there (+1 Power; one Title per arena, never for the Grand Tournament).
+- **Champions in lower arenas:** a Champion who fights back in a lower arena gets no Prestige and no Renown for a win, loses 10 Morale, and costs 3 Favor ("a champion picking on newcomers").
+- **Rookies:** fighters under 5 Renown are never jeered for mismatches; only known fighters (5+ Renown) crushing a weak opponent by 3+ Power are.
+- **Injuries go both ways every round:** whoever wins the round, both fighters roll to injure. The round loser is much easier to hurt (25% vs 10% at even Power).
+- **Reloading mid-match** counts as throwing in the towel, but keeps any injuries (or death) from rounds already played.
 - **Revolt:** if the roster's average Morale stays below 20 for 4 weeks in a row, the career is lost.
 
 ### Fighter growth
