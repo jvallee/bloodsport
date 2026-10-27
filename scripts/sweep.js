@@ -6,6 +6,27 @@ import { CIRCUITS, GRAND, FAVOR, EVASION, TRIBUTE, ECONOMY } from '../src/data.j
 import { playCareer } from './bots.js';
 import { speedSplit } from './checks.js';
 
+if (process.argv.includes('--curve')) {
+  // Difficulty curve: first-Boss Power × Challenger Renown step. Same seeds as the gates.
+  const { bossCurve } = await import('./checks.js');
+  const n = Number(process.argv.find((a) => /^\d+$/.test(a))) || 150;
+  const saved = [CIRCUITS[0].oppPower[2], ECONOMY.challengerRenown];
+  console.log(`T1 Boss Power | Challenger per | careful win | T1 Boss | T4 Boss | Grand | reckless deaths   (${n} careers)`);
+  for (const p of [7]) {
+    for (const step of [15, 20, 30, 999]) {
+      CIRCUITS[0].oppPower[2] = p;
+      ECONOMY.challengerRenown = step;
+      const c = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'careful'));
+      const r = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'reckless'));
+      const curve = bossCurve(c);
+      const pc = (x) => `${Math.round(100 * (x ?? 0))}%`;
+      console.log(`${String(p).padStart(13)} | ${String(step).padStart(14)} | ${pc(c.filter((x) => x.won).length / n).padStart(11)} | ${pc(curve[1]).padStart(7)} | ${pc(curve[4]).padStart(7)} | ${pc(curve[5]).padStart(5)} | ${(r.reduce((s, x) => s + x.deaths, 0) / n).toFixed(2).padStart(15)}`);
+    }
+  }
+  [CIRCUITS[0].oppPower[2], ECONOMY.challengerRenown] = saved;
+  process.exit(0);
+}
+
 if (process.argv.includes('--scout')) {
   // Scouted cap (opponent Power per consecutive top-arena month, max) × Favor start. Same seeds as the gates.
   const n = Number(process.argv.find((a) => /^\d+$/.test(a))) || 150;

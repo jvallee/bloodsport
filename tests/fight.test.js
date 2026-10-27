@@ -498,3 +498,8 @@ test('Scouted: the opponent gets +Power against a fighter they have studied', ()
   assert.deepEqual(sources(computePower(m.b, m.a, 1).mods), ['Scouted:2']);
   assert.equal(computePower(m.a, m.b, 1).mods.length, 0);
 });
+
+test('Challenger: the opponent gets +Power against a famous fighter', () => {
+  const m = createMatch({ a: blank(), b: blank(), rng: createRng(1), challenger: 2 });
+  assert.deepEqual(sources(computePower(m.b, m.a, 1).mods), ['Challenger:2']);
+});

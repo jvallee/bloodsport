@@ -1010,3 +1010,42 @@ test('Crowd Bribe: capitulating this fight costs no Favor and no Renown', () => 
   assert.equal(f.renown, renown);
   assert.equal(s.bribed, true);
 });
+
+// ---------- Difficulty curve (gentle start, tough finish) ----------
+
+test('the Dirt Pits Boss fights without an arena rule; later Bosses keep theirs', () => {
+  const run = createRun(1);
+  run.arenas[1].stage = 2;
+  assert.equal(boutFor(run, 1).debuff, null);
+  run.topTier = 2;
+  run.arenas[2] = { ...run.arenas[1], tier: 2, stage: 2, debuff: 'rainyMud' };
+  assert.equal(boutFor(run, 2).debuff, 'rainyMud');
+});
+
+test('Challengers: late top-arena opponents gain +1 Power per ECONOMY.challengerRenown Renown of the fighter they face (capped)', () => {
+  const { run, f } = atBout();
+  // Move the career to the Silver Coliseum so Challengers apply.
+  run.topTier = ECONOMY.challengerFromTier;
+  run.arenas[run.topTier] = { ...run.arenas[1], tier: run.topTier, stage: 0 };
+  run.bouts = { [run.topTier]: 'open' };
+  run.prestige = 100;
+  f.renown = ECONOMY.challengerRenown;
+  assert.equal(matchOptions(run, f).challenger, 1);
+  f.renown = ECONOMY.challengerRenown * 9;
+  assert.equal(matchOptions(run, f).challenger, ECONOMY.challengerMax);
+  const m = startMatch(run, f.id);
+  assert.ok(computePower(m.b, m.a, 1).mods.some((x) => x.source === 'Challenger' && x.value === ECONOMY.challengerMax));
+});
+
+test('Challengers only appear in your top arena, and never in the first two tiers', () => {
+  const early = createRun(1);
+  const g = recruit(early, early.market[0].id);
+  g.renown = 100;
+  assert.equal(matchOptions(early, g, 1).challenger, 0);
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  f.renown = 100;
+  run.topTier = 2;
+  run.arenas[2] = { ...run.arenas[1], tier: 2 };
+  assert.equal(matchOptions(run, f, 1).challenger, 0);
+});

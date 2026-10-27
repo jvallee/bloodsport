@@ -107,6 +107,9 @@ export const ECONOMY = {
   lootChance: 0.35, // chance to claim a beaten opponent's gear (Bosses always drop theirs)
   titleWins: 3, // wins in an arena that make a fighter its Champion (beating its Boss does too)
   knownRenown: 5, // fighters below this Renown (rookies) are never jeered for mismatches
+  challengerRenown: 30, // top-arena opponents gain +1 Power per this much Renown of the fighter they face
+  challengerMax: 2,
+  challengerFromTier: 3, // Challengers only appear from the Silver Coliseum on (the late game)
   scoutedMax: 1, // opponents gain +1 Power per consecutive top-arena month a fighter has fought, up to this (swept: 2+ is too punishing)
 };
 
@@ -138,7 +141,7 @@ export const STAGES = ['Tournament 1', 'Tournament 2', 'Boss Tournament'];
 
 // One circuit per tier: Tournament 1 → Tournament 2 → Boss. Arrays are per stage.
 export const CIRCUITS = [
-  { tier: 1, name: 'The Dirt Pits', oppPower: [6, 7, 8], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
+  { tier: 1, name: 'The Dirt Pits', oppPower: [6, 6, 7], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
   { tier: 2, name: 'The Bronze Arena', oppPower: [9, 10, 11], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
   { tier: 3, name: 'The Silver Coliseum', oppPower: [13, 14, 15], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
   { tier: 4, name: 'The Imperial Coliseum', oppPower: [19, 20, 21], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },

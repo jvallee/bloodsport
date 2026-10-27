@@ -84,7 +84,8 @@ export function boutFor(run, tier = run.topTier) {
     name: `${c.name} · ${STAGES[s]}`, stage: s, boss: s === 2,
     buyIn: c.buyIn[s], winGold: c.winGold[s],
     winPrestige: Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below),
-    lossGold: c.lossGold, oppPower: c.oppPower[s], oppDecor: c.oppDecor, debuff: s === 2 ? arena.debuff : null,
+    // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
+    lossGold: c.lossGold, oppPower: c.oppPower[s], oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
     conquered: arena.conquered,
   };
 }
@@ -140,6 +141,7 @@ export function matchOptions(run, f, tier = run.topTier) {
     debuff: boutFor(run, tier).debuff,
     overtrained: f.stress >= STRESS.overtrained,
     scouted: tier === run.topTier ? Math.min(ECONOMY.scoutedMax, f.topStreak ?? 0) : 0,
+    challenger: tier === run.topTier && tier >= ECONOMY.challengerFromTier ? Math.min(ECONOMY.challengerMax, Math.floor((f.renown ?? 0) / ECONOMY.challengerRenown)) : 0,
   };
 }
 

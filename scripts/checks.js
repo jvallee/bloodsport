@@ -36,18 +36,35 @@ export function speedSplit({ n = 3000 } = {}) {
   return { rows, balanced };
 }
 
+// Top-arena Boss win rate per attempt, by tier (5 = Grand Tournament).
+export function bossCurve(results) {
+  const by = {};
+  for (const { run } of results) {
+    for (const h of run.history) {
+      if (!h.boss || !h.top || h.skipped) continue;
+      by[h.tier] ??= { n: 0, w: 0 };
+      by[h.tier].n++;
+      if (h.won) by[h.tier].w++;
+    }
+  }
+  return Object.fromEntries(Object.entries(by).map(([t, v]) => [t, v.w / v.n]));
+}
+
 export function runGates({ careers = 200, quick = false } = {}) {
   const careful = Array.from({ length: careers }, (_, i) => playCareer(1000 + i, 'careful'));
   const reckless = Array.from({ length: careers }, (_, i) => playCareer(1000 + i, 'reckless'));
   const rate = (rs) => rs.filter((r) => r.won).length / rs.length;
   const deaths = (rs) => avg(rs.map((r) => r.deaths));
   const split = speedSplit({ n: quick ? 800 : 3000 });
+  const curve = bossCurve(careful);
   const gates = [
     { name: 'Careful career win rate is 30–45%', value: rate(careful), pass: rate(careful) >= 0.3 && rate(careful) <= 0.45, fmt: 'pct' },
     { name: 'Careful wins at least as often as reckless', value: rate(careful) - rate(reckless), pass: rate(careful) >= rate(reckless), fmt: 'pctDiff' },
     { name: 'Careful loses clearly fewer fighters than reckless', value: deaths(careful) / Math.max(0.01, deaths(reckless)), pass: deaths(careful) <= 0.5 * deaths(reckless), fmt: 'ratio' },
     { name: 'Reckless loses 1–3 fighters per career', value: deaths(reckless), pass: deaths(reckless) >= 1 && deaths(reckless) <= 3, fmt: 'num' },
     { name: 'Balanced fighter (25–60% Speed) is best vs at least 2 of 4 Bosses', value: split.balanced, pass: split.balanced >= 2, fmt: 'count' },
+    { name: 'Gentle start: the first Boss is won at least 55% of the time', value: curve[1] ?? 0, pass: (curve[1] ?? 0) >= 0.55, fmt: 'pct' },
+    { name: 'Tough finish: the Grand Tournament is 10+ points harder than the first Boss', value: (curve[1] ?? 0) - (curve[5] ?? 1), pass: (curve[1] ?? 0) - (curve[5] ?? 1) >= 0.1, fmt: 'pctDiff' },
   ];
-  return { gates, careful, reckless, split };
+  return { gates, careful, reckless, split, curve };
 }
