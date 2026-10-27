@@ -9,7 +9,7 @@ import { blank, injuries } from './helpers.js';
 test('the intro explains the world, winning, losing and the core stats', () => {
   assert.equal(INTRO.length, 4);
   const text = INTRO.map((p) => p.body).join(' ');
-  for (const word of ['Grand Tournament', 'Imperial Strike', 'two injuries', 'Power', 'Speed']) assert.match(text, new RegExp(word));
+  for (const word of ['Grand Tournament', 'Imperial Favor', 'tribute', 'two injuries', 'Power', 'Speed']) assert.match(text, new RegExp(word));
 });
 
 test('the tutorial walks a new career in order: recruit → jobs → fight day', () => {

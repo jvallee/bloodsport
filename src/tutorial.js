@@ -18,14 +18,14 @@ export const INTRO = [
   },
   {
     title: 'How you lose',
-    body: `<p>Every Boss you lose earns an <b>Imperial Strike</b>. <b>Three Strikes and you're executed.</b></p>
-      <p>You also fall if every gladiator is dead and you can't afford another.</p>
+    body: `<p>The Emperor watches you through <b>Imperial Favor</b>. Losing a Boss in your top arena, forfeiting, and failing to pay his <b>yearly tribute</b> all cost Favor. <b>At 0 Favor you're executed.</b></p>
+      <p>You also fall if every gladiator is dead and you can't afford another, or if your miserable gladiators revolt.</p>
       <p>Your fighters are mortal. One injury is survivable; with <b>two injuries, losing a round can kill them</b>. Between rounds you can always <b>throw in the towel</b> to save a fighter, at the cost of the match.</p>`,
   },
   {
     title: 'Power, Speed and luck',
     body: `<p><b>Power</b> wins rounds. What counts is the gap between the fighters: +1 is 55% per round, +3 is 70%, +5 is 95%.</p>
-      <p><b>Speed</b> decides who strikes first: +10% to win that round, and the first chance to wound.</p>
+      <p><b>Speed</b> decides who strikes first (+10% to win that round, and the first chance to wound), and being faster makes you <b>harder to wound</b>. A balanced fighter wins and stays healthy.</p>
       <p>Traits, weapons and injuries tilt the odds further. Every number is shown in the fight and explained in the <b>Codex</b>. Good luck, Lanista.</p>`,
   },
 ];
@@ -45,7 +45,13 @@ export const STEPS = [
   { id: 'injury', when: (r) => r.roster.some((f) => f.injuries.length), title: 'Injuries and the Death Gate',
     body: 'An injured fighter shows red chips and filled <b>Death Gate</b> dots. At <b>two dots</b> the gate is open: losing a round can kill them. Heal them in the Medbay, or pay the Emergency Surgeon if you need them right away.' },
   { id: 'boss', when: (r) => r.boutPending && currentBout(r).boss, title: 'A Boss fight',
-    body: 'Bosses are stronger and fight under a special <b>arena rule</b> (shown in red). They can\'t be skipped. Win and your fighter earns a <b>Title</b> (+1 Power) and you move up an arena. Lose and you take an <b>Imperial Strike</b>.' },
+    body: 'Bosses are stronger and fight under a special <b>arena rule</b> (shown in red). They can\'t be skipped. Win and your fighter earns a <b>Title</b> (+1 Power), you gain Favor and a new arena opens. Lose and you lose <b>Favor</b>, and that Boss will be waiting for you, stronger.' },
+  { id: 'levelup', when: (r) => r.roster.some((f) => f.pendingPerks.length), title: 'Level up!',
+    body: 'Every match earns XP. When a fighter levels up, pick <b>one of three perks</b> on their card. Some perks need both Power and Speed, which is a reason to build balanced fighters.' },
+  { id: 'arenas', when: (r) => Object.keys(r.arenas).length > 1, title: 'More arenas, more fights',
+    body: 'Your old arenas still hold bouts every tournament week. Send a <b>different fighter to each</b> to earn Gold, XP and Renown. Only your <b>top arena</b> affects Favor, and crushing a much weaker opponent makes the crowd jeer.' },
+  { id: 'morale', when: (r) => r.roster.some((f) => f.renown >= 4 || f.morale < 45), title: 'Keep your stars happy',
+    body: 'Winning makes fighters famous (<b>Renown</b>), and famous fighters expect better rooms. Their <b>Morale</b> drifts toward comfort minus expectations: place decor, upgrade Quarters, build an Entertainment Room. Inspired fighters fight better; restless ones won\'t train.' },
   { id: 'estate', when: (r) => r.prestigeLevel >= 2, title: 'Your house has grown',
     body: 'A new Prestige level unlocks <b>room plots</b> and buildings. Visit the <b>Estate</b>: plots are limited, so choose what your house needs most. Trainer upgrades raise how far fighters can train.' },
 ];

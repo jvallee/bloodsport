@@ -1,22 +1,30 @@
-// Career state: weekly schedule, market, circuits (Tournament 1 → 2 → Boss per tier), Grand Tournament.
+// Career state: weekly schedule, market, fighter growth, Morale, inventory, and the arenas.
+// Every arena you've unlocked holds a bout on tournament week (Tournament 1 → 2 → Boss); the highest one is your
+// "top" arena, where Bosses decide your standing with the Emperor. After Tier 4 comes the Grand Tournament (tier 5).
 // Pure: no DOM. Actions mutate the run and throw on invalid moves; *Blocker() returns why a move is invalid.
 
-import { createRng, deriveSeed, int, pick, randomSeed } from './rng.js';
+import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
-  ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS, STARTING_BUILDINGS,
+  ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
+  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT,
 } from './data.js';
-import { createMatch, kindActive } from './fight.js';
-import { isTournamentWeek, isMonthStart, formatDate } from './calendar.js';
+import { createMatch, kindActive, effectiveInjuries } from './fight.js';
+import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
+  maxLevel, effectAt,
 } from './ludus.js';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
+export const GRAND_TIER = CIRCUITS.length + 1;
 const KIND_IDS = Object.keys(KINDS);
 const CLASS_IDS = Object.keys(CLASSES);
 const WEAPON_IDS = Object.keys(WEAPONS);
 const DEBUFF_IDS = Object.keys(BOSS_DEBUFFS);
+const COMBAT_PERKS = ['thickSkin', 'killer', 'fastStart', 'closer', 'survivor', 'duelist'];
 export const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
+
+const emptyDecor = () => Object.fromEntries(Object.keys(DECOR).map((k) => [k, 0]));
 
 export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel = 0, takenNames = [] } = {}) {
   kind ??= pick(rng, KIND_IDS);
@@ -25,7 +33,7 @@ export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel
   const weapon = cls === 'fighter' ? pick(rng, WEAPON_IDS) : null;
   const free = NAMES.filter((n) => !takenNames.includes(n));
   const name = pick(rng, free.length ? free : NAMES);
-  const decor = { bird: 0, fireBrazier: 0 };
+  const decor = emptyDecor();
   if (cls === 'ornitharius') decor.bird = decorLevel;
   if (kindTrait === 'firebug') decor.fireBrazier = decorLevel;
   return {
@@ -34,34 +42,97 @@ export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel
     speed: ECONOMY.startSpeed,
     trained: 0, decor, injuries: [], alive: true,
     stress: 0, job: 'rest', titles: [],
+    xp: 0, level: 1, perks: [], pendingPerks: [], renown: 0, morale: MORALE.start, gear: { weapon: null, armor: null },
   };
 }
 
 const newId = (run, prefix) => `${prefix}${run.nextId++}`;
+const allOpponents = (run) => Object.values(run.arenas).map((a) => a.opponent).filter(Boolean);
 const takenNames = (run, extra = []) =>
-  [...run.roster, ...run.market, ...(run.opponent ? [run.opponent] : []), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name);
-const clampStress = (n) => Math.max(0, Math.min(STRESS.max, n));
+  [...run.roster, ...run.market, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name);
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const clampStress = (n) => clamp(n, 0, STRESS.max);
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
+const findFighter = (run, id) => run.roster.find((f) => f.id === id);
 
-// ---------- Circuit info ----------
+// ---------- Arenas and bouts ----------
 
-export const circuitInfo = (run) => CIRCUITS[run.tier - 1];
+export const unlockedTiers = (run) => Object.keys(run.arenas).map(Number).sort((a, b) => a - b);
+export const isGrand = (run) => run.topTier === GRAND_TIER;
+export const circuitInfo = (run) => CIRCUITS[Math.min(run.topTier, CIRCUITS.length) - 1];
+export const arenaName = (tier) => (tier === GRAND_TIER ? GRAND.name : CIRCUITS[tier - 1].name);
 
-// The bout on the next tournament week: name, buy-in, rewards, opponent Power, debuff.
-export function currentBout(run) {
-  if (run.grand) return { name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: GRAND.oppPower, oppDecor: GRAND.oppDecor, debuff: run.debuff };
-  const c = circuitInfo(run);
-  const s = run.stage;
+// The bout an arena holds on tournament week: name, buy-in, rewards, opponent Power, debuff.
+export function boutFor(run, tier = run.topTier) {
+  const top = tier === run.topTier;
+  const below = run.topTier - tier;
+  const arena = run.arenas[tier];
+  if (tier === GRAND_TIER) {
+    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: GRAND.oppPower, oppDecor: GRAND.oppDecor, debuff: arena.debuff, conquered: false };
+  }
+  const c = CIRCUITS[tier - 1];
+  const s = arena.stage;
   return {
+    tier, top, below,
     name: `${c.name} · ${STAGES[s]}`, stage: s, boss: s === 2,
-    buyIn: c.buyIn[s], winGold: c.winGold[s], winPrestige: c.winPrestige[s], lossGold: c.lossGold,
-    oppPower: c.oppPower[s], oppDecor: c.oppDecor, debuff: s === 2 ? run.debuff : null,
+    buyIn: c.buyIn[s], winGold: c.winGold[s],
+    winPrestige: Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below),
+    lossGold: c.lossGold, oppPower: c.oppPower[s], oppDecor: c.oppDecor, debuff: s === 2 ? arena.debuff : null,
+    conquered: arena.conquered,
   };
 }
+export const currentBout = (run) => boutFor(run, run.topTier);
+export const opponentFor = (run, tier = run.topTier) => run.arenas[tier].opponent;
+
+// Opponents get faster as you climb (+1 Speed per tier, +1 more for Bosses), so Speed stays worth training.
+export const opponentSpeed = (run, bout = currentBout(run)) => 3 + Math.min(bout.tier, CIRCUITS.length) - 1 + (bout.boss ? 1 : 0);
+
+// Higher tiers field seasoned opponents: perks (tier − 1, +1 for Bosses) and gear from Tier 2.
+function seasonOpponent(run, f, bout) {
+  const rng = run.rng.opponents;
+  const t = Math.min(bout.tier, CIRCUITS.length);
+  const perkCount = t - 1 + (bout.boss ? 1 : 0);
+  const pool = COMBAT_PERKS.filter((p) => !PERKS[p].req || PERKS[p].req({ ...f, level: 5 }));
+  for (let i = 0; i < perkCount && pool.length; i++) f.perks.push(pool.splice(int(rng, 0, pool.length - 1), 1)[0]);
+  f.level = 1 + f.perks.length;
+  const tierGear = (slot, gearTier) => Object.keys(GEAR).filter((k) => GEAR[k].slot === slot && GEAR[k].tier <= gearTier);
+  if (t >= 2) f.gear.weapon = pick(rng, tierGear('weapon', t >= 4 ? 2 : 1));
+  if (t >= 3) f.gear.armor = pick(rng, tierGear('armor', t >= 4 ? 2 : 1));
+  f.renown = t * 3 + (bout.boss ? 5 : 0);
+}
+
+function newOpponent(run, tier) {
+  const arena = run.arenas[tier];
+  const bout = boutFor(run, tier);
+  if (bout.boss && arena.rival) {
+    arena.opponent = arena.rival; // a Boss who beat you comes back, stronger
+    return;
+  }
+  const f = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower, decorLevel: bout.oppDecor, takenNames: takenNames(run) });
+  f.speed = opponentSpeed(run, bout);
+  seasonOpponent(run, f, bout);
+  arena.opponent = f;
+}
+
+function openArena(run, tier) {
+  run.arenas[tier] = { tier, stage: tier === GRAND_TIER ? 3 : 0, debuff: pick(run.rng.opponents, DEBUFF_IDS), opponent: null, conquered: false, rival: null };
+  newOpponent(run, tier);
+}
+
+function restartCircuit(run, tier) {
+  const arena = run.arenas[tier];
+  arena.stage = 0;
+  arena.debuff = pick(run.rng.opponents, DEBUFF_IDS);
+  newOpponent(run, tier);
+}
+
+// ---------- Market, Liaison, Armourer ----------
+
+export const marketPrice = (run) => circuitInfo(run).price;
 
 function refreshMarket(run) {
   const rng = run.rng.market;
-  const bonus = run.grand ? CIRCUITS[3].marketPower : circuitInfo(run).marketPower;
+  const bonus = circuitInfo(run).marketPower;
   const market = [];
   const make = (kind) => createFighter(rng, { id: newId(run, 'f'), kind, bonusPower: bonus, takenNames: takenNames({ ...run, market: [] }, market) });
   for (let i = 0; i < ECONOMY.marketSize - 1; i++) market.push(make());
@@ -69,41 +140,32 @@ function refreshMarket(run) {
   run.market = market;
 }
 
-export const marketPrice = (run) => (run.grand ? CIRCUITS[3].price : circuitInfo(run).price);
-
 // Liaison: Lv 1 offers a cheap weak convict with a Flesh Wound; Lv 2 a strong POW with a Concussion.
 function refreshLiaison(run) {
   const lv = liaisonLevel(run);
   run.liaisonOffer = null;
   if (!lv) return;
-  const bout = currentBout(run);
   const elite = lv >= 2;
-  const f = createFighter(run.rng.market, {
-    id: newId(run, 'f'),
-    power: Math.max(3, bout.oppPower + (elite ? 1 : -2)),
-    takenNames: takenNames(run),
-  });
+  const f = createFighter(run.rng.market, { id: newId(run, 'f'), power: Math.max(3, currentBout(run).oppPower + (elite ? 1 : -2)), takenNames: takenNames(run) });
   f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
   f.stress = elite ? 30 : 40;
+  f.morale = elite ? 40 : 30;
   f.price = elite ? 4 : 1;
   f.origin = elite ? 'Prisoner of war' : 'Condemned convict';
   run.liaisonOffer = f;
 }
 
-// Opponents get faster as you climb (+1 Speed per tier, +1 more for Bosses), so Speed stays worth training.
-export const opponentSpeed = (run, bout = currentBout(run)) => 3 + (run.grand ? CIRCUITS.length : run.tier) - 1 + (bout.boss ? 1 : 0);
-
-function newOpponent(run) {
-  const bout = currentBout(run);
-  run.opponent = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower, decorLevel: bout.oppDecor, takenNames: takenNames({ ...run, opponent: null }) });
-  run.opponent.speed = opponentSpeed(run, bout);
+function refreshArmourer(run) {
+  const lv = maxLevel(run, 'armourer');
+  if (!lv) {
+    run.armourerStock = [];
+    return;
+  }
+  const pool = Object.keys(GEAR).filter((k) => GEAR[k].tier <= lv);
+  run.armourerStock = Array.from({ length: effectAt('armourer', lv) }, () => pick(run.rng.market, pool));
 }
 
-function newCircuit(run) {
-  run.stage = 0;
-  run.debuff = pick(run.rng.opponents, DEBUFF_IDS);
-  newOpponent(run);
-}
+// ---------- Career setup ----------
 
 export function createRun(seed = randomSeed()) {
   const run = {
@@ -112,23 +174,24 @@ export function createRun(seed = randomSeed()) {
     gold: ECONOMY.startGold,
     prestige: ECONOMY.startPrestige,
     prestigeLevel: 1,
-    strikes: 0,
+    favor: FAVOR.start,
     week: 0,
-    tier: 1,
-    stage: 0,
-    grand: false,
-    debuff: null,
+    topTier: 1,
+    arenas: {},
+    bouts: null, // on tournament week: { tier: 'open' | 'done' }
+    boutPending: false, // the top arena's bout still needs a decision
     roster: [],
     fallen: [],
     market: [],
     liaisonOffer: null,
-    opponent: null,
+    armourerStock: [],
+    inventory: { decor: emptyDecor(), gear: [] },
     buildings: [],
-    boutPending: false,
     status: 'active', // 'active' | 'won' | 'lost'
     endReason: null,
     inMatch: false,
-    matchFighterId: null,
+    matchInfo: null,
+    revoltWeeks: 0,
     history: [],
     log: [],
     nextId: 1,
@@ -136,18 +199,17 @@ export function createRun(seed = randomSeed()) {
       market: createRng(deriveSeed(seed, 1)),
       opponents: createRng(deriveSeed(seed, 2)),
       fight: createRng(deriveSeed(seed, 3)),
+      growth: createRng(deriveSeed(seed, 4)),
     },
   };
   for (const type of STARTING_BUILDINGS) run.buildings.push({ id: newId(run, 'b'), type, level: 1 });
-  newCircuit(run);
+  openArena(run, 1);
   refreshMarket(run);
-  log(run, `You take charge of a bottom-tier Ludus in ${circuitInfo(run).name}.`);
+  log(run, `You take charge of a bottom-tier Ludus in ${arenaName(1)}.`);
   return run;
 }
 
 // ---------- Shared checks ----------
-
-const findFighter = (run, id) => run.roster.find((f) => f.id === id);
 
 function idleBlocker(run) {
   if (run.status !== 'active') return 'The run is over.';
@@ -157,6 +219,18 @@ function idleBlocker(run) {
 
 function assertOk(reason) {
   if (reason) throw new Error(reason);
+}
+
+// Return a fighter's decor and gear to the house storeroom (on death or release).
+function stripFighter(run, f) {
+  for (const k of Object.keys(DECOR)) {
+    run.inventory.decor[k] += f.decor[k] ?? 0;
+    f.decor[k] = 0;
+  }
+  for (const slot of ['weapon', 'armor']) {
+    if (f.gear[slot]) run.inventory.gear.push(f.gear[slot]);
+    f.gear[slot] = null;
+  }
 }
 
 // ---------- Recruiting ----------
@@ -197,8 +271,9 @@ export function releaseBlocker(run, id) {
 export function release(run, id) {
   assertOk(releaseBlocker(run, id));
   const f = findFighter(run, id);
+  stripFighter(run, f);
   run.roster = run.roster.filter((x) => x !== f);
-  log(run, `${f.name} is released from the Ludus.`);
+  log(run, `${f.name} is released from the Ludus. Their gear and decor return to the storeroom.`);
 }
 
 // ---------- Weekly jobs ----------
@@ -230,10 +305,33 @@ export function setJob(run, id, job) {
   findFighter(run, id).job = job;
 }
 
+// ---------- Morale ----------
+
+export const decorCount = (f) => Object.values(f.decor).reduce((s, n) => s + n, 0);
+
+// Where a fighter's Morale is heading: comfort (rooms, decor, entertainment) minus what their fame makes them expect.
+export function moraleTarget(run, f) {
+  const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + MORALE.perDecor * decorCount(f) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
+  const expects = Math.min(MORALE.maxExpectation, MORALE.expectationPerRenown * f.renown);
+  return { target: clamp(MORALE.base + comfort - expects, 0, 100), comfort, expects };
+}
+
+export function moraleState(f) {
+  if (f.morale >= MORALE.inspired) return { id: 'inspired', label: 'Inspired', desc: '+5% win chance in every round.' };
+  if (f.morale < MORALE.mutinous) return { id: 'mutinous', label: 'Mutinous', desc: 'Refuses to fight. Give them decor, a better room, or wins.' };
+  if (f.morale < MORALE.restless) return { id: 'restless', label: 'Restless', desc: "Won't train. Give them decor or a better room." };
+  return { id: 'content', label: 'Content', desc: 'No effect.' };
+}
+
+const bumpMorale = (f, n) => { f.morale = clamp(f.morale + n, 0, 100); };
+
+// ---------- The week ----------
+
 export function advanceBlocker(run) {
   const idle = idleBlocker(run);
   if (idle) return idle;
-  if (run.boutPending) return 'Tournament week: send a fighter or skip the bout first.';
+  if (run.boutPending) return `Tournament week: send a fighter to ${arenaName(run.topTier)}, or skip the bout first.`;
+  if (run.roster.some((f) => f.pendingPerks.length)) return 'A fighter levelled up: choose their perk first.';
   return null;
 }
 
@@ -242,9 +340,11 @@ export function advanceWeek(run) {
   assertOk(advanceBlocker(run));
   const relief = stressRelief(run);
   for (const f of run.roster) {
+    const restless = f.morale < MORALE.restless;
     const tooStressed = isTraining(f.job) && f.stress >= STRESS.overtrained;
     if (tooStressed) log(run, `${f.name} is too stressed to train and rests this week.`, 'warn');
-    if (isTraining(f.job) && !tooStressed) {
+    else if (isTraining(f.job) && restless) log(run, `${f.name} is too restless to train (Morale ${f.morale}).`, 'warn');
+    if (isTraining(f.job) && !tooStressed && !restless) {
       const cost = trainCost(run);
       if (f.trained >= trainCap(run)) {
         f.job = 'rest';
@@ -257,7 +357,7 @@ export function advanceWeek(run) {
         f[stat] += TRAIN_GAIN[stat];
         f.trained += 1;
         run.gold -= cost;
-        f.stress = clampStress(f.stress + STRESS.train);
+        f.stress = clampStress(f.stress + STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0));
         log(run, `${f.name} trains: +${TRAIN_GAIN[stat]} ${stat === 'power' ? 'Power' : 'Speed'}.`, 'good');
       }
     }
@@ -278,54 +378,214 @@ export function advanceWeek(run) {
         f.job = 'rest';
         log(run, `${f.name} leaves the Medbay fully healed.`, 'good');
       }
-    } else if (f.job === 'rest' || tooStressed) {
+    } else if (f.job === 'rest' || tooStressed || (isTraining(f.job) && restless)) {
       f.stress = clampStress(f.stress + STRESS.rest);
     }
     f.stress = clampStress(f.stress - relief);
+    // Morale drifts toward what their room and fame warrant.
+    const { target } = moraleTarget(run, f);
+    f.morale = f.morale < target ? Math.min(target, f.morale + MORALE.drift) : Math.max(target, f.morale - MORALE.drift);
     if (f.stress >= STRESS.overtrained) log(run, `${f.name} is overtrained (Stress ${f.stress}). Rest them before a fight.`, 'warn');
+    if (f.morale < MORALE.mutinous) log(run, `${f.name} is mutinous and refuses to fight.`, 'bad');
   }
+  // A house in despair revolts.
+  const avg = run.roster.length ? run.roster.reduce((s, f) => s + f.morale, 0) / run.roster.length : 100;
+  run.revoltWeeks = avg < REVOLT.morale ? run.revoltWeeks + 1 : 0;
+  if (run.revoltWeeks) log(run, `The gladiators are close to revolt (${run.revoltWeeks}/${REVOLT.weeks} weeks).`, 'bad');
+
+  run.bouts = null;
   run.week += 1;
+  const d = dateOf(run.week);
   if (isMonthStart(run.week)) {
     refreshMarket(run);
     refreshLiaison(run);
+    refreshArmourer(run);
   }
+  if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
+  if (run.week % WEEKS_PER_YEAR === WEEKS_PER_YEAR - 4) payTribute(run);
   if (isTournamentWeek(run.week)) {
+    run.bouts = Object.fromEntries(unlockedTiers(run).map((t) => [t, 'open']));
     run.boutPending = true;
-    log(run, `Tournament week: ${currentBout(run).name}.`, 'event');
+    log(run, `Tournament week in ${unlockedTiers(run).length > 1 ? `${unlockedTiers(run).length} arenas` : arenaName(run.topTier)}.`, 'event');
   }
   checkLoss(run);
 }
 
-// Advance until the next tournament week (stops early if the run ends).
+// Advance until the next tournament week (stops early if the run ends or a decision is needed).
 export function advanceToTournament(run) {
   let weeks = 0;
-  while (!run.boutPending && run.status === 'active') {
+  while (!run.boutPending && run.status === 'active' && !advanceBlocker(run)) {
     advanceWeek(run);
     weeks++;
   }
   return weeks;
 }
 
-// ---------- Decor and surgeon ----------
+// ---------- Tribute and Favor ----------
 
-export function decorBlocker(run, id, item) {
+export const tributeDue = (run) => TRIBUTE.perYear * dateOf(run.week).year;
+
+function payTribute(run) {
+  const due = tributeDue(run);
+  if (run.gold >= due) {
+    run.gold -= due;
+    log(run, `You pay the Emperor's tribute: ${due} Gold.`, 'event');
+  } else {
+    log(run, `You can't pay the ${due} Gold tribute. The Emperor takes what you have, and remembers.`, 'bad');
+    run.gold = 0;
+    changeFavor(run, FAVOR.unpaidTribute, 'unpaid tribute');
+  }
+}
+
+function changeFavor(run, delta, why) {
+  if (!delta) return;
+  run.favor = clamp(run.favor + delta, 0, FAVOR.max);
+  log(run, `Imperial Favor ${delta > 0 ? '+' : ''}${delta} (${why}): now ${run.favor}.`, delta > 0 ? 'good' : 'bad');
+}
+
+// ---------- Growth: XP, levels, perks ----------
+
+export function xpFor(won, boss, upset) {
+  const base = (won ? XP.win : XP.loss) * (boss ? XP.bossMultiplier : 1);
+  return base + (won && upset ? XP.upsetBonus : 0);
+}
+
+function perkOffer(run, f) {
+  const pool = Object.keys(PERKS).filter((p) => (PERKS[p].repeatable || !f.perks.includes(p)) && (!PERKS[p].req || PERKS[p].req(f)));
+  const offer = [];
+  while (offer.length < 3 && pool.length) offer.push(pool.splice(int(run.rng.growth, 0, pool.length - 1), 1)[0]);
+  return offer;
+}
+
+function gainXp(run, f, amount) {
+  f.xp += amount;
+  while (f.level <= XP.levels.length && f.xp >= XP.levels[f.level - 1]) {
+    f.level += 1;
+    f.pendingPerks.push(perkOffer(run, f));
+    log(run, `${f.name} reaches level ${f.level}! Choose a perk.`, 'event');
+  }
+}
+
+export function perkBlocker(run, id, perk) {
   const idle = idleBlocker(run);
   if (idle) return idle;
   const f = findFighter(run, id);
   if (!f) return 'No such fighter.';
-  if (!(item in f.decor)) return 'Unknown decor item.';
-  if (f.decor[item] >= decorCap(run)) return `Quarters allow ${decorCap(run)} of each item. Upgrade Fighter Quarters for more.`;
-  if (run.gold < ECONOMY.decorCost) return 'Not enough Gold.';
+  if (!f.pendingPerks[0]?.includes(perk)) return 'That perk is not on offer.';
   return null;
 }
 
-export function buyDecor(run, id, item) {
-  assertOk(decorBlocker(run, id, item));
-  findFighter(run, id).decor[item] += 1;
-  run.gold -= ECONOMY.decorCost;
+export function choosePerk(run, id, perk) {
+  assertOk(perkBlocker(run, id, perk));
+  const f = findFighter(run, id);
+  f.pendingPerks.shift();
+  f.perks.push(perk);
+  for (const [stat, n] of Object.entries(PERKS[perk].stat ?? {})) f[stat] += n;
+  log(run, `${f.name} learns ${PERKS[perk].name}.`, 'good');
 }
 
-export const surgeonPrice = (run) => ECONOMY.surgeonCost + ECONOMY.surgeonPerTier * ((run.grand ? CIRCUITS.length : run.tier) - 1);
+// ---------- Inventory: decor and gear ----------
+
+export function buyDecorBlocker(run, item) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!DECOR[item]) return 'Unknown decor item.';
+  if (run.gold < DECOR[item].price) return `Needs ${DECOR[item].price} Gold.`;
+  return null;
+}
+
+export function buyDecor(run, item) {
+  assertOk(buyDecorBlocker(run, item));
+  run.gold -= DECOR[item].price;
+  run.inventory.decor[item] += 1;
+}
+
+export function assignDecorBlocker(run, id, item) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (!DECOR[item]) return 'Unknown decor item.';
+  if (!run.inventory.decor[item]) return `No ${DECOR[item].name} in the storeroom. Buy one first.`;
+  if (f.decor[item] >= decorCap(run)) return `Quarters fit ${decorCap(run)} of each item. Upgrade Fighter Quarters for more.`;
+  return null;
+}
+
+export function assignDecor(run, id, item) {
+  assertOk(assignDecorBlocker(run, id, item));
+  run.inventory.decor[item] -= 1;
+  findFighter(run, id).decor[item] += 1;
+}
+
+export function removeDecorBlocker(run, id, item) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (!f.decor[item]) return 'Nothing to remove.';
+  return null;
+}
+
+export function removeDecor(run, id, item) {
+  assertOk(removeDecorBlocker(run, id, item));
+  findFighter(run, id).decor[item] -= 1;
+  run.inventory.decor[item] += 1;
+}
+
+export function buyGearBlocker(run, index) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const key = run.armourerStock[index];
+  if (!key) return 'Not in stock.';
+  if (run.gold < GEAR[key].price) return `Needs ${GEAR[key].price} Gold.`;
+  return null;
+}
+
+export function buyGear(run, index) {
+  assertOk(buyGearBlocker(run, index));
+  const [key] = run.armourerStock.splice(index, 1);
+  run.gold -= GEAR[key].price;
+  run.inventory.gear.push(key);
+  return key;
+}
+
+export function equipBlocker(run, id, index) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!findFighter(run, id)) return 'No such fighter.';
+  if (!run.inventory.gear[index]) return 'No such item in the storeroom.';
+  return null;
+}
+
+// Equip from the storeroom; whatever was in that slot goes back to the storeroom.
+export function equip(run, id, index) {
+  assertOk(equipBlocker(run, id, index));
+  const f = findFighter(run, id);
+  const [key] = run.inventory.gear.splice(index, 1);
+  const slot = GEAR[key].slot;
+  if (f.gear[slot]) run.inventory.gear.push(f.gear[slot]);
+  f.gear[slot] = key;
+}
+
+export function unequipBlocker(run, id, slot) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (!f.gear[slot]) return 'Nothing equipped.';
+  return null;
+}
+
+export function unequip(run, id, slot) {
+  assertOk(unequipBlocker(run, id, slot));
+  const f = findFighter(run, id);
+  run.inventory.gear.push(f.gear[slot]);
+  f.gear[slot] = null;
+}
+
+// ---------- Surgeon ----------
+
+export const surgeonPrice = (run) => ECONOMY.surgeonCost + ECONOMY.surgeonPerTier * (Math.min(run.topTier, CIRCUITS.length) - 1);
 
 export function surgeonBlocker(run, id, index) {
   const idle = idleBlocker(run);
@@ -347,44 +607,53 @@ export function surgeon(run, id, index) {
 
 // ---------- Tournaments ----------
 
-export function fightBlocker(run, id) {
+export const foughtThisWeek = (run) => run.history.filter((h) => h.week === run.week && h.fighterId).map((h) => h.fighterId);
+
+export function fightBlocker(run, id, tier = run.topTier) {
   const idle = idleBlocker(run);
   if (idle) return idle;
-  if (!run.boutPending) return 'Fights happen on tournament weeks.';
-  if (!findFighter(run, id)) return 'Choose a fighter from your roster.';
-  if (run.prestige < currentBout(run).buyIn) return `Needs ${currentBout(run).buyIn} Prestige for the buy-in.`;
+  if (!run.bouts) return 'Fights happen on tournament weeks.';
+  if (run.bouts[tier] !== 'open') return run.bouts[tier] ? 'This arena is settled for the week.' : 'That arena is not open to you.';
+  const f = findFighter(run, id);
+  if (!f) return 'Choose a fighter from your roster.';
+  if (foughtThisWeek(run).includes(id)) return `${f.name} already fought this week.`;
+  if (f.pendingPerks.length) return `${f.name} levelled up: choose a perk first.`;
+  if (f.morale < MORALE.mutinous) return `${f.name} is mutinous and refuses to fight.`;
+  if (run.prestige < boutFor(run, tier).buyIn) return `Needs ${boutFor(run, tier).buyIn} Prestige for the buy-in.`;
   return null;
 }
 
 // Pays the buy-in and returns a match for the UI to play round by round.
-export function startMatch(run, id) {
-  assertOk(fightBlocker(run, id));
-  const bout = currentBout(run);
+export function startMatch(run, id, tier = run.topTier) {
+  assertOk(fightBlocker(run, id, tier));
+  const bout = boutFor(run, tier);
   const fighter = findFighter(run, id);
   run.prestige -= bout.buyIn;
   run.inMatch = true;
-  run.matchFighterId = id;
-  return createMatch({ a: fighter, b: run.opponent, rng: run.rng.fight, debuff: bout.debuff, overtrained: fighter.stress >= STRESS.overtrained });
+  run.matchInfo = { fighterId: id, tier };
+  return createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, debuff: bout.debuff, overtrained: fighter.stress >= STRESS.overtrained });
 }
 
 export function skipBlocker(run) {
   const idle = idleBlocker(run);
   if (idle) return idle;
-  if (!run.boutPending) return 'No bout this week.';
+  if (!run.boutPending) return 'No bout to skip this week.';
   if (currentBout(run).boss) return 'Bosses cannot be skipped. Fight or forfeit.';
   return null;
 }
 
-// Skip Tournament 1 or 2: no buy-in, small Gold reward, the roster recovers.
+// Skip your top arena's Tournament 1 or 2: no buy-in, small Gold reward, the roster recovers.
 export function skipBout(run) {
   assertOk(skipBlocker(run));
   run.gold += ECONOMY.skipGold;
   for (const f of run.roster) f.stress = clampStress(f.stress - ECONOMY.skipStressRelief);
   const bout = currentBout(run);
-  run.history.push({ week: run.week, name: bout.name, skipped: true });
+  run.history.push({ week: run.week, tier: bout.tier, name: bout.name, skipped: true });
   log(run, `You skip ${bout.name}: +${ECONOMY.skipGold} Gold, the roster recovers.`);
-  run.boutPending = false;
-  advanceCircuit(run, null);
+  settleBout(run, bout.tier);
+  run.arenas[bout.tier].stage += 1;
+  newOpponent(run, bout.tier);
+  checkLoss(run);
 }
 
 export function forfeitBlocker(run) {
@@ -395,57 +664,108 @@ export function forfeitBlocker(run) {
   return null;
 }
 
-// Forfeiting a Boss (no fighter or no Prestige) counts as a Boss loss.
+// Forfeiting your top arena's Boss costs Imperial Favor.
 export function forfeitBout(run) {
   assertOk(forfeitBlocker(run));
   const bout = currentBout(run);
-  run.history.push({ week: run.week, name: bout.name, won: false, forfeit: true });
+  run.history.push({ week: run.week, tier: bout.tier, name: bout.name, won: false, forfeit: true });
   log(run, `You forfeit ${bout.name}.`, 'bad');
-  run.boutPending = false;
-  advanceCircuit(run, false);
+  settleBout(run, bout.tier);
+  changeFavor(run, FAVOR.forfeit, 'forfeited a Boss');
+  if (bout.tier === GRAND_TIER) newOpponent(run, bout.tier);
+  else restartCircuit(run, bout.tier);
+  checkLoss(run);
+}
+
+function settleBout(run, tier) {
+  if (run.bouts) run.bouts[tier] = 'done';
+  if (tier === run.topTier) run.boutPending = false;
 }
 
 export function finishMatch(run, match) {
   if (!run.inMatch) throw new Error('No match in progress.');
   if (!match.over) throw new Error('The match is not over.');
-  const bout = currentBout(run);
+  const { tier } = run.matchInfo;
+  const bout = boutFor(run, tier);
+  const arena = run.arenas[tier];
   const fighter = findFighter(run, match.a.f.id);
+  const opp = arena.opponent;
   fighter.injuries = match.a.f.injuries.map((i) => ({ ...i, weeksLeft: i.weeksLeft ?? HEAL_WEEKS[i.tag] }));
   fighter.alive = match.a.f.alive;
   fighter.stress = clampStress(fighter.stress + STRESS.fight);
 
   const won = match.result.winner === 'A';
+  const upset = opp.power > fighter.power;
+  const crushing = won && !bout.top && fighter.power - opp.power >= ECONOMY.crushingGap;
+  const atDeathGate = effectiveInjuries(fighter) >= 2;
   const summary = {
-    week: run.week, name: bout.name, boss: bout.boss, won, reason: match.result.reason, fighter: fighter.name,
-    died: !fighter.alive, gold: 0, prestige: -bout.buyIn, bloodFaith: false, title: null, strike: false, levelUp: null,
+    week: run.week, tier, name: bout.name, boss: bout.boss, top: bout.top, won, reason: match.result.reason,
+    fighter: fighter.name, fighterId: fighter.id, died: !fighter.alive, gold: 0, prestige: -bout.buyIn, bloodFaith: false,
+    title: null, favor: 0, xp: 0, renown: 0, loot: null, levelUp: null, crushing,
   };
+  const favorBefore = run.favor;
+
   if (won) {
-    summary.gold = bout.winGold;
+    summary.gold = bout.winGold + Math.floor(fighter.renown / RENOWN.goldPer);
     summary.prestige += bout.buyIn + bout.winPrestige;
-    if (bout.boss) {
-      const title = run.grand ? 'Master of the Games' : `Champion of ${circuitInfo(run).name.replace(/^The /, 'the ')}`;
+    if (!crushing) {
+      summary.renown = RENOWN.win + (bout.boss ? RENOWN.bossWin : 0) + (upset ? RENOWN.upset : 0) + (fighter.perks.includes('crowdPleaser') ? 1 : 0);
+    }
+    bumpMorale(fighter, crushing ? MORALE.crowdJeers : MORALE.win);
+    if (crushing) {
+      log(run, `The crowd jeers ${fighter.name} for crushing a much weaker opponent.`, 'warn');
+      changeFavor(run, FAVOR.crushingWin, 'a crushing win in a lower arena');
+    }
+    if (bout.top && bout.boss) changeFavor(run, FAVOR.bossWin, `beat the ${bout.name}`);
+    if (upset) changeFavor(run, FAVOR.upsetWin, 'an upset');
+    if (atDeathGate) changeFavor(run, FAVOR.spectacleWin, 'won at the Death Gate');
+    // Loot: claim the loser's gear.
+    const drops = [opp.gear.weapon, opp.gear.armor].filter(Boolean);
+    if (drops.length && (bout.boss || next(run.rng.growth) < ECONOMY.lootChance)) {
+      summary.loot = pick(run.rng.growth, drops);
+      run.inventory.gear.push(summary.loot);
+      log(run, `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good');
+    }
+    if (bout.boss && !bout.conquered && tier !== GRAND_TIER) {
+      const title = `Champion of ${arenaName(tier).replace(/^The /, 'the ')}`;
       fighter.titles.push(title);
       fighter.power += 1;
       summary.title = title;
     }
+    if (tier === GRAND_TIER) {
+      fighter.titles.push('Master of the Games');
+      summary.title = 'Master of the Games';
+    }
   } else {
     summary.gold = bout.lossGold;
+    bumpMorale(fighter, match.result.reason === 'towel' ? MORALE.towel : MORALE.loss);
+    if (match.result.reason === 'towel') summary.renown = RENOWN.towel;
     if (!fighter.alive && kindActive(match.a, 'bloodFaith', match.round)) {
       summary.bloodFaith = true;
       summary.prestige += bout.buyIn;
     }
+    if (bout.top && bout.boss) changeFavor(run, FAVOR.bossLoss, `lost the ${bout.name}`);
+    else if (bout.top && match.result.reason === 'towel') changeFavor(run, FAVOR.topTowel, 'threw in the towel in your top arena');
   }
+  summary.favor = run.favor - favorBefore;
   run.gold += summary.gold;
   run.prestige += summary.prestige + bout.buyIn; // buy-in was already paid in startMatch
+  fighter.renown = Math.max(0, fighter.renown + summary.renown);
+  summary.xp = xpFor(won, bout.boss, upset);
+
   if (!fighter.alive) {
+    stripFighter(run, fighter);
     run.roster = run.roster.filter((f) => f !== fighter);
     run.fallen.push({ ...fighter, diedWeek: run.week });
-    log(run, `${fighter.name} died in ${bout.name}.`, 'bad');
+    for (const f of run.roster) bumpMorale(f, MORALE.allyDeath);
+    log(run, `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad');
+  } else {
+    gainXp(run, fighter, summary.xp);
   }
   if (fighter.job === 'medbay' && !fighter.injuries.length) fighter.job = 'rest';
   run.inMatch = false;
-  run.matchFighterId = null;
-  run.boutPending = false;
+  run.matchInfo = null;
+  settleBout(run, tier);
   const before = run.prestigeLevel;
   run.prestigeLevel = prestigeLevelFor(run.prestige, run.prestigeLevel);
   if (run.prestigeLevel > before) {
@@ -454,52 +774,53 @@ export function finishMatch(run, match) {
   }
   run.history.push(summary);
   log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
-  advanceCircuit(run, bout.boss ? won : null);
-  summary.strike = bout.boss && !won;
+  advanceArena(run, tier, won, opp);
   return summary;
 }
 
-// bossWon: null for Tournament 1/2, true/false for a Boss or the Grand Tournament.
-function advanceCircuit(run, bossWon) {
-  if (run.grand) {
-    if (bossWon) {
+function advanceArena(run, tier, won, opp) {
+  const arena = run.arenas[tier];
+  if (tier === GRAND_TIER) {
+    if (won) {
       run.status = 'won';
       run.endReason = 'You won the Grand Tournament. The Emperor names you Master of the Games.';
       return;
     }
-    strike(run);
-    newOpponent(run);
-  } else if (bossWon === null) {
-    run.stage += 1;
-    newOpponent(run);
-  } else if (bossWon) {
-    log(run, `${circuitInfo(run).name} conquered!`, 'event');
-    if (run.tier === CIRCUITS.length) {
-      run.grand = true;
-      run.debuff = pick(run.rng.opponents, DEBUFF_IDS);
-      newOpponent(run);
-      log(run, 'The Grand Tournament awaits.', 'event');
-    } else {
-      run.tier += 1;
-      newCircuit(run);
+    newOpponent(run, tier);
+  } else if (arena.stage < 2) {
+    arena.stage += 1;
+    newOpponent(run, tier);
+  } else if (won) {
+    arena.rival = null;
+    if (!arena.conquered) {
+      arena.conquered = true;
+      log(run, `${arenaName(tier)} conquered!`, 'event');
+      const nextTier = tier + 1;
+      run.topTier = nextTier;
+      openArena(run, nextTier);
+      log(run, nextTier === GRAND_TIER ? 'The Grand Tournament awaits.' : `${arenaName(nextTier)} opens its gates to you. Your old arenas still hold bouts every month.`, 'event');
     }
+    restartCircuit(run, tier);
   } else {
-    strike(run);
-    newCircuit(run);
+    if (tier === run.topTier) {
+      arena.rival = { ...structuredClone(opp), power: opp.power + 1, renown: opp.renown + 2, rival: true };
+      log(run, `${opp.name} will remember this, and will be waiting for you.`, 'warn');
+    }
+    restartCircuit(run, tier);
   }
   checkLoss(run);
 }
 
-function strike(run) {
-  run.strikes += 1;
-  log(run, `The Emperor is displeased. Imperial Strike ${run.strikes}/${ECONOMY.maxStrikes}.`, 'bad');
-}
-
 function checkLoss(run) {
   if (run.status !== 'active') return;
-  if (run.strikes >= ECONOMY.maxStrikes) {
+  if (run.favor <= 0) {
     run.status = 'lost';
-    run.endReason = `Three Imperial Strikes. The Emperor has you executed in ${formatDate(run.week)}.`;
+    run.endReason = `The Emperor's Favor is gone. You are executed in ${formatDate(run.week)}.`;
+    return;
+  }
+  if (run.revoltWeeks >= REVOLT.weeks) {
+    run.status = 'lost';
+    run.endReason = 'Your gladiators revolt and burn the Ludus.';
     return;
   }
   const cheapest = Math.min(marketPrice(run), run.liaisonOffer?.price ?? Infinity);
@@ -513,13 +834,42 @@ function checkLoss(run) {
 
 export const serialize = (run) => JSON.stringify(run);
 
+// v2 careers (save version 2) upgrade in place: Strikes become Favor, the single circuit becomes arenas.
+function migrateV2(run) {
+  const fighters = [...run.roster, ...run.market, ...run.fallen, ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...(run.opponent ? [run.opponent] : [])];
+  for (const f of fighters) {
+    Object.assign(f, { xp: 0, level: 1, perks: [], pendingPerks: [], renown: 3 * (f.titles?.length ?? 0), morale: MORALE.start, gear: { weapon: null, armor: null } });
+    f.decor = { ...emptyDecor(), ...f.decor };
+  }
+  const topTier = run.grand ? GRAND_TIER : run.tier;
+  run.rng.growth = createRng(deriveSeed(run.seed, 4));
+  run.favor = clamp(FAVOR.start - 15 * (run.strikes ?? 0), 1, FAVOR.max);
+  run.topTier = topTier;
+  run.arenas = {};
+  run.inventory = { decor: emptyDecor(), gear: [] };
+  run.armourerStock = [];
+  run.revoltWeeks = 0;
+  run.matchInfo = run.inMatch ? { fighterId: run.matchFighterId, tier: topTier } : null;
+  run.arenas[topTier] = { tier: topTier, stage: run.grand ? 3 : run.stage, debuff: run.debuff, opponent: run.opponent, conquered: false, rival: null };
+  for (let t = 1; t < topTier; t++) {
+    openArena(run, t);
+    run.arenas[t].conquered = true;
+  }
+  run.bouts = run.boutPending ? Object.fromEntries(unlockedTiers(run).map((t) => [t, 'open'])) : null;
+  for (const h of run.history) h.tier ??= topTier;
+  for (const key of ['tier', 'stage', 'grand', 'debuff', 'opponent', 'strikes', 'matchFighterId']) delete run[key];
+  run.version = SAVE_VERSION;
+  return run;
+}
+
 export function deserialize(text) {
-  const run = JSON.parse(text);
+  let run = JSON.parse(text);
+  if (run?.version === 2) run = migrateV2(run);
   if (run?.version !== SAVE_VERSION) throw new Error('This save is from an older version of the game.');
   // A match in progress isn't saved. Reloading mid-fight counts as throwing in the towel,
   // so quitting can't be used to escape a losing fight for free.
   if (run.inMatch) {
-    const f = findFighter(run, run.matchFighterId);
+    const f = findFighter(run, run.matchInfo.fighterId);
     finishMatch(run, { over: true, round: 0, result: { winner: 'B', reason: 'towel' }, a: { f: structuredClone(f) } });
   }
   return run;

@@ -3,7 +3,8 @@
 import { STRESS } from './data.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel } from './fight.js';
 import {
-  createRun, currentBout, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon,
+  createRun, boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk,
+  assignDecor, removeDecor, buyGear, equip, unequip,
   startMatch, finishMatch, skipBout, forfeitBout, serialize, deserialize,
 } from './run.js';
 import { build, upgrade } from './ludus.js';
@@ -55,12 +56,13 @@ const save = () => run && storage.set(SAVE_KEY, serialize(run));
 // ---------- Odds cache (simulating is cheap but not free) ----------
 
 const oddsCache = new Map();
-function oddsFor(f) {
-  const bout = currentBout(run);
-  const key = JSON.stringify([f, run.opponent.id, bout.debuff, f.stress >= STRESS.overtrained]);
+function oddsFor(f, tier = run.topTier) {
+  const bout = boutFor(run, tier);
+  const opp = run.arenas[tier].opponent;
+  const key = JSON.stringify([f, opp, bout.debuff, f.stress >= STRESS.overtrained]);
   if (!oddsCache.has(key)) {
     if (oddsCache.size > 200) oddsCache.clear();
-    oddsCache.set(key, estimateOdds(f, run.opponent, { debuff: bout.debuff, overtrained: f.stress >= STRESS.overtrained, n: 400 }));
+    oddsCache.set(key, estimateOdds(f, opp, { debuff: bout.debuff, overtrained: f.stress >= STRESS.overtrained, n: 400 }));
   }
   return oddsCache.get(key);
 }
@@ -91,7 +93,7 @@ function renderFight() {
     return;
   }
   fightEl.hidden = false;
-  fightEl.innerHTML = fightView(match, ui, currentBout(run), tutorialCard(fightTutorial(), 'fight'));
+  fightEl.innerHTML = fightView(match, ui, boutFor(run, run.matchInfo.tier), tutorialCard(fightTutorial(), 'fight'));
   const feed = document.getElementById('feed');
   if (feed) feed.scrollTop = feed.scrollHeight;
 }
@@ -173,7 +175,13 @@ const actions = {
   recruit: (d) => recruit(run, d.id),
   release: (d) => { if (confirm('Release this fighter for good?')) release(run, d.id); },
   job: (d) => setJob(run, d.id, d.job),
-  decor: (d) => buyDecor(run, d.id, d.item),
+  'buy-decor': (d) => buyDecor(run, d.item),
+  'assign-decor': (d) => assignDecor(run, d.id, d.item),
+  'remove-decor': (d) => removeDecor(run, d.id, d.item),
+  'buy-gear': (d) => buyGear(run, Number(d.index)),
+  equip: (d) => equip(run, d.id, Number(d.index)),
+  unequip: (d) => unequip(run, d.id, d.slot),
+  perk: (d) => choosePerk(run, d.id, d.perk),
   surgeon: (d) => surgeon(run, d.id, Number(d.index)),
   build: (d) => build(run, d.type),
   upgrade: (d) => upgrade(run, d.id),
@@ -182,7 +190,7 @@ const actions = {
   skip: () => skipBout(run),
   forfeit: () => { if (confirm('Forfeit the Boss? You get an Imperial Strike.')) forfeitBout(run); },
   fight: (d) => {
-    match = startMatch(run, d.id);
+    match = startMatch(run, d.id, Number(d.tier) || run.topTier);
     ui.animateRound = 0;
   },
   'next-round': () => { ui.animateRound = playRound(match).round; },

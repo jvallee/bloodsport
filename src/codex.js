@@ -1,9 +1,9 @@
 // The Codex: an unlockable glossary that persists across careers. Pure.
 // Rules entries unlock the first time you see something; lore unlocks when you defeat it.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS } from './data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR } from './data.js';
 import { oracleLevel } from './ludus.js';
-import { currentBout } from './run.js';
+import { boutFor, unlockedTiers } from './run.js';
 
 export const SECTIONS = {
   basics: 'Basics',
@@ -14,6 +14,8 @@ export const SECTIONS = {
   injury: 'Injuries',
   debuff: 'Arena rules',
   building: 'Buildings',
+  perk: 'Perks',
+  gear: 'Gear',
 };
 
 const LORE = {
@@ -43,8 +45,14 @@ const BASICS = [
   ['stress', 'Stress', `Training (+${STRESS.train}) and fighting (+${STRESS.fight}) raise it; rest (${STRESS.rest}) lowers it. At ${STRESS.overtrained}+ a fighter is overtrained: no training, and −1 Power with one ability lost in the arena.`],
   ['armor', 'Armor', 'Alloyed Skin and Ego Armour lower your chance to be injured. Gun (rounds 1 and 3) and Flail ignore armor.'],
   ['prestige', 'Prestige and House level', "Your house's reputation. Staked as tournament buy-ins and won back with interest. Reaching 10 / 25 / 50 / 90 raises your House level for good, unlocking room plots and buildings."],
-  ['strikes', 'Imperial Strikes', 'Every Boss you lose or forfeit is a Strike. Three Strikes and the Emperor has you executed.'],
-  ['decor', 'Room decor', `Items for a fighter's quarters. ${Object.values(DECOR).map((d) => `${d.name}: ${d.effect}`).join(' ')} Other fighters get nothing from decor yet.`],
+  ['favor', 'Imperial Favor', 'The Emperor\'s opinion of your house (0–100). Boss wins, upsets and wins at the Death Gate raise it. Losing or forfeiting a Boss in your top arena, throwing in the towel there, crushing weak opponents in lower arenas, and unpaid tribute lower it. At 0 you are executed.'],
+  ['tribute', 'Tribute', 'Each winter the Emperor collects tribute: 15 Gold × the year. If you can\'t pay, he takes what you have and your Favor drops.'],
+  ['arenas', 'Arenas and divisions', 'Every arena you have reached holds a bout each tournament week, and you may send one fighter to each. Your highest arena is your top arena: only its Bosses move you up and only it affects Favor. Lower arenas pay less Prestige, and crushing a much weaker opponent there angers the crowd.'],
+  ['growth', 'Levels and perks', 'Fighters earn XP from every match (more for wins, Bosses and upsets). Each level lets you choose 1 of 3 perks: stat boosts, combat edges, or combo perks that need both Power and Speed.'],
+  ['renown', 'Renown', 'Fame. Wins (especially Bosses and upsets) raise it; throwing in the towel lowers it. Every 5 Renown adds +1 Gold to a fighter\'s winnings, but famous fighters expect better rooms.'],
+  ['morale', 'Morale', 'Drifts each week toward comfort (Quarters level, decor, Entertainment Room) minus expectations (Renown). 80+: Inspired, +5% win chance. Below 40: Restless, won\'t train. Below 20: Mutinous, refuses to fight. A house that stays below 20 on average for 4 weeks revolts.'],
+  ['gear', 'Gear and the storeroom', 'Each fighter has a weapon and an armor slot. Gear and decor belong to the house: buy them, hand them out, take them back. A fallen or released fighter\'s things return to the storeroom. Beaten opponents sometimes drop their gear (Bosses always do).'],
+  ['decor', 'Room decor', `Items for a fighter's quarters. Every item adds comfort (Morale). ${Object.values(DECOR).map((d) => `${d.name}: ${d.effect}`).join(' ')}`],
 ];
 
 function ruleText(cat, id) {
@@ -60,6 +68,8 @@ function ruleText(cat, id) {
     return `${i.desc} Injury roll ${i.min}–${i.max}. Heals in ${HEAL_WEEKS[id]} Medbay week${HEAL_WEEKS[id] > 1 ? 's' : ''}.`;
   }
   if (cat === 'debuff') return BOSS_DEBUFFS[id].desc;
+  if (cat === 'perk') return `${PERKS[id].desc}${PERKS[id].reqText ? ` Requires ${PERKS[id].reqText}.` : ''}`;
+  if (cat === 'gear') return `${gearText(GEAR[id])} ${GEAR[id].slot === 'weapon' ? 'Weapon' : 'Armor'}, ${GEAR[id].price} Gold.`;
   if (cat === 'building') {
     const b = BUILDINGS[id];
     return `${b.effect(b.per[0])} at level 1, up to: ${b.effect(b.per.at(-1))}. Build cost ${b.cost[0]} Gold.${b.unique ? ' One per estate.' : ''}`;
@@ -67,7 +77,17 @@ function ruleText(cat, id) {
   return '';
 }
 
-const nameOf = (cat, id) => ({ kind: KINDS, trait: TRAITS, class: CLASSES, weapon: WEAPONS, debuff: BOSS_DEBUFFS, building: BUILDINGS })[cat]?.[id]?.name
+// Plain description of a gear item's effects, e.g. "+1 Power, −10% chance to be injured."
+export function gearText(g) {
+  const bits = [];
+  if (g.power) bits.push(`${g.power > 0 ? '+' : '−'}${Math.abs(g.power)} Power`);
+  if (g.speed) bits.push(`${g.speed > 0 ? '+' : '−'}${Math.abs(g.speed)} Speed`);
+  if (g.injure) bits.push(`+${g.injure / 1000}% chance to injure`);
+  if (g.guard) bits.push(`−${g.guard / 1000}% chance to be injured (armor)`);
+  return `${bits.join(', ')}.`;
+}
+
+const nameOf = (cat, id) => ({ kind: KINDS, trait: TRAITS, class: CLASSES, weapon: WEAPONS, debuff: BOSS_DEBUFFS, building: BUILDINGS, perk: PERKS, gear: GEAR })[cat]?.[id]?.name
   ?? INJURIES.find((i) => i.tag === id)?.name;
 
 // Every entry, grouped by section. Basics are always unlocked.
@@ -80,6 +100,8 @@ export const ENTRIES = [
   ...INJURIES.filter((i) => i.tag !== 'death').map((i) => ({ key: `injury:${i.tag}`, cat: 'injury', id: i.tag })),
   ...Object.keys(BOSS_DEBUFFS).map((id) => ({ key: `debuff:${id}`, cat: 'debuff', id })),
   ...Object.keys(BUILDINGS).map((id) => ({ key: `building:${id}`, cat: 'building', id })),
+  ...Object.keys(PERKS).map((id) => ({ key: `perk:${id}`, cat: 'perk', id })),
+  ...Object.keys(GEAR).map((id) => ({ key: `gear:${id}`, cat: 'gear', id })),
 ].map((e) => ({ ...e, name: e.name ?? nameOf(e.cat, e.id), rules: e.rules ?? ruleText(e.cat, e.id), lore: LORE[e.key] ?? null }));
 
 export const createCodex = () => ({ seen: [], lore: [], fresh: [] });
@@ -101,12 +123,19 @@ function unlock(codex, list, keys) {
 // Everything visible in the career right now. Returns the newly unlocked keys.
 export function discover(codex, run) {
   const keys = [];
-  for (const f of [...run.market, ...run.roster, ...run.fallen, run.opponent, run.liaisonOffer].filter(Boolean)) {
+  const opponents = unlockedTiers(run).map((t) => run.arenas[t].opponent);
+  for (const f of [...run.market, ...run.roster, ...run.fallen, ...opponents, run.liaisonOffer].filter(Boolean)) {
     keys.push(...fighterKeys(f));
     for (const i of f.injuries) keys.push(`injury:${i.tag}`);
+    for (const p of [...(f.perks ?? []), ...(f.pendingPerks ?? []).flat()]) keys.push(`perk:${p}`);
+    for (const g of [f.gear?.weapon, f.gear?.armor]) if (g) keys.push(`gear:${g}`);
   }
+  for (const g of [...(run.inventory?.gear ?? []), ...(run.armourerStock ?? [])]) keys.push(`gear:${g}`);
   for (const [id, b] of Object.entries(BUILDINGS)) if (run.prestigeLevel >= b.req[0]) keys.push(`building:${id}`);
-  if (run.debuff && (currentBout(run).boss || oracleLevel(run) >= 2)) keys.push(`debuff:${run.debuff}`);
+  for (const t of unlockedTiers(run)) {
+    if (boutFor(run, t).boss || oracleLevel(run) >= 2) keys.push(`debuff:${run.arenas[t].debuff}`);
+  }
+  for (const [id, b] of Object.entries(BUILDINGS)) if (run.buildings.some((x) => x.type === id)) keys.push(`building:${id}`);
   return unlock(codex, 'seen', keys);
 }
 

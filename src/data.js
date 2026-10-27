@@ -85,9 +85,9 @@ export const WEAPONS = {
 // Decor only helps specific builds (for now). `helps` says whether a fighter gets anything from it.
 // Every decor item adds comfort (Morale). Birds and Fire Braziers also help specific builds in combat.
 export const DECOR = {
-  bird: { name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale. Ornitharius fighters also get +5% injure chance per Bird once injured (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
-  fireBrazier: { name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
-  trophy: { name: 'Trophy Rack', feeds: 'Morale', effect: 'Comfort for Morale: a famous fighter likes to see their victories on the wall.', helps: () => false },
+  bird: { price: 1, name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale. Ornitharius fighters also get +5% injure chance per Bird once injured (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
+  fireBrazier: { price: 1, name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
+  trophy: { price: 2, name: 'Trophy Rack', feeds: 'Morale', effect: 'Comfort for Morale: a famous fighter likes to see their victories on the wall.', helps: () => false },
 };
 
 // ---- Career placeholders (docs/fight-rules.md, "Career rules"); tune with scripts/simulate.js ----
@@ -102,8 +102,23 @@ export const ECONOMY = {
   surgeonPerTier: 4,
   skipGold: 2, // reward for skipping Tournament 1 or 2
   skipStressRelief: 20,
-  maxStrikes: 3,
+  lowerArenaPrestige: 0.5, // Prestige from a win shrinks by half for each tier below your top arena
+  crushingGap: 3, // a win with this much more Power than the opponent is a "crushing" win
+  lootChance: 0.35, // chance to claim a beaten opponent's gear (Bosses always drop theirs)
 };
+
+// Imperial Favor replaces v1's three Strikes. At 0 you're executed.
+export const FAVOR = {
+  start: 50, max: 100, warning: 25,
+  bossWin: 15, upsetWin: 5, spectacleWin: 5,
+  bossLoss: -20, forfeit: -25, topTowel: -5, crushingWin: -2, unpaidTribute: -25,
+};
+
+// Tribute is due at the start of each winter: perYear × the year number. Warning a month ahead.
+export const TRIBUTE = { perYear: 15 };
+
+// House revolt: average Morale below this for `weeks` weeks in a row ends the career.
+export const REVOLT = { morale: 20, weeks: 4 };
 
 // Speed trains twice as fast as Power: +1 Power is worth about +2 Speed, and Speed's value levels off.
 export const TRAIN_GAIN = { power: 1, speed: 2 };
@@ -145,6 +160,7 @@ export const BUILDINGS = {
   trainer: { name: 'Trainer Room', dept: 'training', icon: 'dumbbell', cost: [8, 10, 16, 26, 40], req: [1, 2, 3, 4, 5], per: [3, 5, 8, 13, 21], effect: (n) => `Trains 1 fighter a week, up to ${n} total points`, extra: (lv) => `Costs ${lv} Gold per training week` },
   medbay: { name: 'Medbay', dept: 'medical', icon: 'cross', cost: [8, 8, 14], req: [1, 2, 4], per: [1, 2, 3], effect: (n) => `Treats ${n} fighter${n > 1 ? 's' : ''} at a time`, extra: (lv) => (lv >= 2 ? 'Heals 2 weeks of injury per week' : 'Heals 1 week of injury per week') },
   oracle: { unique: true, name: 'Oracle', dept: 'scouting', icon: 'eye', cost: [8, 12], req: [2, 3], per: [1, 2], effect: (n) => (n >= 2 ? 'Exact odds and next Boss debuff' : 'Odds to the nearest 10%') },
+  armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16], req: [2, 3], per: [3, 4], effect: (n) => `Sells ${n} pieces of gear each month`, extra: (lv) => (lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
   liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly 1-Gold condemned convict') },
 };
 

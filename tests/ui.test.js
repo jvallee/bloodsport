@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
-import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, currentBout } from '../src/run.js';
+import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk } from '../src/run.js';
 import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard } from '../src/ui/views.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
 import { INTRO, STEPS, FIGHT_STEPS } from '../src/tutorial.js';
@@ -27,26 +27,38 @@ test('every screen renders cleanly through whole careers', () => {
   for (let seed = 1; seed <= 6; seed++) {
     const run = createRun(seed);
     checkScreens(run);
-    for (let step = 0; step < 400 && run.status === 'active'; step++) {
+    run.gold += 60;
+    for (let step = 0; step < 600 && run.status === 'active'; step++) {
+      for (const f of run.roster) while (f.pendingPerks.length) choosePerk(run, f.id, f.pendingPerks[0][0]);
       if (run.roster.length < rosterCap(run) && run.market[0] && !recruitBlocker(run, run.market[0].id)) recruit(run, run.market[0].id);
       for (const f of run.roster) {
         const job = f.injuries.length ? 'medbay' : f.stress >= 40 ? 'rest' : 'trainPower';
         if (!jobBlocker(run, f.id, job)) setJob(run, f.id, job);
       }
-      if (run.boutPending) {
-        const f = run.roster.find((x) => !fightBlocker(run, x.id));
-        if (f) {
-          const m = startMatch(run, f.id);
-          assert.doesNotMatch(fightView(m, ui, currentBout(run)), BAD);
+      if (run.bouts) {
+        // Fight in every open arena with whoever is free, top arena last.
+        for (const t of unlockedTiers(run)) {
+          const f = run.roster.find((x) => !fightBlocker(run, x.id, t));
+          if (!f) continue;
+          const m = startMatch(run, f.id, t);
+          const bout = boutFor(run, t);
+          assert.doesNotMatch(fightView(m, ui, bout), BAD);
           playRound(m);
-          for (const showMath of [true, false]) assert.doesNotMatch(fightView(m, { ...ui, showMath }, currentBout(run)), BAD);
+          for (const showMath of [true, false]) assert.doesNotMatch(fightView(m, { ...ui, showMath }, bout), BAD);
           autoPlay(m);
-          assert.doesNotMatch(fightView(m, ui, currentBout(run)), BAD);
+          assert.doesNotMatch(fightView(m, ui, bout), BAD);
           discoverMatch(codex, m);
           assert.doesNotMatch(summaryBanner(finishMatch(run, m)), BAD);
-        } else if (!skipBlocker(run)) skipBout(run);
+          checkScreens(run);
+        }
+        if (run.status !== 'active') continue;
+        for (const f of run.roster) while (f.pendingPerks.length) choosePerk(run, f.id, f.pendingPerks[0][0]);
+        if (!run.boutPending) advanceWeek(run);
+        else if (!skipBlocker(run)) skipBout(run);
         else forfeitBout(run);
-      } else advanceWeek(run);
+        continue;
+      }
+      advanceWeek(run);
       checkScreens(run);
     }
   }

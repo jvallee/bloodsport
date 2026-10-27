@@ -28,7 +28,7 @@ test('a new career reveals the market, the opponent and level-1 buildings', () =
   const run = createRun(3);
   const c = createCodex();
   const added = discover(c, run);
-  for (const f of [...run.market, run.opponent]) assert.ok(c.seen.includes(`kind:${f.kind}`) && c.seen.includes(`trait:${f.kindTrait}`));
+  for (const f of [...run.market, run.arenas[1].opponent]) assert.ok(c.seen.includes(`kind:${f.kind}`) && c.seen.includes(`trait:${f.kindTrait}`));
   assert.ok(c.seen.includes('building:trainer'));
   assert.ok(!c.seen.includes('building:oracle'), 'Oracle unlocks at Prestige level 2');
   assert.deepEqual(c.fresh, added);
@@ -39,10 +39,10 @@ test('the Boss arena rule is revealed only when it is visible', () => {
   const run = createRun(3);
   const c = createCodex();
   discover(c, run);
-  assert.ok(!c.seen.includes(`debuff:${run.debuff}`));
-  run.stage = 2;
+  assert.ok(!c.seen.includes(`debuff:${run.arenas[1].debuff}`));
+  run.arenas[1].stage = 2;
   discover(c, run);
-  assert.ok(c.seen.includes(`debuff:${run.debuff}`));
+  assert.ok(c.seen.includes(`debuff:${run.arenas[1].debuff}`));
 });
 
 test('injuries unlock when seen; lore unlocks only when you defeat that fighter', () => {

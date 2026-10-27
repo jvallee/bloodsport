@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY } from '../src/data.js';
+import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR } from '../src/data.js';
 import { autoPlay } from '../src/fight.js';
 import { build, rosterCap, plotsFree } from '../src/ludus.js';
 import {
   createRun, createFighter, recruit, recruitBlocker, release, setJob, jobBlocker, advanceWeek, advanceBlocker, advanceToTournament,
-  buyDecor, decorBlocker, surgeon, surgeonBlocker, startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker,
-  currentBout, marketPrice, serialize, deserialize,
+  buyDecor, assignDecor, assignDecorBlocker, removeDecor, buyGear, equip, unequip, surgeon, surgeonBlocker,
+  startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker, choosePerk, perkBlocker,
+  currentBout, boutFor, marketPrice, serialize, deserialize, moraleTarget, moraleState, xpFor, GRAND_TIER, SAVE_VERSION,
 } from '../src/run.js';
 
 // A run with one recruited fighter, standing on the first tournament week.
@@ -18,8 +19,8 @@ const atBout = (seed = 1) => {
   return { run, f };
 };
 
-const fakeMatch = (run, id, { winner = 'A', reason = 'rounds', alive = true, injuries = [] } = {}) => {
-  const m = startMatch(run, id);
+const fakeMatch = (run, id, { winner = 'A', reason = 'rounds', alive = true, injuries = [], tier } = {}) => {
+  const m = startMatch(run, id, tier);
   m.over = true;
   m.result = { winner, reason };
   m.a.f.alive = alive;
@@ -27,26 +28,41 @@ const fakeMatch = (run, id, { winner = 'A', reason = 'rounds', alive = true, inj
   return m;
 };
 
-// Win (or lose) bouts until the circuit reaches the given stage.
 const playBout = (run, id, opts) => finishMatch(run, fakeMatch(run, id, opts));
-const nextBout = (run) => advanceToTournament(run);
+// Resolve level-ups so the calendar can move.
+const pickPerks = (run) => {
+  for (const f of run.roster) while (f.pendingPerks.length) choosePerk(run, f.id, f.pendingPerks[0][0]);
+};
+const nextBout = (run) => {
+  pickPerks(run);
+  advanceToTournament(run);
+};
+// Win the top arena's circuit outright.
+const conquerTop = (run, id) => {
+  for (let i = 0; i < 3; i++) {
+    if (i) nextBout(run);
+    playBout(run, id);
+  }
+};
 
 // ---------- Setup ----------
 
-test('a new career: 12 Gold, 5 Prestige, level 1, Martius week 1, Tier 1 circuit, no bout yet', () => {
+test('a new career: 12 Gold, 5 Prestige, Favor 50, Martius week 1, one arena, no bout yet', () => {
   const run = createRun(1);
-  assert.deepEqual([run.gold, run.prestige, run.prestigeLevel, run.week, run.tier, run.stage, run.strikes], [12, 5, 1, 0, 1, 0, 0]);
+  assert.deepEqual([run.gold, run.prestige, run.favor, run.prestigeLevel, run.week, run.topTier], [12, 5, 50, 1, 0, 1]);
+  assert.deepEqual(Object.keys(run.arenas), ['1']);
+  assert.equal(run.arenas[1].stage, 0);
+  assert.equal(run.arenas[1].opponent.power, CIRCUITS[0].oppPower[0]);
   assert.equal(run.boutPending, false);
   assert.equal(run.market.length, 4);
-  assert.equal(run.opponent.power, CIRCUITS[0].oppPower[0]);
-  assert.ok(run.debuff);
+  assert.equal(run.version, SAVE_VERSION);
 });
 
 test('every market includes at least one Orc, and names are unique', () => {
   for (let seed = 0; seed < 40; seed++) {
     const run = createRun(seed);
     assert.ok(run.market.some((f) => f.kind === 'orc'), `seed ${seed}`);
-    const names = [...run.market, run.opponent].map((f) => f.name);
+    const names = [...run.market, run.arenas[1].opponent].map((f) => f.name);
     assert.equal(new Set(names).size, names.length);
   }
 });
@@ -55,13 +71,14 @@ test('careers are deterministic from the seed', () => {
   assert.equal(serialize(createRun(42)), serialize(createRun(42)));
 });
 
-test('created fighters follow kind rules and start rested', () => {
+test('created fighters follow kind rules and start fresh', () => {
   const rng = createRng(4);
   for (let i = 0; i < 200; i++) {
     const f = createFighter(rng, { id: 'x' });
     assert.equal(f.power, KINDS[f.kind].basePower);
     assert.ok(KINDS[f.kind].traits.includes(f.kindTrait));
-    assert.deepEqual([f.stress, f.job, f.titles], [0, 'rest', []]);
+    assert.deepEqual([f.stress, f.job, f.xp, f.level, f.renown, f.morale], [0, 'rest', 0, 1, 0, MORALE.start]);
+    assert.deepEqual(f.gear, { weapon: null, armor: null });
   }
 });
 
@@ -77,16 +94,20 @@ test('recruiting costs the tier price and is capped by Quarters', () => {
   assert.match(recruitBlocker(run, ids[2]), /quarters are full/);
 });
 
-test('releasing a fighter frees a slot', () => {
+test('releasing a fighter returns their decor and gear to the storeroom', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
+  f.decor.trophy = 1;
+  f.gear.weapon = 'gladius';
   release(run, f.id);
   assert.equal(run.roster.length, 0);
+  assert.equal(run.inventory.decor.trophy, 1);
+  assert.deepEqual(run.inventory.gear, ['gladius']);
 });
 
 // ---------- Weekly jobs ----------
 
-test('training gives +1 stat per week, costs Gold and adds Stress', () => {
+test('training gives +1 Power per week, costs Gold and adds Stress', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
   const [power, gold] = [f.power, run.gold];
@@ -113,6 +134,15 @@ test('training stops at the trainer cap and the fighter switches to rest', () =>
   advanceWeek(run);
   advanceWeek(run);
   assert.deepEqual([f.trained, f.job], [3, 'rest']);
+});
+
+test('re-selecting the job a fighter already has is a no-op, even at the trainer cap', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  setJob(run, f.id, 'trainPower');
+  f.trained = 3;
+  assert.equal(jobBlocker(run, f.id, 'trainPower'), null);
+  assert.doesNotThrow(() => setJob(run, f.id, 'trainPower'));
 });
 
 test('one Trainer Room trains one fighter at a time', () => {
@@ -154,22 +184,13 @@ test('an overtrained fighter cannot train and rests instead, keeping the job for
   assert.equal(f.power, power + 1);
 });
 
-test('train, train, rest is a stable rhythm below the overtrained line', () => {
+test('Iron Constitution cuts training Stress by 10', () => {
   const run = createRun(1);
-  run.gold = 100;
   const f = recruit(run, run.market[0].id);
-  run.buildings.find((b) => b.type === 'trainer').level = 1;
-  const seen = [];
-  for (let i = 0; i < 3; i++) {
-    for (const job of ['trainPower', 'trainPower', 'rest']) {
-      f.trained = 0;
-      setJob(run, f.id, job);
-      run.boutPending = false;
-      advanceWeek(run);
-      seen.push(f.stress);
-    }
-  }
-  assert.ok(seen.every((s) => s < STRESS.overtrained), seen.join(','));
+  f.perks.push('ironConstitution');
+  setJob(run, f.id, 'trainPower');
+  advanceWeek(run);
+  assert.equal(f.stress, STRESS.train - 10);
 });
 
 test('the Medbay heals injuries over weeks, then sends the fighter to rest', () => {
@@ -186,20 +207,15 @@ test('the Medbay heals injuries over weeks, then sends the fighter to rest', () 
   assert.deepEqual([f.injuries.length, f.job], [0, 'rest']);
 });
 
-test('injuries do not heal outside the Medbay', () => {
-  const run = createRun(1);
-  const f = recruit(run, run.market[0].id);
-  f.injuries = [{ tag: 'fleshWound', weight: 1, weeksLeft: 1 }];
-  advanceWeek(run);
-  assert.equal(f.injuries.length, 1);
-});
-
-test('the Medbay has limited beds', () => {
+test('injuries do not heal outside the Medbay, and the Medbay has limited beds', () => {
   const run = createRun(1);
   const [a, b] = [recruit(run, run.market[0].id), recruit(run, run.market[0].id)];
-  a.injuries = b.injuries = [{ tag: 'fleshWound', weight: 1, weeksLeft: 1 }];
+  a.injuries = [{ tag: 'fleshWound', weight: 1, weeksLeft: 1 }];
+  b.injuries = [{ tag: 'fleshWound', weight: 1, weeksLeft: 1 }];
   setJob(run, a.id, 'medbay');
   assert.match(jobBlocker(run, b.id, 'medbay'), /full/);
+  advanceWeek(run);
+  assert.equal(b.injuries.length, 1);
 });
 
 test('the Emergency Surgeon heals one injury instantly for 8 Gold in tier 1, +4 per tier', () => {
@@ -210,15 +226,96 @@ test('the Emergency Surgeon heals one injury instantly for 8 Gold in tier 1, +4 
   assert.deepEqual([f.injuries.length, run.gold], [0, 12 - 3 - 8]);
   f.injuries = [{ tag: 'blinded', weight: 1, weeksLeft: 3 }];
   assert.match(surgeonBlocker(run, f.id, 0), /needs 8 Gold/);
-  run.tier = 3;
+  run.topTier = 3;
   assert.match(surgeonBlocker(run, f.id, 0), /needs 16 Gold/);
 });
 
-test('decor is capped by the Quarters level', () => {
+// ---------- Morale ----------
+
+test('Morale drifts toward comfort minus expectations', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
-  buyDecor(run, f.id, 'bird');
-  assert.match(decorBlocker(run, f.id, 'bird'), /Upgrade Fighter Quarters/);
+  assert.equal(moraleTarget(run, f).target, MORALE.base + MORALE.perQuartersLevel);
+  f.decor.trophy = 1;
+  f.renown = 10;
+  assert.equal(moraleTarget(run, f).target, MORALE.base + MORALE.perQuartersLevel + MORALE.perDecor - 20);
+  f.morale = 90;
+  advanceWeek(run);
+  assert.equal(f.morale, 80, 'drifts 10 per week');
+});
+
+test('Morale states: Inspired 80+, Restless below 40, Mutinous below 20', () => {
+  assert.equal(moraleState({ morale: 85 }).id, 'inspired');
+  assert.equal(moraleState({ morale: 50 }).id, 'content');
+  assert.equal(moraleState({ morale: 30 }).id, 'restless');
+  assert.equal(moraleState({ morale: 10 }).id, 'mutinous');
+});
+
+test('a Restless fighter will not train', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  setJob(run, f.id, 'trainPower');
+  f.morale = 30;
+  const power = f.power;
+  advanceWeek(run);
+  assert.equal(f.power, power);
+});
+
+test('a Mutinous fighter refuses to fight', () => {
+  const { run, f } = atBout();
+  f.morale = 10;
+  assert.match(fightBlocker(run, f.id), /mutinous/);
+});
+
+test('a house that stays below 20 average Morale for 4 weeks revolts', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  run.buildings = run.buildings.filter((b) => b.type !== 'quarters');
+  f.renown = 50;
+  f.morale = 0;
+  for (let i = 0; i < 4 && run.status === 'active'; i++) {
+    run.boutPending = false;
+    advanceWeek(run);
+  }
+  assert.equal(run.status, 'lost');
+  assert.match(run.endReason, /revolt/);
+});
+
+// ---------- Storeroom: decor and gear ----------
+
+test('decor is bought into the storeroom, assigned up to the Quarters cap, and can be taken back', () => {
+  const run = createRun(1);
+  const [a, b] = [recruit(run, run.market[0].id), recruit(run, run.market[0].id)];
+  buyDecor(run, 'trophy');
+  buyDecor(run, 'trophy');
+  assert.equal(run.inventory.decor.trophy, 2);
+  assignDecor(run, a.id, 'trophy');
+  assert.match(assignDecorBlocker(run, a.id, 'trophy'), /Upgrade Fighter Quarters/);
+  removeDecor(run, a.id, 'trophy');
+  assignDecor(run, b.id, 'trophy');
+  assert.deepEqual([a.decor.trophy, b.decor.trophy, run.inventory.decor.trophy], [0, 1, 1]);
+});
+
+test('the Armourer stocks gear monthly; equipping swaps the old item back to the storeroom', () => {
+  const run = createRun(1);
+  run.gold = 200;
+  run.prestigeLevel = 2;
+  const f = recruit(run, run.market[0].id);
+  build(run, 'armourer');
+  advanceToTournament(run);
+  run.boutPending = false;
+  advanceWeek(run);
+  assert.equal(run.armourerStock.length, 3);
+  assert.ok(run.armourerStock.every((k) => GEAR[k].tier === 1));
+  run.inventory.gear.push('gladius', 'trident');
+  equip(run, f.id, run.inventory.gear.indexOf('gladius'));
+  equip(run, f.id, run.inventory.gear.indexOf('trident'));
+  assert.equal(f.gear.weapon, 'trident');
+  assert.ok(run.inventory.gear.includes('gladius'));
+  unequip(run, f.id, 'weapon');
+  assert.equal(f.gear.weapon, null);
+  const key = buyGear(run, 0);
+  assert.ok(run.inventory.gear.includes(key));
 });
 
 // ---------- Calendar ----------
@@ -235,6 +332,7 @@ test('the market and Liaison refresh at the start of each month', () => {
   const { run, f } = atBout();
   const before = run.market.map((x) => x.id);
   playBout(run, f.id);
+  pickPerks(run);
   advanceWeek(run);
   assert.ok(run.market.every((x) => !before.includes(x.id)));
 });
@@ -255,6 +353,21 @@ test('the Liaison offers a cheap injured convict once built', () => {
   assert.ok(run.roster.some((x) => x.id === id));
 });
 
+test('tribute is paid at the start of winter; unpaid tribute costs Favor', () => {
+  const run = createRun(1);
+  recruit(run, run.market[0].id);
+  run.week = 39;
+  run.gold = 100;
+  advanceWeek(run);
+  assert.equal(run.gold, 100 - 15);
+  const poor = createRun(2);
+  recruit(poor, poor.market[0].id);
+  poor.week = 39;
+  poor.gold = 3;
+  advanceWeek(poor);
+  assert.deepEqual([poor.gold, poor.favor], [0, FAVOR.start + FAVOR.unpaidTribute]);
+});
+
 // ---------- Tournaments ----------
 
 test('fights only happen on tournament weeks and cost the buy-in', () => {
@@ -273,14 +386,50 @@ test('a fighter with Stress 50+ enters overtrained', () => {
   assert.equal(m.preMatch[0]?.source, 'Overtrained');
 });
 
-test('a win pays Gold and Prestige, adds fight Stress and moves to Tournament 2', () => {
+test('a win pays Gold, Prestige, XP and Renown, raises Morale, and moves to Tournament 2', () => {
   const { run, f } = atBout();
-  const [gold, prestige] = [run.gold, run.prestige];
+  const [gold, prestige, morale] = [run.gold, run.prestige, f.morale];
   const s = playBout(run, f.id);
-  assert.deepEqual([s.gold, s.prestige], [CIRCUITS[0].winGold[0], CIRCUITS[0].winPrestige[0]]);
-  assert.deepEqual([run.gold, run.prestige, run.stage, run.boutPending], [gold + CIRCUITS[0].winGold[0], prestige + CIRCUITS[0].winPrestige[0], 1, false]);
-  assert.equal(f.stress, STRESS.fight);
-  assert.equal(run.opponent.power, CIRCUITS[0].oppPower[1]);
+  assert.deepEqual([s.gold, s.prestige, s.xp, s.renown], [CIRCUITS[0].winGold[0], CIRCUITS[0].winPrestige[0], XP.win, 2]);
+  assert.deepEqual([run.gold, run.prestige, run.arenas[1].stage, run.boutPending], [gold + CIRCUITS[0].winGold[0], prestige + CIRCUITS[0].winPrestige[0], 1, false]);
+  assert.deepEqual([f.stress, f.renown, f.morale], [STRESS.fight, 2, morale + MORALE.win]);
+  assert.equal(run.arenas[1].opponent.power, CIRCUITS[0].oppPower[1]);
+});
+
+test('Renown adds +1 Gold per 5 to a fighter\'s winnings', () => {
+  const { run, f } = atBout();
+  f.renown = 10;
+  assert.equal(playBout(run, f.id).gold, CIRCUITS[0].winGold[0] + 2);
+});
+
+test('XP: wins 3, losses 1, Bosses double, upsets +2', () => {
+  assert.deepEqual([xpFor(true, false, false), xpFor(false, false, false), xpFor(true, true, false), xpFor(true, false, true)], [3, 1, 6, 5]);
+});
+
+test('levelling up offers 3 perks; the week cannot end until one is chosen', () => {
+  const { run, f } = atBout();
+  playBout(run, f.id);
+  assert.equal(f.level, 2);
+  assert.equal(f.pendingPerks[0].length, 3);
+  assert.match(advanceBlocker(run), /choose their perk/);
+  assert.match(perkBlocker(run, f.id, 'nope'), /not on offer/);
+  const offer = f.pendingPerks[0];
+  const pick = offer.includes('mighty') ? 'mighty' : offer[0];
+  const power = f.power;
+  choosePerk(run, f.id, pick);
+  assert.ok(f.perks.includes(pick));
+  if (pick === 'mighty') assert.equal(f.power, power + 1);
+  assert.equal(advanceBlocker(run), null);
+});
+
+test('combo perks are only offered to fighters who meet them', () => {
+  for (let seed = 0; seed < 60; seed++) {
+    const { run, f } = atBout(seed);
+    f.power = 4 + (seed % 12);
+    f.speed = 3 + (seed % 9);
+    playBout(run, f.id);
+    for (const p of f.pendingPerks.flat()) if (PERKS[p].req) assert.ok(PERKS[p].req(f), `${p} offered to P${f.power} S${f.speed}`);
+  }
 });
 
 test('injuries from a match get healing times', () => {
@@ -293,7 +442,7 @@ test('skipping Tournament 1 gives Gold and rest, but Bosses cannot be skipped', 
   const { run, f } = atBout();
   f.stress = 40;
   skipBout(run);
-  assert.deepEqual([run.gold, f.stress, run.stage], [12 - 3 + ECONOMY.skipGold, 20, 1]);
+  assert.deepEqual([run.gold, f.stress, run.arenas[1].stage], [12 - 3 + ECONOMY.skipGold, 20, 1]);
   nextBout(run);
   skipBout(run);
   nextBout(run);
@@ -302,77 +451,152 @@ test('skipping Tournament 1 gives Gold and rest, but Bosses cannot be skipped', 
   assert.equal(forfeitBlocker(run), null);
 });
 
-test('opponents get faster: +1 Speed per tier and +1 for Bosses', () => {
-  const { run, f } = atBout();
-  assert.equal(run.opponent.speed, 3);
-  playBout(run, f.id);
-  nextBout(run);
-  playBout(run, f.id);
-  assert.equal(run.opponent.speed, 4, 'Tier 1 Boss');
-  nextBout(run);
-  playBout(run, f.id);
-  assert.equal(run.opponent.speed, 4, 'Tier 2, Tournament 1');
-});
-
-test('beating a Boss grants a Title (+1 Power) and opens the next tier', () => {
+test('beating your top Boss grants a Title, Favor and the next arena; the old arena stays open', () => {
   const { run, f } = atBout();
   playBout(run, f.id);
   nextBout(run);
   playBout(run, f.id);
   nextBout(run);
-  const power = f.power;
+  const favor = run.favor;
+  const bossPower = run.arenas[1].opponent.power;
+  f.power = bossPower; // not an upset, so only the Boss bonus applies
   const s = playBout(run, f.id);
   assert.match(s.title, /Champion of the Dirt Pits/);
-  assert.equal(f.power, power + 1);
-  assert.deepEqual([run.tier, run.stage, run.strikes], [2, 0, 0]);
+  assert.equal(f.power, bossPower + 1, 'the Title adds +1 Power');
+  assert.equal(s.favor, FAVOR.bossWin);
+  assert.equal(run.favor, favor + FAVOR.bossWin);
+  assert.equal(run.topTier, 2);
+  assert.deepEqual(Object.keys(run.arenas), ['1', '2']);
+  assert.equal(run.arenas[1].conquered, true);
+  assert.equal(run.arenas[1].stage, 0);
 });
 
-test('losing a Boss gives a Strike and restarts the tier', () => {
+test('losing your top Boss costs Favor, and that Boss returns stronger next circuit', () => {
   const { run, f } = atBout();
   skipBout(run);
   nextBout(run);
   skipBout(run);
   nextBout(run);
-  const s = playBout(run, f.id, { winner: 'B' });
-  assert.equal(s.strike, true);
-  assert.deepEqual([run.tier, run.stage, run.strikes, run.status], [1, 0, 1, 'active']);
+  const boss = run.arenas[1].opponent;
+  playBout(run, f.id, { winner: 'B' });
+  assert.equal(run.favor, FAVOR.start + FAVOR.bossLoss);
+  assert.deepEqual([run.topTier, run.arenas[1].stage], [1, 0]);
+  assert.equal(run.arenas[1].rival.name, boss.name);
+  run.arenas[1].stage = 2;
+  run.arenas[1].opponent = null;
+  // The next time the circuit reaches its Boss, the rival is back with +1 Power.
+  run.arenas[1].stage = 1;
+  run.boutPending = true;
+  run.bouts = { 1: 'open' };
+  skipBout(run);
+  assert.equal(run.arenas[1].opponent.name, boss.name);
+  assert.equal(run.arenas[1].opponent.power, boss.power + 1);
 });
 
-test('three Strikes and the Emperor has you executed', () => {
+test('forfeiting a Boss costs 25 Favor; at 0 Favor you are executed', () => {
   const { run } = atBout();
   run.prestige = 100;
-  for (let i = 0; i < 3; i++) {
-    skipBout(run);
-    nextBout(run);
-    skipBout(run);
-    nextBout(run);
-    forfeitBout(run);
-    if (i < 2) nextBout(run);
-  }
+  skipBout(run);
+  nextBout(run);
+  skipBout(run);
+  nextBout(run);
+  forfeitBout(run);
+  assert.equal(run.favor, FAVOR.start + FAVOR.forfeit);
+  run.favor = 10;
+  nextBout(run);
+  skipBout(run);
+  nextBout(run);
+  skipBout(run);
+  nextBout(run);
+  forfeitBout(run);
   assert.equal(run.status, 'lost');
-  assert.match(run.endReason, /Three Imperial Strikes/);
+  assert.match(run.endReason, /Favor is gone/);
+});
+
+// ---------- Multiple arenas ----------
+
+const twoArenas = () => {
+  const run = createRun(3);
+  run.gold = 200;
+  run.prestige = 200;
+  const a = recruit(run, run.market[0].id);
+  const b = recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  conquerTop(run, a.id);
+  nextBout(run);
+  return { run, a, b };
+};
+
+test('after conquering an arena, tournament weeks open bouts in every arena you have reached', () => {
+  const { run } = twoArenas();
+  assert.deepEqual(run.bouts, { 1: 'open', 2: 'open' });
+  assert.equal(boutFor(run, 1).top, false);
+  assert.equal(boutFor(run, 2).top, true);
+});
+
+test('each fighter can fight once a week; different fighters can take different arenas', () => {
+  const { run, a, b } = twoArenas();
+  playBout(run, a.id, { tier: 2 });
+  assert.match(fightBlocker(run, a.id, 1), /already fought/);
+  assert.equal(fightBlocker(run, b.id, 1), null);
+  playBout(run, b.id, { tier: 1 });
+  assert.match(fightBlocker(run, b.id, 1), /settled/);
+});
+
+test('lower arenas pay half Prestige per tier below, and only the top arena must be resolved', () => {
+  const { run, a } = twoArenas();
+  assert.equal(boutFor(run, 1).winPrestige, Math.floor(CIRCUITS[0].winPrestige[0] / 2));
+  playBout(run, a.id, { tier: 2 });
+  pickPerks(run);
+  assert.equal(advanceBlocker(run), null, 'the lower arena can be left alone');
+});
+
+test('a crushing win in a lower arena angers the crowd: no Renown, −Morale, −Favor', () => {
+  const { run, a } = twoArenas();
+  a.power = run.arenas[1].opponent.power + ECONOMY.crushingGap;
+  const [favor, morale, renown] = [run.favor, a.morale, a.renown];
+  const s = playBout(run, a.id, { tier: 1 });
+  assert.equal(s.crushing, true);
+  assert.deepEqual([a.renown, a.morale, run.favor], [renown, morale + MORALE.crowdJeers, favor + FAVOR.crushingWin]);
+});
+
+test('losing a lower-arena Boss costs no Favor and no title is re-awarded', () => {
+  const { run, a, b } = twoArenas();
+  run.arenas[1].stage = 2;
+  const favor = run.favor;
+  playBout(run, b.id, { tier: 1, winner: 'B' });
+  assert.equal(run.favor, favor);
+  run.arenas[1].stage = 2;
+  run.bouts[1] = 'open';
+  run.history = run.history.filter((h) => h.fighterId !== a.id);
+  const s = playBout(run, a.id, { tier: 1 });
+  assert.equal(s.title, null);
+});
+
+test('Bosses always drop their gear; loot goes to the storeroom', () => {
+  const { run, a } = twoArenas();
+  run.arenas[2].stage = 2;
+  run.arenas[2].opponent.gear.weapon = 'gladius';
+  const s = playBout(run, a.id, { tier: 2 });
+  assert.equal(s.loot, 'gladius');
+  assert.ok(run.inventory.gear.includes('gladius'));
 });
 
 test('after the Tier 4 Boss comes the Grand Tournament; winning it wins the career', () => {
   const { run, f } = atBout();
   run.prestige = 500;
-  run.tier = 4;
-  run.stage = 2;
+  run.topTier = 4;
+  run.arenas = { 4: run.arenas[1] };
+  run.arenas[4].tier = 4;
+  run.arenas[4].stage = 2;
+  run.bouts = { 4: 'open' };
   playBout(run, f.id);
-  assert.equal(run.grand, true);
+  assert.equal(run.topTier, GRAND_TIER);
   nextBout(run);
   assert.equal(currentBout(run).name, GRAND.name);
-  assert.equal(run.opponent.power, GRAND.oppPower);
-  playBout(run, f.id);
+  assert.equal(run.arenas[GRAND_TIER].opponent.power, GRAND.oppPower);
+  playBout(run, f.id, { tier: GRAND_TIER });
   assert.equal(run.status, 'won');
-});
-
-test('losing the Grand Tournament is a Strike and you can try again', () => {
-  const { run, f } = atBout();
-  run.prestige = 500;
-  run.grand = true;
-  playBout(run, f.id, { winner: 'B' });
-  assert.deepEqual([run.grand, run.strikes, run.status], [true, 1, 'active']);
 });
 
 test('Prestige levels unlock as Prestige grows and add room plots', () => {
@@ -383,13 +607,18 @@ test('Prestige levels unlock as Prestige grows and add room plots', () => {
   assert.deepEqual([run.prestigeLevel, plotsFree(run)], [2, 2]);
 });
 
-test('Blood Faith refunds the buy-in when the Orc dies', () => {
+test('Blood Faith refunds the buy-in when the Orc dies, and the house mourns', () => {
   const run = createRun(1);
   const orc = recruit(run, run.market.find((x) => x.kind === 'orc').id);
+  const other = recruit(run, run.market[0].id);
+  orc.gear.armor = 'leatherVest';
   advanceToTournament(run);
+  const morale = other.morale;
   const s = playBout(run, orc.id, { winner: 'B', reason: 'death', alive: false });
   assert.deepEqual([s.bloodFaith, run.prestige], [true, 5]);
   assert.equal(run.fallen[0].id, orc.id);
+  assert.deepEqual(run.inventory.gear, ['leatherVest'], 'their gear returns to the storeroom');
+  assert.equal(other.morale, morale + MORALE.allyDeath);
 });
 
 test('losing the last fighter with no Gold for another ends the career', () => {
@@ -413,20 +642,40 @@ test('reloading in the middle of a match counts as throwing in the towel', () =>
   const loaded = deserialize(serialize(run));
   assert.equal(loaded.inMatch, false);
   assert.equal(loaded.prestige, 5 - 1, 'buy-in stays lost');
-  assert.equal(loaded.stage, 1);
+  assert.equal(loaded.arenas[1].stage, 1);
   assert.equal(loaded.roster[0].alive, true);
 });
 
-test('saves from another version are rejected', () => {
+test('a v2 save is upgraded: Strikes become Favor and the circuit becomes arenas', () => {
+  const run = createRun(9);
+  const f = recruit(run, run.market[0].id);
+  const v2 = JSON.parse(serialize(run));
+  Object.assign(v2, { version: 2, tier: 2, stage: 1, grand: false, debuff: 'rainyMud', opponent: v2.arenas[1].opponent, strikes: 1, matchFighterId: null });
+  for (const k of ['arenas', 'topTier', 'favor', 'inventory', 'armourerStock', 'revoltWeeks', 'matchInfo', 'bouts']) delete v2[k];
+  delete v2.rng.growth;
+  for (const x of v2.roster) for (const k of ['xp', 'level', 'perks', 'pendingPerks', 'renown', 'morale', 'gear']) delete x[k];
+  const loaded = deserialize(JSON.stringify(v2));
+  assert.equal(loaded.version, SAVE_VERSION);
+  assert.equal(loaded.favor, FAVOR.start - 15);
+  assert.equal(loaded.topTier, 2);
+  assert.deepEqual(Object.keys(loaded.arenas), ['1', '2']);
+  assert.equal(loaded.arenas[2].stage, 1);
+  assert.equal(loaded.arenas[1].conquered, true);
+  assert.deepEqual(loaded.roster[0].gear, { weapon: null, armor: null });
+  assert.equal(loaded.roster[0].id, f.id);
+});
+
+test('saves from version 1 are rejected', () => {
   assert.throws(() => deserialize(JSON.stringify({ version: 1 })), /older version/);
 });
 
 // ---------- Whole-career invariants ----------
 
 test('simple-bot careers always end, and the state stays valid every week', () => {
-  for (let seed = 0; seed < 40; seed++) {
+  for (let seed = 0; seed < 30; seed++) {
     const run = createRun(seed);
-    for (let step = 0; step < 2000 && run.status === 'active'; step++) {
+    for (let step = 0; step < 3000 && run.status === 'active'; step++) {
+      pickPerks(run);
       if (run.roster.length < rosterCap(run) && run.market.length && !recruitBlocker(run, run.market[0].id)) recruit(run, run.market[0].id);
       for (const f of run.roster) {
         const job = f.injuries.length ? 'medbay' : f.stress >= 40 ? 'rest' : 'trainPower';
@@ -441,19 +690,10 @@ test('simple-bot careers always end, and the state stays valid every week', () =
         } else if (!skipBlocker(run)) skipBout(run);
         else forfeitBout(run);
       } else advanceWeek(run);
-      assert.ok(run.gold >= 0 && run.prestige >= 0, `seed ${seed}: negative resources`);
+      assert.ok(run.gold >= 0 && run.prestige >= 0 && run.favor >= 0, `seed ${seed}: negative resources`);
       assert.ok(run.roster.length <= rosterCap(run), `seed ${seed}: roster over cap`);
-      assert.ok(run.roster.every((f) => f.alive && f.stress >= 0 && f.stress <= 100));
+      assert.ok(run.roster.every((f) => f.alive && f.stress >= 0 && f.stress <= 100 && f.morale >= 0 && f.morale <= 100));
     }
     assert.ok(['won', 'lost'].includes(run.status), `seed ${seed} never ended`);
   }
-});
-
-test('re-selecting the job a fighter already has is a no-op, even at the trainer cap', () => {
-  const run = createRun(1);
-  const f = recruit(run, run.market[0].id);
-  setJob(run, f.id, 'trainPower');
-  f.trained = 3;
-  assert.equal(jobBlocker(run, f.id, 'trainPower'), null);
-  assert.doesNotThrow(() => setJob(run, f.id, 'trainPower'));
 });

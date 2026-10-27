@@ -1,22 +1,24 @@
-// Ludus screens: top bar, week planner, next bout, estate, market, help.
+// Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS } from '../data.js';
+import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP } from '../data.js';
 import { formatDate, weeksUntilTournament, isWinter } from '../calendar.js';
 import {
-  currentBout, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, decorBlocker, surgeonBlocker, fightBlocker,
-  skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker,
+  boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
+  skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
+  buyGearBlocker, equipBlocker, unequipBlocker, tributeDue, moraleTarget, GRAND_TIER,
 } from '../run.js';
 import {
-  plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo,
+  plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel,
 } from '../ludus.js';
 import { describeOdds } from '../odds.js';
+import { gearText } from '../codex.js';
 import { esc, button, fighterCard, ICON, BUILDING_ICON } from './components.js';
 
 const JOB_LABELS = { rest: 'Rest', trainPower: '+1 Power', trainSpeed: '+2 Speed', medbay: 'Medbay' };
 const JOB_HELP = {
   rest: `Rest: −${-STRESS.rest} Stress.`,
   trainPower: `Train Power: +1 Power this week, +${STRESS.train} Stress.`,
-  trainSpeed: `Train Speed: +2 Speed this week, +${STRESS.train} Stress. Speed decides who strikes first (+10% to win that round).`,
+  trainSpeed: `Train Speed: +2 Speed this week, +${STRESS.train} Stress. Speed decides who strikes first and makes you harder to wound.`,
   medbay: 'Medbay: heals injuries over weeks.',
 };
 
@@ -25,27 +27,30 @@ const JOB_HELP = {
 export function topbar(run, tab, codexNew = 0) {
   const next = PRESTIGE_LEVELS[run.prestigeLevel];
   const progress = next ? Math.min(100, (run.prestige / next.at) * 100) : 100;
-  const strikes = Array.from({ length: ECONOMY.maxStrikes }, (_, i) => `<i class="${i < run.strikes ? 'on' : ''}"></i>`).join('');
   const tiers = CIRCUITS.map((c) => {
-    const cls = run.grand || c.tier < run.tier ? 'won' : c.tier === run.tier ? 'now' : '';
+    const cls = c.tier < run.topTier ? 'won' : c.tier === run.topTier ? 'now' : '';
     return `<span class="step ${cls}" title="${esc(c.name)}">${c.tier}</span>`;
-  }).join('') + `<span class="step ${run.grand ? 'now' : ''}" title="The Grand Tournament">👑</span>`;
+  }).join('') + `<span class="step ${run.topTier === GRAND_TIER ? 'now' : ''}" title="The Grand Tournament">👑</span>`;
   const tabBtn = (id, label, badge = '') => `<button class="tab${tab === id ? ' on' : ''}" data-action="tab" data-tab="${id}">${label}${badge}</button>`;
-  const marketBadge = run.liaisonOffer ? '<span class="dot" title="Liaison offer"></span>' : '';
+  const marketBadge = run.liaisonOffer || run.armourerStock.length ? '<span class="dot" title="New stock"></span>' : '';
   const codexBadge = codexNew ? `<span class="count" title="New Codex entries">${codexNew}</span>` : '';
+  const levelUps = run.roster.filter((f) => f.pendingPerks.length).length;
+  const ludusBadge = levelUps ? `<span class="count" title="Fighters waiting to choose a perk">${levelUps}</span>` : '';
+  const low = run.favor <= FAVOR.warning;
   return `
     <header class="topbar">
       <h1>BLOODSPORT</h1>
-      <div class="stat gold" title="Gold: pays for fighters, training, buildings and the surgeon.">${ICON.gold}<b>${run.gold}</b></div>
+      <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
       <div class="stat prestige" title="Prestige: staked as tournament buy-ins. Reaching thresholds raises your House level (kept forever).">${ICON.prestige}<b>${run.prestige}</b>
         <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${next.at}</small>` : ''}</span></div>
-      <div class="strikes" title="Imperial Strikes: lose a Boss and you get one. Three and you're executed.">${strikes}</div>
+      <div class="favor${low ? ' low' : ''}" title="Imperial Favor: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, towels there, crushing weak opponents, and unpaid tribute.">
+        <span>Favor</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
       <div class="track" title="Arena tiers">${tiers}</div>
       <div class="spacer"></div>
       <button class="btn small" data-action="help">How to play</button>
       <button class="btn small" data-action="new-run">New career</button>
     </header>
-    <nav class="tabs">${tabBtn('ludus', 'Ludus')}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
+    <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
 }
 
 // ---------- Banners ----------
@@ -61,13 +66,19 @@ export function endBanner(run) {
     <div class="row"><button class="btn primary" data-action="new-run">New career</button><button class="btn" data-action="replay-seed">Replay seed ${run.seed}</button></div></div>`;
 }
 
+const plus = (n) => `${n >= 0 ? '+' : ''}${n}`;
+
 export function summaryBanner(s) {
   if (!s) return '';
   const verdict = s.reason === 'towel' ? 'threw in the towel' : s.died ? 'was slain' : s.won ? 'won' : 'lost';
-  const bits = [`${s.gold >= 0 ? '+' : ''}${s.gold} Gold`, `${s.prestige >= 0 ? '+' : ''}${s.prestige} Prestige`];
-  if (s.title) bits.push(`🏆 ${s.fighter} earns the title "${s.title}" (+1 Power)`);
+  const bits = [`${plus(s.gold)} Gold`, `${plus(s.prestige)} Prestige`];
+  if (s.xp && !s.died) bits.push(`${plus(s.xp)} XP`);
+  if (s.renown) bits.push(`${plus(s.renown)} Renown`);
+  if (s.favor) bits.push(`${plus(s.favor)} Favor`);
+  if (s.title) bits.push(`🏆 ${s.fighter} earns the title "${s.title}"${s.title === 'Master of the Games' ? '' : ' (+1 Power)'}`);
+  if (s.loot) bits.push(`⚒ Claimed a ${GEAR[s.loot].name}`);
+  if (s.crushing) bits.push('The crowd jeered the mismatch');
   if (s.bloodFaith) bits.push('Blood Faith refunded the buy-in');
-  if (s.strike) bits.push('⚠ Imperial Strike');
   if (s.levelUp) bits.push(`⭐ House Prestige level ${s.levelUp}! Visit the Estate.`);
   return `<div class="banner ${s.won ? 'win' : 'loss'}"><button class="close" data-action="dismiss-summary" aria-label="Dismiss">×</button>
     <h2>${esc(s.name)}: ${esc(s.fighter)} ${verdict}</h2><div>${bits.map(esc).join(' · ')}</div></div>`;
@@ -100,11 +111,11 @@ function weekPanel(run) {
   const until = weeksUntilTournament(run.week);
   const status = run.boutPending
     ? '<div class="when now">⚔ Tournament week!</div>'
-    : until === 0
-      ? '<div class="when">This week\'s bout is settled. End the week to carry on.</div>'
+    : run.bouts
+      ? '<div class="when">Your top arena\'s bout is settled. Send fighters to other open arenas, or end the week.</div>'
       : `<div class="when">${isWinter(run.week) ? '❄ Winter Dead Season: no tournaments. Heal, train and build. ' : ''}Next tournament in <b>${until}</b> week${until === 1 ? '' : 's'}.</div>`;
   const blocked = advanceBlocker(run);
-  const recent = run.log.slice(-8).reverse().map((l) => `<li class="${l.tone}">${esc(l.text)}</li>`).join('');
+  const recent = run.log.slice(-9).reverse().map((l) => `<li class="${l.tone}">${esc(l.text)}</li>`).join('');
   return `
     <section class="panel week">
       <h2>${formatDate(run.week)}</h2>
@@ -113,10 +124,38 @@ function weekPanel(run) {
         ${button('End week', 'advance', {}, blocked, 'btn primary')}
         ${button('Skip to tournament', 'advance-tournament', {}, blocked, 'btn')}
       </div>
-      <p class="sub">Each fighter does their job once per week. Jobs stay set until you change them.</p>
+      ${blocked && !run.boutPending ? `<div class="why-not">${esc(blocked)}</div>` : ''}
+      <p class="sub">Each fighter does their job once per week. Jobs stay set until you change them. Tribute of <b>${tributeDue(run)} Gold</b> is due each winter.</p>
       <h3 class="mini">House log</h3>
       <ul class="log">${recent}</ul>
     </section>`;
+}
+
+function perkChooser(run, f) {
+  if (!f.pendingPerks.length) return '';
+  const offer = f.pendingPerks[0].map((p) => `<button class="perk-opt" data-action="perk" data-id="${f.id}" data-perk="${p}" ${perkBlocker(run, f.id, p) ? 'disabled' : ''}>
+    <b>${esc(PERKS[p].name)}</b><small>${esc(PERKS[p].desc)}</small></button>`).join('');
+  return `<div class="perk-choice"><div class="label">⭐ Level ${f.level - f.pendingPerks.length + 1}! Choose a perk:</div><div class="perk-list">${offer}</div></div>`;
+}
+
+function roomPanel(run, f) {
+  const decor = Object.entries(DECOR).map(([k, d]) => {
+    const helps = d.helps(f);
+    return `<div class="decor-opt"><div class="row tight"><span><b>${esc(d.name)}</b> ×${f.decor[k]}</span>
+      ${button(`+ Place (${run.inventory.decor[k]} in storeroom)`, 'assign-decor', { id: f.id, item: k }, assignDecorBlocker(run, f.id, k))}
+      ${button('− Take back', 'remove-decor', { id: f.id, item: k }, removeDecorBlocker(run, f.id, k))}</div>
+      <small>${helps ? '✦ ' : ''}${esc(d.effect)}</small></div>`;
+  }).join('');
+  const { target, comfort, expects } = moraleTarget(run, f);
+  const gear = ['weapon', 'armor'].map((slot) => {
+    const cur = f.gear[slot];
+    const options = run.inventory.gear.map((k, i) => (GEAR[k].slot === slot ? button(`Equip ${esc(GEAR[k].name)}`, 'equip', { id: f.id, index: i }, equipBlocker(run, f.id, i)) : '')).join('');
+    return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armor'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot))}` : '<small>empty</small>'}
+      ${options ? `<div class="row tight">${options}</div>` : ''}</div>`;
+  }).join('');
+  return `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown}).</div>
+    <div class="decor-list">${decor}</div>
+    <div class="label">Gear (from the storeroom)</div>${gear}`;
 }
 
 function rosterPanel(run) {
@@ -125,17 +164,13 @@ function rosterPanel(run) {
       const reason = f.job === job ? null : jobBlocker(run, f.id, job);
       return `<button class="seg${f.job === job ? ' on' : ''}" data-action="job" data-id="${f.id}" data-job="${job}" ${reason ? `disabled title="${esc(reason)}"` : `title="${esc(JOB_HELP[job])}"`}>${JOB_LABELS[job]}</button>`;
     }).join('');
-    const useful = Object.keys(DECOR).filter((k) => DECOR[k].helps(f));
-    const decor = useful.length
-      ? useful.map((k) => `<div class="decor-opt">${button(`+${DECOR[k].name} (${ECONOMY.decorCost} Gold)`, 'decor', { id: f.id, item: k }, decorBlocker(run, f.id, k))}<small>${esc(DECOR[k].effect)} Has ${f.decor[k]}.</small></div>`).join('')
-      : '<small class="sub">No decor helps this fighter. Birds help Ornitharius; Fire Braziers help Firebug elves.</small>';
     const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(inj.tag === 'fleshWound' ? 'Flesh Wound' : inj.tag)} (${surgeonPrice(run)}g)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
-    const actions = `<div class="actions">
+    const actions = `${perkChooser(run, f)}<div class="actions">
       <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week</small></div>
       <div class="segs">${jobs}</div>
-      <details class="more"><summary>Decor${useful.length ? ' ✦' : ''}, surgeon, release</summary>
-        <div class="label">Quarters decor</div><div class="decor-list">${decor}</div>
-        ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : ''}
+      <details class="more"><summary>Room, decor &amp; gear${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f)}</details>
+      <details class="more"><summary>Surgeon, release</summary>
+        ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>
     </div>`;
@@ -149,45 +184,60 @@ function rosterPanel(run) {
     </section>`;
 }
 
-function oddsRow(run, f, oddsFor) {
-  const bout = currentBout(run);
-  const odds = describeOdds(oddsFor(f), oracleLevel(run));
+function oddsRow(run, f, tier, oddsFor) {
+  const bout = boutFor(run, tier);
+  const odds = describeOdds(oddsFor(f, tier), oracleLevel(run));
   const pct = (p) => (p ? ` <small>${p}</small>` : '');
   const warn = [];
   if (f.stress >= STRESS.overtrained) warn.push('Overtrained');
   if (f.injuries.length) warn.push(`${f.injuries.length} injur${f.injuries.length === 1 ? 'y' : 'ies'}`);
+  if (f.power - run.arenas[tier].opponent.power >= ECONOMY.crushingGap && !bout.top) warn.push('Crushing mismatch: the crowd will jeer');
   const tone = odds.win === 'Strong favorite' || odds.win === 'Favored' ? 'good' : odds.win === 'Even fight' ? '' : 'bad';
   return `<div class="odds-row">
     <div class="who"><b>${esc(f.name)}</b> ${warn.length ? `<span class="warn">${warn.join(' · ')}</span>` : ''}</div>
     <div class="o ${tone}" title="Chance to win the match">${odds.win}${pct(odds.winPct)}</div>
     <div class="o" title="Chance of picking up at least one injury">Injury: ${odds.injury}${pct(odds.injuryPct)}</div>
     <div class="o ${odds.death === 'None' || odds.death === 'Low' ? '' : 'bad'}" title="Chance of dying if you never throw in the towel">Death: ${odds.death}${pct(odds.deathPct)}</div>
-    ${run.boutPending ? button(`Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id }, fightBlocker(run, f.id), 'btn primary small') : ''}
+    ${run.bouts?.[tier] === 'open' ? button(`Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id, tier }, fightBlocker(run, f.id, tier), 'btn primary small') : ''}
   </div>`;
 }
 
-function boutPanel(run, oddsFor) {
-  const bout = currentBout(run);
-  const showDebuff = bout.boss || oracleLevel(run) >= 2;
-  const debuff = BOSS_DEBUFFS[run.debuff];
+function arenaBlock(run, tier, oddsFor) {
+  const bout = boutFor(run, tier);
+  const arena = run.arenas[tier];
+  const state = run.bouts?.[tier];
+  const showDebuff = bout.boss || (bout.top && oracleLevel(run) >= 2);
+  const debuff = BOSS_DEBUFFS[arena.debuff];
   const debuffNote = showDebuff
     ? `<div class="debuff">☠ ${bout.boss ? 'Boss arena' : 'Oracle foresees the Boss arena'}: <b>${esc(debuff.name)}</b>. ${esc(debuff.desc)}</div>`
-    : '<div class="sub">The Boss arena rule stays hidden until the Boss (an Oracle Lv 2 reveals it early).</div>';
-  const rows = run.roster.map((f) => oddsRow(run, f, oddsFor)).join('');
+    : '';
+  const stakes = bout.top
+    ? bout.boss ? `Win: ${tier === GRAND_TIER ? 'the career' : `a Title (+1 Power), +${FAVOR.bossWin} Favor and the next arena`}. Loss: ${FAVOR.bossLoss} Favor.` : ''
+    : 'Lower arena: no Favor at stake, half Prestige per tier below, and the crowd jeers crushing mismatches.';
+  const rival = arena.opponent.rival ? '<div class="warn">⚔ A rival returns: this Boss beat you before, and has grown stronger.</div>' : '';
+  const rows = state === 'open' || !run.bouts ? run.roster.map((f) => oddsRow(run, f, tier, oddsFor)).join('') : '';
+  const choice = bout.top && run.boutPending
+    ? `<div class="row">${bout.boss ? button(`Forfeit (${FAVOR.forfeit} Favor)`, 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
+    : '';
+  const body = `<p class="sub"><b>${esc(bout.name)}</b> · Buy-in ${bout.buyIn} Prestige · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
+      ${stakes ? `<p class="sub">${stakes}</p>` : ''}${rival}${debuffNote}
+      ${fighterCard(arena.opponent, { compact: true, stress: false, tag: 'Opponent' })}
+      ${state === 'done' ? '<p class="sub">✔ Settled for this week.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
+      ${choice}`;
+  if (bout.top) return `<div class="arena-block top"><h3>${esc(arenaName(tier))} <small>your top arena</small></h3>${body}</div>`;
+  return `<details class="arena-block"${state === 'open' ? ' open' : ''}><summary><b>${esc(arenaName(tier))}</b> <small>${state === 'open' ? 'open this week' : state === 'done' ? 'settled' : 'lower arena'}</small></summary>${body}</details>`;
+}
+
+function boutPanel(run, oddsFor) {
+  const tiers = unlockedTiers(run).sort((a, b) => b - a);
   const oracleNote = oracleLevel(run) === 0 ? '<p class="sub">Build an Oracle to see exact percentages.</p>' : '';
-  const choice = run.boutPending
-    ? `<div class="row">${bout.boss ? button('Forfeit (Strike)', 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
-    : `<p class="sub">${weeksUntilTournament(run.week) === 0 ? 'This is the next opponent on the circuit.' : `Fight day comes in ${weeksUntilTournament(run.week)} week(s). Plan training and rest around it.`}</p>`;
+  const when = run.bouts ? '' : `<p class="sub">Fight day comes in ${weeksUntilTournament(run.week)} week(s). ${tiers.length > 1 ? 'Every arena you have reached holds a bout; send one fighter to each.' : 'Plan training and rest around it.'}</p>`;
   return `
     <section class="panel bout${run.boutPending ? ' live' : ''}">
-      <h2>${run.boutPending ? 'Fight day' : 'Next bout'}</h2>
-      <p class="sub"><b>${esc(bout.name)}</b> · Buy-in ${bout.buyIn} Prestige · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige${bout.boss ? ', a Title (+1 Power)' : ''} · Loss: +${bout.lossGold} Gold${bout.boss ? ', an Imperial Strike' : ''}</p>
-      ${debuffNote}
-      ${fighterCard(run.opponent, { compact: true, stress: false, tag: 'Opponent' })}
-      <h3 class="mini">Your odds</h3>
-      ${rows || '<div class="empty">No fighters to send.</div>'}
+      <h2>${run.bouts ? 'Fight day' : 'Next bouts'}</h2>
+      ${when}
+      ${tiers.map((t) => arenaBlock(run, t, oddsFor)).join('')}
       ${oracleNote}
-      ${choice}
     </section>`;
 }
 
@@ -229,7 +279,7 @@ export function estateTab(run) {
   return `
     <section class="panel estate">
       <h2>The Estate <small>${run.buildings.length}/${plotCount(run)} plots · up to ${levelInfo(run.prestigeLevel).maxFighters} fighters at this level</small></h2>
-      <p class="sub">Plots are limited, so every building is a trade-off. Reaching new Prestige levels adds plots and unlocks new buildings.</p>
+      <p class="sub">Plots are limited, so every building is a trade-off. Better Quarters and an Entertainment Room keep famous fighters happy. Reaching new Prestige levels adds plots and unlocks new buildings.</p>
       <div class="legends">${legend}</div>
       <div class="villa">
         <div class="roof"></div>
@@ -238,7 +288,7 @@ export function estateTab(run) {
     </section>`;
 }
 
-// ---------- Market tab ----------
+// ---------- Market tab: fighters, decor, Armourer, storeroom ----------
 
 export function marketTab(run) {
   const price = marketPrice(run);
@@ -250,12 +300,32 @@ export function marketTab(run) {
   const liaison = offer
     ? fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })
     : '<p class="sub">Build a Liaison (Prestige level 2) for a cheap monthly prisoner.</p>';
+  const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small><br><small>${esc(d.effect)}</small></div>
+    ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`).join('');
+  const armourer = maxLevel(run, 'armourer')
+    ? run.armourerStock.length
+      ? run.armourerStock.map((k, i) => `<div class="shop-row"><div><b>${esc(GEAR[k].name)}</b> · ${GEAR[k].price} Gold <small>${GEAR[k].slot}</small><br><small>${esc(gearText(GEAR[k]))}</small></div>
+        ${button('Buy', 'buy-gear', { index: i }, buyGearBlocker(run, i), 'btn small primary')}</div>`).join('')
+      : '<p class="sub">Sold out until next month.</p>'
+    : '<p class="sub">Build an Armourer (Prestige level 2) to buy weapons and armor. Beaten opponents sometimes drop theirs; Bosses always do.</p>';
+  const stored = run.inventory.gear.length
+    ? run.inventory.gear.map((k) => `<span class="chip" title="${esc(gearText(GEAR[k]))}">${esc(GEAR[k].name)}</span>`).join(' ')
+    : '<small class="sub">No spare gear.</small>';
+  const storedDecor = Object.entries(run.inventory.decor).filter(([, n]) => n).map(([k, n]) => `<span class="chip decor">${esc(DECOR[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">No spare decor.</small>';
   return `
     <div class="grid market">
       <section class="panel"><h2>Market <small>${circuitInfo(run).name}</small></h2>
         <p class="sub">${price} Gold each. New fighters arrive at the start of every month, stronger as you climb the tiers. Roster: ${run.roster.length}/${rosterCap(run)}.</p>
         <div class="cards two">${cards || '<div class="empty">Sold out until next month.</div>'}</div></section>
-      <section class="panel"><h2>The Liaison</h2>${liaison}</section>
+      <div class="stack">
+        <section class="panel"><h2>The Storeroom</h2>
+          <p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room, decor &amp; gear" panel. A fallen fighter's things come back here.</p>
+          <div class="label">Gear</div><div class="chips">${stored}</div>
+          <div class="label">Decor</div><div class="chips">${storedDecor}</div></section>
+        <section class="panel"><h2>Decor merchant</h2>${decorShop}</section>
+        <section class="panel"><h2>The Armourer</h2>${armourer}</section>
+        <section class="panel"><h2>The Liaison</h2>${liaison}</section>
+      </div>
     </div>`;
 }
 
@@ -267,13 +337,15 @@ export function helpModal() {
     <h2>How to play</h2>
     <ol>
       <li><b>Recruit</b> gladiators in the Market.</li>
-      <li><b>Give each a weekly job</b>: train Power or Speed, rest, or heal in the Medbay. Training builds Stress. At 50+ Stress a fighter is overtrained: they can't train, and they fight at −1 Power with one ability lost.</li>
-      <li><b>End the week.</b> The last week of each month is a tournament. Check the odds, then send a fighter or skip.</li>
+      <li><b>Give each a weekly job</b>: train Power or Speed, rest, or heal in the Medbay. Training builds Stress; at 50+ a fighter is overtrained.</li>
+      <li><b>End the week.</b> The last week of each month is a tournament. Every arena you've reached holds a bout; send one fighter to each, after checking the odds.</li>
       <li><b>Fight</b> best-of-3 rounds. Between rounds you can throw in the towel to save a badly hurt fighter.</li>
-      <li><b>Climb</b> four arena tiers: Tournament 1 → Tournament 2 → Boss. Win the Grand Tournament to win the game. Each Boss loss is an Imperial Strike; three and you're executed.</li>
+      <li><b>Grow your fighters.</b> Matches give XP; each level lets you pick a perk. Wins bring Renown, and famous fighters want better rooms: keep their Morale up with decor, Quarters and entertainment.</li>
+      <li><b>Equip them</b> from the storeroom: decor and gear belong to the house and pass on when a fighter falls.</li>
+      <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favor</b> above 0, and pay his tribute each winter.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
     </ol>
-    <p class="sub">Every rule, trait, class and injury is explained in the <b>Codex</b> tab as you discover it.</p>
+    <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>
     <div class="row"><button class="btn small" data-action="intro-replay">Replay the intro</button><button class="btn small" data-action="tutorial-replay">Restart the tutorial</button><button class="btn small" data-action="tab" data-tab="codex">Open the Codex</button></div>
   </div></div>`;
 }
@@ -296,3 +368,5 @@ export function codexTab(codex, entries, sections, fresh, prog, isUnlocked, hasL
   return `<section class="panel codex"><h2>The Codex <small>${prog.found}/${prog.total} discovered · carries over between careers</small></h2>
     <p class="sub">Entries unlock the first time you see something. Defeat a Kind, Class or weapon in the arena to unlock its lore.</p>${groups}</section>`;
 }
+
+export { XP };
