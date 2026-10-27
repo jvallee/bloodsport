@@ -13,6 +13,15 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - Use a seeded RNG for all randomness so fights replay exactly from a seed.
 - Tests use Node's built-in runner: `node --test`. No test framework dependencies.
 
+## Commands
+- `npm test`: run all tests (no install needed).
+- `npm run serve`: play locally at http://localhost:8000 (ES modules don't load from `file://`).
+- `npm run simulate`: balance report (build win rates and circuit difficulty).
+
+## Layout
+- `src/rng.js` seeded RNG · `src/data.js` tables · `src/fight.js` fight engine · `src/run.js` run loop · `src/narrate.js` text · `src/main.js` DOM only.
+- `tests/`: one file per module, plus `tests/helpers.js` (blank fighters, scripted RNG).
+
 ## Working practices
 - **Commit early and often.** Make small, focused commits, each with a clear message, after every working step. Don't batch unrelated changes.
 - **Run the tests before every commit.** Don't commit a failing test suite.

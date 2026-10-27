@@ -49,3 +49,17 @@ scripts/simulate.js        balance simulator (build vs build win rates)
    - the "no fighters" loss condition, which would otherwise end the run before the first recruit
 6. **ES modules don't load from `file://`**, so local play needs a static server. This is documented in `CLAUDE.md`. GitHub Pages serves them fine.
 7. **Save/load (localStorage) stays deferred**, as in the design doc. The run state is plain JSON-safe data, so adding it later is easy.
+
+## Balance snapshot (2026-10-26, `node scripts/simulate.js 3000`)
+
+- **Equal Power:** all 100 Kind trait × Class/weapon builds win 42–63% against random equal-Power opponents, so none falls outside the 30–70% target.
+- **Cestus leads every Kind (57–63%).** Progressive Overload stacks win chance and injure chance every round. It's the first candidate for a nerf.
+- **Ornitharius and Firebug look weak (42–50%)** in this run, but only because it gives them no decor. With 3 Birds or Braziers they're much stronger.
+- **Circuit difficulty for a fresh Human:**
+
+| Training | T1 win | T2 win | Boss win | Boss death |
+| :--- | ---: | ---: | ---: | ---: |
+| +0 Power | 50% | 31% | 9% | 23% |
+| +3 Power | 79% | 56% | 40% | 5% |
+
+  Training clearly pays off, and the Boss debuff makes an untrained fighter's Boss match very deadly. That seems in keeping with the design, but it's worth checking in playtests.
