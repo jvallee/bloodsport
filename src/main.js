@@ -5,13 +5,15 @@ import { createRun, matchOptions, serialize, deserialize } from './run.js';
 import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
+import { exportSave, importSave } from './savefile.js';
 import { estimateOdds } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
-import { fightView } from './ui/fightView.js';
+import { fightView, DICE_TIME } from './ui/fightView.js';
+import { roundSounds, setSound, sfx } from './ui/sound.js';
 
 const app = document.getElementById('app');
 const fightEl = document.getElementById('fight');
@@ -28,7 +30,7 @@ let tab = 'ludus';
 let showHelp = false;
 let autoTimer = null;
 const ui = { animateRound: 0, showMath: false, auto: false, open: {} }; // open: fold-outs the player opened or closed, by data-key
-let prefs = { tutorial: [], showMath: false, introSeen: false };
+let prefs = { tutorial: [], showMath: false, introSeen: false, sound: true };
 let codex = loadCodex(null);
 let codexShownNew = []; // entries highlighted as new while the Codex tab is open
 let introPage = null; // index into INTRO while the intro is showing
@@ -56,6 +58,7 @@ function loadPrefs() {
   try { prefs = { ...prefs, ...JSON.parse(storage.get(PREFS_KEY) ?? '{}') }; } catch { /* keep defaults */ }
   if (!Array.isArray(prefs.tutorial)) prefs.tutorial = [];
   ui.showMath = prefs.showMath;
+  setSound(prefs.sound !== false);
   codex = loadCodex(storage.get(CODEX_KEY));
   legacy = loadLegacy(storage.get(LEGACY_KEY));
 }
@@ -103,7 +106,7 @@ function render() {
   // Notifications: the tutorial step first, then this week's results (newest first), one page at a time.
   const notices = [tutorialCard(tutorialStep()), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
   renderFight();
@@ -149,6 +152,7 @@ function scheduleAuto() {
     lastAction = ['next-round', { stance }];
     act('next-round', { stance });
     ui.animateRound = match.round;
+    roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME });
     save();
     render();
     scheduleAuto();
@@ -233,6 +237,40 @@ const actions = {
   },
   'notice-page': (d) => { noticePage = Number(d.page); },
   'auto-play': () => { ui.auto = !ui.auto; },
+  'export-save': () => {
+    const blob = new Blob([exportSave({ run, codex, legacy, version: VERSION })], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `bloodsport-save-${run.seed}-week${run.week}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  },
+  'import-save': () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const data = importSave(await file.text());
+        if (!confirm('Load this save? It replaces your current career.')) return;
+        storage.set(SAVE_KEY, data.career);
+        storage.set(CODEX_KEY, JSON.stringify(data.codex));
+        storage.set(LEGACY_KEY, JSON.stringify(data.legacy));
+        location.reload();
+      } catch (err) {
+        alert(err.message);
+      }
+    };
+    input.click();
+  },
+  'toggle-sound': () => {
+    prefs.sound = prefs.sound === false;
+    setSound(prefs.sound);
+    savePrefs();
+    if (prefs.sound) sfx.event();
+  },
   'toggle-math': () => {
     ui.animateRound = 0; // switching views shouldn't replay the dice
     ui.showMath = !ui.showMath;
@@ -259,7 +297,11 @@ const after = {
     ui.animateRound = 0;
     ui.auto = false; // auto-play is per match: each fight starts paused
   },
-  'next-round': () => { ui.animateRound = match?.round ?? 0; },
+  'next-round': () => {
+    ui.animateRound = match?.round ?? 0;
+    if (match?.rounds.length) roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME });
+  },
+  'event-choice': () => { sfx.event(); },
   'leave-fight': () => {
     ui.auto = false;
     tab = 'ludus';

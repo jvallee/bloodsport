@@ -29,7 +29,7 @@ const JOB_HELP = {
 
 // ---------- Top bar ----------
 
-export function topbar(run, tab, codexNew = 0) {
+export function topbar(run, tab, codexNew = 0, sound = true) {
   const next = PRESTIGE_LEVELS[run.prestigeLevel];
   const progress = next ? Math.min(100, (run.prestige / next.at) * 100) : 100;
   const tiers = CIRCUITS.map((c) => {
@@ -53,6 +53,7 @@ export function topbar(run, tab, codexNew = 0) {
       ${tributeStat(run)}
       <div class="track" title="Arena tiers">${tiers}</div>
       <div class="spacer"></div>
+      <button class="btn small sound" data-action="toggle-sound" title="${sound ? 'Sound on: click to mute' : 'Sound off: click to turn on'}" aria-label="${sound ? 'Mute sound' : 'Turn sound on'}">${sound ? '🔊' : '🔇'}</button>
       <button class="btn small" data-action="help">How to play</button>
       <button class="btn small" data-action="bug-open" title="Something wrong or confusing? Send the developer a report they can replay.">Report a bug</button>
       <button class="btn small" data-action="new-run">New career</button>
@@ -479,6 +480,7 @@ export function helpModal() {
     <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or ends the week · T skips to the tournament · 1–4 switch tabs · ? opens this page.</p>
     <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>
     <div class="row"><button class="btn small" data-action="intro-replay">Replay the intro</button><button class="btn small" data-action="tutorial-replay">Restart the tutorial</button><button class="btn small" data-action="tab" data-tab="codex">Open the Codex</button></div>
+    <div class="row"><button class="btn small" data-action="export-save" title="Download your career, Codex and Legacy as one file">Export save</button><button class="btn small" data-action="import-save" title="Load a save file (replaces your current career)">Import save</button></div>
   </div></div>`;
 }
 
