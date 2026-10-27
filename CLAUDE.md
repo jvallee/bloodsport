@@ -37,5 +37,5 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - **Fix bugs test-first.** Write a failing test that reproduces the bug, then fix it.
 - Don't change balance numbers or rules without saying so. Record each new placeholder decision in `docs/fight-rules.md`.
 - Current plan: `docs/roadmap-v2.md`. Deferred features stay deferred unless asked.
-- `v1/` is a frozen copy of tag `v1.0`. Don't edit it.
+- `v1/` and `v2/` are frozen copies of tags `v1.0` and `v2.0`. Don't edit them.
 - Check that the site works when opened from GitHub Pages (relative paths only, no absolute `/` links).
