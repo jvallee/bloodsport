@@ -7,6 +7,9 @@ export function fmtPct(e5) {
   return `${Number.isInteger(p) ? p : +p.toFixed(3)}%`;
 }
 
+// A roll on a 1–100 scale, e.g. 5920 → "5.9", 55000 → "55".
+export const roll100 = (e5) => `${+(e5 / 1000).toFixed(1)}`;
+
 export const signed = (n) => (n > 0 ? `+${n}` : `${n}`);
 
 export function classAbility(f) {
@@ -38,14 +41,14 @@ export function narrateRound(m, r) {
 
   add('power', `Power ${r.power.A.total} vs ${r.power.B.total}: Delta ${signed(r.delta)}.`);
   add('chance', `${name('A')} wins this round ${fmtPct(r.win.chance)} of the time.`);
-  add('roll', `Rolled ${fmtPct(r.roll)} against ${fmtPct(r.win.chance)}: ${name(r.winner)} takes Round ${r.round}.`);
+  add('roll', `Round roll: ${name('A')} needs ${roll100(r.win.chance)} or less, rolled ${roll100(r.roll)}. ${name(r.winner)} takes Round ${r.round}.`);
 
   for (const c of r.checks) {
     const att = name(c.attacker);
     const def = name(c.defender);
     const prefix = c.counter ? `Elven Eyes! ${att} counters` : `${att} strikes at ${def}`;
     const pierce = c.pierced ? ' (armor pierced)' : '';
-    add(c.hit ? 'hit' : 'miss', `${prefix}: ${fmtPct(c.chance)} to injure${pierce}, rolled ${fmtPct(c.roll)}. ${c.hit ? 'Hit!' : 'Miss.'}`);
+    add(c.hit ? 'hit' : 'miss', `${prefix}: needs ${roll100(c.chance)} or less to wound${pierce}, rolled ${roll100(c.roll)}. ${c.hit ? 'Hit!' : 'Miss.'}`);
     if (c.parry) add(c.parry.success ? 'parry' : 'hit', c.parry.success ? `${def} parries with the Sword! Riposte: +3 Speed next round.` : `${def}'s parry fails.`);
     const inj = c.injury;
     if (!inj) continue;
@@ -68,7 +71,7 @@ export function resultText(m) {
   const { winner, reason } = m.result;
   const you = m.a.f.name;
   const them = m.b.f.name;
-  if (reason === 'towel') return `You threw in the towel. ${you} lives to fight another day.`;
+  if (reason === 'towel') return `You capitulated. ${you} lives to fight another day.`;
   if (reason === 'death') return winner === 'A' ? `${them} died in the arena. ${you} wins.` : `${you} died in the arena.`;
   return winner === 'A' ? `${you} wins ${m.a.roundsWon}–${m.b.roundsWon}.` : `${you} loses ${m.a.roundsWon}–${m.b.roundsWon}.`;
 }
@@ -126,7 +129,7 @@ export function narrateStory(m, r) {
 export function adviceFor(m) {
   if (m.result.winner === 'A') return null;
   const you = m.a.f.name;
-  if (m.result.reason === 'death') return `${you} fought on with 2+ injuries. When the Death Gate is open, throwing in the towel or healing first keeps fighters alive.`;
+  if (m.result.reason === 'death') return `${you} fought on with 2+ injuries. When the Death Gate is open, capitulating or healing first keeps fighters alive.`;
   if (m.preMatch.some((p) => p.source === 'Overtrained')) return `${you} entered overtrained (−1 Power, one ability lost). Rest the week before a fight to keep Stress under 50.`;
   const worst = Math.min(...m.rounds.map((r) => r.delta));
   if (worst <= -2) return `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.`;

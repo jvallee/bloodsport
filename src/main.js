@@ -27,7 +27,7 @@ let noticePage = 0;
 let tab = 'ludus';
 let showHelp = false;
 let autoTimer = null;
-const ui = { animateRound: 0, showMath: false, auto: false };
+const ui = { animateRound: 0, showMath: false, auto: false, open: {} }; // open: fold-outs the player opened or closed, by data-key
 let prefs = { tutorial: [], showMath: false, introSeen: false };
 let codex = loadCodex(null);
 let codexShownNew = []; // entries highlighted as new while the Codex tab is open
@@ -87,6 +87,8 @@ function render() {
   const notices = [tutorialCard(tutorialStep()), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
   app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run) : ''}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
+  for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
   renderFight();
 }
 
@@ -114,7 +116,7 @@ function renderFight() {
   if (feed) feed.scrollTop = feed.scrollHeight;
 }
 
-// Auto-play: one round every ~2.5s, pausing whenever the towel decision really matters.
+// Auto-play: one round every ~2.5s, pausing whenever the capitulate decision really matters.
 function scheduleAuto() {
   clearTimeout(autoTimer);
   if (!ui.auto || !match || match.over) return;
@@ -226,6 +228,7 @@ const actions = {
   },
   'auto-play': () => { ui.auto = !ui.auto; },
   'toggle-math': () => {
+    ui.animateRound = 0; // switching views shouldn't replay the dice
     ui.showMath = !ui.showMath;
     prefs.showMath = ui.showMath;
     savePrefs();
@@ -254,6 +257,10 @@ document.addEventListener('click', (e) => {
   render();
   scheduleAuto();
 });
+
+document.addEventListener('toggle', (e) => {
+  if (e.target.matches?.('details[data-key]')) ui.open[e.target.dataset.key] = e.target.open;
+}, true);
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && (showHelp || introPage !== null)) {

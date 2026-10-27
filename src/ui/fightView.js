@@ -1,4 +1,4 @@
-// The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, towel decision, breakdown.
+// The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
 
 import { BOSS_DEBUFFS, GEAR } from '../data.js';
 
@@ -107,7 +107,7 @@ function controls(m, ui, bout) {
     const won = m.result.winner === 'A';
     const advice = adviceFor(m);
     const late = m.rounds.at(-1)?.round === ui.animateRound ? ` late" style="animation-delay:${DICE_TIME + 1.8}s` : '';
-    return `<div class="result ${won ? 'win' : 'loss'}${late}">${won ? 'Victory' : m.result.reason === 'towel' ? 'Towel thrown' : m.result.reason === 'death' ? 'Slain' : 'Defeat'}</div>
+    return `<div class="result ${won ? 'win' : 'loss'}${late}">${won ? 'Victory' : m.result.reason === 'towel' ? 'Capitulated' : m.result.reason === 'death' ? 'Slain' : 'Defeat'}</div>
       <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${DICE_TIME + 1.9}s"` : ''}>${esc(resultText(m))}</div>
       <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${DICE_TIME + 2.1}s"` : ''}>${report(m.summary)}</div>
       ${advice ? `<div class="advice">💡 ${esc(advice)}</div>` : ''}
@@ -125,7 +125,7 @@ function controls(m, ui, bout) {
     <div>Score ${m.a.roundsWon}–${m.b.roundsWon}. First to two wins. Your call, Lanista.</div>
     <div class="row">
       <button class="btn primary big" data-action="next-round">Fight on: Round ${m.round + 1}</button>
-      ${canThrowTowel(m) ? `<button class="btn danger big" data-action="towel" title="Forfeit the match and the buy-in. Your fighter is guaranteed to survive.">Throw in the towel (lose ${bout.buyIn} Prestige)</button>` : ''}
+      ${canThrowTowel(m) ? `<button class="btn danger big" data-action="towel" title="Forfeit the match and the buy-in. Your fighter is guaranteed to survive.">Capitulate (lose ${bout.buyIn} Prestige)</button>` : ''}
       <button class="btn big" data-action="auto-play">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button>
     </div>`;
 }

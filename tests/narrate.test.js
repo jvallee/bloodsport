@@ -49,3 +49,10 @@ test('advice points at the Death Gate after a death and at Stress after an overt
   assert.match(adviceFor({ ...base, preMatch: [{ source: 'Overtrained' }], result: { winner: 'B', reason: 'rounds' } }), /Rest the week/);
   assert.match(adviceFor({ ...base, rounds: [{ delta: -3, checks: [] }], result: { winner: 'B', reason: 'rounds' } }), /out-powered/);
 });
+
+test('rolls read on a 1–100 scale', async () => {
+  const { roll100 } = await import('../src/narrate.js');
+  assert.equal(roll100(55000), '55');
+  assert.equal(roll100(5920), '5.9');
+  assert.equal(roll100(99999), '100');
+});

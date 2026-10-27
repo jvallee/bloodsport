@@ -336,12 +336,12 @@ export const canThrowTowel = (m) => !m.over && m.round >= 1;
 export const mortalDanger = (c) => c.f.alive && effectiveInjuries(c.f) >= 2;
 
 export function throwTowel(m) {
-  if (!canThrowTowel(m)) throw new Error('You can only throw in the towel between rounds.');
+  if (!canThrowTowel(m)) throw new Error('You can only capitulate between rounds.');
   m.over = true;
   m.result = { winner: 'B', reason: 'towel' };
 }
 
-// Plays a whole match without towel decisions (simulator and tests).
+// Plays a whole match without capitulate decisions (simulator and tests).
 export function autoPlay(m) {
   while (!m.over) playRound(m);
   return m.result;

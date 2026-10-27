@@ -39,7 +39,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).join(', ')}
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
-  next | towel                  during a fight: play the next round, or throw in the towel
+  next | capitulate             during a fight: play the next round, or capitulate ("towel" also works)
   math                          toggle the round-by-round math in fight narration
   end-week | to-tournament      run one week of jobs, or keep ending weeks until the next tournament`;
 
@@ -275,7 +275,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     }
     if (match.debuff) lines.push(`  Arena rule: ${BOSS_DEBUFFS[match.debuff].name}. ${BOSS_DEBUFFS[match.debuff].desc}`);
     if (mortalDanger(match.a)) lines.push(`  MORTAL DANGER: ${match.a.f.name} has ${effectiveInjuries(match.a.f)} injuries and can die if they lose the next round.`);
-    lines.push(match.round === 0 ? '  `next` to begin Round 1.' : `  \`next\` to fight Round ${match.round + 1}${canThrowTowel(match) ? `, or \`towel\` (lose the match and ${bout.buyIn} Prestige buy-in; your fighter survives)` : ''}.`);
+    lines.push(match.round === 0 ? '  `next` to begin Round 1.' : `  \`next\` to fight Round ${match.round + 1}${canThrowTowel(match) ? `, or \`capitulate\` (lose the match and ${bout.buyIn} Prestige buy-in; your fighter survives)` : ''}.`);
     const tip = fightTutorial();
     if (tip) lines.push(tip);
     return lines.join('\n');
@@ -319,7 +319,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (args.length < n) throw new Error(`Usage: ${usage}`);
   };
   const idle = () => {
-    if (match) throw new Error('A match is in progress: `next` or `towel`.');
+    if (match) throw new Error('A match is in progress: `next` or `capitulate`.');
   };
 
   const commands = {
@@ -423,8 +423,9 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     towel: () => {
       if (!match) throw new Error('No match in progress.');
       throwTowel(match);
-      return ['You throw in the towel.', '', endFight(), '', look()].join('\n');
+      return ['You capitulate.', '', endFight(), '', look()].join('\n');
     },
+    capitulate: (...args) => commands.towel(...args),
     skip: () => {
       idle();
       skipBout(run);

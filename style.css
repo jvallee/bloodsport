@@ -378,3 +378,6 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
   .die .face, .reveal, .late { opacity: 1; animation: none; }
   .die:not(.still), .init-side.first { animation: none; }
 }
+
+.notice { margin-top: 8px; padding: 6px 10px; border-radius: 8px; border: 1px solid #6b5a2a; background: #2b2416; color: #f0cc8c; font-size: 13px; }
+.trait-text > div + div { margin-top: 3px; }

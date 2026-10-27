@@ -63,7 +63,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
         <div class="who"><h3>${esc(f.name)} ${levelLine}</h3><div class="kind">${KINDS[f.kind].name} · ${clsName}</div></div>
         <div class="badges">
           <div class="badge power" title="Power decides who wins rounds. ${f.power}${gearPow(f) ? ` + ${gearPow(f)} from gear` : ''}. Each point of difference shifts the odds a lot.">${ICON.power}<b>${f.power + gearPow(f)}</b></div>
-          <div class="badge speed" title="Speed decides who strikes first (Speed + d6). The first striker gets +10% to win the round and injures first.">${ICON.speed}<b>${f.speed}</b></div>
+          <div class="badge speed" title="Speed decides who strikes first (Speed + d6) and makes them harder to wound. ${f.speed}${gearSpd(f) ? ` ${gearSpd(f) > 0 ? '+' : '−'} ${Math.abs(gearSpd(f))} from gear` : ''}.">${ICON.speed}<b>${f.speed + gearSpd(f)}</b></div>
         </div>
       </div>
       <div class="traits">
@@ -71,7 +71,8 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
         ${f.cls ? `<span class="chip ability${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
         ${titles}${perks}${gear}
       </div>
-      ${compact ? '' : `<div class="trait-text">${trait ? `<b>${trait.name}:</b> ${esc(trait.desc)} ` : ''}${f.cls ? `<b>${classAbility(f)}:</b> ${esc(abilityDesc)}` : ''}</div>`}
+      ${compact ? '' : `<div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}</div>`}
+      ${f.notice ? `<div class="notice">⚠ ${esc(f.notice)}</div>` : ''}
       <div class="status-row">
         <span class="gate-wrap">Death Gate ${deathGate(f)}</span>
         ${stress && f.stress !== undefined ? stressBar(f) : ''}
@@ -98,3 +99,11 @@ function moraleChip(f) {
 }
 
 const gearPow = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].power ?? 0), 0);
+const gearSpd = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].speed ?? 0), 0);
+// Gear effects that the badges don't show: injure chance and armor.
+function gearBonus(f) {
+  const items = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => GEAR[k]);
+  const injure = items.reduce((n, g) => n + (g.injure ?? 0), 0);
+  const guard = items.reduce((n, g) => n + (g.guard ?? 0), 0);
+  return [injure ? `+${injure / 1000}% to injure` : '', guard ? `−${guard / 1000}% to be injured (armor)` : ''].filter(Boolean).join(', ');
+}

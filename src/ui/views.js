@@ -44,7 +44,7 @@ export function topbar(run, tab, codexNew = 0) {
       <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
       <div class="stat prestige" title="Prestige: staked as tournament buy-ins. Reaching thresholds raises your House level (kept forever).">${ICON.prestige}<b>${run.prestige}</b>
         <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${next.at}</small>` : ''}</span></div>
-      <div class="favor${low ? ' low' : ''}" title="Imperial Favor: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, towels there, crushing weak opponents, and unpaid tribute.">
+      <div class="favor${low ? ' low' : ''}" title="Imperial Favor: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
         <span>Favor</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
       <div class="track" title="Arena tiers">${tiers}</div>
       <div class="spacer"></div>
@@ -71,7 +71,7 @@ const plus = (n) => `${n >= 0 ? '+' : ''}${n}`;
 
 export function summaryBanner(s) {
   if (!s) return '';
-  const verdict = s.reason === 'towel' ? 'threw in the towel' : s.died ? 'was slain' : s.won ? 'won' : 'lost';
+  const verdict = s.reason === 'towel' ? 'capitulated' : s.died ? 'was slain' : s.won ? 'won' : 'lost';
   const bits = [`${plus(s.gold)} Gold`, `${plus(s.prestige)} Prestige`];
   if (s.xp && !s.died) bits.push(`${plus(s.xp)} XP`);
   if (s.renown) bits.push(`${plus(s.renown)} Renown`);
@@ -188,8 +188,8 @@ function rosterPanel(run) {
     const actions = `${perkChooser(run, f)}<div class="actions">
       <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week</small></div>
       <div class="segs">${jobs}</div>
-      <details class="more"><summary>Room, decor &amp; gear${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f)}</details>
-      <details class="more"><summary>Surgeon, release</summary>
+      <details class="more" data-key="room-${f.id}"><summary>Room, decor &amp; gear${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f)}</details>
+      <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, release</summary>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>
@@ -221,7 +221,7 @@ function oddsRow(run, f, tier, oddsFor) {
     <div class="who"><b>${esc(f.name)}</b> ${warn.length ? `<span class="warn">${warn.join(' · ')}</span>` : ''}</div>
     <div class="o ${tone}" title="Chance to win the match">${odds.win}${pct(odds.winPct)}</div>
     <div class="o" title="Chance of picking up at least one injury">Injury: ${odds.injury}${pct(odds.injuryPct)}</div>
-    <div class="o ${odds.death === 'None' || odds.death === 'Low' ? '' : 'bad'}" title="Chance of dying if you never throw in the towel">Death: ${odds.death}${pct(odds.deathPct)}</div>
+    <div class="o ${odds.death === 'None' || odds.death === 'Low' ? '' : 'bad'}" title="Chance of dying if you never capitulate">Death: ${odds.death}${pct(odds.deathPct)}</div>
     ${run.bouts?.[tier] === 'open' ? button(`Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id, tier }, fightBlocker(run, f.id, tier), 'btn primary small') : ''}
   </div>`;
 }
@@ -249,7 +249,7 @@ function arenaBlock(run, tier, oddsFor) {
       ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
       ${choice}`;
   if (bout.top) return `<div class="arena-block top"><h3>${esc(arenaName(tier))} <small>your top arena</small></h3>${body}</div>`;
-  return `<details class="arena-block"${state === 'open' ? ' open' : ''}><summary><b>${esc(arenaName(tier))}</b> <small>${state === 'open' ? 'open this week' : state === 'done' ? 'settled' : 'lower arena'}</small></summary>${body}</details>`;
+  return `<details class="arena-block" data-key="arena-${tier}"${state === 'open' ? ' open' : ''}><summary><b>${esc(arenaName(tier))}</b> <small>${state === 'open' ? 'open this week' : state === 'done' ? 'settled' : 'lower arena'}</small></summary>${body}</details>`;
 }
 
 function boutPanel(run, oddsFor) {
@@ -363,7 +363,7 @@ export function helpModal() {
       <li><b>Recruit</b> gladiators in the Market.</li>
       <li><b>Give each a weekly job</b>: train Power or Speed, rest, or heal in the Medbay. Training builds Stress; at 50+ Stress a fighter is overtrained.</li>
       <li><b>End the week.</b> The last week of each month is a tournament. Every arena you've reached holds a bout; send one fighter to each, after checking the odds.</li>
-      <li><b>Fight</b> best-of-3 rounds. Between rounds you can throw in the towel to save a badly hurt fighter.</li>
+      <li><b>Fight</b> best-of-3 rounds. Between rounds you can capitulate to save a badly hurt fighter.</li>
       <li><b>Grow your fighters.</b> Matches give XP; each level lets you pick a perk. Wins bring Renown, and famous fighters want better rooms: keep their Morale up with decor, Quarters and entertainment.</li>
       <li><b>Equip them</b> from the storeroom: decor and gear belong to the house and pass on when a fighter falls.</li>
       <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favor</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>

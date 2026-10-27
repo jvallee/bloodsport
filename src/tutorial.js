@@ -20,7 +20,7 @@ export const INTRO = [
     title: 'How you lose',
     body: `<p>The Emperor watches you through <b>Imperial Favor</b>. Losing a Boss in your top arena, forfeiting, and failing to pay his <b>yearly tribute</b> all cost Favor. <b>At 0 Favor you're executed.</b></p>
       <p>You also fall if every gladiator is dead and you can't afford another, or if your miserable gladiators revolt.</p>
-      <p>Your fighters are mortal. One injury is survivable; with <b>two injuries, losing a round can kill them</b>. Between rounds you can always <b>throw in the towel</b> to save a fighter, at the cost of the match.</p>`,
+      <p>Your fighters are mortal. One injury is survivable; with <b>two injuries, losing a round can kill them</b>. Between rounds you can always <b>capitulate</b> to save a fighter, at the cost of the match.</p>`,
   },
   {
     title: 'Power, Speed and luck',
@@ -61,7 +61,7 @@ export const FIGHT_STEPS = [
   { id: 'fight-start', when: (m) => m.round === 0, title: 'How a round works',
     body: 'Each round: the faster fighter (Speed + a die) strikes first, Power decides the odds (the gauge shows the gap), traits pop up as coloured tags, then a roll decides the round. After that, each fighter rolls to injure the other. <b>First to win two rounds takes the match.</b>' },
   { id: 'fight-towel', when: (m) => m.round >= 1 && !m.over, title: 'Your call between rounds',
-    body: 'Fight on, or <b>throw in the towel</b>: you lose the match and the buy-in, but your fighter is guaranteed to survive. It matters most when the <b>Death Gate</b> is open (two injuries).' },
+    body: 'Fight on, or <b>capitulate</b>: you lose the match and the buy-in, but your fighter is guaranteed to survive. It matters most when the <b>Death Gate</b> is open (two injuries).' },
   { id: 'fight-danger', when: (m) => !m.over && mortalDanger(m.a), title: 'Mortal danger',
     body: 'Your fighter has two or more injuries. If they lose the next round and get hit, they can die permanently. Is this match worth it?' },
   { id: 'fight-over', when: (m) => m.over, title: 'Why you won or lost',

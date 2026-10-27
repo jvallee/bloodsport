@@ -8,9 +8,9 @@ These are not from the design doc. They exist so the MVP can be built now. Items
 
 ### 1. Match win — (amended)
 - Best of 3: the match ends as soon as one fighter wins 2 rounds.
-- A fighter who dies loses the match immediately. Throwing in the towel is a loss.
+- A fighter who dies loses the match immediately. Capitulating is a loss.
 - The towel prompt appears after Round 1, and after Round 2 only when the score is 1–1.
-- *Why amended:* if all 3 rounds are always played, a fighter leading 2–0 must fight a round that can only hurt them, and throwing in the towel would forfeit a match already won. Round 3 traits (Cestus +15%, Melancholic, Phlegmatic) still matter in every 1–1 decider.
+- *Why amended:* if all 3 rounds are always played, a fighter leading 2–0 must fight a round that can only hurt them, and capitulating would forfeit a match already won. Round 3 traits (Cestus +15%, Melancholic, Phlegmatic) still matter in every 1–1 decider.
 
 ### 2. Economy — (amended)
 - Start: **10 Gold, 5 Prestige.**
@@ -129,7 +129,7 @@ All numbers live in `src/data.js` and were tuned with `npm run career` (see `doc
 - *One only* buildings are capped because only the best one would count; a second would be a trap.
 
 ### Saves
-- The career autosaves to the browser after every action. Reloading during a match counts as throwing in the towel, so quitting can't undo a bad fight.
+- The career autosaves to the browser after every action. Reloading during a match counts as capitulating, so quitting can't undo a bad fight.
 
 ## v2 rules (supersede the career rules above where they differ)
 
@@ -147,7 +147,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 | Win while at the Death Gate (2+ injuries) | +5 |
 | Lose your top arena's Boss | −15 / −20 / −25 / −30 by tier (Grand −30) |
 | Forfeit your top arena's Boss | loss −5 |
-| Throw in the towel in your top arena (non-Boss) | −5 |
+| Capitulate in your top arena (non-Boss) | −5 |
 | Crushing win in a lower arena | −2 |
 | Unpaid tribute | −25 |
 
@@ -160,7 +160,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Champions in lower arenas:** a Champion who fights back in a lower arena gets no Prestige and no Renown for a win, loses 10 Morale, and costs 3 Favor ("a champion picking on newcomers").
 - **Rookies:** fighters under 5 Renown are never jeered for mismatches; only known fighters (5+ Renown) crushing a weak opponent by 3+ Power are.
 - **Injuries go both ways every round:** whoever wins the round, both fighters roll to injure. The round loser is much easier to hurt (25% vs 10% at even Power).
-- **Reloading mid-match** counts as throwing in the towel, but keeps any injuries (or death) from rounds already played.
+- **Reloading mid-match** counts as capitulating, but keeps any injuries (or death) from rounds already played.
 - **Revolt:** if the roster's average Morale stays below 20 for 4 weeks in a row, the career is lost.
 
 ### Fighter growth

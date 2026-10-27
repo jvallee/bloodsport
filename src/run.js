@@ -55,6 +55,7 @@ const clampStress = (n) => clamp(n, 0, STRESS.max);
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
 const findFighter = (run, id) => run.roster.find((f) => f.id === id);
 // Power as the card shows it: trained Power plus gear.
+export const effectiveSpeed = (f) => f.speed + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].speed ?? 0), 0);
 export const effectivePower = (f) => f.power + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].power ?? 0), 0);
 export const championTitle = (tier) => `Champion of ${arenaName(tier).replace(/^The /, 'the ')}`;
 export const isChampionOf = (f, tier) => (f.titles ?? []).includes(championTitle(tier));
@@ -304,6 +305,19 @@ export function release(run, id) {
 const jobCount = (run, job, exceptId) => run.roster.filter((f) => f.id !== exceptId && f.job === job).length;
 const isTraining = (job) => job === 'trainPower' || job === 'trainSpeed';
 
+// Why a fighter can't train this week (or null). Gold covers every trainee's fee, this one included.
+export function trainBlocker(run, f, { checkGold = true } = {}) {
+  if (f.trained >= trainCap(run)) return `Trainer cap reached (${trainCap(run)} points). Upgrade a Trainer Room.`;
+  if (f.morale < MORALE.restless) return `Restless (Morale ${f.morale}): won't train. Raise their comfort.`;
+  if (f.stress >= STRESS.overtrained) return `Stress ${f.stress}: must rest first.`;
+  if (checkGold) {
+    const trainees = run.roster.filter((x) => x.id !== f.id && isTraining(x.job)).length + 1;
+    const fee = trainees * trainCost(run);
+    if (run.gold < fee) return trainees > 1 ? `Needs ${fee} Gold for ${trainees} trainees; you have ${run.gold}.` : `Needs ${fee} Gold; you have ${run.gold}.`;
+  }
+  return null;
+}
+
 export function jobBlocker(run, id, job) {
   const idle = idleBlocker(run);
   if (idle) return idle;
@@ -314,7 +328,8 @@ export function jobBlocker(run, id, job) {
   if (isTraining(job)) {
     const busy = run.roster.filter((x) => x.id !== id && isTraining(x.job)).length;
     if (busy >= trainerRooms(run)) return `All ${trainerRooms(run)} Trainer Room${trainerRooms(run) > 1 ? 's are' : ' is'} busy.`;
-    if (f.trained >= trainCap(run)) return `Trainer cap reached (${trainCap(run)} points). Upgrade a Trainer Room.`;
+    const cannot = trainBlocker(run, f);
+    if (cannot) return cannot;
   }
   if (job === 'medbay') {
     if (jobCount(run, 'medbay', id) >= medbaySlots(run)) return 'The Medbay is full.';
@@ -325,7 +340,16 @@ export function jobBlocker(run, id, job) {
 
 export function setJob(run, id, job) {
   assertOk(jobBlocker(run, id, job));
-  findFighter(run, id).job = job;
+  const f = findFighter(run, id);
+  f.job = job;
+  f.notice = null;
+}
+
+// A fighter can't train after all: they rest this week, and the card says why.
+function switchToRest(run, f, reason) {
+  f.job = 'rest';
+  f.notice = `Switched to Rest: ${reason}`;
+  log(run, `${f.name} switched to Rest: ${reason}`, 'warn');
 }
 
 // ---------- Morale ----------
@@ -363,26 +387,19 @@ export function advanceWeek(run) {
   assertOk(advanceBlocker(run));
   const relief = stressRelief(run);
   for (const f of run.roster) {
-    const restless = f.morale < MORALE.restless;
-    const tooStressed = isTraining(f.job) && f.stress >= STRESS.overtrained;
-    if (tooStressed) log(run, `${f.name} is too stressed to train and rests this week.`, 'warn');
-    else if (isTraining(f.job) && restless) log(run, `${f.name} is too restless to train (Morale ${f.morale}).`, 'warn');
-    if (isTraining(f.job) && !tooStressed && !restless) {
+    // Training that can't happen counts as Rest, and the card says why (it normally can't be chosen at all).
+    if (isTraining(f.job)) {
+      const cannot = trainBlocker(run, f, { checkGold: false }) ?? (run.gold < trainCost(run) ? `not enough Gold for the trainer's fee (${trainCost(run)}).` : null);
+      if (cannot) switchToRest(run, f, cannot);
+    }
+    if (isTraining(f.job)) {
       const cost = trainCost(run);
-      if (f.trained >= trainCap(run)) {
-        f.job = 'rest';
-        log(run, `${f.name} has learned all this trainer can teach.`);
-      } else if (run.gold < cost) {
-        f.job = 'rest';
-        log(run, `Not enough Gold to pay the trainer; ${f.name} rests instead.`, 'warn');
-      } else {
-        const stat = f.job === 'trainPower' ? 'power' : 'speed';
-        f[stat] += TRAIN_GAIN[stat];
-        f.trained += 1;
-        run.gold -= cost;
-        f.stress = clampStress(f.stress + STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0));
-        log(run, `${f.name} trains: +${TRAIN_GAIN[stat]} ${stat === 'power' ? 'Power' : 'Speed'}.`, 'good');
-      }
+      const stat = f.job === 'trainPower' ? 'power' : 'speed';
+      f[stat] += TRAIN_GAIN[stat];
+      f.trained += 1;
+      run.gold -= cost;
+      f.stress = clampStress(f.stress + STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0));
+      log(run, `${f.name} trains: +${TRAIN_GAIN[stat]} ${stat === 'power' ? 'Power' : 'Speed'}.`, 'good');
     }
     if (f.job === 'medbay') {
       let heal = healRate(run);
@@ -401,13 +418,18 @@ export function advanceWeek(run) {
         f.job = 'rest';
         log(run, `${f.name} leaves the Medbay fully healed.`, 'good');
       }
-    } else if (f.job === 'rest' || tooStressed || (isTraining(f.job) && restless)) {
+    } else if (f.job === 'rest') {
       f.stress = clampStress(f.stress + STRESS.rest);
     }
     f.stress = clampStress(f.stress - relief);
     // Morale drifts toward what their room and fame warrant.
     const { target } = moraleTarget(run, f);
     f.morale = f.morale < target ? Math.min(target, f.morale + MORALE.drift) : Math.max(target, f.morale - MORALE.drift);
+    // Don't leave a job that will fail next week: switch now, visibly.
+    if (isTraining(f.job)) {
+      const next = trainBlocker(run, f, { checkGold: false });
+      if (next) switchToRest(run, f, next);
+    }
     if (f.stress >= STRESS.overtrained) log(run, `${f.name} is overtrained (Stress ${f.stress}). Rest them before a fight.`, 'warn');
     if (f.morale < MORALE.mutinous) log(run, `${f.name} is mutinous and refuses to fight.`, 'bad');
   }
@@ -793,7 +815,7 @@ export function finishMatch(run, match) {
       summary.prestige += bout.buyIn;
     }
     if (bout.top && bout.boss) changeFavor(run, bossLossFavor(tier), `lost ${bout.name}`);
-    else if (bout.top && match.result.reason === 'towel') changeFavor(run, FAVOR.topTowel, 'threw in the towel in your top arena');
+    else if (bout.top && match.result.reason === 'towel') changeFavor(run, FAVOR.topTowel, 'capitulated in your top arena');
   }
   summary.favor = run.favor - favorBefore;
   summary.morale = fighter.morale - moraleBefore;
@@ -918,7 +940,7 @@ export function deserialize(text) {
   let run = JSON.parse(text);
   if (run?.version === 2) run = migrateV2(run);
   if (run?.version !== SAVE_VERSION) throw new Error('This save is from an older version of the game.');
-  // A match in progress isn't saved. Reloading mid-fight counts as throwing in the towel,
+  // A match in progress isn't saved. Reloading mid-fight counts as capitulating,
   // so quitting can't be used to escape a losing fight for free.
   if (run.inMatch) {
     const f = structuredClone(findFighter(run, run.matchInfo.fighterId));

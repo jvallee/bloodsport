@@ -174,16 +174,15 @@ test('rest lowers Stress by 40; Stress stays within 0–100', () => {
   assert.equal(f.stress, 0);
 });
 
-test('an overtrained fighter cannot train and rests instead, keeping the job for later', () => {
+test('training a fighter who just became overtrained switches them to Rest, with a notice on the card', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
+  f.stress = 40;
   setJob(run, f.id, 'trainPower');
-  f.stress = 50;
-  const power = f.power;
-  advanceWeek(run);
-  assert.deepEqual([f.power, f.stress, f.job], [power, 10, 'trainPower']);
-  advanceWeek(run);
-  assert.equal(f.power, power + 1);
+  advanceWeek(run); // 40 + 20 = 60: overtrained now
+  assert.equal(f.stress, 60);
+  assert.equal(f.job, 'rest');
+  assert.match(f.notice, /Stress 60/);
 });
 
 test('Iron Constitution cuts training Stress by 10', () => {
@@ -872,4 +871,54 @@ test('a known fighter (5+ Renown) crushing a weak opponent is still jeered', () 
   b.renown = 6;
   b.power = run.arenas[1].opponent.power + 6;
   assert.equal(refight(run, b, 1).crushing, true);
+});
+
+// ---------- Training never fails silently (playtest #2) ----------
+
+test('training is not selectable when it cannot happen: Restless, overtrained, or not enough Gold', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  f.morale = 30;
+  assert.match(jobBlocker(run, f.id, 'trainPower'), /Restless \(Morale 30\)/);
+  f.morale = 60;
+  f.stress = 55;
+  assert.match(jobBlocker(run, f.id, 'trainSpeed'), /Stress 55: must rest first/);
+  f.stress = 0;
+  run.gold = 0;
+  assert.match(jobBlocker(run, f.id, 'trainPower'), /Needs 1 Gold/);
+  run.gold = 5;
+  assert.equal(jobBlocker(run, f.id, 'trainPower'), null);
+});
+
+test('the Gold check covers every trainee\'s fee', () => {
+  const run = createRun(1);
+  run.gold = 100;
+  run.prestigeLevel = 2;
+  const [a, b] = [recruit(run, run.market[0].id), recruit(run, run.market[0].id)];
+  run.buildings.push({ id: 'bT2', type: 'trainer', level: 1 });
+  setJob(run, a.id, 'trainPower');
+  run.gold = 1;
+  assert.match(jobBlocker(run, b.id, 'trainPower'), /Needs 2 Gold for 2 trainees/);
+});
+
+test('a training week that fails anyway (Gold spent since) counts as Rest, and the card says so', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  setJob(run, f.id, 'trainPower');
+  f.stress = 30;
+  run.gold = 0;
+  const power = f.power;
+  advanceWeek(run);
+  assert.equal(f.power, power);
+  assert.equal(f.stress, 0, 'a full Rest week: 30 - 40');
+  assert.equal(f.job, 'rest');
+  assert.match(f.notice, /Gold/);
+});
+
+test('choosing a new job clears the card notice', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  f.notice = 'Switched to Rest: something';
+  setJob(run, f.id, 'trainPower');
+  assert.equal(f.notice, null);
 });
