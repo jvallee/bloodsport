@@ -54,7 +54,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
   const perks = (f.perks ?? []).map((p) => `<span class="chip perk" title="${esc(PERKS[p].desc)}">⭐ ${esc(PERKS[p].name)}</span>`).join('');
   const gear = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => `<span class="chip gear" title="${esc(gearSummary(GEAR[k]))}">⚒ ${esc(GEAR[k].name)}</span>`).join('');
   const nextXp = XP.levels[(f.level ?? 1) - 1];
-  const levelLine = f.level ? `<span class="lvl-chip" title="XP ${f.xp}${nextXp ? ` / ${nextXp} for the next level` : ' (max level)'}">Lv ${f.level}</span>` : '';
+  const levelLine = f.level ? `<span class="lvl-chip" title="XP ${f.xp}${nextXp ? ` / ${nextXp} for the next level` : ' (max level reached; XP no longer adds anything)'}">Lv ${f.level}${nextXp ? '' : ' max'}</span>` : '';
   const danger = combatant ? mortalDanger(combatant) : f.alive && effectiveInjuries(f) >= 2;
   return `
     <article class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
@@ -62,7 +62,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
       <div class="card-head">
         <div class="who"><h3>${esc(f.name)} ${levelLine}</h3><div class="kind">${KINDS[f.kind].name} · ${clsName}</div></div>
         <div class="badges">
-          <div class="badge power" title="Power decides who wins rounds. Each point of difference shifts the odds a lot.">${ICON.power}<b>${f.power}</b></div>
+          <div class="badge power" title="Power decides who wins rounds. ${f.power}${gearPow(f) ? ` + ${gearPow(f)} from gear` : ''}. Each point of difference shifts the odds a lot.">${ICON.power}<b>${f.power + gearPow(f)}</b></div>
           <div class="badge speed" title="Speed decides who strikes first (Speed + d6). The first striker gets +10% to win the round and injures first.">${ICON.speed}<b>${f.speed}</b></div>
         </div>
       </div>
@@ -96,3 +96,5 @@ function moraleChip(f) {
   const state = f.morale >= MORALE.inspired ? ['inspired', 'Inspired: +5% win chance'] : f.morale < MORALE.mutinous ? ['mutinous', 'Mutinous: refuses to fight'] : f.morale < MORALE.restless ? ['restless', "Restless: won't train"] : ['content', 'Content'];
   return `<span class="morale ${state[0]}" title="Morale ${f.morale}/100. ${state[1]}. Comfort (Quarters, decor, Entertainment Room) raises it; fame raises expectations.">☺ ${f.morale} <small>${state[0]}</small></span>`;
 }
+
+const gearPow = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].power ?? 0), 0);

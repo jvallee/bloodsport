@@ -90,6 +90,7 @@ export function computePower(c, opp, round) {
   if (blinded) mods.push({ source: 'Blinded', value: -2 * blinded });
   if (c.side === 'B' && c.arena === 'crowdFavorite') mods.push({ source: 'Crowd Favorite', value: 1 });
   if (c.overtrained) mods.push({ source: 'Overtrained', value: -1 });
+  if (c.scouted) mods.push({ source: 'Scouted', value: c.scouted });
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
@@ -234,12 +235,14 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
 // Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favorite boosts the opponent (B).
 const BOTH_SIDES = ['bloodMoon', 'crowdFavorite'];
 
-export function createMatch({ a, b, rng, debuff = null, overtrained = false }) {
+export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0 }) {
   const m = {
     a: makeCombatant(a, 'A', debuff),
     b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
     rng, debuff, round: 0, rounds: [], over: false, result: null, preMatch: [],
   };
+  // Scouted: opponents who have studied your fighter fight them with extra Power.
+  if (scouted) m.b.scouted = scouted;
   // Stress: an overtrained fighter loses one random ability and fights at −1 Power.
   if (overtrained) {
     m.a.overtrained = true;

@@ -492,3 +492,9 @@ test('an Inspired fighter (Morale 80+) gets +5% win chance', () => {
   assert.deepEqual(sources(computePhase2(A, B, 1).win), ['Inspired:5000']);
   assert.equal(computePhase2(B, A, 1).win.length, 0);
 });
+
+test('Scouted: the opponent gets +Power against a fighter they have studied', () => {
+  const m = createMatch({ a: blank(), b: blank(), rng: createRng(1), scouted: 2 });
+  assert.deepEqual(sources(computePower(m.b, m.a, 1).mods), ['Scouted:2']);
+  assert.equal(computePower(m.a, m.b, 1).mods.length, 0);
+});

@@ -1,11 +1,11 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP } from '../data.js';
+import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE } from '../data.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, tributeDue, moraleTarget, GRAND_TIER,
+  buyGearBlocker, equipBlocker, unequipBlocker, tributeDue, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
 } from '../run.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel,
@@ -77,10 +77,11 @@ export function summaryBanner(s) {
   if (s.favor) bits.push(`${plus(s.favor)} Favor`);
   if (s.title) bits.push(`🏆 ${s.fighter} earns the title "${s.title}"${s.title === 'Master of the Games' ? '' : ' (+1 Power)'}`);
   if (s.loot) bits.push(`⚒ Claimed a ${GEAR[s.loot].name}`);
+  if (s.injuries?.length) bits.push(`🩸 ${s.fighter} is now ${s.injuries.join(' and ')}: send them to the Medbay`);
   if (s.crushing) bits.push('The crowd jeered the mismatch');
   if (s.bloodFaith) bits.push('Blood Faith refunded the buy-in');
   if (s.levelUp) bits.push(`⭐ House Prestige level ${s.levelUp}! Visit the Estate.`);
-  return `<div class="banner ${s.won ? 'win' : 'loss'}"><button class="close" data-action="dismiss-summary" aria-label="Dismiss">×</button>
+  return `<div class="banner ${s.won ? 'win' : 'loss'}${s.injuries?.length ? ' hurt' : ''}"><button class="close" data-action="dismiss-summary" aria-label="Dismiss">×</button>
     <h2>${esc(s.name)}: ${esc(s.fighter)} ${verdict}</h2><div>${bits.map(esc).join(' · ')}</div></div>`;
 }
 
@@ -197,7 +198,9 @@ function oddsRow(run, f, tier, oddsFor) {
   const warn = [];
   if (f.stress >= STRESS.overtrained) warn.push('Overtrained');
   if (f.injuries.length) warn.push(`${f.injuries.length} injur${f.injuries.length === 1 ? 'y' : 'ies'}`);
-  if (f.power - run.arenas[tier].opponent.power >= ECONOMY.crushingGap && !bout.top) warn.push('Crushing mismatch: the crowd will jeer');
+  if (effectivePower(f) - effectivePower(run.arenas[tier].opponent) >= ECONOMY.crushingGap && !bout.top) warn.push(`Crushing mismatch (${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale if they win)`);
+  const scouted = matchOptions(run, f, tier).scouted;
+  if (scouted) warn.push(`Scouted: opponent +${scouted} Power (they've studied ${esc(f.name)}; a month out of the top arena resets it)`);
   const tone = odds.win === 'Strong favorite' || odds.win === 'Favored' ? 'good' : odds.win === 'Even fight' ? '' : 'bad';
   return `<div class="odds-row">
     <div class="who"><b>${esc(f.name)}</b> ${warn.length ? `<span class="warn">${warn.join(' · ')}</span>` : ''}</div>
@@ -218,17 +221,17 @@ function arenaBlock(run, tier, oddsFor) {
     ? `<div class="debuff">☠ ${bout.boss ? 'Boss arena' : 'Oracle foresees the Boss arena'}: <b>${esc(debuff.name)}</b>. ${esc(debuff.desc)}</div>`
     : '';
   const stakes = bout.top
-    ? bout.boss ? `Win: ${tier === GRAND_TIER ? 'the career' : `a Title (+1 Power), +${FAVOR.bossWin} Favor and the next arena`}. Loss: ${FAVOR.bossLoss} Favor.` : ''
-    : 'Lower arena: no Favor at stake, half Prestige per tier below, and the crowd jeers crushing mismatches.';
+    ? bout.boss ? `Win: ${tier === GRAND_TIER ? 'the career' : `a Title (+1 Power), +${FAVOR.bossWin} Favor and the next arena`}. Loss: ${bossLossFavor(tier)} Favor.` : ''
+    : `Lower arena: winning earns no Favor and Prestige is halved per tier below your top arena. A <b>crushing win</b> (your fighter has ${ECONOMY.crushingGap}+ more Power than the opponent, gear included) makes the crowd jeer: ${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale, no Renown.`;
   const rival = arena.opponent.rival ? '<div class="warn">⚔ A rival returns: this Boss beat you before, and has grown stronger.</div>' : '';
   const rows = state === 'open' || !run.bouts ? run.roster.map((f) => oddsRow(run, f, tier, oddsFor)).join('') : '';
   const choice = bout.top && run.boutPending
-    ? `<div class="row">${bout.boss ? button(`Forfeit (${FAVOR.forfeit} Favor)`, 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
+    ? `<div class="row">${bout.boss ? button(`Forfeit (${bossLossFavor(tier) + FAVOR.forfeitExtra} Favor)`, 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
     : '';
   const body = `<p class="sub"><b>${esc(bout.name)}</b> · Buy-in ${bout.buyIn} Prestige · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
       ${stakes ? `<p class="sub">${stakes}</p>` : ''}${rival}${debuffNote}
       ${fighterCard(arena.opponent, { compact: true, stress: false, tag: 'Opponent' })}
-      ${state === 'done' ? '<p class="sub">✔ Settled for this week.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
+      ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
       ${choice}`;
   if (bout.top) return `<div class="arena-block top"><h3>${esc(arenaName(tier))} <small>your top arena</small></h3>${body}</div>`;
   return `<details class="arena-block"${state === 'open' ? ' open' : ''}><summary><b>${esc(arenaName(tier))}</b> <small>${state === 'open' ? 'open this week' : state === 'done' ? 'settled' : 'lower arena'}</small></summary>${body}</details>`;
@@ -305,7 +308,7 @@ export function marketTab(run) {
   const offer = run.liaisonOffer;
   const liaison = offer
     ? fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })
-    : '<p class="sub">Build a Liaison (Prestige level 2) for a cheap monthly prisoner.</p>';
+    : maxLevel(run, 'liaison') ? '<p class="sub">No prisoner on offer this month.</p>' : `<p class="sub">Build a Liaison${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for a cheap monthly prisoner.</p>`;
   const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small><br><small>${esc(d.effect)}</small></div>
     ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`).join('');
   const armourer = maxLevel(run, 'armourer')
@@ -313,7 +316,7 @@ export function marketTab(run) {
       ? run.armourerStock.map((k, i) => `<div class="shop-row"><div><b>${esc(GEAR[k].name)}</b> · ${GEAR[k].price} Gold <small>${GEAR[k].slot}</small><br><small>${esc(gearText(GEAR[k]))}</small></div>
         ${button('Buy', 'buy-gear', { index: i }, buyGearBlocker(run, i), 'btn small primary')}</div>`).join('')
       : '<p class="sub">Sold out until next month.</p>'
-    : '<p class="sub">Build an Armourer (Prestige level 2) to buy weapons and armor. Beaten opponents sometimes drop theirs; Bosses always do.</p>';
+    : '<p class="sub">Build an Armourer (Prestige level 2) to buy weapons and armor; it stocks up the moment it opens. Beaten opponents sometimes drop theirs, and your top arena\'s Boss always does.</p>';
   const stored = run.inventory.gear.length
     ? run.inventory.gear.map((k) => `<span class="chip" title="${esc(gearText(GEAR[k]))}">${esc(GEAR[k].name)}</span>`).join(' ')
     : '<small class="sub">No spare gear.</small>';
@@ -328,7 +331,7 @@ export function marketTab(run) {
           <p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room, decor &amp; gear" panel. A fallen fighter's things come back here.</p>
           <div class="label">Gear</div><div class="chips">${stored}</div>
           <div class="label">Decor</div><div class="chips">${storedDecor}</div></section>
-        <section class="panel"><h2>Decor merchant</h2>${decorShop}</section>
+        <section class="panel"><h2>Decor merchant</h2><p class="sub">Each fighter's quarters fit up to ${maxLevel(run, 'quarters')} of each item (your best Fighter Quarters level).</p>${decorShop}</section>
         <section class="panel"><h2>The Armourer</h2>${armourer}</section>
         <section class="panel"><h2>The Liaison</h2>${liaison}</section>
       </div>
@@ -348,7 +351,7 @@ export function helpModal() {
       <li><b>Fight</b> best-of-3 rounds. Between rounds you can throw in the towel to save a badly hurt fighter.</li>
       <li><b>Grow your fighters.</b> Matches give XP; each level lets you pick a perk. Wins bring Renown, and famous fighters want better rooms: keep their Morale up with decor, Quarters and entertainment.</li>
       <li><b>Equip them</b> from the storeroom: decor and gear belong to the house and pass on when a fighter falls.</li>
-      <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favor</b> above 0, and pay his tribute each winter.</li>
+      <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favor</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who keep fighting in your top arena (+1 Power per month, up to +3), so rotate your stars.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
     </ol>
     <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>

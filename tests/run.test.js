@@ -9,7 +9,9 @@ import {
   buyDecor, assignDecor, assignDecorBlocker, removeDecor, buyGear, equip, unequip, surgeon, surgeonBlocker,
   startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker, choosePerk, perkBlocker,
   currentBout, boutFor, marketPrice, serialize, deserialize, moraleTarget, moraleState, xpFor, GRAND_TIER, SAVE_VERSION,
+  matchOptions, bossLossFavor, buildRoom,
 } from '../src/run.js';
+import { computePower } from '../src/fight.js';
 
 // A run with one recruited fighter, standing on the first tournament week.
 const atBout = (seed = 1) => {
@@ -480,7 +482,7 @@ test('losing your top Boss costs Favor, and that Boss returns stronger next circ
   nextBout(run);
   const boss = run.arenas[1].opponent;
   playBout(run, f.id, { winner: 'B' });
-  assert.equal(run.favor, FAVOR.start + FAVOR.bossLoss);
+  assert.equal(run.favor, FAVOR.start + bossLossFavor(1));
   assert.deepEqual([run.topTier, run.arenas[1].stage], [1, 0]);
   assert.equal(run.arenas[1].rival.name, boss.name);
   run.arenas[1].stage = 2;
@@ -494,7 +496,7 @@ test('losing your top Boss costs Favor, and that Boss returns stronger next circ
   assert.equal(run.arenas[1].opponent.power, boss.power + 1);
 });
 
-test('forfeiting a Boss costs 25 Favor; at 0 Favor you are executed', () => {
+test('forfeiting a Boss costs 5 more Favor than losing it; at 0 Favor you are executed', () => {
   const { run } = atBout();
   run.prestige = 100;
   skipBout(run);
@@ -502,7 +504,7 @@ test('forfeiting a Boss costs 25 Favor; at 0 Favor you are executed', () => {
   skipBout(run);
   nextBout(run);
   forfeitBout(run);
-  assert.equal(run.favor, FAVOR.start + FAVOR.forfeit);
+  assert.equal(run.favor, FAVOR.start + bossLossFavor(1) + FAVOR.forfeitExtra);
   run.favor = 10;
   nextBout(run);
   skipBout(run);
@@ -742,4 +744,53 @@ test('lower-arena Bosses drop gear only by chance; only the top Boss always drop
     if (s.loot) drops++;
   }
   assert.ok(drops > 0 && drops < 40, `lower Boss dropped ${drops}/40`);
+});
+
+// ---------- Playtest #1 fixes ----------
+
+test('Scouted: each consecutive top-arena month raises the opponent\'s Power against that fighter (max +3); a month off resets it', () => {
+  const { run, f } = atBout();
+  assert.equal(matchOptions(run, f, 1).scouted, 0);
+  playBout(run, f.id);
+  nextBout(run);
+  assert.equal(matchOptions(run, f, 1).scouted, 1);
+  const m = startMatch(run, f.id);
+  assert.ok(computePower(m.b, m.a, 1).mods.some((x) => x.source === 'Scouted'));
+  m.over = true;
+  m.result = { winner: 'A', reason: 'rounds' };
+  finishMatch(run, m);
+  nextBout(run);
+  assert.equal(matchOptions(run, f, 1).scouted, 2);
+  skipBlocker(run) ? forfeitBout(run) : skipBout(run);
+  nextBout(run);
+  assert.equal(matchOptions(run, f, 1).scouted, 0, 'sitting out a top-arena month resets it');
+});
+
+test('Boss losses cost Favor by tier: 15 / 20 / 25 / 30', () => {
+  assert.deepEqual([1, 2, 3, 4, GRAND_TIER].map((t) => bossLossFavor(t)), [-15, -20, -25, -30, -30]);
+  const { run, f } = atBout();
+  run.arenas[1].stage = 2;
+  playBout(run, f.id, { winner: 'B' });
+  assert.equal(run.favor, FAVOR.start - 15);
+});
+
+test('crushing and upsets count gear Power', () => {
+  const { run, f } = atBout();
+  const opp = run.arenas[1].opponent;
+  f.power = opp.power + 2;
+  f.gear.weapon = 'gladius'; // +1 Power: now 3 above the opponent
+  run.arenas[1].conquered = true;
+  run.topTier = 2;
+  run.arenas[2] = { ...run.arenas[1], tier: 2, opponent: { ...opp, id: 'oX', name: 'Zed' } };
+  run.bouts = { 1: 'open', 2: 'open' };
+  const s = playBout(run, f.id, { tier: 1 });
+  assert.equal(s.crushing, true);
+});
+
+test('an Armourer has stock as soon as it is built', () => {
+  const run = createRun(1);
+  run.gold = 100;
+  run.prestigeLevel = 2;
+  buildRoom(run, 'armourer');
+  assert.equal(run.armourerStock.length, 3);
 });

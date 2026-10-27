@@ -3,11 +3,11 @@
 import { STRESS } from './data.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel } from './fight.js';
 import {
-  createRun, boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk,
+  createRun, boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, matchOptions, buildRoom,
   assignDecor, removeDecor, buyGear, equip, unequip,
   startMatch, finishMatch, skipBout, forfeitBout, serialize, deserialize,
 } from './run.js';
-import { build, upgrade } from './ludus.js';
+import { upgrade } from './ludus.js';
 import { estimateOdds } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal } from './ui/views.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
@@ -57,12 +57,12 @@ const save = () => run && storage.set(SAVE_KEY, serialize(run));
 
 const oddsCache = new Map();
 function oddsFor(f, tier = run.topTier) {
-  const bout = boutFor(run, tier);
   const opp = run.arenas[tier].opponent;
-  const key = JSON.stringify([f, opp, bout.debuff, f.stress >= STRESS.overtrained]);
+  const opts = matchOptions(run, f, tier);
+  const key = JSON.stringify([f, opp, opts]);
   if (!oddsCache.has(key)) {
     if (oddsCache.size > 200) oddsCache.clear();
-    oddsCache.set(key, estimateOdds(f, opp, { debuff: bout.debuff, overtrained: f.stress >= STRESS.overtrained, n: 400 }));
+    oddsCache.set(key, estimateOdds(f, opp, { ...opts, n: 400 }));
   }
   return oddsCache.get(key);
 }
@@ -183,7 +183,7 @@ const actions = {
   unequip: (d) => unequip(run, d.id, d.slot),
   perk: (d) => choosePerk(run, d.id, d.perk),
   surgeon: (d) => surgeon(run, d.id, Number(d.index)),
-  build: (d) => build(run, d.type),
+  build: (d) => buildRoom(run, d.type),
   upgrade: (d) => upgrade(run, d.id),
   advance: () => { lastSummary = null; advanceWeek(run); },
   'advance-tournament': () => { lastSummary = null; advanceToTournament(run); },

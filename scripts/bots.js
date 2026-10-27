@@ -5,11 +5,11 @@
 
 import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE } from '../src/data.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel } from '../src/fight.js';
-import { rosterCap, trainCap, medbaySlots, buildBlocker, build, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
+import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
-  equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor,
+  equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
 
@@ -33,7 +33,7 @@ function spend(run, reserve) {
     if (b && run.gold - BUILDINGS[type].cost[b.level] >= reserve) upgrade(run, b.id);
   };
   const tryBuild = (type) => {
-    if (!buildBlocker(run, type) && run.gold - BUILDINGS[type].cost[0] >= reserve) build(run, type);
+    if (!buildBlocker(run, type) && run.gold - BUILDINGS[type].cost[0] >= reserve) buildRoom(run, type);
   };
   // The bot reads exact odds and never needs cheap recruits, so it skips the Oracle and Liaison.
   tryUp('trainer');
@@ -129,7 +129,7 @@ function playMatch(run, f, tier, towel) {
 function carefulBouts(run, n, opts) {
   const odds = (f, tier) => {
     const bout = boutFor(run, tier);
-    return estimateOdds(f, opponentFor(run, tier), { debuff: bout.debuff, overtrained: f.stress >= STRESS.overtrained, n });
+    return estimateOdds(f, opponentFor(run, tier), { ...matchOptions(run, f, tier), n });
   };
   // Top arena first: send whoever scores best.
   const top = run.topTier;

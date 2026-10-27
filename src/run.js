@@ -6,13 +6,13 @@
 import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
-  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT,
+  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries } from './fight.js';
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
-  maxLevel, effectAt,
+  maxLevel, effectAt, build,
 } from './ludus.js';
 
 export const SAVE_VERSION = 3;
@@ -42,18 +42,21 @@ export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel
     speed: ECONOMY.startSpeed,
     trained: 0, decor, injuries: [], alive: true,
     stress: 0, job: 'rest', titles: [],
-    xp: 0, level: 1, perks: [], pendingPerks: [], renown: 0, morale: MORALE.start, gear: { weapon: null, armor: null },
+    xp: 0, level: 1, perks: [], pendingPerks: [], renown: 0, morale: MORALE.start, gear: { weapon: null, armor: null }, topStreak: 0,
   };
 }
 
 const newId = (run, prefix) => `${prefix}${run.nextId++}`;
 const allOpponents = (run) => Object.values(run.arenas).map((a) => a.opponent).filter(Boolean);
 const takenNames = (run, extra = []) =>
-  [...run.roster, ...run.market, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name);
+  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name);
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const clampStress = (n) => clamp(n, 0, STRESS.max);
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
 const findFighter = (run, id) => run.roster.find((f) => f.id === id);
+// Power as the card shows it: trained Power plus gear.
+export const effectivePower = (f) => f.power + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].power ?? 0), 0);
+export const bossLossFavor = (tier) => FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1];
 
 // ---------- Arenas and bouts ----------
 
@@ -126,6 +129,16 @@ function restartCircuit(run, tier) {
   newOpponent(run, tier);
 }
 
+// Everything about a fighter that changes a match: the arena rule, Stress, and how well the opponent has studied them.
+// Scouted: +1 opponent Power per consecutive month this fighter has fought in your top arena (max +3).
+export function matchOptions(run, f, tier = run.topTier) {
+  return {
+    debuff: boutFor(run, tier).debuff,
+    overtrained: f.stress >= STRESS.overtrained,
+    scouted: tier === run.topTier ? Math.min(ECONOMY.scoutedMax, f.topStreak ?? 0) : 0,
+  };
+}
+
 // ---------- Market, Liaison, Armourer ----------
 
 export const marketPrice = (run) => circuitInfo(run).price;
@@ -163,6 +176,14 @@ function refreshArmourer(run) {
   }
   const pool = Object.keys(GEAR).filter((k) => GEAR[k].tier <= lv);
   run.armourerStock = Array.from({ length: effectAt('armourer', lv) }, () => pick(run.rng.market, pool));
+}
+
+// Build a room; shops open straight away instead of next month.
+export function buildRoom(run, type) {
+  const b = build(run, type);
+  if (type === 'armourer') refreshArmourer(run);
+  if (type === 'liaison') refreshLiaison(run);
+  return b;
 }
 
 // ---------- Career setup ----------
@@ -393,6 +414,8 @@ export function advanceWeek(run) {
   run.revoltWeeks = avg < REVOLT.morale ? run.revoltWeeks + 1 : 0;
   if (run.revoltWeeks) log(run, `The gladiators are close to revolt (${run.revoltWeeks}/${REVOLT.weeks} weeks).`, 'bad');
 
+  // Scouting fades for anyone who sat out the top arena this tournament week.
+  if (run.bouts) for (const f of run.roster) if (f.foughtTopWeek !== run.week) f.topStreak = 0;
   run.bouts = null;
   run.week += 1;
   const d = dateOf(run.week);
@@ -631,7 +654,7 @@ export function startMatch(run, id, tier = run.topTier) {
   run.prestige -= bout.buyIn;
   run.inMatch = true;
   run.matchInfo = { fighterId: id, tier };
-  return createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, debuff: bout.debuff, overtrained: fighter.stress >= STRESS.overtrained });
+  return createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, ...matchOptions(run, fighter, tier) });
 }
 
 export function skipBlocker(run) {
@@ -671,7 +694,7 @@ export function forfeitBout(run) {
   run.history.push({ week: run.week, tier: bout.tier, name: bout.name, won: false, forfeit: true });
   log(run, `You forfeit ${bout.name}.`, 'bad');
   settleBout(run, bout.tier);
-  changeFavor(run, FAVOR.forfeit, 'forfeited a Boss');
+  changeFavor(run, bossLossFavor(bout.tier) + FAVOR.forfeitExtra, 'forfeited a Boss');
   if (bout.tier === GRAND_TIER) newOpponent(run, bout.tier);
   else restartCircuit(run, bout.tier);
   checkLoss(run);
@@ -690,18 +713,23 @@ export function finishMatch(run, match) {
   const arena = run.arenas[tier];
   const fighter = findFighter(run, match.a.f.id);
   const opp = arena.opponent;
+  const newInjuries = match.a.f.injuries.filter((i) => i.weeksLeft === undefined).map((i) => INJURY_BY_TAG[i.tag].name);
   fighter.injuries = match.a.f.injuries.map((i) => ({ ...i, weeksLeft: i.weeksLeft ?? HEAL_WEEKS[i.tag] }));
   fighter.alive = match.a.f.alive;
   fighter.stress = clampStress(fighter.stress + STRESS.fight);
 
   const won = match.result.winner === 'A';
-  const upset = opp.power > fighter.power;
-  const crushing = won && !bout.top && fighter.power - opp.power >= ECONOMY.crushingGap;
+  const upset = effectivePower(opp) > effectivePower(fighter);
+  const crushing = won && !bout.top && effectivePower(fighter) - effectivePower(opp) >= ECONOMY.crushingGap;
+  if (bout.top) {
+    fighter.topStreak = (fighter.topStreak ?? 0) + 1;
+    fighter.foughtTopWeek = run.week;
+  }
   const atDeathGate = effectiveInjuries(fighter) >= 2;
   const summary = {
     week: run.week, tier, name: bout.name, boss: bout.boss, top: bout.top, won, reason: match.result.reason,
     fighter: fighter.name, fighterId: fighter.id, died: !fighter.alive, gold: 0, prestige: -bout.buyIn, bloodFaith: false,
-    title: null, favor: 0, xp: 0, renown: 0, loot: null, levelUp: null, crushing,
+    title: null, favor: 0, xp: 0, renown: 0, loot: null, levelUp: null, crushing, injuries: fighter.alive ? newInjuries : [],
   };
   const favorBefore = run.favor;
 
@@ -716,7 +744,7 @@ export function finishMatch(run, match) {
       log(run, `The crowd jeers ${fighter.name} for crushing a much weaker opponent.`, 'warn');
       changeFavor(run, FAVOR.crushingWin, 'a crushing win in a lower arena');
     }
-    if (bout.top && bout.boss) changeFavor(run, FAVOR.bossWin, `beat the ${bout.name}`);
+    if (bout.top && bout.boss) changeFavor(run, FAVOR.bossWin, `beat ${bout.name}`);
     if (upset) changeFavor(run, FAVOR.upsetWin, 'an upset');
     if (atDeathGate) changeFavor(run, FAVOR.spectacleWin, 'won at the Death Gate');
     // Loot: claim the loser's gear.
@@ -745,7 +773,7 @@ export function finishMatch(run, match) {
       summary.bloodFaith = true;
       summary.prestige += bout.buyIn;
     }
-    if (bout.top && bout.boss) changeFavor(run, FAVOR.bossLoss, `lost the ${bout.name}`);
+    if (bout.top && bout.boss) changeFavor(run, bossLossFavor(tier), `lost ${bout.name}`);
     else if (bout.top && match.result.reason === 'towel') changeFavor(run, FAVOR.topTowel, 'threw in the towel in your top arena');
   }
   summary.favor = run.favor - favorBefore;

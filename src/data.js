@@ -105,13 +105,14 @@ export const ECONOMY = {
   lowerArenaPrestige: 0.5, // Prestige from a win shrinks by half for each tier below your top arena
   crushingGap: 3, // a win with this much more Power than the opponent is a "crushing" win
   lootChance: 0.35, // chance to claim a beaten opponent's gear (Bosses always drop theirs)
+  scoutedMax: 3, // opponents gain +1 Power per consecutive top-arena month a fighter has fought, up to this
 };
 
 // Imperial Favor replaces v1's three Strikes. At 0 you're executed.
 export const FAVOR = {
   start: 50, max: 100, warning: 25,
   bossWin: 15, upsetWin: 5, spectacleWin: 5,
-  bossLoss: -30, forfeit: -35, topTowel: -5, crushingWin: -2, unpaidTribute: -25,
+  bossLoss: [-15, -20, -25, -30], forfeitExtra: -5, topTowel: -5, crushingWin: -2, unpaidTribute: -25,
 };
 
 // Tribute is due at the start of each winter: perYear × the year number. Warning a month ahead.
@@ -157,7 +158,7 @@ export const PRESTIGE_LEVELS = [
 export const BUILDINGS = {
   quarters: { name: 'Fighter Quarters', dept: 'housing', icon: 'bed', cost: [6, 6, 10], req: [1, 1, 3], per: [2, 3, 4], effect: (n) => `Houses ${n} fighters`, extra: (lv) => `Decor up to ${lv} of each item` },
   entertainment: { unique: true, name: 'Entertainment Room', dept: 'housing', icon: 'lyre', cost: [8, 12], req: [2, 3], per: [15, 30], effect: (n) => `All fighters −${n} Stress each week` },
-  trainer: { name: 'Trainer Room', dept: 'training', icon: 'dumbbell', cost: [8, 10, 16, 26, 40], req: [1, 2, 3, 4, 5], per: [3, 5, 8, 13, 21], effect: (n) => `Trains 1 fighter a week, up to ${n} total points`, extra: (lv) => `Costs ${lv} Gold per training week` },
+  trainer: { name: 'Trainer Room', dept: 'training', icon: 'dumbbell', cost: [8, 10, 16, 26, 40], req: [1, 2, 3, 4, 5], per: [3, 5, 8, 13, 21], effect: (n) => `Trains 1 fighter a week; each fighter can train up to ${n} points in total`, extra: (lv) => `Training costs ${lv} Gold per fighter-week (your best Trainer Room sets the cap and the fee)` },
   medbay: { name: 'Medbay', dept: 'medical', icon: 'cross', cost: [8, 8, 14], req: [1, 2, 4], per: [1, 2, 3], effect: (n) => `Treats ${n} fighter${n > 1 ? 's' : ''} at a time`, extra: (lv) => (lv >= 2 ? 'Heals 2 weeks of injury per week' : 'Heals 1 week of injury per week') },
   oracle: { unique: true, name: 'Oracle', dept: 'scouting', icon: 'eye', cost: [8, 12], req: [2, 3], per: [1, 2], effect: (n) => (n >= 2 ? 'Exact odds and next Boss debuff' : 'Odds to the nearest 10%') },
   armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16], req: [2, 3], per: [3, 4], effect: (n) => `Sells ${n} pieces of gear each month`, extra: (lv) => (lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
@@ -222,7 +223,7 @@ export const GEAR = {
 export const BOSS_DEBUFFS = {
   firstInjuryDouble: { name: 'First Blood Counts Double', desc: 'The first injury your fighter takes counts as two, opening the Death Gate at once.' },
   rainyMud: { name: 'Rainy Mud', desc: 'Your fighter has −2 Speed every round.' },
-  noArmor: { name: 'Stripped of Armor', desc: "Your fighter's armor (Alloyed Skin, Ego Armour) doesn't work." },
+  noArmor: { name: 'Stripped of Armor', desc: "Your fighter's armor doesn't work: Alloyed Skin, Ego Armour and armor gear. Speed evasion still does." },
   ironRules: { name: 'Iron Rules', desc: 'Room decor gives no bonus to your fighter.' },
   bloodMoon: { name: 'Blood Moon', desc: 'Both fighters have +10% chance to be injured.' },
   crowdFavorite: { name: 'Crowd Favorite', desc: 'The champion fights with +1 Power.' },
@@ -232,4 +233,9 @@ export const NAMES = [
   'Aurelia', 'Brutus', 'Cassia', 'Drusus', 'Flamma', 'Gaius', 'Hilarus', 'Ixa', 'Juno', 'Krell',
   'Livia', 'Marcus', 'Nyx', 'Octavia', 'Priscus', 'Quintus', 'Rusta', 'Spiculus', 'Tigris', 'Ursa',
   'Varro', 'Vex', 'Xanthe', 'Zorak', 'Carpophorus', 'Verus', 'Thraxa', 'Sol-9', 'Unit Kappa', 'Grosh',
+  'Aelia', 'Bellona', 'Crixus', 'Decima', 'Eppia', 'Fulvia', 'Gannicus', 'Hector', 'Iulia', 'Kaeso',
+  'Lucilla', 'Mevia', 'Naevius', 'Oenomaus', 'Pugnax', 'Rufa', 'Sabina', 'Tetraites', 'Ulfa', 'Vibia',
+  'Agron', 'Barca', 'Cato', 'Duma', 'Ennia', 'Felix', 'Glabra', 'Hostus', 'Ilithya', 'Kroth',
+  'Lyra', 'Morg', 'Nerva', 'Orsk', 'Pavo', 'Riva', 'Seren', 'Torq', 'Unit Delta', 'Unit Sigma',
+  'Vorath', 'Wyrr', 'Yssa', 'Zenna', 'Ashka', 'Brakk', 'Celeste', 'Dask', 'Elowen', 'Fenn',
 ];
