@@ -105,7 +105,7 @@ export const ECONOMY = {
   lowerArenaPrestige: 0.5, // Prestige from a win shrinks by half for each tier below your top arena
   crushingGap: 3, // a win with this much more Power than the opponent is a "crushing" win
   lootChance: 0.35, // chance to claim a beaten opponent's gear (Bosses always drop theirs)
-  scoutedMax: 3, // opponents gain +1 Power per consecutive top-arena month a fighter has fought, up to this
+  scoutedMax: 1, // opponents gain +1 Power per consecutive top-arena month a fighter has fought, up to this (swept: 2+ is too punishing)
 };
 
 // Imperial Favor replaces v1's three Strikes. At 0 you're executed.
@@ -116,7 +116,7 @@ export const FAVOR = {
 };
 
 // Tribute is due at the start of each winter: perYear × the year number. Warning a month ahead.
-export const TRIBUTE = { perYear: 20 };
+export const TRIBUTE = { perYear: 15 };
 
 // House revolt: average Morale below this for `weeks` weeks in a row ends the career.
 export const REVOLT = { morale: 20, weeks: 4 };

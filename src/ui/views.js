@@ -351,7 +351,7 @@ export function helpModal() {
       <li><b>Fight</b> best-of-3 rounds. Between rounds you can throw in the towel to save a badly hurt fighter.</li>
       <li><b>Grow your fighters.</b> Matches give XP; each level lets you pick a perk. Wins bring Renown, and famous fighters want better rooms: keep their Morale up with decor, Quarters and entertainment.</li>
       <li><b>Equip them</b> from the storeroom: decor and gear belong to the house and pass on when a fighter falls.</li>
-      <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favor</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who keep fighting in your top arena (+1 Power per month, up to +3), so rotate your stars.</li>
+      <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favor</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
     </ol>
     <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>

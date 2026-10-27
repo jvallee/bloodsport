@@ -4,6 +4,7 @@ import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
 import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk } from '../src/run.js';
 import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard } from '../src/ui/views.js';
+import { TRIBUTE } from '../src/data.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
 import { INTRO, STEPS, FIGHT_STEPS } from '../src/tutorial.js';
 import { fightView } from '../src/ui/fightView.js';
@@ -84,7 +85,7 @@ test('the week panel warns about tribute in the last month, in red when you are 
   run.week = 37;
   run.gold = 3;
   const html = ludusTab(run, fakeOdds);
-  assert.match(html, /tribute of <b>20 Gold<\/b> is due in <b>3<\/b> weeks/);
+  assert.match(html, new RegExp(`tribute of <b>${TRIBUTE.perYear} Gold</b> is due in <b>3</b> weeks`));
   assert.match(html, /class="tribute short"/);
   run.week = 10;
   assert.doesNotMatch(ludusTab(run, fakeOdds), /class="tribute/);

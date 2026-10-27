@@ -748,7 +748,7 @@ test('lower-arena Bosses drop gear only by chance; only the top Boss always drop
 
 // ---------- Playtest #1 fixes ----------
 
-test('Scouted: each consecutive top-arena month raises the opponent\'s Power against that fighter (max +3); a month off resets it', () => {
+test('Scouted: consecutive top-arena months raise the opponent\'s Power against that fighter, up to the cap; a month off resets it', () => {
   const { run, f } = atBout();
   assert.equal(matchOptions(run, f, 1).scouted, 0);
   playBout(run, f.id);
@@ -760,7 +760,7 @@ test('Scouted: each consecutive top-arena month raises the opponent\'s Power aga
   m.result = { winner: 'A', reason: 'rounds' };
   finishMatch(run, m);
   nextBout(run);
-  assert.equal(matchOptions(run, f, 1).scouted, 2);
+  assert.equal(matchOptions(run, f, 1).scouted, Math.min(2, ECONOMY.scoutedMax), 'capped');
   skipBlocker(run) ? forfeitBout(run) : skipBout(run);
   nextBout(run);
   assert.equal(matchOptions(run, f, 1).scouted, 0, 'sitting out a top-arena month resets it');

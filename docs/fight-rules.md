@@ -145,15 +145,17 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 | Win your top arena's Boss | +15 |
 | Win an upset (opponent had more Power) | +5 |
 | Win while at the Death Gate (2+ injuries) | +5 |
-| Lose your top arena's Boss | −30 |
-| Forfeit your top arena's Boss | −35 |
+| Lose your top arena's Boss | −15 / −20 / −25 / −30 by tier (Grand −30) |
+| Forfeit your top arena's Boss | loss −5 |
 | Throw in the towel in your top arena (non-Boss) | −5 |
 | Crushing win in a lower arena | −2 |
 | Unpaid tribute | −25 |
 
 - **At 0 Favor you are executed.** The top bar warns at 25.
-- **Tribute:** 20 Gold × the year, paid automatically at the start of winter (warning in December). If you can't pay, you lose all your Gold and 25 Favor.
+- **Tribute:** 15 Gold × the year, paid automatically at the start of winter (warning in December). If you can't pay, you lose all your Gold and 25 Favor.
 - **Rivals:** a top-arena Boss who beats you returns as that arena's next Boss at the arena's Boss Power +1 (never more, however often they win).
+- **Scouted:** a fighter who fought in your top arena last tournament week faces +1 opponent Power there this week. Sitting out the top arena for one tournament week resets it. Lower arenas never scout.
+- **Crushing wins and upsets** compare Power including gear (the number on the fighter card).
 - **Revolt:** if the roster's average Morale stays below 20 for 4 weeks in a row, the career is lost.
 
 ### Fighter growth
@@ -191,6 +193,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - Tier 3: 13 / 14 / 15
   - Tier 4: 17 / 18 / 19
   - Grand Tournament: 22
+- The Armourer and Liaison stock up the moment they are built.
 
 ### Saves
 - Save format version 3. Version-2 careers are upgraded on load: Favor = 50 − 15 per Strike, the old circuit becomes the top arena, and earlier arenas count as conquered. The Codex is stored separately and is never touched by career saves.

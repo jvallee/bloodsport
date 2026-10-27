@@ -2,9 +2,29 @@
 // Usage: node scripts/sweep.js [careers]         difficulty: opponent Power per tier × Favor lost per Boss loss
 //        node scripts/sweep.js --evasion         evasion strength vs the balanced-fighter gate
 
-import { CIRCUITS, GRAND, FAVOR, EVASION, TRIBUTE } from '../src/data.js';
+import { CIRCUITS, GRAND, FAVOR, EVASION, TRIBUTE, ECONOMY } from '../src/data.js';
 import { playCareer } from './bots.js';
 import { speedSplit } from './checks.js';
+
+if (process.argv.includes('--scout')) {
+  // Scouted cap (opponent Power per consecutive top-arena month, max) × Favor start. Same seeds as the gates.
+  const n = Number(process.argv.find((a) => /^\d+$/.test(a))) || 150;
+  const saved = [ECONOMY.scoutedMax, TRIBUTE.perYear];
+  console.log(`scouted max | tribute/yr | careful win | careful deaths | reckless win | reckless deaths   (${n} careers)`);
+  for (const max of [0, 1, 2, 3]) {
+    for (const per of [15, 20]) {
+      ECONOMY.scoutedMax = max;
+      TRIBUTE.perYear = per;
+      const c = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'careful'));
+      const r = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'reckless'));
+      const w = (rs) => `${Math.round((100 * rs.filter((x) => x.won).length) / n)}%`;
+      const d = (rs) => (rs.reduce((s, x) => s + x.deaths, 0) / rs.length).toFixed(2);
+      console.log(`${String(max).padStart(11)} | ${String(per).padStart(10)} | ${w(c).padStart(11)} | ${d(c).padStart(14)} | ${w(r).padStart(12)} | ${d(r).padStart(15)}`);
+    }
+  }
+  [ECONOMY.scoutedMax, TRIBUTE.perYear] = saved;
+  process.exit(0);
+}
 
 if (process.argv.includes('--favor')) {
   // Difficulty without changing any matchup: starting Favor × yearly tribute. Same seeds as the gates.
