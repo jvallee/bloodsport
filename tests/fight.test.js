@@ -4,7 +4,7 @@ import { createRng } from '../src/rng.js';
 import { deltaRow } from '../src/data.js';
 import {
   createMatch, playRound, autoPlay, throwTowel, canThrowTowel, mortalDanger, makeCombatant,
-  computePower, computeSpeed, computePhase2, initiative, injurySeverity, injuryCheck, applyRoundEnd, effectiveInjuries,
+  computePower, computeSpeed, computePhase2, initiative, injurySeverity, injuryCheck, applyRoundEnd, effectiveInjuries, deathGateAt,
 } from '../src/fight.js';
 import { blank, injuries, scripted, e5, pct, roundRecord } from './helpers.js';
 
@@ -468,7 +468,11 @@ test('combat perks apply in the right rounds and conditions', () => {
   assert.deepEqual(sources(r1.self), ['Thick Skin:-5000']);
   assert.deepEqual(sources(computePhase2(A, B, 3).win), ['Closer:5000', 'Duelist:5000']);
   const [S, T] = pair({ perks: ['survivor'], injuries: injuries('poisoned') }, {});
-  assert.deepEqual(sources(computePhase2(S, T, 1).self), ['Survivor:-10000']);
+  assert.deepEqual(sources(computePhase2(S, T, 1).self), ['Survivor:-20000']);
+  const [S1, T1] = pair({ perks: ['survivor'], injuries: injuries('fleshWound') }, {});
+  assert.deepEqual(sources(computePhase2(S1, T1, 1).self), ['Survivor:-10000']);
+  const [S0, T0] = pair({ perks: ['survivor'] }, {});
+  assert.deepEqual(sources(computePhase2(S0, T0, 1).self), []);
 });
 
 test('Tactician makes First Strike worth +15%', () => {
@@ -502,4 +506,44 @@ test('Scouted: the opponent gets +Power against a fighter they have studied', ()
 test('Challenger: the opponent gets +Power against a famous fighter', () => {
   const m = createMatch({ a: blank(), b: blank(), rng: createRng(1), challenger: 2 });
   assert.deepEqual(sources(computePower(m.b, m.a, 1).mods), ['Challenger:2']);
+});
+
+// ---- Traits added after playtest 3 ----
+
+test('Underdog: +2 Power when the opponent has equal or more Power (before Underdog)', () => {
+  const [A, B] = pair({ kindTrait: 'underdog', power: 6 }, { power: 6 });
+  assert.deepEqual(sources(computePower(A, B, 1).mods), ['Underdog:2']);
+  const [C, D] = pair({ kindTrait: 'underdog', power: 7 }, { power: 6 });
+  assert.deepEqual(sources(computePower(C, D, 1).mods), []);
+  // Two underdogs at equal Power both get it (no recursion).
+  const [E, F] = pair({ kindTrait: 'underdog' }, { kindTrait: 'underdog' });
+  assert.equal(computePower(E, F, 1).total, 7);
+  assert.equal(computePower(F, E, 1).total, 7);
+});
+
+test('Bloodlust: +1 Power once the opponent is injured', () => {
+  const [A, B] = pair({ kindTrait: 'bloodlust' }, {});
+  assert.deepEqual(sources(computePower(A, B, 1).mods), []);
+  B.f.injuries = injuries('fleshWound');
+  assert.deepEqual(sources(computePower(A, B, 1).mods), ['Bloodlust:1']);
+});
+
+test('Unbreakable: the Death Gate opens at 3 injuries instead of 2', () => {
+  assert.equal(deathGateAt(blank()), 2);
+  assert.equal(deathGateAt(blank({ kindTrait: 'unbreakable' })), 3);
+  assert.equal(injurySeverity(99, 2, 0, false, 3).canDie, false);
+  assert.equal(injurySeverity(99, 3, 0, false, 3).canDie, true);
+  const [A] = pair({ kindTrait: 'unbreakable', injuries: injuries('poisoned') }, {});
+  assert.equal(mortalDanger(A), false);
+  A.f.injuries.push(...injuries('fleshWound'));
+  assert.equal(mortalDanger(A), true);
+});
+
+test('kill marks: Dreaded at 3 kills (+5% win), Reaper at 6 (+5% injure as well)', () => {
+  const [A, B] = pair({ kills: 3 }, {});
+  assert.deepEqual(sources(computePhase2(A, B, 1).win), ['Dreaded:5000']);
+  assert.deepEqual(sources(computePhase2(A, B, 1).enemy), []);
+  const [C, D] = pair({ kills: 6 }, {});
+  assert.deepEqual(sources(computePhase2(C, D, 1).win), ['Dreaded:5000']);
+  assert.deepEqual(sources(computePhase2(C, D, 1).enemy), ['Reaper:5000']);
 });

@@ -207,6 +207,19 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - Grand Tournament: 24
 - The Armourer and Liaison stock up the moment they are built.
 
+### Playtest 3 additions (placeholders, tune after playtesting)
+- **New kind traits:**
+  - Human **Underdog**: +2 Power when the opponent has equal or more Power (compared before Underdog itself).
+  - Orc **Unbreakable**: the Death Gate opens at 3 effective injuries instead of 2.
+  - Orc **Bloodlust**: +1 Power once the opponent has an injury.
+- **Survivor** perk (Level 3+): once injured, −10% chance to be injured; −20% at 2+ injuries (was −10% at 2+ only).
+- **Bloodied Victory:** winning with 2+ effective injuries gives +5 Favor (the old "win at the Death Gate"), plus +2 Renown, +2 XP and +5 Morale.
+- **Kill marks:** fighters keep a tally of opponents they kill. 3 kills: **Dreaded** (+5% win chance). 6 kills: **Reaper** (+5% chance to injure).
+- **New decor:** Shrine of Mars (3 Gold; −10 Stress a week), War Banner (4 Gold; +1 Renown per win, per Banner).
+- **Selling gear:** spare storeroom gear sells for half its price (rounded down).
+- **Tribute:** can be paid early from the week panel. Unpaid tribute takes all your Gold and 25 Favor; it only ends the career if Favor reaches 0.
+- **Auto-play** is per match: every fight starts paused.
+
 ### Saves
 - Save format version 3. Version-2 careers are upgraded on load: Favor = 50 − 15 per Strike, the old circuit becomes the top arena, and earlier arenas count as conquered. The Codex is stored separately and is never touched by career saves.
 

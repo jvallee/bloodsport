@@ -1,7 +1,7 @@
 // The Codex: an unlockable glossary that persists across careers. Pure.
 // Rules entries unlock the first time you see something; lore unlocks when you defeat it.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE } from './data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE, FAVOR, BLOODIED, KILL_MARKS } from './data.js';
 import { oracleLevel } from './ludus.js';
 import { boutFor, unlockedTiers } from './run.js';
 
@@ -41,20 +41,22 @@ const BASICS = [
   ['speed', 'Speed', 'Decides who strikes first each round (Speed + a d6 roll). The first striker gets +10% to win the round and rolls to injure before the other can hit back. Speed trains at +3 a week, and every point faster than your opponent is −4% to be injured (up to −20%).'],
   ['rounds', 'Rounds and matches', 'A match is best of 3 rounds. Each round: strike order (Speed + a die), then Power, then trait bonuses, then a roll for the round winner. Then BOTH fighters try to injure each other, whoever won: the round loser is much easier to hurt (25% vs 10% at even Power, more as the gap grows), and the first striker swings first.'],
   ['champions', 'Championships', 'A fighter becomes Champion of an arena by beating its Boss or winning 3 matches there (+1 Power, one Title per arena). Champions are too famous for lower arenas: a Champion who fights back in one earns no Prestige or Renown, loses Morale, and costs a little Favor. Rookies (under 5 Renown) are never jeered.'],
-  ['deathGate', 'The Death Gate', 'A fighter with fewer than 2 injuries can never die. At 2 or more (Poisoned counts as 2), losing a round and being hit can be fatal. Capitulate between rounds to guarantee survival.'],
+  ['deathGate', 'The Death Gate', 'A fighter with fewer than 2 injuries can never die (3 for an Unbreakable Orc). At 2 or more (Poisoned counts as 2), losing a round and being hit can be fatal. Capitulate between rounds to guarantee survival.'],
+  ['bloodied', 'Bloodied Victory', `Winning a match with 2+ injuries is a Bloodied Victory: the crowd loves it. +${FAVOR.spectacleWin} Favor, +${BLOODIED.renown} Renown, +${BLOODIED.xp} XP and +${BLOODIED.morale} Morale on top of the usual win.`],
+  ['kills', 'Kills and marks', `Fighters keep a tally of opponents they kill. ${KILL_MARKS.map((k) => `${k.at} kills earns the mark ${k.name} (${k.desc})`).join('; ')}.`],
   ['towel', 'Capitulating', 'Between rounds you can forfeit the match. You lose the buy-in and the match, but your fighter is guaranteed to survive.'],
   ['stress', 'Stress', `Training (+${STRESS.train}) and fighting (+${STRESS.fight}) raise it; rest (${STRESS.rest}) lowers it. At ${STRESS.overtrained}+ a fighter is overtrained: no training, and −1 Power with one ability lost in the arena.`],
   ['armor', 'Armor', 'Alloyed Skin and Ego Armour lower your chance to be injured. Gun (rounds 1 and 3) and Flail ignore armor, but not Speed evasion.'],
   ['prestige', 'Prestige and House level', "Your house's reputation. Staked as tournament buy-ins and won back with interest. Reaching 10 / 25 / 50 / 90 raises your House level for good, unlocking room plots and buildings."],
-  ['favor', 'Imperial Favor', 'The Emperor\'s opinion of your house (0–100). Boss wins, upsets and wins at the Death Gate raise it. Losing or forfeiting a Boss in your top arena, capitulating there, crushing weak opponents in lower arenas, and unpaid tribute lower it. At 0 you are executed.'],
+  ['favor', 'Imperial Favor', 'The Emperor\'s opinion of your house (0–100). Boss wins, upsets and Bloodied Victories raise it. Losing or forfeiting a Boss in your top arena, capitulating there, crushing weak opponents in lower arenas, and unpaid tribute lower it. At 0 you are executed.'],
   ['scouted', 'Scouted', 'Opponents study fighters who keep fighting in your top arena. A fighter who fought there last tournament week faces +1 opponent Power there this time. Sit them out of the top arena for a month (lower arenas are fine) and the scouting fades.'],
-  ['tribute', 'Tribute', `Each winter the Emperor collects tribute: ${TRIBUTE.perYear} Gold × the year. If you can't pay, he takes what you have and your Favor drops.`],
+  ['tribute', 'Tribute', `Each winter the Emperor collects tribute: ${TRIBUTE.perYear} Gold × the year. You can pay early from the week panel. If you can't pay, he takes all your Gold and ${-FAVOR.unpaidTribute} Favor. It only ends the career if Favor reaches 0.`],
   ['arenas', 'Arenas and divisions', 'Every arena you have reached holds a bout each tournament week, and you may send one fighter to each. Your highest arena is your top arena: only its Bosses move you up and only it affects Favor. Lower arenas pay less Prestige, and crushing a much weaker opponent there angers the crowd.'],
   ['growth', 'Levels and perks', 'Fighters earn XP from every match (more for wins, Bosses and upsets). Each level lets you choose 1 of 3 perks: stat boosts, combat edges, or combo perks that need both Power and Speed.'],
   ['renown', 'Renown', 'Fame. Wins (especially Bosses and upsets) raise it; capitulating lowers it. Every 5 Renown adds +1 Gold to a fighter\'s winnings, but famous fighters expect better rooms.'],
   ['morale', 'Morale', 'Drifts each week toward comfort (Quarters level, decor, Entertainment Room) minus expectations (Renown). 80+: Inspired, +5% win chance. Below 40: Restless, won\'t train. Below 20: Mutinous, refuses to fight. A house that stays below 20 on average for 4 weeks revolts.'],
   ['items', 'Fight items', 'Single-use items from the Apothecary (in the Market): War Paint, Adrenaline Draught, Blessed Bandage, Crowd Bribe. Use one between rounds, after Round 1, at most one per fight. Boosts last the next round only.'],
-  ['gear', 'Gear and the storeroom', 'Each fighter has a weapon and an armor slot. Gear and decor belong to the house: buy them, hand them out, take them back. A fallen or released fighter\'s things return to the storeroom. Beaten opponents sometimes drop their gear (Bosses always do).'],
+  ['gear', 'Gear and the storeroom', 'Each fighter has a weapon and an armor slot. Gear and decor belong to the house: buy them, hand them out, take them back. A fallen or released fighter\'s things return to the storeroom. Beaten opponents sometimes drop their gear (Bosses always do). Spare gear sells back for half its price.'],
   ['decor', 'Room decor', `Items for a fighter's quarters. Every item adds comfort (Morale). ${Object.values(DECOR).map((d) => `${d.name}: ${d.effect}`).join(' ')}`],
 ];
 

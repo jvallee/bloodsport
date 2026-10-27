@@ -58,7 +58,7 @@ export function runGates({ careers = 200, quick = false } = {}) {
   const split = speedSplit({ n: quick ? 800 : 3000 });
   const curve = bossCurve(careful);
   const gates = [
-    { name: 'Careful career win rate is 30–45%', value: rate(careful), pass: rate(careful) >= 0.3 && rate(careful) <= 0.45, fmt: 'pct' },
+    { name: 'Careful career win rate is 20–45%', value: rate(careful), pass: rate(careful) >= 0.2 && rate(careful) <= 0.45, fmt: 'pct' },
     { name: 'Careful wins at least as often as reckless', value: rate(careful) - rate(reckless), pass: rate(careful) >= rate(reckless), fmt: 'pctDiff' },
     { name: 'Careful loses clearly fewer fighters than reckless', value: deaths(careful) / Math.max(0.01, deaths(reckless)), pass: deaths(careful) <= 0.5 * deaths(reckless), fmt: 'ratio' },
     { name: 'Reckless loses 1–3 fighters per career', value: deaths(reckless), pass: deaths(reckless) >= 1 && deaths(reckless) <= 3, fmt: 'num' },

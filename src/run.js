@@ -6,9 +6,9 @@
 import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
-  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES,
+  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED,
 } from './data.js';
-import { createMatch, kindActive, effectiveInjuries } from './fight.js';
+import { createMatch, kindActive, effectiveInjuries, killMarks } from './fight.js';
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
@@ -645,6 +645,24 @@ export function equip(run, id, index) {
   f.gear[slot] = key;
 }
 
+export const sellPrice = (key) => Math.floor(GEAR[key].price / 2);
+
+export function sellGearBlocker(run, index) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!run.inventory.gear[index]) return 'No such item in the storeroom.';
+  return null;
+}
+
+// Sell spare storeroom gear back to the Armourer for half its price.
+export function sellGear(run, index) {
+  assertOk(sellGearBlocker(run, index));
+  const [key] = run.inventory.gear.splice(index, 1);
+  run.gold += sellPrice(key);
+  log(run, `Sold a ${GEAR[key].name} for ${sellPrice(key)} Gold.`);
+  return sellPrice(key);
+}
+
 export function unequipBlocker(run, id, slot) {
   const idle = idleBlocker(run);
   if (idle) return idle;
@@ -826,12 +844,12 @@ export function finishMatch(run, match) {
     fighter.topStreak = (fighter.topStreak ?? 0) + 1;
     fighter.foughtTopWeek = run.week;
   }
-  const atDeathGate = effectiveInjuries(fighter) >= 2;
+  const bloodied = won && effectiveInjuries(fighter) >= 2;
   const summary = {
     week: run.week, tier, name: bout.name, boss: bout.boss, top: bout.top, won, reason: match.result.reason,
     fighter: fighter.name, fighterId: fighter.id, died: !fighter.alive, gold: 0, prestige: -bout.buyIn, bloodFaith: false,
     title: null, favor: 0, xp: 0, renown: 0, loot: null, levelUp: null, crushing, champion: won && champion,
-    injuries: fighter.alive ? newInjuries : [], morale: 0, levels: 0,
+    injuries: fighter.alive ? newInjuries : [], morale: 0, levels: 0, bloodied, kill: false, mark: null,
   };
   const favorBefore = run.favor;
 
@@ -839,7 +857,20 @@ export function finishMatch(run, match) {
     summary.gold = bout.winGold + Math.floor(fighter.renown / RENOWN.goldPer);
     summary.prestige += bout.buyIn + (champion ? 0 : bout.winPrestige);
     if (!crushing && !champion) {
-      summary.renown = RENOWN.win + (bout.boss ? RENOWN.bossWin : 0) + (upset ? RENOWN.upset : 0) + (fighter.perks.includes('crowdPleaser') ? 1 : 0);
+      summary.renown = RENOWN.win + (bout.boss ? RENOWN.bossWin : 0) + (upset ? RENOWN.upset : 0) + (fighter.perks.includes('crowdPleaser') ? 1 : 0)
+        + (fighter.decor.warBanner ?? 0) * DECOR.warBanner.renown + (bloodied ? BLOODIED.renown : 0);
+    }
+    if (bloodied) bumpMorale(fighter, BLOODIED.morale);
+    // Kill tally and marks.
+    if (match.result.reason === 'death') {
+      const before = killMarks(fighter).length;
+      fighter.kills = (fighter.kills ?? 0) + 1;
+      summary.kill = true;
+      const marks = killMarks(fighter);
+      if (marks.length > before) {
+        summary.mark = marks.at(-1).name;
+        log(run, `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event');
+      }
     }
     bumpMorale(fighter, crushing || champion ? MORALE.crowdJeers : MORALE.win);
     if (champion) {
@@ -851,7 +882,7 @@ export function finishMatch(run, match) {
     }
     if (bout.top && bout.boss) changeFavor(run, FAVOR.bossWin, `beat ${bout.name}`);
     if (upset) changeFavor(run, FAVOR.upsetWin, 'an upset');
-    if (atDeathGate) changeFavor(run, FAVOR.spectacleWin, 'won at the Death Gate');
+    if (bloodied) changeFavor(run, FAVOR.spectacleWin, 'a Bloodied Victory (won with 2+ injuries)');
     // Loot: claim the loser's gear.
     const drops = [opp.gear.weapon, opp.gear.armor].filter(Boolean);
     // Only your top arena's Boss always drops gear; anything else is a chance (no farming conquered Bosses).
@@ -892,7 +923,7 @@ export function finishMatch(run, match) {
   run.gold += summary.gold;
   run.prestige += summary.prestige + bout.buyIn; // buy-in was already paid in startMatch
   fighter.renown = Math.max(0, fighter.renown + summary.renown);
-  summary.xp = xpFor(won, bout.boss, upset);
+  summary.xp = xpFor(won, bout.boss, upset) + (bloodied ? BLOODIED.xp : 0);
 
   if (!fighter.alive) {
     stripFighter(run, fighter);
@@ -1011,6 +1042,8 @@ export function deserialize(text) {
   if (run?.version === 2) run = migrateV2(run);
   if (run?.version !== SAVE_VERSION) throw new Error('This save is from an older version of the game.');
   run.inventory.items = { ...emptyItems(), ...(run.inventory.items ?? {}) }; // saves from before consumables
+  run.inventory.decor = { ...emptyDecor(), ...run.inventory.decor }; // saves from before new decor
+  for (const f of run.roster) f.decor = { ...emptyDecor(), ...f.decor };
   // A match in progress isn't saved. Reloading mid-fight counts as capitulating,
   // so quitting can't be used to escape a losing fight for free.
   if (run.inMatch) {

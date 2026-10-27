@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR, TRIBUTE, CONSUMABLES } from '../src/data.js';
+import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR, TRIBUTE, CONSUMABLES, BLOODIED, DECOR } from '../src/data.js';
 import { autoPlay } from '../src/fight.js';
 import { build, rosterCap, plotsFree } from '../src/ludus.js';
 import {
@@ -10,7 +10,7 @@ import {
   startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker, choosePerk, perkBlocker,
   currentBout, boutFor, marketPrice, serialize, deserialize, moraleTarget, moraleState, xpFor, GRAND_TIER, SAVE_VERSION,
   matchOptions, bossLossFavor, buildRoom, recordMatchProgress, buyItem, buyItemBlocker, useItem, useItemBlocker,
-  payTribute, payTributeBlocker, tributeDue,
+  payTribute, payTributeBlocker, tributeDue, sellGear, sellGearBlocker,
 } from '../src/run.js';
 import { computePower, computeSpeed, computePhase2, playRound, throwTowel } from '../src/fight.js';
 
@@ -614,6 +614,7 @@ test('Prestige levels unlock as Prestige grows and add room plots', () => {
 test('Blood Faith refunds the buy-in when the Orc dies, and the house mourns', () => {
   const run = createRun(1);
   const orc = recruit(run, run.market.find((x) => x.kind === 'orc').id);
+  orc.kindTrait = 'bloodFaith'; // Orcs have several traits since playtest 3
   const other = recruit(run, run.market[0].id);
   orc.gear.armor = 'leatherVest';
   advanceToTournament(run);
@@ -1078,4 +1079,64 @@ test('tribute can be paid early, and is then not collected again that winter', (
   assert.match(payTributeBlocker(run), /Needs 30 Gold/);
   run.gold = 30;
   assert.equal(payTributeBlocker(run), null);
+});
+
+// ---------- Playtest #3 ----------
+
+test('a Bloodied Victory (winning with 2+ injuries) earns extra Favor, Renown, XP and Morale', () => {
+  const clean = atBout(3);
+  clean.f.morale = 50;
+  const plain = playBout(clean.run, clean.f.id);
+  const bloody = atBout(3);
+  bloody.f.morale = 50;
+  const wounds = [{ tag: 'fleshWound', weight: 1 }, { tag: 'concussed', weight: 1 }];
+  const s = playBout(bloody.run, bloody.f.id, { injuries: wounds });
+  assert.equal(s.bloodied, true);
+  assert.equal(plain.bloodied, false);
+  assert.equal(s.renown, plain.renown + BLOODIED.renown);
+  assert.equal(s.xp, plain.xp + BLOODIED.xp);
+  assert.equal(s.favor, plain.favor + FAVOR.spectacleWin);
+  assert.equal(s.morale, plain.morale + BLOODIED.morale);
+});
+
+test('killing an opponent adds to the fighter\'s tally; 3 kills earn the Dreaded mark', () => {
+  const { run, f } = atBout(5);
+  f.kills = 2;
+  const s = playBout(run, f.id, { reason: 'death' });
+  assert.equal(f.kills, 3);
+  assert.equal(s.kill, true);
+  assert.equal(s.mark, 'Dreaded');
+  nextBout(run);
+  const s2 = playBout(run, f.id);
+  assert.equal(f.kills, 3);
+  assert.equal(s2.mark, null);
+});
+
+test('a War Banner in quarters adds Renown to every win', () => {
+  const a = atBout(6);
+  const plain = playBout(a.run, a.f.id);
+  const b = atBout(6);
+  b.f.decor.warBanner = 1;
+  const s = playBout(b.run, b.f.id);
+  assert.equal(s.renown, plain.renown + 1);
+  assert.equal(DECOR.shrine.calm, 10);
+});
+
+test('spare gear sells back to the Armourer for half its price', () => {
+  const run = createRun(1);
+  run.inventory.gear = ['gladius', 'scaleMail'];
+  run.gold = 0;
+  assert.equal(sellGearBlocker(run, 5), 'No such item in the storeroom.');
+  assert.equal(sellGear(run, 1), Math.floor(GEAR.scaleMail.price / 2));
+  assert.deepEqual([run.inventory.gear, run.gold], [['gladius'], 8]);
+});
+
+test('old saves gain the new decor slots', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  delete run.inventory.decor.shrine;
+  delete f.decor.warBanner;
+  const back = deserialize(serialize(run));
+  assert.equal(back.inventory.decor.shrine, 0);
+  assert.equal(back.roster[0].decor.warBanner, 0);
 });

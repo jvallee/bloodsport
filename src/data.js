@@ -56,13 +56,22 @@ export const TRAITS = {
   egoArmour: { name: 'Ego Armour', desc: 'While uninjured: +5% win chance and armor −10% chance to be injured.' },
   elvenEyes: { name: 'Elven Eyes', desc: 'When an injury check against this fighter misses by 50%+, makes a free 15% counter-injury check.' },
   bloodFaith: { name: 'Blood Faith', desc: 'If this fighter dies in a match, the Prestige buy-in is refunded.' },
+  underdog: { name: 'Underdog', desc: '+2 Power when the opponent has equal or more Power.' },
+  unbreakable: { name: 'Unbreakable', desc: 'The Death Gate opens at 3 injuries instead of 2.' },
+  bloodlust: { name: 'Bloodlust', desc: '+1 Power once the opponent is injured.' },
 };
 
+// Kill marks: earned for opponents killed in the arena (fighters keep a tally).
+export const KILL_MARKS = [
+  { id: 'dreaded', at: 3, name: 'Dreaded', desc: '+5% win chance: opponents fear a proven killer.' },
+  { id: 'reaper', at: 6, name: 'Reaper', desc: '+5% chance to injure.' },
+];
+
 export const KINDS = {
-  human: { name: 'Human', basePower: 5, traits: ['hateful', 'masochist'] },
+  human: { name: 'Human', basePower: 5, traits: ['hateful', 'masochist', 'underdog'] },
   android: { name: 'Android', basePower: 5, traits: ['quantumAnalyzer', 'alloyedSkin', 'perpetualMotion'] },
   elf: { name: 'Elf', basePower: 5, traits: ['firebug', 'footwork', 'egoArmour', 'elvenEyes'] },
-  orc: { name: 'Orc', basePower: 6, traits: ['bloodFaith'] },
+  orc: { name: 'Orc', basePower: 6, traits: ['bloodFaith', 'unbreakable', 'bloodlust'] },
 };
 
 export const CLASSES = {
@@ -88,6 +97,8 @@ export const DECOR = {
   bird: { price: 1, calm: 5, name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale and −5 Stress a week. Ornitharius fighters also get +5% injure chance per Bird once injured (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
   fireBrazier: { price: 1, calm: 5, name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale and −5 Stress a week. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
   trophy: { price: 2, name: 'Trophy Rack', feeds: 'Morale', effect: 'Comfort for Morale: a famous fighter likes to see their victories on the wall.', helps: () => false },
+  shrine: { price: 3, calm: 10, name: 'Shrine of Mars', feeds: 'Stress', effect: 'Comfort for Morale and −10 Stress a week: prayer steadies a fighter between bouts.', helps: () => false },
+  warBanner: { price: 4, renown: 1, name: 'War Banner', feeds: 'Renown', effect: 'Comfort for Morale, and +1 Renown for every win (per Banner): the crowd learns their colours.', helps: () => true },
 };
 
 // ---- Career placeholders (docs/fight-rules.md, "Career rules"); tune with scripts/simulate.js ----
@@ -197,11 +208,14 @@ export const PERKS = {
   closer: { name: 'Closer', desc: '+5% win chance in Round 3.' },
   ironConstitution: { name: 'Iron Constitution', desc: 'Training adds 10 less Stress.' },
   crowdPleaser: { name: 'Crowd Pleaser', desc: '+1 extra Renown for every win.' },
-  survivor: { name: 'Survivor', desc: '−10% chance to be injured while at 2+ injuries.', req: (f) => f.level >= 3, reqText: 'Level 3+' },
+  survivor: { name: 'Survivor', desc: 'Once injured: −10% chance to be injured; −20% at 2+ injuries.', req: (f) => f.level >= 3, reqText: 'Level 3+' },
   duelist: { name: 'Duelist', desc: '+5% win chance and +5% chance to injure.', req: (f) => f.power >= 9 && f.speed >= 7, reqText: 'Power 9+ and Speed 7+' },
   tactician: { name: 'Tactician', desc: 'Striking first is worth +15% instead of +10%.', req: (f) => f.speed >= 9 && f.power >= 8, reqText: 'Speed 9+ and Power 8+' },
   juggernaut: { name: 'Juggernaut', desc: '+1 Power.', stat: { power: 1 }, req: (f) => f.power >= 12, reqText: 'Power 12+' },
 };
+
+// Bloodied Victory: winning with 2+ injuries (on top of FAVOR.spectacleWin).
+export const BLOODIED = { renown: 2, xp: 2, morale: 5 };
 
 // Renown (fame) and Morale. Comfort raises Morale; expectations grow with Renown.
 export const RENOWN = { win: 2, bossWin: 3, upset: 1, towel: -1, goldPer: 5 }; // +1 Gold per 5 Renown on wins

@@ -13,7 +13,7 @@ import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries }
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, recruitBlocker, fightBlocker, GRAND_TIER,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, recruitBlocker, fightBlocker, GRAND_TIER,
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
@@ -46,7 +46,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   buy-item <warPaint|adrenaline|blessedBandage|crowdBribe>   single-use fight items
   use <item>                    during a fight, between rounds: use one item (one per fight)
   place <id> <item> | remove <id> <item>      put decor in a fighter's room, or take it back
-  buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armor>
+  buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armor> | sell-gear <storeroom#> (half price)
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).join(', ')}
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
   pay-tribute                   pay this year's tribute early
@@ -311,6 +311,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (s.favor) bits.push(`${s.favor > 0 ? '+' : ''}${s.favor} Favor`);
     if (!s.died) bits.push(`+${s.xp} XP`);
     if (s.renown) bits.push(`${s.renown > 0 ? '+' : ''}${s.renown} Renown`);
+    if (s.bloodied) bits.push('Bloodied Victory (won with 2+ injuries)');
+    if (s.kill) bits.push(`a kill${s.mark ? `: earns the mark ${s.mark}` : ''}`);
     if (s.loot) bits.push(`loot: ${GEAR[s.loot].name}`);
     if (s.title) bits.push(`Title: ${s.title}`);
     if (s.levelUp) bits.push(`House level ${s.levelUp}!`);
@@ -424,6 +426,12 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       const key = run.inventory.gear[Number(i)];
       equip(run, id, Number(i));
       return `${run.roster.find((f) => f.id === id).name} equips the ${GEAR[key].name}.`;
+    },
+    'sell-gear': ([i]) => {
+      need([i].filter(Boolean), 1, 'sell-gear <storeroom#>');
+      const key = run.inventory.gear[Number(i)];
+      const gold = sellGear(run, Number(i));
+      return `Sold the ${GEAR[key].name} for ${gold} Gold. Gold ${run.gold}.`;
     },
     unequip: ([id, slot]) => {
       need([id, slot].filter(Boolean), 2, 'unequip <id> <weapon|armor>');

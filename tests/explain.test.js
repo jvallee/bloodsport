@@ -33,7 +33,7 @@ test('lower-arena stakes no longer claim "no Favor at stake" and mention what st
   const { run } = twoTiers();
   const text = arenaStakes(run, 1);
   assert.doesNotMatch(text, /no Favor at stake/);
-  assert.match(text, /Upsets and wins at the Death Gate still earn Favor/);
+  assert.match(text, /Upsets and Bloodied Victories \(wins with 2\+ injuries\) still earn Favor/);
 });
 
 test('Boss stakes show the real per-tier Favor loss and forfeit cost', () => {

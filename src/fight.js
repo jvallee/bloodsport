@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_ROLL, EVASION, GEAR, MORALE } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS } from './data.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -13,6 +13,10 @@ export const effectiveInjuries = (f) => f.injuries.reduce((s, i) => s + i.weight
 export const hasInjury = (f, tag) => f.injuries.some((i) => i.tag === tag);
 const countInjury = (f, tag) => f.injuries.filter((i) => i.tag === tag).length;
 export const hasPerk = (f, perk) => Boolean(f.perks?.includes(perk));
+// Injuries at which losing a round can kill (Unbreakable holds out one longer).
+export const deathGateAt = (f) => (f.kindTrait === 'unbreakable' ? 3 : 2);
+export const killMarks = (f) => KILL_MARKS.filter((k) => (f.kills ?? 0) >= k.at);
+const hasMark = (f, id) => (f.kills ?? 0) >= KILL_MARKS.find((k) => k.id === id).at;
 export const gearOf = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => GEAR[k]);
 
 // `arena` is the Boss debuff affecting this fighter (see BOSS_DEBUFFS in data.js).
@@ -76,8 +80,8 @@ export function initiative(A, B, round, rng) {
   return { first: next(rng) < 0.5 ? 'A' : 'B', reason: 'tiebreak', rolls, speed };
 }
 
-// Step 2 — Phase 1 Power.
-export function computePower(c, opp, round) {
+// Step 2 — Phase 1 Power. `raw` leaves out Underdog (it compares Power before itself).
+export function computePower(c, opp, round, raw = false) {
   const f = c.f;
   const mods = [];
   if (kindActive(c, 'masochist', round)) {
@@ -95,6 +99,8 @@ export function computePower(c, opp, round) {
   if (c.challenger) mods.push({ source: 'Challenger', value: c.challenger });
   if (c.boost?.round === round && c.boost.power) mods.push({ source: c.boost.name, value: c.boost.power });
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
+  if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
+  if (!raw && kindActive(c, 'underdog', round) && computePower(opp, c, round, true).total >= f.power + sum(mods)) mods.push({ source: 'Underdog', value: 2 });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
 
@@ -143,7 +149,9 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (hasPerk(f, 'killer')) enemy.push({ source: 'Killer Instinct', value: 5000 });
   if (hasPerk(f, 'fastStart') && round === 1) win.push({ source: 'Fast Starter', value: 5000 });
   if (hasPerk(f, 'closer') && round === 3) win.push({ source: 'Closer', value: 5000 });
-  if (hasPerk(f, 'survivor') && eff >= 2) self.push({ source: 'Survivor', value: -10000 });
+  if (hasPerk(f, 'survivor') && eff >= 1) self.push({ source: 'Survivor', value: eff >= 2 ? -20000 : -10000 });
+  if (hasMark(f, 'dreaded')) win.push({ source: 'Dreaded', value: 5000 });
+  if (hasMark(f, 'reaper')) enemy.push({ source: 'Reaper', value: 5000 });
   if (hasPerk(f, 'duelist')) {
     win.push({ source: 'Duelist', value: 5000 });
     enemy.push({ source: 'Duelist', value: 5000 });
@@ -159,9 +167,9 @@ export function computePhase2(c, opp, round, volley = {}) {
 }
 
 // Escalating Injury Table roll with the 2-Injury Death Gate.
-export function injurySeverity(roll, priorInjuries, opponentAdvantage, defenderWonRound) {
+export function injurySeverity(roll, priorInjuries, opponentAdvantage, defenderWonRound, gate = 2) {
   const raw = roll + INJURY_ROLL.perInjury * priorInjuries + INJURY_ROLL.perPowerGap * opponentAdvantage;
-  const canDie = priorInjuries >= 2 && !defenderWonRound;
+  const canDie = priorInjuries >= gate && !defenderWonRound;
   const score = canDie ? raw : Math.min(raw, 99);
   return { roll, raw, score, canDie, injury: injuryForScore(score) };
 }
@@ -181,7 +189,7 @@ function disableRandom(c, n, rng) {
 function inflictInjury(m, X, Y, r) {
   const prior = effectiveInjuries(Y.f);
   const advantage = Math.max(0, clampDelta(r.power[X.side].total - r.power[Y.side].total));
-  const sev = injurySeverity(d100(m.rng), prior, advantage, r.winner === Y.side);
+  const sev = injurySeverity(d100(m.rng), prior, advantage, r.winner === Y.side, deathGateAt(Y.f));
   const result = { ...sev, tag: sev.injury.tag, name: sev.injury.name, advantage, prior };
   delete result.injury;
   if (result.tag === 'death') {
@@ -339,7 +347,7 @@ export function playRound(m) {
 }
 
 export const canThrowTowel = (m) => !m.over && m.round >= 1;
-export const mortalDanger = (c) => c.f.alive && effectiveInjuries(c.f) >= 2;
+export const mortalDanger = (c) => c.f.alive && effectiveInjuries(c.f) >= deathGateAt(c.f);
 
 export function throwTowel(m) {
   if (!canThrowTowel(m)) throw new Error('You can only capitulate between rounds.');

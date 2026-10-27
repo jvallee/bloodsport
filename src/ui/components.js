@@ -1,7 +1,7 @@
 // Shared UI pieces: escaping, buttons, icons, the fighter card. Returns HTML strings.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE } from '../data.js';
-import { effectiveInjuries, mortalDanger } from '../fight.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS } from '../data.js';
+import { effectiveInjuries, mortalDanger, deathGateAt, killMarks } from '../fight.js';
 import { classAbility } from '../narrate.js';
 
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -28,8 +28,10 @@ export function button(label, action, data = {}, blocker = null, cls = 'btn smal
 
 export function deathGate(f) {
   const n = effectiveInjuries(f);
-  const title = n >= 2 ? 'Death Gate open: losing a round can now be fatal.' : 'Fighters can only die once they have 2 effective injuries.';
-  return `<span class="gate" title="${title}"><i class="${n >= 1 ? 'on' : ''}"></i><i class="${n >= 2 ? 'on' : ''}"></i></span>`;
+  const gate = deathGateAt(f);
+  const title = n >= gate ? 'Death Gate open: losing a round can now be fatal.' : `Fighters can only die once they have ${gate} effective injuries${gate > 2 ? ' (Unbreakable)' : ''}.`;
+  const pips = Array.from({ length: gate }, (_, i) => `<i class="${n > i ? 'on' : ''}"></i>`).join('');
+  return `<span class="gate" title="${title}">${pips}</span>`;
 }
 
 function stressBar(f) {
@@ -49,13 +51,15 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
     return `<span class="chip injury" title="${esc(def.desc)}${i.weeksLeft ? ` Heals in ${i.weeksLeft} Medbay week(s).` : ''}">${ICON.injury}${def.name}${i.weight > 1 ? ' ×' + i.weight : ''}${weeks}</span>`;
   }).join('');
   const decor = Object.entries(f.decor).filter(([, n]) => n > 0)
-    .map(([k, n]) => `<span class="chip decor${DECOR[k].helps(f) ? '' : ' off'}" title="${esc(DECOR[k].effect)}${DECOR[k].helps(f) ? '' : ' (No effect for this fighter.)'}">${DECOR[k].name} ×${n}</span>`).join('');
+    .map(([k, n]) => `<span class="chip decor" title="${esc(DECOR[k].effect)}">${DECOR[k].name} ×${n}</span>`).join('');
   const titles = (f.titles ?? []).map((t) => `<span class="chip title" title="+1 Power">🏆 ${esc(t)}</span>`).join('');
   const perks = (f.perks ?? []).map((p) => `<span class="chip perk" title="${esc(PERKS[p].desc)}">⭐ ${esc(PERKS[p].name)}</span>`).join('');
   const gear = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => `<span class="chip gear" title="${esc(gearSummary(GEAR[k]))}">⚒ ${esc(GEAR[k].name)}</span>`).join('');
   const nextXp = XP.levels[(f.level ?? 1) - 1];
   const levelLine = f.level ? `<span class="lvl-chip" title="XP ${f.xp}${nextXp ? ` / ${nextXp} for the next level` : ' (max level reached; XP no longer adds anything)'}">Lv ${f.level}${nextXp ? '' : ' max'}</span>` : '';
-  const danger = combatant ? mortalDanger(combatant) : f.alive && effectiveInjuries(f) >= 2;
+  const danger = combatant ? mortalDanger(combatant) : f.alive && effectiveInjuries(f) >= deathGateAt(f);
+  const marks = killMarks(f).map((k) => `<span class="chip mark" title="${esc(k.desc)}">💀 ${esc(k.name)}</span>`).join('');
+  const kills = f.kills ? `<span class="chip kills" title="Opponents killed in the arena. ${KILL_MARKS.map((k) => `${k.at} kills: ${k.name} (${k.desc})`).join(' ')}">💀 ${f.kills}</span>` : '';
   return `
     <article class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
       ${tag ? `<div class="card-tag">${tag}</div>` : ''}
@@ -69,7 +73,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
       <div class="traits">
         ${trait ? `<span class="chip trait${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
         ${f.cls ? `<span class="chip ability${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
-        ${titles}${perks}${gear}
+        ${titles}${marks}${perks}${gear}${kills}
       </div>
       ${compact ? '' : `<div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}</div>`}
       ${f.notice ? `<div class="notice">⚠ ${esc(f.notice)}</div>` : ''}

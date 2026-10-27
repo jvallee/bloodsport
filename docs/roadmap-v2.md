@@ -148,7 +148,7 @@ Measured with the real engine (`estimateOdds`, 6,000 fights per row) against eac
 - New bot behaviors (multi-arena, perks, gear).
 - Targets:
   - careful bot ≥ reckless bot in career wins, and clearly fewer deaths
-  - careful career win rate 30–45% (harder than v1's 33–47% spread)
+  - careful career win rate 20–45% (was 30–45%; lowered after playtest 3, when the new traits took careful play to 23% and the user accepted the harder game)
   - 1–3 fighter deaths per career for reckless play
 
 ---
@@ -202,3 +202,10 @@ Both LLM playtests found Year 1 the hardest part and the finale easy. Two gates 
 - **Tough finish:** the Grand Tournament is at least 10 points harder than the first Boss (now **+22**).
 
 Values chosen with `npm run sweep -- --curve`: first-Boss Power 7 with no arena rule, and Challengers at +1 opponent Power per 30 Renown from Tier 3 (max +2). Steeper Challenger settings (+1 per 5–20 Renown) cut careful wins to 7–23%. The bot doesn't snowball as hard as a thoughtful player, so the Challenger threshold is aimed at genuinely famous stars.
+
+## Playtest 3 (2026-10-27)
+New traits (Underdog, Unbreakable, Bloodlust), a stronger Survivor, Bloodied Victories, kill marks, new decor, gear selling and early tribute.
+Opponents get the new traits and perks too, so careful careers dropped from 32% to 23%.
+Variant runs: without Underdog 27%, without Bloodlust 21%, Underdog at +1 26%, Underdog only at a 2+ Power gap 27%. So no single change caused the drop.
+The user accepted the harder game, and the careful win gate is now 20–45%.
+Results: careful 23%, first Boss 55%, Grand +23 points harder, reckless deaths 2.18, and all gates pass.

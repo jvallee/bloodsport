@@ -5,7 +5,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter } from '..
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -88,6 +88,8 @@ export function summaryBanner(s) {
   if (s.renown) bits.push(`${plus(s.renown)} Renown`);
   if (s.favor) bits.push(`${plus(s.favor)} Favor`);
   if (s.title) bits.push(`🏆 ${s.fighter} earns the title "${s.title}"${s.title === 'Master of the Games' ? '' : ' (+1 Power)'}`);
+  if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favor, Renown, XP and Morale)`);
+  if (s.kill) bits.push(`💀 A kill${s.mark ? `: ${s.fighter} earns the mark "${s.mark}"` : ''}`);
   if (s.loot) bits.push(`⚒ Claimed a ${GEAR[s.loot].name}`);
   if (s.injuries?.length) bits.push(`🩸 ${s.fighter} is now ${s.injuries.join(' and ')}: send them to the Medbay`);
   if (s.crushing) bits.push('The crowd jeered the mismatch');
@@ -181,7 +183,11 @@ function roomPanel(run, f) {
   const { target, comfort, expects } = moraleTarget(run, f);
   const gear = ['weapon', 'armor'].map((slot) => {
     const cur = f.gear[slot];
-    const options = run.inventory.gear.map((k, i) => (GEAR[k].slot === slot ? button(`Equip ${esc(GEAR[k].name)}`, 'equip', { id: f.id, index: i }, equipBlocker(run, f.id, i)) : '')).join('');
+    const options = run.inventory.gear.map((k, i) => {
+      if (GEAR[k].slot !== slot) return '';
+      const why = equipBlocker(run, f.id, i);
+      return `<button class="btn small" data-action="equip" data-id="${f.id}" data-index="${i}" title="${esc(why ?? `${GEAR[k].name}: ${gearText(GEAR[k])}`)}" ${why ? 'disabled' : ''}>Equip ${esc(GEAR[k].name)} <small>(${esc(gearText(GEAR[k]))})</small></button>`;
+    }).join('');
     return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armor'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot))}` : '<small>empty</small>'}
       ${options ? `<div class="row tight">${options}</div>` : ''}</div>`;
   }).join('');
@@ -338,7 +344,8 @@ export function marketTab(run) {
       : '<p class="sub">Sold out until next month.</p>'
     : '<p class="sub">Build an Armourer (Prestige level 2) to buy weapons and armor; it stocks up the moment it opens. Beaten opponents sometimes drop theirs, and your top arena\'s Boss always does.</p>';
   const stored = run.inventory.gear.length
-    ? run.inventory.gear.map((k) => `<span class="chip" title="${esc(gearText(GEAR[k]))}">${esc(GEAR[k].name)}</span>`).join(' ')
+    ? run.inventory.gear.map((k, i) => `<div class="shop-row"><div><b>${esc(GEAR[k].name)}</b> <small>${GEAR[k].slot}</small><br><small>${esc(gearText(GEAR[k]))}</small></div>
+      ${button(`Sell · ${sellPrice(k)} Gold`, 'sell-gear', { index: i }, sellGearBlocker(run, i), 'btn small')}</div>`).join('')
     : '<small class="sub">No spare gear.</small>';
   const storedDecor = Object.entries(run.inventory.decor).filter(([, n]) => n).map(([k, n]) => `<span class="chip decor">${esc(DECOR[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">No spare decor.</small>';
   return `
@@ -349,7 +356,7 @@ export function marketTab(run) {
       <div class="stack">
         <section class="panel"><h2>The Storeroom</h2>
           <p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room, decor &amp; gear" panel. A fallen fighter's things come back here.</p>
-          <div class="label">Gear</div><div class="chips">${stored}</div>
+          <div class="label">Gear <small>(sells for half price)</small></div><div>${stored}</div>
           <div class="label">Decor</div><div class="chips">${storedDecor}</div>
           <div class="label">Fight items</div><div class="chips">${Object.entries(run.inventory.items ?? {}).filter(([, n]) => n).map(([k, n]) => `<span class="chip" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">None. The Apothecary sells them.</small>'}</div></section>
         <section class="panel"><h2>Apothecary</h2><p class="sub">Single-use items for a fight. Use one between rounds (after Round 1), at most one per fight.</p>${Object.entries(CONSUMABLES).map(([k, c]) => `<div class="shop-row"><div><b>${esc(c.name)}</b> · ${c.price} Gold <small>(${run.inventory.items?.[k] ?? 0} in storeroom)</small><br><small>${esc(c.desc)}</small></div>

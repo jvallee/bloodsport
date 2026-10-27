@@ -5,7 +5,7 @@ import { playRound, throwTowel, mortalDanger, canThrowTowel } from './fight.js';
 import {
   createRun, boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, matchOptions, buildRoom,
   assignDecor, removeDecor, buyGear, equip, unequip,
-  startMatch, finishMatch, skipBout, forfeitBout, serialize, deserialize, recordMatchProgress, buyItem, useItem, payTribute,
+  startMatch, finishMatch, skipBout, forfeitBout, serialize, deserialize, recordMatchProgress, buyItem, useItem, payTribute, sellGear,
 } from './run.js';
 import { upgrade } from './ludus.js';
 import { estimateOdds } from './odds.js';
@@ -214,6 +214,7 @@ const actions = {
   'advance-tournament': () => { summaries = []; advanceToTournament(run); },
   skip: () => skipBout(run),
   'pay-tribute': () => payTribute(run),
+  'sell-gear': (d) => sellGear(run, Number(d.index)),
   forfeit: () => { if (confirm('Forfeit the Boss? It costs more Imperial Favor than losing the fight.')) forfeitBout(run); },
   fight: (d) => {
     const tier = Number(d.tier) || run.topTier;
