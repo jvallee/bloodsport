@@ -53,6 +53,7 @@ export function computeSpeed(c, round) {
   if (c.proneRound === round) mods.push({ source: 'Prone', value: -2 });
   if (c.riposteRound === round) mods.push({ source: 'Riposte', value: 3 });
   if (c.arena === 'rainyMud') mods.push({ source: 'Rainy Mud', value: -2 });
+  if (c.boost?.round === round && c.boost.speed) mods.push({ source: c.boost.name, value: c.boost.speed });
   for (const g of gearOf(c.f)) if (g.speed) mods.push({ source: g.name, value: g.speed });
   return { base: c.f.speed, mods, total: c.f.speed + sum(mods) };
 }
@@ -91,6 +92,7 @@ export function computePower(c, opp, round) {
   if (c.side === 'B' && c.arena === 'crowdFavorite') mods.push({ source: 'Crowd Favorite', value: 1 });
   if (c.overtrained) mods.push({ source: 'Overtrained', value: -1 });
   if (c.scouted) mods.push({ source: 'Scouted', value: c.scouted });
+  if (c.boost?.round === round && c.boost.power) mods.push({ source: c.boost.name, value: c.boost.power });
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
@@ -129,6 +131,7 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (fleshWounds) enemy.push({ source: 'Flesh Wound', value: -10000 * fleshWounds });
   if (hasInjury(f, 'senseless')) self.push({ source: 'Senseless', value: 10000 * eff });
   if (c.arena === 'bloodMoon') self.push({ source: 'Blood Moon', value: 10000 });
+  if (c.boost?.round === round && c.boost.guard) self.push({ source: c.boost.name, value: -c.boost.guard });
   // Gear.
   for (const g of gearOf(f)) {
     if (g.injure) enemy.push({ source: g.name, value: g.injure });

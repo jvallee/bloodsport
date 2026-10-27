@@ -1,12 +1,12 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE } from '../data.js';
+import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES } from '../data.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, tributeDue, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
-  isChampionOf,
+  isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel,
@@ -345,7 +345,10 @@ export function marketTab(run) {
         <section class="panel"><h2>The Storeroom</h2>
           <p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room, decor &amp; gear" panel. A fallen fighter's things come back here.</p>
           <div class="label">Gear</div><div class="chips">${stored}</div>
-          <div class="label">Decor</div><div class="chips">${storedDecor}</div></section>
+          <div class="label">Decor</div><div class="chips">${storedDecor}</div>
+          <div class="label">Fight items</div><div class="chips">${Object.entries(run.inventory.items ?? {}).filter(([, n]) => n).map(([k, n]) => `<span class="chip" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">None. The Apothecary sells them.</small>'}</div></section>
+        <section class="panel"><h2>Apothecary</h2><p class="sub">Single-use items for a fight. Use one between rounds (after Round 1), at most one per fight.</p>${Object.entries(CONSUMABLES).map(([k, c]) => `<div class="shop-row"><div><b>${esc(c.name)}</b> · ${c.price} Gold <small>(${run.inventory.items?.[k] ?? 0} in storeroom)</small><br><small>${esc(c.desc)}</small></div>
+          ${button('Buy', 'buy-item', { item: k }, buyItemBlocker(run, k), 'btn small primary')}</div>`).join('')}</section>
         <section class="panel"><h2>Decor merchant</h2><p class="sub">Each fighter's quarters fit up to ${maxLevel(run, 'quarters')} of each item (your best Fighter Quarters level).</p>${decorShop}</section>
         <section class="panel"><h2>The Armourer</h2>${armourer}</section>
         <section class="panel"><h2>The Liaison</h2>${liaison}</section>

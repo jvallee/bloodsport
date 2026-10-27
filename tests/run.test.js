@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR, TRIBUTE } from '../src/data.js';
+import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR, TRIBUTE, CONSUMABLES } from '../src/data.js';
 import { autoPlay } from '../src/fight.js';
 import { build, rosterCap, plotsFree } from '../src/ludus.js';
 import {
@@ -9,9 +9,9 @@ import {
   buyDecor, assignDecor, assignDecorBlocker, removeDecor, buyGear, equip, unequip, surgeon, surgeonBlocker,
   startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker, choosePerk, perkBlocker,
   currentBout, boutFor, marketPrice, serialize, deserialize, moraleTarget, moraleState, xpFor, GRAND_TIER, SAVE_VERSION,
-  matchOptions, bossLossFavor, buildRoom, recordMatchProgress,
+  matchOptions, bossLossFavor, buildRoom, recordMatchProgress, buyItem, buyItemBlocker, useItem, useItemBlocker,
 } from '../src/run.js';
-import { computePower } from '../src/fight.js';
+import { computePower, computeSpeed, computePhase2, playRound, throwTowel } from '../src/fight.js';
 
 // A run with one recruited fighter, standing on the first tournament week.
 const atBout = (seed = 1) => {
@@ -934,4 +934,79 @@ test('Birds and Fire Braziers calm a fighter: -5 Stress each per week; Trophy Ra
   f.decor.trophy = 1;
   advanceWeek(run);
   assert.equal(f.stress, 40 - 10 - 10);
+});
+
+// ---------- Consumables (used between rounds, one per fight) ----------
+
+const midMatch = () => {
+  const { run, f } = atBout();
+  run.gold = 100;
+  const m = startMatch(run, f.id);
+  playRound(m);
+  return { run, f, m };
+};
+
+test('consumables are bought into the storeroom', () => {
+  const run = createRun(1);
+  run.gold = 50;
+  buyItem(run, 'warPaint');
+  assert.equal(run.inventory.items.warPaint, 1);
+  assert.equal(run.gold, 50 - CONSUMABLES.warPaint.price);
+  run.gold = 0;
+  assert.match(buyItemBlocker(run, 'warPaint'), /Needs/);
+});
+
+test('War Paint gives +1 Power next round; only one item per fight, only between rounds', () => {
+  const { run, m } = midMatch();
+  if (m.over) return;
+  run.inventory.items.warPaint = 2;
+  useItem(run, m, 'warPaint');
+  assert.equal(run.inventory.items.warPaint, 1);
+  assert.ok(computePower(m.a, m.b, m.round + 1).mods.some((x) => x.source === 'War Paint' && x.value === 1));
+  assert.equal(computePower(m.a, m.b, m.round + 2).mods.some((x) => x.source === 'War Paint'), false, 'one round only');
+  assert.match(useItemBlocker(run, m, 'warPaint'), /one item per fight/);
+});
+
+test('items cannot be used before Round 1 or without one in the storeroom', () => {
+  const { run, f } = atBout();
+  const m = startMatch(run, f.id);
+  run.inventory.items.warPaint = 1;
+  assert.match(useItemBlocker(run, m, 'warPaint'), /between rounds/);
+  playRound(m);
+  if (m.over) return;
+  assert.match(useItemBlocker(run, m, 'blessedBandage'), /No Blessed Bandage/);
+});
+
+test('Adrenaline Draught: +3 Speed next round, +15 Stress after the fight', () => {
+  const { run, f, m } = midMatch();
+  if (m.over) return;
+  run.inventory.items.adrenaline = 1;
+  useItem(run, m, 'adrenaline');
+  assert.ok(computeSpeed(m.a, m.round + 1).mods.some((x) => x.source === 'Adrenaline Draught' && x.value === 3));
+  const stress = f.stress;
+  autoPlay(m);
+  finishMatch(run, m);
+  if (f.alive) assert.equal(f.stress, Math.min(100, stress + STRESS.fight + 15));
+});
+
+test('Blessed Bandage: -10% chance to be injured next round (not armor, so Gun/Flail don\'t ignore it)', () => {
+  const { run, m } = midMatch();
+  if (m.over) return;
+  run.inventory.items.blessedBandage = 1;
+  useItem(run, m, 'blessedBandage');
+  const self = computePhase2(m.a, m.b, m.round + 1).self.find((x) => x.source === 'Blessed Bandage');
+  assert.deepEqual(self, { source: 'Blessed Bandage', value: -10000 });
+});
+
+test('Crowd Bribe: capitulating this fight costs no Favor and no Renown', () => {
+  const { run, f, m } = midMatch();
+  if (m.over) return;
+  run.inventory.items.crowdBribe = 1;
+  useItem(run, m, 'crowdBribe');
+  const [favor, renown] = [run.favor, f.renown];
+  throwTowel(m);
+  const s = finishMatch(run, m);
+  assert.equal(run.favor, favor);
+  assert.equal(f.renown, renown);
+  assert.equal(s.bribed, true);
 });

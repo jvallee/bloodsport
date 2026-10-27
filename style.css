@@ -381,3 +381,5 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 
 .notice { margin-top: 8px; padding: 6px 10px; border-radius: 8px; border: 1px solid #6b5a2a; background: #2b2416; color: #f0cc8c; font-size: 13px; }
 .trait-text > div + div { margin-top: 3px; }
+
+.items-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }

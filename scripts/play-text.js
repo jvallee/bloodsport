@@ -6,11 +6,11 @@
 
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
-import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS } from '../src/data.js';
+import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES } from '../src/data.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
-  advanceBlocker, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
+  advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, recruitBlocker, fightBlocker, GRAND_TIER,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo } from '../src/ludus.js';
@@ -34,6 +34,8 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   perk <id> <perk>              choose a level-up perk
   surgeon <id> <injury#>        Emergency Surgeon: heal one injury now (injury# from 0)
   buy-decor <bird|fireBrazier|trophy>
+  buy-item <warPaint|adrenaline|blessedBandage|crowdBribe>   single-use fight items
+  use <item>                    during a fight, between rounds: use one item (one per fight)
   place <id> <item> | remove <id> <item>      put decor in a fighter's room, or take it back
   buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armor>
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).join(', ')}
@@ -368,6 +370,18 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       const tag = run.roster.find((f) => f.id === id)?.injuries[Number(i)]?.tag;
       surgeon(run, id, Number(i));
       return `The Emergency Surgeon heals the ${injuryName(tag)} for ${price} Gold. Gold ${run.gold}.`;
+    },
+    'buy-item': ([item]) => {
+      need([item].filter(Boolean), 1, 'buy-item <item>');
+      idle();
+      buyItem(run, item);
+      return `Bought ${CONSUMABLES[item].name}. You have ${run.inventory.items[item]}. ${CONSUMABLES[item].desc}`;
+    },
+    use: ([item]) => {
+      need([item].filter(Boolean), 1, 'use <item>');
+      if (!match) throw new Error('Items are used during a match, between rounds.');
+      useItem(run, match, item);
+      return `${match.a.f.name} uses ${CONSUMABLES[item].name}: ${CONSUMABLES[item].desc}`;
     },
     'buy-decor': ([item]) => {
       need([item].filter(Boolean), 1, 'buy-decor <item>');

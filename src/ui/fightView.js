@@ -1,6 +1,6 @@
 // The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
 
-import { BOSS_DEBUFFS, GEAR } from '../data.js';
+import { BOSS_DEBUFFS, GEAR, CONSUMABLES } from '../data.js';
 
 const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 import { effectiveInjuries, mortalDanger, canThrowTowel } from '../fight.js';
@@ -77,6 +77,7 @@ function report(s) {
     s.title ? row('Title', `🏆 ${esc(s.title)}${s.title === 'Master of the Games' ? '' : ' (+1 Power)'}`, 'good') : '',
     s.champion ? row('The crowd', 'boos a champion back in the pits', 'bad') : s.crushing ? row('The crowd', 'jeers the mismatch', 'bad') : '',
     s.bloodFaith ? row('Blood Faith', 'buy-in refunded', 'good') : '',
+    s.bribed ? row('Crowd Bribe', 'the crowd forgave the capitulation', 'good') : '',
     s.died ? row('Fallen', `${esc(s.fighter)}'s gear returns to the storeroom`, 'bad') : '',
   ].join('');
   return `<div class="report"><h3>After the fight</h3>${rows}</div>`;
@@ -102,7 +103,7 @@ function whyTable(m) {
     <tbody>${rows}</tbody></table><p class="sub">You win a round when the roll is at or under your win chance.</p></div></details>`;
 }
 
-function controls(m, ui, bout) {
+function controls(m, ui, bout, items = {}) {
   if (m.over) {
     const won = m.result.winner === 'A';
     const advice = adviceFor(m);
@@ -121,8 +122,15 @@ function controls(m, ui, bout) {
   const danger = mortalDanger(m.a);
   const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injuries and can die if they lose the next round.</div>` : '';
   const paused = ui.auto && danger ? '<div class="sub">Auto-play paused: your call.</div>' : '';
+  const owned = Object.entries(items).filter(([, n]) => n > 0);
+  const itemRow = m.itemUsed
+    ? `<div class="sub">Used this fight: ${esc(CONSUMABLES[m.itemUsed].name)}.</div>`
+    : owned.length
+      ? `<div class="items-row"><span class="sub">Use an item (one per fight):</span>${owned.map(([k, n]) => `<button class="btn small" data-action="use-item" data-item="${k}" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</button>`).join('')}</div>`
+      : '';
   return `${alert}${paused}
     <div>Score ${m.a.roundsWon}–${m.b.roundsWon}. First to two wins. Your call, Lanista.</div>
+    ${itemRow}
     <div class="row">
       <button class="btn primary big" data-action="next-round">Fight on: Round ${m.round + 1}</button>
       ${canThrowTowel(m) ? `<button class="btn danger big" data-action="towel" title="Forfeit the match and the buy-in. Your fighter is guaranteed to survive.">Capitulate (lose ${bout.buyIn} Prestige)</button>` : ''}
@@ -130,7 +138,7 @@ function controls(m, ui, bout) {
     </div>`;
 }
 
-export function fightView(m, ui, bout, tutorial = '') {
+export function fightView(m, ui, bout, tutorial = '', items = {}) {
   const last = m.rounds.at(-1);
   const delta = last ? last.delta : 0;
   const pills = last ? tagPills(last) : [];
@@ -159,6 +167,6 @@ export function fightView(m, ui, bout, tutorial = '') {
         <div><div class="side-label b">Opponent</div>${fighterCard(m.b.f, { combatant: m.b, compact: true, stress: false })}</div>
       </div>
       ${tutorial}
-      <div class="controls${hold(DICE_TIME + 1.4)}">${controls(m, ui, bout)}</div>
+      <div class="controls${hold(DICE_TIME + 1.4)}">${controls(m, ui, bout, items)}</div>
     </div>`;
 }

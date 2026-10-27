@@ -6,7 +6,7 @@
 import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
-  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG,
+  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries } from './fight.js';
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR } from './calendar.js';
@@ -25,6 +25,7 @@ const COMBAT_PERKS = ['thickSkin', 'killer', 'fastStart', 'closer', 'survivor', 
 export const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
 
 const emptyDecor = () => Object.fromEntries(Object.keys(DECOR).map((k) => [k, 0]));
+const emptyItems = () => Object.fromEntries(Object.keys(CONSUMABLES).map((k) => [k, 0]));
 
 export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel = 0, takenNames = [] } = {}) {
   kind ??= pick(rng, KIND_IDS);
@@ -209,7 +210,7 @@ export function createRun(seed = randomSeed()) {
     market: [],
     liaisonOffer: null,
     armourerStock: [],
-    inventory: { decor: emptyDecor(), gear: [] },
+    inventory: { decor: emptyDecor(), gear: [], items: emptyItems() },
     buildings: [],
     status: 'active', // 'active' | 'won' | 'lost'
     endReason: null,
@@ -688,6 +689,43 @@ export function recordMatchProgress(run, match) {
   if (run.matchInfo) run.matchInfo.progress = { injuries: structuredClone(match.a.f.injuries), alive: match.a.f.alive };
 }
 
+// ---------- Consumables ----------
+
+export function buyItemBlocker(run, key) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!CONSUMABLES[key]) return 'Unknown item.';
+  if (run.gold < CONSUMABLES[key].price) return `Needs ${CONSUMABLES[key].price} Gold.`;
+  return null;
+}
+
+export function buyItem(run, key) {
+  assertOk(buyItemBlocker(run, key));
+  run.gold -= CONSUMABLES[key].price;
+  run.inventory.items[key] = (run.inventory.items[key] ?? 0) + 1;
+}
+
+export function useItemBlocker(run, match, key) {
+  if (!run.inMatch || !match || match.over) return 'Items are used during a match.';
+  if (match.round < 1) return 'Items are used between rounds, after Round 1.';
+  if (match.itemUsed) return 'Only one item per fight.';
+  if (!CONSUMABLES[key]) return 'Unknown item.';
+  if (!run.inventory.items[key]) return `No ${CONSUMABLES[key].name} in the storeroom.`;
+  return null;
+}
+
+// Use an item on your fighter for the next round (or, for the Crowd Bribe, for this fight).
+export function useItem(run, match, key) {
+  assertOk(useItemBlocker(run, match, key));
+  const item = CONSUMABLES[key];
+  run.inventory.items[key] -= 1;
+  match.itemUsed = key;
+  if (item.boost) match.a.boost = { ...item.boost, name: item.name, round: match.round + 1 };
+  if (item.bribe) match.bribe = true;
+  if (item.stressAfter) match.stressAfter = item.stressAfter;
+  log(run, `${match.a.f.name} uses ${item.name}.`, 'event');
+}
+
 export function skipBlocker(run) {
   const idle = idleBlocker(run);
   if (idle) return idle;
@@ -747,7 +785,7 @@ export function finishMatch(run, match) {
   const newInjuries = match.a.f.injuries.filter((i) => i.weeksLeft === undefined).map((i) => INJURY_BY_TAG[i.tag].name);
   fighter.injuries = match.a.f.injuries.map((i) => ({ ...i, weeksLeft: i.weeksLeft ?? HEAL_WEEKS[i.tag] }));
   fighter.alive = match.a.f.alive;
-  fighter.stress = clampStress(fighter.stress + STRESS.fight);
+  fighter.stress = clampStress(fighter.stress + STRESS.fight + (match.stressAfter ?? 0));
 
   const won = match.result.winner === 'A';
   const upset = effectivePower(opp) > effectivePower(fighter);
@@ -811,13 +849,15 @@ export function finishMatch(run, match) {
   } else {
     summary.gold = bout.lossGold;
     bumpMorale(fighter, match.result.reason === 'towel' ? MORALE.towel : MORALE.loss);
-    if (match.result.reason === 'towel') summary.renown = RENOWN.towel;
+    const bribed = match.bribe && match.result.reason === 'towel';
+    summary.bribed = Boolean(bribed);
+    if (match.result.reason === 'towel' && !bribed) summary.renown = RENOWN.towel;
     if (!fighter.alive && kindActive(match.a, 'bloodFaith', match.round)) {
       summary.bloodFaith = true;
       summary.prestige += bout.buyIn;
     }
     if (bout.top && bout.boss) changeFavor(run, bossLossFavor(tier), `lost ${bout.name}`);
-    else if (bout.top && match.result.reason === 'towel') changeFavor(run, FAVOR.topTowel, 'capitulated in your top arena');
+    else if (bout.top && match.result.reason === 'towel' && !bribed) changeFavor(run, FAVOR.topTowel, 'capitulated in your top arena');
   }
   summary.favor = run.favor - favorBefore;
   summary.morale = fighter.morale - moraleBefore;
@@ -942,6 +982,7 @@ export function deserialize(text) {
   let run = JSON.parse(text);
   if (run?.version === 2) run = migrateV2(run);
   if (run?.version !== SAVE_VERSION) throw new Error('This save is from an older version of the game.');
+  run.inventory.items = { ...emptyItems(), ...(run.inventory.items ?? {}) }; // saves from before consumables
   // A match in progress isn't saved. Reloading mid-fight counts as capitulating,
   // so quitting can't be used to escape a losing fight for free.
   if (run.inMatch) {

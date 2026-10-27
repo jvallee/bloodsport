@@ -5,7 +5,7 @@ import { playRound, throwTowel, mortalDanger, canThrowTowel } from './fight.js';
 import {
   createRun, boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, matchOptions, buildRoom,
   assignDecor, removeDecor, buyGear, equip, unequip,
-  startMatch, finishMatch, skipBout, forfeitBout, serialize, deserialize, recordMatchProgress,
+  startMatch, finishMatch, skipBout, forfeitBout, serialize, deserialize, recordMatchProgress, buyItem, useItem,
 } from './run.js';
 import { upgrade } from './ludus.js';
 import { estimateOdds } from './odds.js';
@@ -111,7 +111,7 @@ function renderFight() {
     return;
   }
   fightEl.hidden = false;
-  fightEl.innerHTML = fightView(match, ui, match.bout, tutorialCard(fightTutorial(), 'fight'));
+  fightEl.innerHTML = fightView(match, ui, match.bout, tutorialCard(fightTutorial(), 'fight'), run.inventory.items);
   const feed = document.getElementById('feed');
   if (feed) feed.scrollTop = feed.scrollHeight;
 }
@@ -198,6 +198,8 @@ const actions = {
   release: (d) => { if (confirm('Release this fighter for good?')) release(run, d.id); },
   job: (d) => setJob(run, d.id, d.job),
   'buy-decor': (d) => buyDecor(run, d.item),
+  'buy-item': (d) => buyItem(run, d.item),
+  'use-item': (d) => useItem(run, match, d.item),
   'assign-decor': (d) => assignDecor(run, d.id, d.item),
   'remove-decor': (d) => removeDecor(run, d.id, d.item),
   'buy-gear': (d) => buyGear(run, Number(d.index)),

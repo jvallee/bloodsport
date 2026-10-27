@@ -209,6 +209,14 @@ export const MORALE = {
 };
 
 // Gear: one weapon and one armor slot per fighter. `guard` lowers the chance to be injured (counts as armor).
+// Consumables: single-use, one per fight, used between rounds. `boost` lasts the next round only.
+export const CONSUMABLES = {
+  warPaint: { name: 'War Paint', price: 10, desc: '+1 Power next round.', boost: { power: 1 } },
+  adrenaline: { name: 'Adrenaline Draught', price: 8, desc: '+3 Speed next round; +15 Stress after the fight.', boost: { speed: 3 }, stressAfter: 15 },
+  blessedBandage: { name: 'Blessed Bandage', price: 10, desc: '−10% chance to be injured next round.', boost: { guard: 10000 } },
+  crowdBribe: { name: 'Crowd Bribe', price: 12, desc: 'If you capitulate this fight, the crowd forgives it: no Favor or Renown lost for capitulating (losing a Boss still counts).', bribe: true },
+};
+
 export const GEAR = {
   gladius: { name: 'Gladius', slot: 'weapon', tier: 1, price: 6, power: 1 },
   spikedGauntlet: { name: 'Spiked Gauntlet', slot: 'weapon', tier: 1, price: 6, injure: 5000 },
