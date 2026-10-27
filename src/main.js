@@ -6,7 +6,7 @@ import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard } from './ui/views.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
@@ -89,7 +89,7 @@ function render() {
   // Notifications: the tutorial step first, then this week's results (newest first), one page at a time.
   const notices = [tutorialCard(tutorialStep()), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run) : ''}${nextBar(nextHint(run))}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run) : ''}${nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
   renderFight();

@@ -4,13 +4,14 @@
 // reckless: trains one star nonstop, heals only with the Surgeon, fights only the top arena, always Presses, never towels.
 
 import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES } from '../src/data.js';
+import { EVENT_BY_ID } from '../src/events.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic } from '../src/fight.js';
 import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom,
-  buyItem, buyItemBlocker, useItem, useItemBlocker,
+  buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
 
@@ -209,6 +210,13 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
   const run = createRun(seed);
   let bouts = 0;
   while (run.status === 'active' && run.week < maxWeeks) {
+    // Events: the careful bot takes the cautious (first) choice it can afford; the reckless one the boldest.
+    if (run.event) {
+      const n = EVENT_BY_ID[run.event.id].choices.length;
+      const order = strategy === 'careful' ? [...Array(n).keys()] : [...Array(n).keys()].reverse();
+      chooseEvent(run, order.find((i) => !eventChoiceBlocker(run, i)));
+      continue;
+    }
     pickPerks(run);
     if (run.bouts) {
       if (run.boutPending) {

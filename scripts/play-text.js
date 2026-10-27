@@ -9,11 +9,12 @@ import { pathToFileURL } from 'node:url';
 import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
+import { EVENT_BY_ID, choiceLabel } from '../src/events.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, recruitBlocker, fightBlocker, GRAND_TIER,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, recruitBlocker, fightBlocker, GRAND_TIER,
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
@@ -50,6 +51,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).join(', ')}
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
   pay-tribute                   pay this year's tribute early
+  choose <n>                    decide this week's event (the week can't end until you do)
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
   next [tactic] | capitulate    during a fight: play the next round with a tactic (steady, press, guard, feint; default: the suggestion), or capitulate ("towel" also works)
   math                          toggle the round-by-round math in fight narration
@@ -181,6 +183,11 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (run.status !== 'active') {
       const fought = run.history.filter((h) => !h.skipped && !h.forfeit);
       out.push(`\n*** CAREER OVER: ${run.endReason} ***\nSurvived ${plural(run.week, 'week')} · ${fought.filter((h) => h.won).length} wins, ${fought.filter((h) => !h.won).length} losses · top arena: ${arenaName(run.topTier)} · fallen: ${run.fallen.map((f) => f.name).join(', ') || 'none'}`);
+    }
+    if (run.event) {
+      const e = EVENT_BY_ID[run.event.id];
+      const names = eventNames(run);
+      out.push(`\n*** EVENT: ${e.title} ***\n${e.text(names)}\n${e.choices.map((c, i) => `  choose ${i}: ${choiceLabel(c, names)}${eventChoiceBlocker(run, i) ? ` (can't: ${eventChoiceBlocker(run, i)})` : ''}`).join('\n')}`);
     }
     out.push(`\n-- Your gladiators ${run.roster.length}/${rosterCap(run)} · training costs ${trainCost(run)} Gold a week --`);
     out.push(run.roster.length ? run.roster.map(fighterBlock).join('\n') : '(none: `market` to see who is for sale)');
@@ -468,6 +475,11 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       return ['You capitulate.', '', endFight(), '', look()].join('\n');
     },
     capitulate: (...args) => commands.towel(...args),
+    choose: ([i]) => {
+      need([i].filter(Boolean), 1, 'choose <number>');
+      idle();
+      return `${chooseEvent(run, Number(i))}\n\n${look()}`;
+    },
     'pay-tribute': () => {
       idle();
       payTribute(run);

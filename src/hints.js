@@ -11,6 +11,7 @@ export function nextHint(run) {
       ? { text: 'Recruit a gladiator in the Market.', action: 'tab', tab: 'market', label: 'Go to Market' }
       : { text: 'No gladiators and not enough Gold: build a Liaison or wait for cheaper offers.', tone: 'bad' };
   }
+  if (run.event) return { text: 'Something has happened in the Ludus: make your choice on the card below.', tone: 'event' };
   const levelled = run.roster.find((f) => f.pendingPerks.length);
   if (levelled) return { text: `${levelled.name} levelled up: pick a perk on their card.`, tone: 'event' };
   if (run.boutPending) {

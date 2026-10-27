@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
 import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, advanceToTournament, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute } from '../src/run.js';
-import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal } from '../src/ui/views.js';
+import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal, eventCard } from '../src/ui/views.js';
 import { TRIBUTE } from '../src/data.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
 import { INTRO, STEPS, FIGHT_STEPS } from '../src/tutorial.js';
@@ -204,4 +204,19 @@ test('the fight shows a tactic for each round, marks the suggestion, and reads t
   html = fightView(m, ui, boutFor(run, 1));
   assert.match(html, /You: <b>Guard<\/b>/);
   assert.match(html, /Last round they chose <b>/);
+});
+
+test('a pending event shows as a card with its choices; a costly one says why it is blocked', () => {
+  const run = createRun(1);
+  recruit(run, run.market[0].id);
+  recruit(run, run.market[0].id);
+  run.event = { id: 'trainer', f: run.roster[0].id };
+  run.gold = 1;
+  const html = eventCard(run);
+  assert.match(html, /A wandering lanista/);
+  assert.match(html, new RegExp(`lessons for ${run.roster[0].name}`));
+  assert.match(html, /data-action="event-choice" data-index="0" disabled/);
+  assert.match(html, /Needs 6 Gold/);
+  assert.match(html, /data-action="event-choice" data-index="1"/);
+  assert.equal(eventCard({ ...run, event: null }), '');
 });

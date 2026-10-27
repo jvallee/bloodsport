@@ -46,6 +46,7 @@ const BASICS = [
   ['kills', 'Kills and marks', `Fighters keep a tally of opponents they kill. ${KILL_MARKS.map((k) => `${k.at} kills earns the mark ${k.name} (${k.desc})`).join('; ')}.`],
   ['tactics', 'Tactics', `Before each round you pick a tactic. ${Object.values(TACTICS).map((t) => `${t.name}: ${t.desc}`).join(' ')} Press beats Feint, Feint beats Guard, Guard beats Press: the side that reads the other gets +10% to win the round. Opponents choose by their humor.`],
   ['humors', 'The Four Humors', `Every fighter has a temperament that shapes how they fight round by round, and which tactic they lean towards. ${Object.values(HUMORS).map((h) => `${h.name}: ${h.desc}`).join(' ')}`],
+  ['events', 'Weekly events', 'About one week in three, something happens in or around the Ludus: a brawl, a senator\'s offer, a fever, a wandering trainer. Each card offers a choice with visible stakes; some are a gamble. The week can\'t end until you decide.'],
   ['towel', 'Capitulating', 'Between rounds you can forfeit the match. You lose the buy-in and the match, but your fighter is guaranteed to survive.'],
   ['stress', 'Stress', `Training (+${STRESS.train}) and fighting (+${STRESS.fight}) raise it; rest (${STRESS.rest}) lowers it. At ${STRESS.overtrained}+ a fighter is overtrained: no training, and −1 Power with one ability lost in the arena.`],
   ['armor', 'Armor', 'Alloyed Skin and Ego Armour lower your chance to be injured. Gun (rounds 1 and 3) and Flail ignore armor, but not Speed evasion.'],

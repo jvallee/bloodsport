@@ -5,7 +5,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter } from '..
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, eventNames, eventChoiceBlocker, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -15,6 +15,8 @@ import { describeOdds } from '../odds.js';
 import { fighterWarnings, arenaStakes } from '../explain.js';
 import { gearText } from '../codex.js';
 import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON } from './components.js';
+import { portrait } from './portrait.js';
+import { EVENT_BY_ID, choiceLabel } from '../events.js';
 
 const JOB_LABELS = { rest: 'Rest', trainPower: '+1 Power', trainSpeed: '+3 Speed', medbay: 'Medbay' };
 const JOB_HELP = {
@@ -441,4 +443,17 @@ export function bugModal({ crashed, message, notes, status, version }) {
     ${status ? `<p class="bug-status">${esc(status)}</p>` : ''}
     <p class="sub">The report holds your career's seed, your choices, your save${crashed ? ' and the error' : ''}. Nothing is sent automatically. Game version ${esc(version)}.</p>
   </div></div>`;
+}
+
+// This week's event: a card with its choices, shown on every tab until decided.
+export function eventCard(run) {
+  if (!run.event) return '';
+  const e = EVENT_BY_ID[run.event.id];
+  const names = eventNames(run);
+  const who = [run.event.f, run.event.g].map((id) => run.roster.find((f) => f.id === id)).filter(Boolean);
+  const faces = who.map((f) => portrait(f, 56)).join('');
+  const choices = e.choices.map((c, i) => buttonWhy(esc(choiceLabel(c, names)), 'event-choice', { index: i }, eventChoiceBlocker(run, i), 'btn')).join('');
+  return `<section class="panel event-card"><div class="event-faces">${faces}</div><div class="event-body">
+    <div class="label">This week</div><h2>${esc(e.title)}</h2><p>${esc(e.text(names))}</p>
+    <div class="row event-choices">${choices}</div></div></section>`;
 }

@@ -10,6 +10,7 @@ import {
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks } from './fight.js';
 import { Refused } from './errors.js';
+import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, choiceLabel } from './events.js';
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
@@ -236,7 +237,9 @@ export function createRun(seed = randomSeed()) {
       opponents: createRng(deriveSeed(seed, 2)),
       fight: createRng(deriveSeed(seed, 3)),
       growth: createRng(deriveSeed(seed, 4)),
+      events: createRng(deriveSeed(seed, 5)),
     },
+    event: null, // this week's event card: { id, f, g } (fighter ids), decided before the week can end
   };
   for (const type of STARTING_BUILDINGS) run.buildings.push({ id: newId(run, 'b'), type, level: 1 });
   openArena(run, 1);
@@ -392,6 +395,7 @@ const bumpMorale = (f, n) => { f.morale = clamp(f.morale + n, 0, 100); };
 export function advanceBlocker(run) {
   const idle = idleBlocker(run);
   if (idle) return idle;
+  if (run.event) return `Decide this week's event first: "${EVENT_BY_ID[run.event.id].title}".`;
   if (run.boutPending) return `Tournament week: send a fighter to ${arenaName(run.topTier)}, or skip the bout first.`;
   if (run.roster.some((f) => f.pendingPerks.length)) return 'A fighter levelled up: choose their perk first.';
   return null;
@@ -473,6 +477,7 @@ export function advanceWeek(run) {
     log(run, `Tournament week in ${unlockedTiers(run).length > 1 ? `${unlockedTiers(run).length} arenas` : arenaName(run.topTier)}.`, 'event');
   }
   checkLoss(run);
+  if (run.status === 'active') rollEvent(run);
 }
 
 // Advance until the next tournament week (stops early if the run ends or a decision is needed).
@@ -483,6 +488,92 @@ export function advanceToTournament(run) {
     weeks++;
   }
   return weeks;
+}
+
+// ---------- Weekly events (src/events.js) ----------
+
+function eventTargets(run, who) {
+  const alive = run.roster;
+  if (!alive.length) return null;
+  const r = run.rng.events;
+  if (who === 'pair') {
+    if (alive.length < 2) return null;
+    const f = pick(r, alive);
+    return { f: f.id, g: pick(r, alive.filter((x) => x !== f)).id };
+  }
+  if (who === 'famous') return { f: [...alive].sort((a, b) => b.renown - a.renown)[0].id };
+  if (who === 'green') return { f: [...alive].sort((a, b) => a.level - b.level || a.xp - b.xp)[0].id };
+  return { f: pick(r, alive).id };
+}
+
+function rollEvent(run) {
+  const r = run.rng.events;
+  const chance = dateOf(run.week).winter ? EVENT_CHANCE.winter : EVENT_CHANCE.season;
+  if (!run.roster.length || next(r) >= chance) return;
+  const options = EVENTS.filter((e) => e.id !== run.lastEvent && (!e.when || e.when(run)) && (e.who !== 'pair' || run.roster.length >= 2));
+  if (!options.length) return;
+  const e = pick(r, options);
+  run.event = { id: e.id, ...eventTargets(run, e.who) };
+  run.lastEvent = e.id;
+}
+
+// Names for an event's text: { f, g }.
+export function eventNames(run, ev = run.event) {
+  const name = (id) => findFighter(run, id)?.name;
+  return { f: name(ev?.f), g: name(ev?.g) };
+}
+
+export function eventChoiceBlocker(run, index) {
+  if (!run.event) return 'No event to decide.';
+  const choice = EVENT_BY_ID[run.event.id].choices[index];
+  if (!choice) return 'No such choice.';
+  if (choice.cost && run.gold < choice.cost) return `Needs ${choice.cost} Gold.`;
+  return null;
+}
+
+function applyEventEffects(run, eff, ev, out) {
+  const targets = (to) => (to === 'all' ? run.roster : (to === 'both' ? [ev.f, ev.g] : [ev[to]]).map((id) => findFighter(run, id)).filter(Boolean));
+  if (eff.gold) { run.gold = Math.max(0, run.gold + eff.gold); out.push(`${eff.gold > 0 ? '+' : ''}${eff.gold} Gold`); }
+  if (eff.favor) { changeFavor(run, eff.favor, EVENT_BY_ID[ev.id].title.toLowerCase()); out.push(`${eff.favor > 0 ? '+' : ''}${eff.favor} Favor`); }
+  if (eff.item) { run.inventory.items[eff.item] = (run.inventory.items[eff.item] ?? 0) + 1; out.push(`+1 ${CONSUMABLES[eff.item].name}`); }
+  for (const [key, label] of [['morale', 'Morale'], ['stress', 'Stress'], ['renown', 'Renown']]) {
+    if (!eff[key]) continue;
+    const fs = targets(eff[key].to);
+    for (const f of fs) {
+      if (key === 'morale') bumpMorale(f, eff[key].n);
+      else if (key === 'stress') f.stress = clampStress(f.stress + eff[key].n);
+      else f.renown = Math.max(0, f.renown + eff[key].n);
+    }
+    if (fs.length) out.push(`${eff[key].to === 'all' ? 'everyone' : fs.map((f) => f.name).join(' and ')} ${eff[key].n > 0 ? '+' : ''}${eff[key].n} ${label}`);
+  }
+  if (eff.xp) for (const f of targets(eff.xp.to)) { gainXp(run, f, eff.xp.n); out.push(`${f.name} +${eff.xp.n} XP`); }
+  if (eff.injury) {
+    for (const f of targets(eff.injury.to)) {
+      const inj = INJURY_BY_TAG[eff.injury.tag];
+      f.injuries.push({ tag: inj.tag, weight: inj.weight, weeksLeft: HEAL_WEEKS[inj.tag] });
+      out.push(`${f.name} is ${inj.name}`);
+    }
+  }
+  if (eff.chance) {
+    const won = next(run.rng.events) < eff.chance.p;
+    out.push(won ? 'it went well' : 'it went badly');
+    applyEventEffects(run, won ? eff.chance.win : eff.chance.lose, ev, out);
+  }
+}
+
+// Decide this week's event. Returns what happened, as text.
+export function chooseEvent(run, index) {
+  assertOk(eventChoiceBlocker(run, index));
+  const ev = run.event;
+  const e = EVENT_BY_ID[ev.id];
+  const choice = e.choices[index];
+  const out = [];
+  applyEventEffects(run, choice.effects, ev, out);
+  const text = `${e.title}: ${choiceLabel(choice, eventNames(run, ev))}.${out.length ? ` ${out.join(', ')}.` : ''}`;
+  log(run, text, 'event');
+  run.event = null;
+  checkLoss(run);
+  return text;
 }
 
 // ---------- Tribute and Favor ----------
@@ -1050,6 +1141,8 @@ export function deserialize(text) {
   if (run?.version === 2) run = migrateV2(run);
   if (run?.version !== SAVE_VERSION) throw new Error('This save is from an older version of the game.');
   run.inventory.items = { ...emptyItems(), ...(run.inventory.items ?? {}) }; // saves from before consumables
+  run.rng.events ??= createRng(deriveSeed(run.seed, 5)); // saves from before events
+  run.event ??= null;
   run.inventory.decor = { ...emptyDecor(), ...run.inventory.decor }; // saves from before new decor
   for (const f of run.roster) f.decor = { ...emptyDecor(), ...f.decor };
   for (const f of [...run.roster, ...run.market, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : [])]) f.humor ??= humorFor(f);

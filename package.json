@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test",
+    "test": "node --test --import ./tests/setup.js",
     "simulate": "node scripts/simulate.js",
     "career": "node scripts/career-sim.js",
     "serve": "python3 -m http.server 8000",

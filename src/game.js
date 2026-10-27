@@ -5,7 +5,7 @@ import { playRound, throwTowel } from './fight.js';
 import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom,
   assignDecor, removeDecor, buyGear, equip, unequip, startMatch, finishMatch, skipBout, forfeitBout,
-  recordMatchProgress, buyItem, useItem, payTribute, sellGear,
+  recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent,
 } from './run.js';
 import { upgrade } from './ludus.js';
 
@@ -44,6 +44,7 @@ export const GAME_ACTIONS = {
   skip: ({ run }) => { skipBout(run); },
   forfeit: ({ run }) => { forfeitBout(run); },
   'pay-tribute': ({ run }) => { payTribute(run); },
+  'event-choice': ({ run }, d) => { chooseEvent(run, Number(d.index)); },
   fight: (state, d) => {
     const { run } = state;
     const tier = Number(d.tier) || run.topTier;

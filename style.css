@@ -424,3 +424,11 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 /* Portraits (phase F1) */
 .card-head .id-row { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .portrait { flex-shrink: 0; border-radius: 10px; border: 1px solid var(--line); }
+
+/* Weekly events (phase B1) */
+.event-card { display: flex; gap: 16px; align-items: flex-start; border-color: var(--gold); margin-bottom: 12px; }
+.event-card .event-faces { display: flex; flex-direction: column; gap: 6px; }
+.event-card h2 { margin: 2px 0 6px; }
+.event-card p { margin: 0 0 10px; }
+.event-choices { flex-wrap: wrap; gap: 8px; }
+@media (max-width: 600px) { .event-card { flex-direction: column; } .event-card .event-faces { flex-direction: row; } }
