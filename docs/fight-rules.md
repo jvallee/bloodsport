@@ -145,7 +145,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 | Win your top arena's Boss | +15 |
 | Win an upset (opponent had more Power) | +5 |
 | Win while at the Death Gate (2+ injuries) | +5 |
-| Lose your top arena's Boss | −15 / −20 / −25 / −30 by tier (Grand −30) |
+| Lose your top arena's Boss | −10 / −15 / −20 / −25 by tier (Grand −25) |
 | Forfeit your top arena's Boss | loss −5 |
 | Capitulate in your top arena (non-Boss) | −5 |
 | Crushing win in a lower arena | −2 |
@@ -160,6 +160,10 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Champions in lower arenas:** a Champion who fights back in a lower arena gets no Prestige and no Renown for a win, loses 10 Morale, and costs 3 Favor ("a champion picking on newcomers").
 - **Rookies:** fighters under 5 Renown are never jeered for mismatches; only known fighters (5+ Renown) crushing a weak opponent by 3+ Power are.
 - **Injuries go both ways every round:** whoever wins the round, both fighters roll to injure. The round loser is much easier to hurt (25% vs 10% at even Power).
+- **Training never fails silently:** training can't be chosen when it can't happen (trainer cap reached, Restless, Stress 50+, or Gold short for every trainee's fee), and the button says why. If it can't happen anyway when the week ends, it counts as a Rest week (−40 Stress); a fighter who becomes unable to train switches to Rest at the end of the week. Either way the card shows "Switched to Rest: …".
+- **Calming decor:** each Bird or Fire Brazier in a fighter's quarters gives −5 Stress a week (Trophy Racks are Morale only).
+- **Fight items** (Apothecary, in the Market): War Paint (+1 Power next round, 10 Gold), Adrenaline Draught (+3 Speed next round, +15 Stress after, 8), Blessed Bandage (−10% to be injured next round, not armor, 10), Crowd Bribe (no Favor or Renown lost for capitulating this fight; a Boss loss still counts, 12). Used between rounds after Round 1, one per fight.
+- **"Throw in the towel" is now "capitulate"** in all player-facing text.
 - **Reloading mid-match** counts as capitulating, but keeps any injuries (or death) from rounds already played.
 - **Revolt:** if the roster's average Morale stays below 20 for 4 weeks in a row, the career is lost.
 
@@ -196,8 +200,8 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - Tier 1: 6 / 7 / 8
   - Tier 2: 9 / 10 / 11
   - Tier 3: 13 / 14 / 15
-  - Tier 4: 17 / 18 / 19
-  - Grand Tournament: 22
+  - Tier 4: 19 / 20 / 21
+  - Grand Tournament: 24
 - The Armourer and Liaison stock up the moment they are built.
 
 ### Saves
