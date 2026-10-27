@@ -24,11 +24,11 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - `npm run replay -- report.json [--stop N] [--steps]`: replay a playtester's bug report (see `docs/bug-reports.md`).
 
 ## Layout
-- Pure logic: `src/rng.js` seeded RNG · `src/data.js` all tables and tunable numbers · `src/fight.js` fight engine · `src/calendar.js` weeks · `src/ludus.js` estate · `src/run.js` career coordinator · `src/odds.js` pre-fight odds · `src/narrate.js` text · `src/codex.js` unlockable glossary · `src/tutorial.js` intro and tutorial steps · `src/game.js` every player action (recorded for replays) · `src/debug.js` bug reports and replay.
-- UI: `src/ui/components.js`, `src/ui/views.js`, `src/ui/fightView.js` return HTML strings; `src/main.js` holds state, saving and events. Every career-changing action goes through `applyGameAction` in `src/game.js` (never call run.js directly from main.js), so careers stay replayable. Rule refusals throw `Refused` (`src/errors.js`); anything else thrown opens the bug report box.
+- Pure logic: `src/rng.js` seeded RNG · `src/data.js` all tables and tunable numbers · `src/fight.js` fight engine · `src/calendar.js` weeks · `src/ludus.js` estate · `src/run.js` career coordinator · `src/odds.js` pre-fight odds · `src/narrate.js` text · `src/codex.js` unlockable glossary · `src/tutorial.js` intro and tutorial steps · `src/game.js` every player action (recorded for replays) · `src/debug.js` bug reports and replay. · `src/events.js` weekly event cards · `src/legacy.js` achievements, patrons, decrees, score · `src/savefile.js` save export/import.
+- UI: `src/ui/components.js`, `src/ui/views.js`, `src/ui/fightView.js`, `src/ui/portrait.js` (generated faces) return HTML strings; `src/ui/sound.js` plays synthesized effects; `src/main.js` holds state, saving and events. Every career-changing action goes through `applyGameAction` in `src/game.js` (never call run.js directly from main.js), so careers stay replayable. Rule refusals throw `Refused` (`src/errors.js`); anything else thrown opens the bug report box.
 - `scripts/bots.js`: careful and reckless career bots used by `career-sim.js` and tests.
 - Every rules change gets re-checked with `npm run check` before it ships; record the numbers in `docs/roadmap-v2.md`. When a gate fails, sweep the relevant values and show the table rather than guessing.
-- `tests/`: one file per module, plus `tests/helpers.js` (blank fighters, scripted RNG).
+- `tests/`: one file per module, plus `tests/helpers.js` (blank fighters, scripted RNG). `tests/setup.js` (loaded by `npm test`) switches weekly events off so unrelated tests stay deterministic; `tests/events.test.js` switches them back on.
 
 ## Working practices
 - **Commit early and often.** Make small, focused commits, each with a clear message, after every working step. Don't batch unrelated changes.

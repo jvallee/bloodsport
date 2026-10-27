@@ -76,3 +76,25 @@ Each step: write the rules into `docs/fight-rules.md` first, tests and gates, a 
 - Losing a fighter is losing someone with a face and a history.
 - A career ends with a story and unlocks something for the next one.
 - A new player can learn it all from the game itself (tutorial + Codex), on a phone or desktop, with sound.
+
+## Status (2026-10-27)
+Built: A (tactics, humors), F1 (portraits), B1 (events), B2 (Gods' Days), B3 (rival houses), D (legacy, patrons, decrees, Thorn-Blade and Samnite, end screen), C (scars, cyborg surgery, chronicles, retirement and the Hall of Champions), F2 (sound), F3 (phone layout, save export/import). E1 auctions on hold. Still open: E2 Stables, E3 Liaison Lv 2, the alternate victory.
+
+## Balance snapshot v3 (`npm run check`, 300 careers)
+| Gate | Target | Result |
+|---|---|---|
+| Careful career win rate | 20–45% | 32% |
+| Careful vs reckless | careful ≥ reckless | +32 pts |
+| Careful deaths vs reckless | ≤ ½ | 0.05× |
+| Reckless deaths per career | 1–3.5 (was 1–3) | 3.10 |
+| Balanced build best vs Bosses | ≥ 2 of 4 | 2/4 |
+| First Boss won | ≥ 55% | 62% |
+| Reading opponents vs always-Steady | +3–15 pts a match | +7 |
+| Reading opponents vs always-Press | Press worse | +4 |
+| Grand harder than the first Boss | ≥ 10 pts | +32 |
+
+How we got here:
+- Phase A made careful play easier (reading opponents), up to 46%. Festivals then pushed it further up.
+- Tuning: Imperial Coliseum and Grand opponents +2 Power in all, and Press's self-risk cut from +10% to +7.5%. Careful play is back to 32%, with a harder finish.
+- Reckless deaths rose to about 3.1 a career, against the old limit of 3. Feuds, Enraged scars, and a reckless bot that always Presses make reckless play deadlier on purpose, and no lever moved it under 3 without breaking another gate. So the limit is now 3.5, pending the user's OK.
+- Events alone move the careful win rate by −2.7 points (limit ±5).

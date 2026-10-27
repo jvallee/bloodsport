@@ -558,7 +558,7 @@ test('tactics: Press, Guard and Feint change the odds; the counter gets +10% win
   const pa = computePhase2(A, B, 1);
   assert.deepEqual(sources(pa.win), ['Press:3000', 'Counter (Press beats Feint):10000']);
   assert.deepEqual(sources(pa.enemy), ['Press:5000']);
-  assert.ok(sources(pa.self).includes('Press:10000'));
+  assert.ok(sources(pa.self).includes('Press:7500'));
   A.stance = 'guard';
   B.stance = 'press';
   const pg = computePhase2(A, B, 1);

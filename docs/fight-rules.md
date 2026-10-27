@@ -203,8 +203,8 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - Tier 1: 6 / 6 / 7 (the first Boss also has no arena rule)
   - Tier 2: 9 / 10 / 11
   - Tier 3: 13 / 14 / 15
-  - Tier 4: 19 / 20 / 21
-  - Grand Tournament: 24
+  - Tier 4: 21 / 22 / 23 (v3: +2 for a harder finish)
+  - Grand Tournament: 26 (v3: +2)
 - The Armourer and Liaison stock up the moment they are built.
 
 ### Playtest 3 additions (placeholders, tune after playtesting)
@@ -227,7 +227,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 ### Phase A: tactics and the Four Humors
 - **Tactics**, chosen before every round (opponents choose theirs at the same time, from their humor):
   - **Steady:** no change.
-  - **Press:** +3% win chance and +5% chance to injure, but +10% chance to be injured.
+  - **Press:** +3% win chance and +5% chance to injure, but +7.5% chance to be injured (was +10%; cut in the v3 tuning pass).
   - **Guard:** −15% chance to be injured, −5% win chance.
   - **Feint:** +10% win chance, only if you strike first that round (so it rewards Speed).
   - **Counters:** Press beats Feint, Feint beats Guard, Guard beats Press. The side whose tactic counters the other's gets **+10% win chance** that round.
@@ -238,6 +238,41 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - **Phlegmatic:** +5% win chance in Rounds 2 and 3. Guards first (50%); from Round 2 counters the tactic you used last round 70% of the time (unless you held Steady).
 - **Suggested tactic** (the ★, and what auto-play and the careful bot use): Guard at the Death Gate; otherwise the counter to the opponent's favourite (against a Phlegmatic, the counter to their counter of your last tactic).
 - **Gates:** reading the opponent beats always-Steady by 3–15 points a match (measured: +7) and beats always-Press (measured: +4). Press was +5% win at first; always-Press came within 2 points of reading, so it was cut to +3%. Feint was +3 Speed at first; that erased trained Speed's value (a balanced build was best vs 0 of 4 Bosses), so it became the first-strike bonus.
+
+### Phase B: a world that moves
+- **Weekly events** (`src/events.js`): after each week, a 30% chance (20% in winter) of an event card, never the same one twice in a row. The week can't end until you choose. 12 events (brawl, senator's offer, fever, wandering lanista, gifts from fans, escaped beast, merchant caravan, omen, revelry, spy, stray dog, sparring). Some choices cost Gold (they're disabled, with the reason, if you can't pay); some are a gamble. Seeded on their own stream. Measured: events move the careful win rate by −2.7 points (limit ±5).
+- **Gods' Days:** festival tournaments (the month's tournament week):
+  - **Floralia** (Maius): wins pay +50% Gold.
+  - **Ludi Apollinares** (Quintilis): ranged fighters (Sagittarius, Bow, Gun, Spear) +1 Power.
+  - **Ludi Romani** (September): wins pay +50% Prestige.
+  - **Armilustrium** (Mars, October): Press gives +5% win chance, and wins +1 Renown. (Moved from Martius so a career's first tournament is plain.)
+  - **Ludi Plebeii** (Fortuna, November): upset wins pay double Gold and double Favor.
+  - **Saturnalia** (December): no buy-ins.
+- **Rival houses:** three per career, seeded on their own stream. Every opponent fights for one (the Grand Tournament's champion for the leading rival).
+  - **Glory** ranks the houses: a win is worth its arena tier (×3 for a Boss, 20 for the Grand Tournament). When you beat a house's fighter it loses 1 Glory; when its fighter beats you it gains the same as you would have.
+  - After each tournament week every rival wins a bout half the time (+its tier in Glory) and climbs a tier at 8, 20 and 40 Glory.
+  - **Feuds:** kill a house's fighter and its fighters get **+1 Power** against you for 3 tournament weeks. **Vengeance:** lose a fighter to a house and yours get **+5% win chance** against it for 3 tournament weeks.
+
+### Phase C: fighter stories
+- **Scars:** surviving a severe wound (Concussed or worse) has a 50% chance to leave one, against the style (melee or ranged) of the fighter who caused it, at most one per style. Choleric fighters become Enraged, Melancholic ones Afeared, others 50/50.
+  - **Afeared:** −1 Power, −10% chance to injure, −10% chance to be injured against that style.
+  - **Enraged:** +1 Power, +15% chance to injure, +15% chance to be injured against that style.
+  - **Battle-Hardened** (first Bloodied Victory): −5% chance to be injured.
+- **Cyborg surgery** (Medbay Lv 2+): replace a Maimed limb (Cyborg Arm: +1 Power) or a Blinded eye (Cyborg Eye: +1 Power, can't be Blinded again; that wound lands as a Flesh Wound). Costs 15 Gold + 5 per tier above 1, and −2 Renown.
+- **Chronicle:** each fighter keeps up to 12 story lines (joined, first win, first kill, titles, marks, scars, augments, death). A death adds a eulogy to the report.
+- **Retirement:** a fighter at level 4+ or with a Title can retire: +5 Prestige, +10 Morale to the roster, and they join the Hall of Champions (kept across careers).
+
+### Phase D: a run, not just a career
+- **Score:** Glory + 25 per arena tier above 1 + 10 per House level above 1 + 2 per win; a won career adds 200 plus its decrees' bonus.
+- **Achievements** (kept across careers, `src/legacy.js`): First Blood (beat a Boss: patron The Old Veteran), Into the Bronze (Thorn-Blade class), Blood and Sand (a Bloodied Victory: patron A Friend at Court), A Rising House (Silver: patron A Merchant's Purse), Dreaded (a kill mark: patron The War Chest), The Gods' Favourite (win on a Gods' Day), First Among Houses (top the standings: patron A Defector), Imperial Ambitions (Imperial: Samnite class), Master of the Games (win: the Emperor's Decrees).
+- **Patrons:** The Old Veteran (a level-3 fighter, +2 Power, +3 Speed, two perks), A Friend at Court (+15 Favor), A Merchant's Purse (+10 Gold), The War Chest (2 War Paint, 1 Blessed Bandage), A Defector (a +3 Power fighter).
+- **Emperor's Decrees:** Iron Bosses (every Boss +1 Power; +30 score), A Greedy Emperor (tribute ×1.5; +20), Harsh Judges (Boss losses and forfeits −5 Favor more; +20).
+- **Legacy classes:** **Thorn-Blade** (winning a round: opponent −2 Speed and −1 Power next round) and **Samnite** (20% shield parry; Concussed doesn't cost the first strike) join the market and opponents once unlocked.
+
+### Phase F: look and sound
+- Portraits are generated SVG (kind, humor expression, class gear, laurel for titles, wounds), from a hash of the name: cosmetic, never the game RNG.
+- Sound is synthesized (Web Audio), on by default with a mute toggle in the top bar.
+- Save files hold the career, the Codex and the Legacy.
 
 ### Saves
 - Save format version 3. Version-2 careers are upgraded on load: Favor = 50 − 15 per Strike, the old circuit becomes the top arena, and earlier arenas count as conquered. The Codex is stored separately and is never touched by career saves.
