@@ -3,13 +3,14 @@
 //          skips bad matchups and throws in the towel when a fighter is in danger.
 // reckless: trains one star nonstop, heals only with the Surgeon, fights only the top arena, never towels.
 
-import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE } from '../src/data.js';
+import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES } from '../src/data.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel } from '../src/fight.js';
 import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom,
+  buyItem, buyItemBlocker, useItem, useItemBlocker,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
 
@@ -116,14 +117,30 @@ function carefulWeek(run, opts) {
   }
 }
 
-function playMatch(run, f, tier, towel) {
+function playMatch(run, f, tier, towel, items = false) {
   const bout = boutFor(run, tier);
   const m = startMatch(run, f.id, tier);
   while (!m.over) {
     playRound(m);
+    if (items && !m.over) {
+      // In danger and not ahead: a Blessed Bandage. In a top-arena Boss fight: War Paint.
+      const danger = mortalDanger(m.a) && m.a.roundsWon <= m.b.roundsWon;
+      const pick = danger && run.inventory.items.blessedBandage ? 'blessedBandage' : bout.top && bout.boss && run.inventory.items.warPaint ? 'warPaint' : null;
+      if (pick && !useItemBlocker(run, m, pick)) useItem(run, m, pick);
+    }
     if (towel && !m.over && canThrowTowel(m) && mortalDanger(m.a) && m.a.roundsWon <= m.b.roundsWon && !bout.boss) throwTowel(m);
   }
   return finishMatch(run, m);
+}
+
+// Before a top-arena Boss, stock one War Paint (and a Bandage for an injured star) if Gold allows.
+function stockItems(run) {
+  const bout = boutFor(run, run.topTier);
+  if (!bout.boss) return;
+  const reserve = 4;
+  if (!run.inventory.items.warPaint && run.gold - CONSUMABLES.warPaint.price >= reserve && !buyItemBlocker(run, 'warPaint')) buyItem(run, 'warPaint');
+  const hurtStar = run.roster.some((f) => f.injuries.length);
+  if (hurtStar && !run.inventory.items.blessedBandage && run.gold - CONSUMABLES.blessedBandage.price >= reserve && !buyItemBlocker(run, 'blessedBandage')) buyItem(run, 'blessedBandage');
 }
 
 function carefulBouts(run, n, opts) {
@@ -131,6 +148,7 @@ function carefulBouts(run, n, opts) {
     const bout = boutFor(run, tier);
     return estimateOdds(f, opponentFor(run, tier), { ...matchOptions(run, f, tier), n });
   };
+  if (opts.items !== false) stockItems(run);
   // Top arena first: send whoever scores best.
   const top = run.topTier;
   let best = null;
@@ -144,9 +162,9 @@ function carefulBouts(run, n, opts) {
   if (!best || (best.o.win < 0.35 && !bout.boss && opts.skip !== false)) {
     if (!skipBlocker(run)) skipBout(run);
     else if (!best) forfeitBout(run);
-    else playMatch(run, best.f, top, opts.towel !== false);
+    else playMatch(run, best.f, top, opts.towel !== false, opts.items !== false);
   } else {
-    playMatch(run, best.f, top, opts.towel !== false);
+    playMatch(run, best.f, top, opts.towel !== false, opts.items !== false);
   }
   if (run.status !== 'active' || opts.lowerArenas === false) return;
   // Lower arenas: send free fighters where the fight is winnable but not a crushing mismatch.
@@ -159,7 +177,7 @@ function carefulBouts(run, n, opts) {
       const o = odds(f, tier);
       if (o.win >= 0.5 && o.death < 0.02 && (!pickF || o.win > pickF.win)) pickF = { f, win: o.win };
     }
-    if (pickF) playMatch(run, pickF.f, tier, opts.towel !== false);
+    if (pickF) playMatch(run, pickF.f, tier, opts.towel !== false, opts.items !== false);
     if (run.status !== 'active') return;
   }
 }
