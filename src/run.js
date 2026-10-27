@@ -9,12 +9,13 @@ const KIND_IDS = Object.keys(KINDS);
 const CLASS_IDS = Object.keys(CLASSES);
 const WEAPON_IDS = Object.keys(WEAPONS);
 
-export function createFighter(rng, { id, kind, power, decorLevel = 0 } = {}) {
+export function createFighter(rng, { id, kind, power, decorLevel = 0, takenNames = [] } = {}) {
   kind ??= pick(rng, KIND_IDS);
   const kindTrait = pick(rng, KINDS[kind].traits);
   const cls = pick(rng, CLASS_IDS);
   const weapon = cls === 'fighter' ? pick(rng, WEAPON_IDS) : null;
-  const name = pick(rng, NAMES);
+  const free = NAMES.filter((n) => !takenNames.includes(n));
+  const name = pick(rng, free.length ? free : NAMES);
   const decor = { bird: 0, fireBrazier: 0 };
   if (cls === 'ornitharius') decor.bird = decorLevel;
   if (kindTrait === 'firebug') decor.fireBrazier = decorLevel;
@@ -28,17 +29,22 @@ export function createFighter(rng, { id, kind, power, decorLevel = 0 } = {}) {
 
 const newId = (run, prefix) => `${prefix}${run.nextId++}`;
 
+// Names stay unique among everyone currently on screen.
+const takenNames = (run, extra = []) => [...run.roster, ...run.market, ...(run.opponent ? [run.opponent] : []), ...extra].map((f) => f.name);
+
 // Each market has 4 fighters including at least one Orc (Blood Faith comeback valve).
 function refreshMarket(run) {
   const rng = run.rng.market;
-  const market = Array.from({ length: ECONOMY.marketSize - 1 }, () => createFighter(rng, { id: newId(run, 'f') }));
-  market.splice(int(rng, 0, market.length), 0, createFighter(rng, { id: newId(run, 'f'), kind: 'orc' }));
+  const market = [];
+  const make = (kind) => createFighter(rng, { id: newId(run, 'f'), kind, takenNames: takenNames({ ...run, market: [] }, market) });
+  for (let i = 0; i < ECONOMY.marketSize - 1; i++) market.push(make());
+  market.splice(int(rng, 0, market.length), 0, make('orc'));
   run.market = market;
 }
 
 function makeOpponent(run) {
   const t = TOURNAMENTS[run.tournament];
-  return createFighter(run.rng.opponents, { id: newId(run, 'o'), power: t.oppPower, decorLevel: t.oppDecor });
+  return createFighter(run.rng.opponents, { id: newId(run, 'o'), power: t.oppPower, decorLevel: t.oppDecor, takenNames: takenNames({ ...run, opponent: null }) });
 }
 
 export function createRun(seed = randomSeed()) {

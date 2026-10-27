@@ -34,6 +34,16 @@ test('every market includes at least one Orc', () => {
   for (let seed = 0; seed < 50; seed++) assert.ok(createRun(seed).market.some((f) => f.kind === 'orc'), `seed ${seed}`);
 });
 
+test('fighter names are unique across roster, market and opponent', () => {
+  for (let seed = 0; seed < 50; seed++) {
+    const run = createRun(seed);
+    recruit(run, run.market[0].id);
+    finishMatch(run, fakeMatch(run, run.roster[0].id));
+    const names = [...run.roster, ...run.market, run.opponent].map((f) => f.name);
+    assert.equal(new Set(names).size, names.length, `seed ${seed}: ${names}`);
+  }
+});
+
 test('runs are deterministic from the seed', () => {
   assert.equal(JSON.stringify(createRun(42)), JSON.stringify(createRun(42)));
   assert.notEqual(JSON.stringify(createRun(42).market), JSON.stringify(createRun(43).market));

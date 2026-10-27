@@ -338,7 +338,14 @@ test('a Flesh Wound from Roll 4B immediately lowers the 4C retaliation', () => {
   injuryCheck(m, m.a, m.b, r, 'First strike');
   const retaliation = injuryCheck(m, m.b, m.a, r, 'Retaliation');
   assert.deepEqual(sources(retaliation.mods), ['Flesh Wound:-10000']);
+  assert.equal(retaliation.mods[0].side, 'B', 'modifier belongs to the attacker who has the Flesh Wound');
   assert.equal(retaliation.chance, 0);
+});
+
+test('armor modifiers in a check are labeled with the defender', () => {
+  const m = matchOf({}, { kindTrait: 'alloyedSkin' }, [e5(99999)]);
+  const check = injuryCheck(m, m.a, m.b, roundRecord({ winner: 'A' }), 'x');
+  assert.deepEqual(check.mods.map((x) => [x.source, x.side]), [['Alloyed Skin', 'B']]);
 });
 
 test('Distracted disables 1 slot; Maimed disables one per effective injury', () => {

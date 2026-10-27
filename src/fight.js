@@ -170,7 +170,10 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
   let mods = [];
   if (!counter) {
     base = r.winner === Y.side ? r.row.winnerInjury : r.row.loserInjury;
-    mods = [...pX.enemy, ...pY.self.filter((mod) => !(mod.armor && pX.piercing))];
+    mods = [
+      ...pX.enemy.map((mod) => ({ ...mod, side: X.side })),
+      ...pY.self.filter((mod) => !(mod.armor && pX.piercing)).map((mod) => ({ ...mod, side: Y.side })),
+    ];
   }
   const chance = clamp(base + sum(mods), 0, 100000);
   const roll = rollE5(m.rng);
