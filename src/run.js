@@ -208,6 +208,7 @@ export function jobBlocker(run, id, job) {
   const f = findFighter(run, id);
   if (!f) return 'No such fighter.';
   if (!JOBS.includes(job)) return 'Unknown job.';
+  if (f.job === job) return null; // keeping the current job is always allowed
   if (isTraining(job)) {
     const busy = run.roster.filter((x) => x.id !== id && isTraining(x.job)).length;
     if (busy >= trainerRooms(run)) return `All ${trainerRooms(run)} Trainer Room${trainerRooms(run) > 1 ? 's are' : ' is'} busy.`;

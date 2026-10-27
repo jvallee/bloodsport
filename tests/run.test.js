@@ -396,3 +396,12 @@ test('simple-bot careers always end, and the state stays valid every week', () =
     assert.ok(['won', 'lost'].includes(run.status), `seed ${seed} never ended`);
   }
 });
+
+test('re-selecting the job a fighter already has is a no-op, even at the trainer cap', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  setJob(run, f.id, 'trainPower');
+  f.trained = 3;
+  assert.equal(jobBlocker(run, f.id, 'trainPower'), null);
+  assert.doesNotThrow(() => setJob(run, f.id, 'trainPower'));
+});
