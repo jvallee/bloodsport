@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
 import { createMatch, autoPlay } from '../src/fight.js';
 import { createFighter } from '../src/run.js';
-import { narrateRound, resultText, fmtPct, signed, modLabel } from '../src/narrate.js';
+import { narrateRound, narrateStory, adviceFor, resultText, fmtPct, signed, modLabel } from '../src/narrate.js';
 
 test('fmtPct formats ChanceE5 values', () => {
   assert.equal(fmtPct(50000), '50%');
@@ -32,7 +32,20 @@ test('narration covers every round of random matches without gaps', () => {
       const lines = narrateRound(m, r);
       assert.ok(lines.length >= 4);
       for (const l of lines) assert.doesNotMatch(l.text, /undefined|NaN|null/, l.text);
+      const story = narrateStory(m, r);
+      assert.ok(story.length >= 2);
+      for (const l of story) assert.doesNotMatch(l.text, /undefined|NaN|null/, l.text);
     }
+    const advice = adviceFor(m);
+    assert.equal(advice === null, m.result.winner === 'A');
+    if (advice) assert.doesNotMatch(advice, /undefined|NaN/);
     assert.doesNotMatch(resultText(m), /undefined|NaN/);
   }
+});
+
+test('advice points at the Death Gate after a death and at Stress after an overtrained loss', () => {
+  const base = { a: { f: { name: 'Livia' } }, rounds: [], preMatch: [] };
+  assert.match(adviceFor({ ...base, result: { winner: 'B', reason: 'death' } }), /Death Gate/);
+  assert.match(adviceFor({ ...base, preMatch: [{ source: 'Overtrained' }], result: { winner: 'B', reason: 'rounds' } }), /Rest the week/);
+  assert.match(adviceFor({ ...base, rounds: [{ delta: -3, checks: [] }], result: { winner: 'B', reason: 'rounds' } }), /out-powered/);
 });
