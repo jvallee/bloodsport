@@ -1,5 +1,7 @@
 # Roadmap v2 — Fighters You Care About, A World That Pushes Back
 
+**Status (2026-10-27): Phases A, B and C are built, tuned and live. All balance gates pass (`npm run check`).** Rules: `docs/fight-rules.md` ("v2 rules").
+
 v1 (tag `v1.0`, playable at `/v1/`) proved the career loop: weekly jobs, the estate, four tiers and the Grand Tournament. v2 acts on the first full playthrough's feedback (2026-10-26). Each phase ships on its own and is re-tuned with `npm run career` before it goes live.
 
 ---
@@ -12,13 +14,13 @@ v1 (tag `v1.0`, playable at `/v1/`) proved the career loop: weekly jobs, the est
 | More tutorial and exposition: how you win and fail, what Power is | Intro story, then a guided first month that explains each step as it happens | ✅ A |
 | Glossary that unlocks as you encounter things; define Orc, Sagittarius, etc. | **Codex** tab: rules entries unlock on first encounter (free); deeper lore unlocks by defeating that kind/class. Persists across careers. | ✅ A |
 | Unclear what decor does | Every decor button says what it does for *this* fighter, or that it does nothing; in B, all decor also feeds Morale | ✅ A → B |
-| Wins should give fighters bonuses | **XP and levels:** each level-up offers a choice of 3 perks | B |
-| Fighter Morale and Renown; better rooms → better Morale; fame raises expectations | **Renown** grows with wins; **Morale** = comfort (decor, Quarters, Entertainment) vs expectations (Renown) | B |
-| Pass decor/items between fighters (especially from the dead); own inventory; Armourer | **House inventory:** decor and gear belong to the house and are assigned to fighters; returned on death. **Armourer** building sells/crafts gear; beaten opponents sometimes drop theirs. | B |
-| Fight in lower divisions, several fights at once | **Multi-arena tournament weeks:** one fighter per unlocked arena each tournament week; easy wins in lower arenas earn less and anger the crowd | C |
-| Harder game, enemies too | Opponents gain levels, perks, gear and Titles by tier; named rival champions recur | C |
-| A failure metric other than three losses | **Imperial Favor** meter (0 = executed) plus a **yearly tribute** due each winter | C |
-| Is a balanced fighter ever right? | Today: barely (see below). Give Speed its own job: **evasion** | B |
+| Wins should give fighters bonuses | **XP and levels:** each level-up offers a choice of 3 perks | ✅ B |
+| Fighter Morale and Renown; better rooms → better Morale; fame raises expectations | **Renown** grows with wins; **Morale** = comfort (decor, Quarters, Entertainment) vs expectations (Renown) | ✅ B |
+| Pass decor/items between fighters (especially from the dead); own inventory; Armourer | **House inventory:** decor and gear belong to the house and are assigned to fighters; returned on death. **Armourer** building sells/crafts gear; beaten opponents sometimes drop theirs. | ✅ B |
+| Fight in lower divisions, several fights at once | **Multi-arena tournament weeks:** one fighter per unlocked arena each tournament week; easy wins in lower arenas earn less and anger the crowd | ✅ C |
+| Harder game, enemies too | Opponents gain levels, perks, gear and Titles by tier; named rival champions recur | ✅ C |
+| A failure metric other than three losses | **Imperial Favor** meter (0 = executed) plus a **yearly tribute** due each winter | ✅ C |
+| Is a balanced fighter ever right? | Today: barely (see below). Give Speed its own job: **evasion** | ✅ B |
 
 ---
 
@@ -153,3 +155,42 @@ Measured with the real engine (`estimateOdds`, 6,000 fights per row) against eac
 
 ## Order of work
 A1 → A2 → A3 (ship) → B2 + B1 (ship, re-tune) → B3 → B4 (ship) → C1 → C3 → C2 (ship, full re-tune).
+
+---
+
+## Design critique of C1 and C3 (before tuning, 2026-10-27)
+
+Arguing against the multi-arena and Favor design to find dominant strategies and degenerate cases:
+
+1. **Rival death spiral (found and fixed).** The first draft brought a victorious Boss back at *its* Power +1, so repeated losses compounded while Favor drained. **Fix:** the rival comes back at the arena's Boss Power +1, never more. Test-first: `a returning rival is the arena's Boss Power +1, never compounding`.
+2. **Gear farming (found and fixed).** Conquered arenas keep cycling, and Bosses always dropped gear, so the Dirt Pits Boss was a free armoury. **Fix:** only your top arena's Boss always drops gear; other wins use the normal 35% chance.
+3. **Farming lower arenas for XP: kept on purpose.** It's how you raise rookies. It costs buy-ins and injury risk, and crushing mismatches are penalized.
+4. **Fame making stars mutiny: kept, with warnings.** The card shows where Morale is heading and why; the tutorial warns at Renown 4; the careful bot copes by placing decor.
+5. **Unwinnable early runs: measured, not assumed.** The careful bot reaches Tier 2 74% of the time. Losses are almost all Favor executions in mid tiers, not early wipes.
+
+## Balance snapshot v2 (2026-10-27, `npm run check`, 300 careers)
+
+| Gate | Target | Result |
+| :--- | :--- | :--- |
+| Careful career win rate | 30–45% | **36%** ✅ |
+| Careful ≥ reckless | yes | **36% vs 0%** ✅ |
+| Careful deaths ≤ ½ reckless | yes | **0.05 vs 1.64** ✅ |
+| Reckless deaths per career | 1–3 | **1.64** ✅ |
+| Balanced build best vs ≥ 2 Bosses | yes | **2/4** ✅ (mix best vs all 4; 23–67% Speed) |
+
+How it was tuned (tables from `npm run sweep`):
+- **Evasion alone didn't make balanced builds best.** Sweeping 3–6% per point and caps of 15–25% moved one Boss at most, because Power's Delta curve is so steep. **Speed at +3 per training point** (instead of +2), with 4%/point evasion up to 20%, makes a mix best against every Boss.
+- **v2 systems made careful play too strong** (67% wins). Raising opponent Power a little (+1/+1/+2/+2 by tier) and Boss losses to −30 Favor brought it down.
+- **Further Power increases broke the Speed gate**, since they change the matchups it measures. So the last step used levers that don't touch fights: tribute 15 → 20 Gold per year.
+
+Known gaps:
+- **Reckless play never wins** (0%). That fits the design goal (careful beats reckless), but it may feel harsh to a new player who plays aggressively. Watch for this in human playtests.
+- **Favor is the only way careers end** for careful players (193 of 193 losses), mostly in Tiers 2–3. Tribute and Boss losses could use clearer warnings in the UI; see next steps.
+
+## Next steps (from the 2026-10-27 workflow notes)
+
+- **Keep `npm run check` green.** Every balance change is swept with `npm run sweep` (`--evasion`, `--favor`, `--fine`) and must pass the gates before it ships.
+- **LLM playtester:** a text interface (`scripts/play-text.js`) so a subagent can play a whole career and write human-style feedback on the tutorial, Codex and pacing. Run after each phase.
+- **"More fun" passes, after the numbers pass:** e.g. "make tournament weeks more dramatic; don't change the balance numbers."
+- **Keep it static:** plain HTML/JS on GitHub Pages, `localStorage` only, versioned saves (career v3; Codex stored separately).
+- **Optional flavor:** procedurally generated music that intensifies during fights; art for Codex lore entries.

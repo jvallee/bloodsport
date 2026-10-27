@@ -131,5 +131,69 @@ All numbers live in `src/data.js` and were tuned with `npm run career` (see `doc
 ### Saves
 - The career autosaves to the browser after every action. Reloading during a match counts as throwing in the towel, so quitting can't undo a bad fight.
 
+## v2 rules (supersede the career rules above where they differ)
+
+All numbers live in `src/data.js`; balance is checked with `npm run check` (see `docs/roadmap-v2.md`).
+
+### Arenas and Favor
+- **Every arena you've reached holds a bout each tournament week.** You may send one fighter to each arena, and a fighter fights at most once a week. Your highest arena is your **top arena**: only its Bosses open new arenas, and only it must be resolved before the week can end.
+- **Lower arenas** pay Prestige ×½ per tier below your top. Beating a conquered arena's Boss again gives no new Title. A **crushing win** (your fighter has 3+ more Power than the opponent) in a lower arena earns no Renown, costs −10 Morale and −2 Favor.
+- **Imperial Favor** (0–100, start 50) replaces Strikes:
+
+| Event | Favor |
+| :--- | :---: |
+| Win your top arena's Boss | +15 |
+| Win an upset (opponent had more Power) | +5 |
+| Win while at the Death Gate (2+ injuries) | +5 |
+| Lose your top arena's Boss | −30 |
+| Forfeit your top arena's Boss | −35 |
+| Throw in the towel in your top arena (non-Boss) | −5 |
+| Crushing win in a lower arena | −2 |
+| Unpaid tribute | −25 |
+
+- **At 0 Favor you are executed.** The top bar warns at 25.
+- **Tribute:** 20 Gold × the year, paid automatically at the start of winter (warning in December). If you can't pay, you lose all your Gold and 25 Favor.
+- **Rivals:** a top-arena Boss who beats you returns as that arena's next Boss at the arena's Boss Power +1 (never more, however often they win).
+- **Revolt:** if the roster's average Morale stays below 20 for 4 weeks in a row, the career is lost.
+
+### Fighter growth
+- **XP:** win 3, loss 1, ×2 for Bosses, +2 for an upset win. Levels at 3 / 8 / 15 / 25 / 40 XP (max level 6).
+- **Each level** offers 3 random perks; you must choose before the week can end or that fighter can fight:
+  - Mighty (+1 Power) and Swift (+3 Speed), both repeatable
+  - Thick Skin, Killer Instinct, Fast Starter, Closer, Iron Constitution, Crowd Pleaser
+  - Survivor (needs Level 3)
+  - Duelist (Power 9+, Speed 7+), Tactician (Speed 9+, Power 8+), Juggernaut (Power 12+)
+- **Renown:** win +2, Boss win +3 more, upset +1, Crowd Pleaser +1, towel −1. Every 5 Renown adds +1 Gold to that fighter's winnings.
+- **Morale** (0–100, start 60) drifts 10 a week toward 40 + 10×Quarters level + 5×decor items + 10×Entertainment level − 2×Renown (expectations capped at 60). Fights: win +10, loss −5, towel −5, ally death −10.
+
+| Morale | State | Effect |
+| :---: | :--- | :--- |
+| 80+ | Inspired | +5% win chance |
+| 20–39 | Restless | Won't train |
+| Below 20 | Mutinous | Refuses to fight |
+
+### Speed
+- Speed training gives **+3 Speed** per training point (Power gives +1).
+- **Evasion:** each point of Speed above the opponent's (after Spear, Prone, Riposte, Rainy Mud and gear) is **−4% chance to be injured, up to −20%**. It is not armor, so Gun and Flail don't ignore it.
+
+### Storeroom and gear
+- **Decor** (Bird 1 Gold, Fire Brazier 1, Trophy Rack 2) is bought into the house storeroom and placed in a fighter's quarters (up to the best Quarters level per item). Every item adds Morale comfort; Birds and Braziers also feed Ornitharius and Firebug.
+- **Gear:** one weapon slot and one armor slot per fighter. Tier 1 gear costs 6 Gold, tier 2 costs 14–16 Gold, and items give +Power, +Speed, +injure chance or armor (see the Codex).
+- **Armourer** building (one per estate; 10 / 16 Gold; Prestige level 2 / 3): 3 / 4 items stocked each month, tier 2 gear from level 2.
+- **Loot:** your top arena's Boss always drops one of its gear items. Other wins drop gear 35% of the time if the opponent had any.
+- A fallen or released fighter's decor and gear return to the storeroom.
+
+### Opponents
+- Opponents get one combat perk per tier above 1 (+1 for Bosses), a weapon from Tier 2, armor from Tier 3, and tier-2 gear in Tier 4.
+- **Opponent Power** (T1 / T2 / Boss by tier):
+  - Tier 1: 6 / 7 / 8
+  - Tier 2: 9 / 10 / 11
+  - Tier 3: 13 / 14 / 15
+  - Tier 4: 17 / 18 / 19
+  - Grand Tournament: 22
+
+### Saves
+- Save format version 3. Version-2 careers are upgraded on load: Favor = 50 − 15 per Strike, the old circuit becomes the top arena, and earlier arenas count as conquered. The Codex is stored separately and is never touched by career saves.
+
 ### Still deferred
-Four Humors, Cowardly/Afeared/Enraged traumas, Gods' Days and the Temple, blind auctions and rival houses, Oracle fog of war on opponent traits (opponent cards are always shown in full), cyborg surgery, Morale, fighter XP, save export/import.
+Four Humors, Cowardly/Afeared/Enraged traumas, Gods' Days and the Temple, blind auctions and rival houses, Oracle fog of war on opponent traits (opponent cards are always shown in full), cyborg surgery, save export/import.
