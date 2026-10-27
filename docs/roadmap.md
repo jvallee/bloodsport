@@ -1,6 +1,6 @@
 # Roadmap — From MVP Toward the Final Game
 
-**Status (2026-10-26):** M5–M8 are built and live. M9–M11 are next. See "Balance snapshot" for where the tuning stands.
+**Status (2026-10-26):** M5–M8 are built and live (frozen as v1.0, playable at `/v1/`). Next steps are in `docs/roadmap-v2.md`, which supersedes M9–M11 below. See "Balance snapshot" for where the tuning stands.
 
 The MVP (`docs/implementation-plan.md`) proves the fight engine. This plan adds the **Ludus buildings**, **progression** across a full career, and the work needed to keep the game **fun and easy to understand** as it grows.
 
