@@ -29,11 +29,13 @@ test('finished steps never come back, and an empty list means no tutorial', () =
   assert.equal(nextStep(STEPS, all, run), null);
 });
 
-test('fight steps follow the match: start → towel → danger → over', () => {
+test('fight steps follow the match: start → tactics → towel → danger → over', () => {
   const m = createMatch({ a: blank(), b: blank(), rng: createRng(1) });
   const done = [];
   assert.equal(nextStep(FIGHT_STEPS, done, m).id, 'fight-start');
   done.push('fight-start');
+  assert.equal(nextStep(FIGHT_STEPS, done, m).id, 'fight-tactics');
+  done.push('fight-tactics');
   playRound(m);
   if (!m.over) {
     assert.equal(nextStep(FIGHT_STEPS, done, m).id, 'fight-towel');
@@ -42,7 +44,7 @@ test('fight steps follow the match: start → towel → danger → over', () => 
     assert.equal(nextStep(FIGHT_STEPS, done, m).id, 'fight-danger');
   }
   m.over = true;
-  assert.equal(nextStep(FIGHT_STEPS, ['fight-start', 'fight-towel', 'fight-danger'], m).id, 'fight-over');
+  assert.equal(nextStep(FIGHT_STEPS, ['fight-start', 'fight-tactics', 'fight-towel', 'fight-danger'], m).id, 'fight-over');
 });
 
 test('step text has no template leftovers', () => {

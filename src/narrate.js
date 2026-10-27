@@ -1,6 +1,6 @@
 // Turns structured round records from fight.js into readable lines. Pure: no DOM.
 
-import { TRAITS, CLASSES, WEAPONS } from './data.js';
+import { TRAITS, CLASSES, WEAPONS, TACTICS } from './data.js';
 
 export function fmtPct(e5) {
   const p = e5 / 1000;
@@ -21,6 +21,15 @@ export function slotName(f, slot) {
   return slot === 'kind' ? TRAITS[f.kindTrait]?.name : classAbility(f);
 }
 
+// "Aurelia Presses; Tigris Guards. Tigris reads it: Guard beats Press." (both narration modes)
+const VERB = { steady: 'holds steady', press: 'Presses', guard: 'Guards', feint: 'Feints' };
+function tacticText(m, r) {
+  if (!r.stances) return null;
+  const name = (side) => (side === 'A' ? m.a : m.b).f.name;
+  const counter = r.counter ? ` ${name(r.counter)} reads it: ${TACTICS[r.stances[r.counter]].name} beats ${TACTICS[r.stances[r.counter === 'A' ? 'B' : 'A']].name}.` : '';
+  return `${name('A')} ${VERB[r.stances.A]}; ${name('B')} ${VERB[r.stances.B]}.${counter}`;
+}
+
 // Modifier as a short label: Power mods are raw, percentage mods are ChanceE5.
 export const modLabel = (mod, percent) => `${mod.source} ${percent ? signed(mod.value / 1000) + '%' : signed(mod.value)}`;
 
@@ -30,6 +39,7 @@ export function narrateRound(m, r) {
   const lines = [];
   const add = (type, text) => lines.push({ type, text });
   const init = r.initiative;
+  if (tacticText(m, r)) add('tactic', tacticText(m, r));
 
   if (init.reason === 'concussed') add('init', `${name(init.first === 'A' ? 'B' : 'A')} is Concussed, so ${name(init.first)} strikes first.`);
   else if (init.reason === 'footwork') add('init', `${name(init.first)}'s Footwork: faster, strikes first.`);
@@ -95,6 +105,7 @@ export function narrateStory(m, r) {
   const lines = [];
   const add = (type, text) => lines.push({ type, text });
   const init = r.initiative;
+  if (tacticText(m, r)) add('tactic', tacticText(m, r));
   const second = name(init.first === 'A' ? 'B' : 'A');
   if (init.reason === 'concussed') add('init', `${second} is still dazed. ${name(init.first)} moves first.`);
   else if (init.reason === 'footwork') add('init', `${name(init.first)} darts in first on quick feet.`);

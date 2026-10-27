@@ -117,7 +117,7 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .card-tag { position: absolute; top: -10px; left: 12px; font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); padding: 1px 8px; border-radius: 99px; color: var(--muted); }
 .card-head { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
 .card-head h3 { font-size: 17px; display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-.card-head h3 .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.card-head h3 .nm { overflow-wrap: anywhere; }
 .card-head .who { min-width: 0; }
 .card-head .kind { color: var(--muted); font-size: 13px; }
 .badges { display: flex; gap: 6px; }
@@ -409,3 +409,18 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 #bug .modal { z-index: 1000; }
 .btn-why { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; vertical-align: top; }
 .btn-why .why-not { margin-top: 0; }
+
+/* Tactics (phase A) */
+.tactics { margin: 8px 0; }
+.tactic-row { flex-wrap: wrap; gap: 8px; }
+.btn.tactic small { font-weight: 400; opacity: 0.8; }
+.tactics .counters { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.tactic-line { font-size: 13px; margin: 6px 0; color: var(--muted); }
+.tactic-line.good b:last-of-type, .tactic-line.good { color: #b7d8b3; }
+.tactic-line.bad { color: #f1b3ad; }
+.chip.humor { border-color: #5a6b8a; }
+.line.tactic { color: var(--gold); }
+
+/* Portraits (phase F1) */
+.card-head .id-row { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.portrait { flex-shrink: 0; border-radius: 10px; border: 1px solid var(--line); }

@@ -5,6 +5,7 @@ import { deltaRow } from '../src/data.js';
 import {
   createMatch, playRound, autoPlay, throwTowel, canThrowTowel, mortalDanger, makeCombatant,
   computePower, computeSpeed, computePhase2, initiative, injurySeverity, injuryCheck, applyRoundEnd, effectiveInjuries, deathGateAt,
+  opponentTactic, suggestTactic,
 } from '../src/fight.js';
 import { blank, injuries, scripted, e5, pct, roundRecord } from './helpers.js';
 
@@ -546,4 +547,95 @@ test('kill marks: Dreaded at 3 kills (+5% win), Reaper at 6 (+5% injure as well)
   const [C, D] = pair({ kills: 6 }, {});
   assert.deepEqual(sources(computePhase2(C, D, 1).win), ['Dreaded:5000']);
   assert.deepEqual(sources(computePhase2(C, D, 1).enemy), ['Reaper:5000']);
+});
+
+// ---- Tactics and Four Humors (roadmap v3, phase A) ----
+
+test('tactics: Press, Guard and Feint change the odds; the counter gets +10% win chance', () => {
+  const [A, B] = pair({}, {});
+  A.stance = 'press';
+  B.stance = 'feint';
+  const pa = computePhase2(A, B, 1);
+  assert.deepEqual(sources(pa.win), ['Press:3000', 'Counter (Press beats Feint):10000']);
+  assert.deepEqual(sources(pa.enemy), ['Press:5000']);
+  assert.ok(sources(pa.self).includes('Press:10000'));
+  A.stance = 'guard';
+  B.stance = 'press';
+  const pg = computePhase2(A, B, 1);
+  assert.deepEqual(sources(pg.win), ['Guard:-5000', 'Counter (Guard beats Press):10000']);
+  assert.ok(sources(pg.self).includes('Guard:-15000'));
+});
+
+test('humors change Power, Speed and percentages by round', () => {
+  const [C, X] = pair({ humor: 'choleric' }, {});
+  assert.deepEqual(sources(computePower(C, X, 1).mods), ['Choleric:1']);
+  assert.deepEqual(sources(computePower(C, X, 2).mods), []);
+  assert.deepEqual(sources(computePower(C, X, 3).mods), ['Choleric:-1']);
+  const [S] = pair({ humor: 'sanguine' }, {});
+  assert.ok(sources(computeSpeed(S, 1).mods).includes('Sanguine:3'));
+  const [M, Y] = pair({ humor: 'melancholic' }, {});
+  assert.ok(sources(computePhase2(M, Y, 1).self).includes('Melancholic:-5000'));
+  assert.deepEqual(sources(computePower(M, Y, 3).mods), ['Melancholic:1']);
+  const [P, Z] = pair({ humor: 'phlegmatic' }, {});
+  assert.deepEqual(sources(computePhase2(P, Z, 1).win), []);
+  assert.deepEqual(sources(computePhase2(P, Z, 2).win), ['Phlegmatic:5000']);
+});
+
+test('opponents pick tactics by their humor; a humorless fighter stays Steady', () => {
+  const counts = { press: 0, guard: 0, feint: 0, steady: 0 };
+  for (let seed = 1; seed <= 400; seed++) {
+    const m = createMatch({ a: blank(), b: blank({ humor: 'choleric' }), rng: createRng(seed) });
+    counts[opponentTactic(m, 1)]++;
+  }
+  assert.ok(counts.press > 200 && counts.press < 280, JSON.stringify(counts));
+  const plain = createMatch({ a: blank(), b: blank(), rng: createRng(1) });
+  assert.equal(opponentTactic(plain, 1), 'steady');
+});
+
+test('a Phlegmatic opponent mostly counters the tactic you used last round', () => {
+  let countered = 0;
+  for (let seed = 1; seed <= 300; seed++) {
+    const m = createMatch({ a: blank(), b: blank({ humor: 'phlegmatic' }), rng: createRng(seed) });
+    m.a.lastStance = 'press';
+    if (opponentTactic(m, 2) === 'guard') countered++;
+  }
+  assert.ok(countered > 235 && countered < 275, `${countered}/300`); // 70% counter + 30% × 50% Guard lean = 85%
+});
+
+test('playRound uses the chosen tactic, records both, and clears them for the next round', () => {
+  const m = createMatch({ a: blank(), b: blank({ humor: 'choleric' }), rng: createRng(3) });
+  const r = playRound(m, { stance: 'guard' });
+  assert.equal(r.stances.A, 'guard');
+  assert.ok(['press', 'guard', 'feint'].includes(r.stances.B));
+  assert.equal(m.a.stance, null);
+  assert.equal(m.a.lastStance, 'guard');
+  assert.equal(playRound(createMatch({ a: blank(), b: blank(), rng: createRng(3) })).stances.A, 'steady');
+});
+
+test('suggestTactic counters the opponent\'s favourite, and Guards at the Death Gate', () => {
+  const m = createMatch({ a: blank(), b: blank({ humor: 'choleric' }), rng: createRng(1) });
+  assert.equal(suggestTactic(m), 'guard'); // Choleric loves to Press
+  m.b.f.humor = 'sanguine';
+  assert.equal(suggestTactic(m), 'press'); // Sanguine loves to Feint
+  m.b.f.humor = 'phlegmatic';
+  m.round = 1;
+  m.a.lastStance = 'press';
+  assert.equal(suggestTactic(m), 'feint'); // they will Guard against your Press
+  m.a.f.injuries = injuries('poisoned');
+  assert.equal(suggestTactic(m), 'guard');
+  m.a.f.injuries = [];
+  m.b.f.humor = undefined;
+  assert.equal(suggestTactic(m), 'steady');
+});
+
+test('Feint: +10% win chance only for the side that strikes first', () => {
+  for (let seed = 1; seed <= 40; seed++) {
+    const m = createMatch({ a: blank({ speed: 30 }), b: blank(), rng: createRng(seed) });
+    const r = playRound(m, { stance: 'feint' });
+    assert.equal(r.initiative.first, 'A');
+    assert.ok(sources(r.win.modsA).includes('Feint:10000'));
+  }
+  const slow = createMatch({ a: blank({ speed: 1 }), b: blank({ speed: 30 }), rng: createRng(2) });
+  const r2 = playRound(slow, { stance: 'feint' });
+  assert.equal(sources(r2.win.modsA).some((x) => x.startsWith('Feint:')), false);
 });

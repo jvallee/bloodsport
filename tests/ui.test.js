@@ -185,5 +185,23 @@ test('fight items can be used before Round 1', () => {
   const m = startMatch(run, f.id);
   const html = fightView(m, { animateRound: 0, showMath: false, auto: false }, boutFor(run, 1), '', { warPaint: 1 });
   assert.match(html, /data-action="use-item" data-item="warPaint"/);
-  assert.match(html, /Begin Round 1/);
+  assert.match(html, /Round 1: choose your tactic/);
+});
+
+test('the fight shows a tactic for each round, marks the suggestion, and reads the opponent', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  const m = startMatch(run, f.id);
+  m.b.f.humor = 'choleric';
+  const ui = { animateRound: 0, showMath: false, auto: false };
+  let html = fightView(m, ui, boutFor(run, 1));
+  for (const t of ['steady', 'press', 'guard', 'feint']) assert.match(html, new RegExp(`data-action="next-round" data-stance="${t}"`));
+  assert.match(html, /btn big tactic primary" data-action="next-round" data-stance="guard"/);
+  assert.match(html, /is <b>Choleric<\/b>: loves to Press/);
+  playRound(m, { stance: 'guard' });
+  if (m.over) return;
+  html = fightView(m, ui, boutFor(run, 1));
+  assert.match(html, /You: <b>Guard<\/b>/);
+  assert.match(html, /Last round they chose <b>/);
 });

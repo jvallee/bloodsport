@@ -1,10 +1,10 @@
 // Career-playing bots for balance checks (scripts/career-sim.js) and invariant tests.
 // careful: rests and heals, builds for training and Morale, equips gear, picks perks, uses every arena,
 //          skips bad matchups and throws in the towel when a fighter is in danger.
-// reckless: trains one star nonstop, heals only with the Surgeon, fights only the top arena, never towels.
+// reckless: trains one star nonstop, heals only with the Surgeon, fights only the top arena, always Presses, never towels.
 
 import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES } from '../src/data.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel } from '../src/fight.js';
+import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic } from '../src/fight.js';
 import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
@@ -117,11 +117,12 @@ function carefulWeek(run, opts) {
   }
 }
 
-function playMatch(run, f, tier, towel, items = false) {
+// `tactic`: 'smart' reads the opponent's humor (as auto-play does); anything else is used every round.
+function playMatch(run, f, tier, towel, items = false, tactic = 'smart') {
   const bout = boutFor(run, tier);
   const m = startMatch(run, f.id, tier);
   while (!m.over) {
-    playRound(m);
+    playRound(m, { stance: tactic === 'smart' ? suggestTactic(m) : tactic });
     if (items && !m.over) {
       // In danger and not ahead: a Blessed Bandage. In a top-arena Boss fight: War Paint.
       const danger = mortalDanger(m.a) && m.a.roundsWon <= m.b.roundsWon;
@@ -201,7 +202,7 @@ function recklessBouts(run) {
     else forfeitBout(run);
     return;
   }
-  playMatch(run, f, run.topTier, false);
+  playMatch(run, f, run.topTier, false, false, 'press');
 }
 
 export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxWeeks = 400, ...opts } = {}) {

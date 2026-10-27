@@ -1,8 +1,11 @@
 // Shared UI pieces: escaping, buttons, icons, the fighter card. Returns HTML strings.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS } from '../data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS } from '../data.js';
+
+const HUMOR_ICON = { choleric: '🔥', sanguine: '💨', melancholic: '🪨', phlegmatic: '💧' };
 import { effectiveInjuries, mortalDanger, deathGateAt, killMarks } from '../fight.js';
 import { classAbility } from '../narrate.js';
+import { portrait } from './portrait.js';
 
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -69,7 +72,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
     <article class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
       ${tag ? `<div class="card-tag">${tag}</div>` : ''}
       <div class="card-head">
-        <div class="who"><h3><span class="nm">${esc(f.name)}</span>${levelLine}</h3><div class="kind">${KINDS[f.kind].name} · ${clsName}</div></div>
+        <div class="id-row">${portrait(f, compact ? 44 : 52)}<div class="who"><h3><span class="nm">${esc(f.name)}</span></h3><div class="kind">${levelLine} ${KINDS[f.kind].name} · ${clsName}</div></div></div>
         <div class="badges">
           <div class="badge power" title="Power decides who wins rounds. ${f.power}${gearPow(f) ? ` + ${gearPow(f)} from gear` : ''}. Each point of difference shifts the odds a lot.">${ICON.power}<b>${f.power + gearPow(f)}</b></div>
           <div class="badge speed" title="Speed decides who strikes first (Speed + d6) and makes them harder to wound. ${f.speed}${gearSpd(f) ? ` ${gearSpd(f) > 0 ? '+' : '−'} ${Math.abs(gearSpd(f))} from gear` : ''}.">${ICON.speed}<b>${f.speed + gearSpd(f)}</b></div>
@@ -78,9 +81,10 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
       <div class="traits">
         ${trait ? `<span class="chip trait${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
         ${f.cls ? `<span class="chip ability${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
+        ${f.humor ? `<span class="chip humor" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
         ${titles}${marks}${perks}${gear}${kills}
       </div>
-      ${compact ? '' : `<div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}</div>`}
+      ${compact ? '' : `<div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div>`}
       ${f.notice ? `<div class="notice">⚠ ${esc(f.notice)}</div>` : ''}
       <div class="status-row">
         <span class="gate-wrap">Death Gate ${deathGate(f)}</span>

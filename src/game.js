@@ -51,8 +51,8 @@ export const GAME_ACTIONS = {
     state.match = startMatch(run, d.id, tier);
     state.match.bout = bout;
   },
-  'next-round': (state) => {
-    playRound(state.match);
+  'next-round': (state, d) => {
+    playRound(state.match, { stance: d.stance });
     return settleMatch(state);
   },
   towel: (state) => {

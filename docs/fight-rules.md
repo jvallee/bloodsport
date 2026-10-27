@@ -222,6 +222,23 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **The Dirt Pits never turn a house away:** if your Prestige is below a Dirt Pits buy-in, you pay what you have (even 0). A win pays its Prestige in full, so a career can't get stuck with no affordable fight. Other arenas still need the full buy-in.
 - **Fight items** can also be used before Round 1 (they boost Round 1).
 
+## v3 rules (roadmap v3)
+
+### Phase A: tactics and the Four Humors
+- **Tactics**, chosen before every round (opponents choose theirs at the same time, from their humor):
+  - **Steady:** no change.
+  - **Press:** +3% win chance and +5% chance to injure, but +10% chance to be injured.
+  - **Guard:** −15% chance to be injured, −5% win chance.
+  - **Feint:** +10% win chance, only if you strike first that round (so it rewards Speed).
+  - **Counters:** Press beats Feint, Feint beats Guard, Guard beats Press. The side whose tactic counters the other's gets **+10% win chance** that round.
+- **Four Humors:** every fighter has one (fighters from older saves get one from their name, so it never changes).
+  - **Choleric:** +1 Power in Round 1, −1 Power in Round 3. Picks Press 60%, Feint 20%, Guard 20%.
+  - **Sanguine:** +3 Speed in Round 1. Picks Feint 55%, Press 25%, Guard 20%.
+  - **Melancholic:** −5% chance to be injured every round; +1 Power in Round 3. Picks Guard 55%, Press 25%, Feint 20%.
+  - **Phlegmatic:** +5% win chance in Rounds 2 and 3. Guards first (50%); from Round 2 counters the tactic you used last round 70% of the time (unless you held Steady).
+- **Suggested tactic** (the ★, and what auto-play and the careful bot use): Guard at the Death Gate; otherwise the counter to the opponent's favourite (against a Phlegmatic, the counter to their counter of your last tactic).
+- **Gates:** reading the opponent beats always-Steady by 3–15 points a match (measured: +7) and beats always-Press (measured: +4). Press was +5% win at first; always-Press came within 2 points of reading, so it was cut to +3%. Feint was +3 Speed at first; that erased trained Speed's value (a balanced build was best vs 0 of 4 Bosses), so it became the first-strike bonus.
+
 ### Saves
 - Save format version 3. Version-2 careers are upgraded on load: Favor = 50 − 15 per Strike, the old circuit becomes the top arena, and earlier arenas count as conquered. The Codex is stored separately and is never touched by career saves.
 

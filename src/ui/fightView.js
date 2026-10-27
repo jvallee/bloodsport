@@ -1,12 +1,12 @@
 // The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
 
-import { BOSS_DEBUFFS, GEAR, CONSUMABLES } from '../data.js';
+import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS } from '../data.js';
 
 const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 
 // What this side actually brings to the coming round (everything applied), so the card never misleads.
 const statLine = (stats, side) => `<div class="round-stats" title="Power and Speed in Round ${stats.round}, with gear, Titles, items, injuries, Scouted, Challenger and arena rules applied">Round ${stats.round}: <b>Power ${stats[side].power}</b> · <b>Speed ${stats[side].speed}</b></div>`;
-import { effectiveInjuries, mortalDanger, canThrowTowel } from '../fight.js';
+import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, fighterCard } from './components.js';
 import { roundStats } from '../explain.js';
@@ -24,6 +24,14 @@ function tagPills(r) {
   for (const c of r.checks) for (const m of c.mods) if (m.value) add(m.side, [m], true);
   const seen = new Set();
   return pills.filter((p) => !seen.has(p.side + p.text) && seen.add(p.side + p.text));
+}
+
+// What both sides chose last round, and who read whom.
+function tacticLine(m, r) {
+  const t = (side) => TACTICS[r.stances?.[side] ?? 'steady'];
+  if (!r.stances) return '';
+  const who = r.counter ? `${esc((r.counter === 'A' ? m.a : m.b).f.name)} read it: ${t(r.counter).name} beats ${t(r.counter === 'A' ? 'B' : 'A').name} (+10%)` : 'No counter';
+  return `<div class="tactic-line ${r.counter ? (r.counter === 'A' ? 'good' : 'bad') : ''}">${t('A').icon} You: <b>${t('A').name}</b> · ${t('B').icon} They: <b>${t('B').name}</b> · ${who}</div>`;
 }
 
 // The dice tumble for this long before the round plays out (seconds).
@@ -107,6 +115,20 @@ function whyTable(m) {
     <tbody>${rows}</tbody></table><p class="sub">You win a round when the roll is at or under your win chance.</p></div></details>`;
 }
 
+// Choose this round's tactic: each button plays the round. The suggestion (what auto-play would do) is marked.
+function tacticPicker(m) {
+  const round = m.round + 1;
+  const suggested = suggestTactic(m);
+  const h = m.b.f.humor ? HUMORS[m.b.f.humor] : null;
+  const buttons = Object.entries(TACTICS).map(([k, t]) => `<button class="btn big tactic${k === suggested ? ' primary' : ''}" data-action="next-round" data-stance="${k}" title="${esc(t.desc)}">
+      ${t.icon} ${t.name}${k === suggested ? ' <small>★ suggested</small>' : ''}</button>`).join('');
+  const last = m.rounds.at(-1);
+  const read = h ? `${esc(m.b.f.name)} is <b>${h.name}</b>: ${esc(h.tell)}.${last ? ` Last round they chose <b>${TACTICS[last.stances.B].name}</b>.` : ''}` : `${esc(m.b.f.name)} has no clear habits.`;
+  return `<div class="tactics"><div class="label">Round ${round}: choose your tactic</div>
+    <div class="row tactic-row">${buttons}</div>
+    <div class="sub">${read} <span class="counters">🗡 Press beats ↯ Feint · ↯ Feint beats 🛡 Guard · 🛡 Guard beats 🗡 Press (+10% win chance)</span></div></div>`;
+}
+
 function controls(m, ui, bout, items = {}) {
   if (m.over) {
     const won = m.result.winner === 'A';
@@ -126,8 +148,7 @@ function controls(m, ui, bout, items = {}) {
       ? `<div class="items-row"><span class="sub">Use an item (one per fight):</span>${owned.map(([k, n]) => `<button class="btn small" data-action="use-item" data-item="${k}" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</button>`).join('')}</div>`
       : '';
   if (m.round === 0) {
-    return `${itemRow}<div class="row"><button class="btn primary big" data-action="next-round">Begin Round 1</button>
-      <button class="btn big" data-action="auto-play">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
+    return `${itemRow}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
   }
   const danger = mortalDanger(m.a);
   const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injuries and can die if they lose the next round.</div>` : '';
@@ -135,8 +156,8 @@ function controls(m, ui, bout, items = {}) {
   return `${alert}${paused}
     <div>Score ${m.a.roundsWon}–${m.b.roundsWon}. First to two wins. Your call, Lanista.</div>
     ${itemRow}
+    ${tacticPicker(m)}
     <div class="row">
-      <button class="btn primary big" data-action="next-round">Fight on: Round ${m.round + 1}</button>
       ${canThrowTowel(m) ? `<button class="btn danger big" data-action="towel" title="Forfeit the match and the buy-in. Your fighter is guaranteed to survive.">Capitulate (lose ${bout.buyIn} Prestige)</button>` : ''}
       <button class="btn big" data-action="auto-play">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button>
     </div>`;
@@ -164,6 +185,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}) {
           <div class="gauge-labels"><span>They're stronger</span><span>Power Delta ${last ? signed(delta) : '0'}</span><span>You're stronger</span></div>
           <div class="gauge"><div class="needle" style="left:${((delta + 10) / 20) * 100}%"></div></div>
           ${last ? initiativeRoll(m, last, animate) : ''}
+          ${last ? tacticLine(m, last) : ''}
           ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span><span class="${hold(DICE_TIME + 1.2)}">Round ${last.round} → <b>${esc((last.winner === 'A' ? m.a : m.b).f.name)}</b></span></div>` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
           <div class="tags">${pills.map((p, i) => `<span class="tag ${p.side.toLowerCase()}" style="animation-delay:${animate ? DICE_TIME + i * 0.2 : 0}s">${esc(p.text)}</span>`).join('')}</div>
           <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the math'}</button></div>

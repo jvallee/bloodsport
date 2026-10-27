@@ -2,7 +2,7 @@
 // so previewing never changes the career's fight rolls. Pure.
 
 import { createRng } from './rng.js';
-import { createMatch, autoPlay } from './fight.js';
+import { createMatch, autoPlay, suggestTactic } from './fight.js';
 
 export function estimateOdds(fighter, opponent, { debuff = null, overtrained = false, scouted = 0, challenger = 0, n = 500, seed = 12345 } = {}) {
   const rng = createRng(seed);
@@ -11,7 +11,7 @@ export function estimateOdds(fighter, opponent, { debuff = null, overtrained = f
   let death = 0;
   for (let i = 0; i < n; i++) {
     const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger });
-    autoPlay(m);
+    autoPlay(m, suggestTactic); // odds assume the tactics auto-play would pick
     if (m.result.winner === 'A') win++;
     if (!m.a.f.alive) death++;
     else if (m.a.f.injuries.length > fighter.injuries.length) hurt++;

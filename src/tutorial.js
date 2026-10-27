@@ -63,6 +63,8 @@ export const STEPS = [
 export const FIGHT_STEPS = [
   { id: 'fight-start', when: (m) => m.round === 0, title: 'How a round works',
     body: 'Each round: the faster fighter (Speed + a die) strikes first, Power decides the odds (the gauge shows the gap), traits pop up as coloured tags, then a roll decides the round. After that, each fighter rolls to injure the other. <b>First to win two rounds takes the match.</b>' },
+  { id: 'fight-tactics', when: (m) => !m.over, title: 'Read your opponent',
+    body: 'Before each round, pick a <b>tactic</b>. <b>Press</b> beats Feint, <b>Feint</b> beats Guard, <b>Guard</b> beats Press: guess right and you get +10% to win the round. Every fighter has a <b>humor</b> (temperament) that hints at what they\'ll do: a Choleric opponent loves to Press, so Guard against them. The ★ marks what auto-play would pick.' },
   { id: 'fight-towel', when: (m) => m.round >= 1 && !m.over, title: 'Your call between rounds',
     body: 'Fight on, or <b>capitulate</b>: you lose the match and the buy-in, but your fighter is guaranteed to survive. It matters most when the <b>Death Gate</b> is open (two injuries).' },
   { id: 'fight-danger', when: (m) => !m.over && mortalDanger(m.a), title: 'Mortal danger',

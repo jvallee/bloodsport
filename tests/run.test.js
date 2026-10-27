@@ -1177,3 +1177,15 @@ test('higher arenas still need the full buy-in, with the reason spelled out', ()
   run.prestige = 1;
   assert.equal(fightBlocker(run, f.id, 2), `Needs ${CIRCUITS[1].buyIn[0]} Prestige for the buy-in (you have 1).`);
 });
+
+test('every new fighter has a humor; fighters from older saves get a stable one', () => {
+  const run = createRun(1);
+  assert.ok(run.market.every((f) => ['choleric', 'sanguine', 'melancholic', 'phlegmatic'].includes(f.humor)));
+  const f = recruit(run, run.market[0].id);
+  delete f.humor;
+  delete run.arenas[1].opponent.humor;
+  const a = deserialize(serialize(run));
+  const b = deserialize(serialize(run));
+  assert.ok(a.roster[0].humor && a.arenas[1].opponent.humor);
+  assert.equal(a.roster[0].humor, b.roster[0].humor);
+});

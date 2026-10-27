@@ -1,6 +1,6 @@
 # Roadmap v3: From Systems to a Game
 
-*Drafted 2026-10-27, after v2.2. Status: proposal, awaiting the user's go-ahead and order.*
+*Drafted 2026-10-27, after v2.2. Status: approved 2026-10-27, in the suggested order; **auctions (E1) on hold** at the user's request.*
 
 ## Why it feels incomplete
 
@@ -43,7 +43,7 @@ The plan tackles these in the order that most changes how the game *feels*, smal
 
 ## Phase E: Getting fighters *(M)*
 
-- **E1. Blind auctions** against the rival houses (sealed bids, lots in rising Desirability), replacing the fixed-price market for most fighters. Needs B3.
+- **E1. Blind auctions** *(on hold, user decision 2026-10-27)* against the rival houses (sealed bids, lots in rising Desirability), replacing the fixed-price market for most fighters. Needs B3.
 - **E2. The Stables:** exotic species and beasts (Basa, living armaments).
 - **E3. Liaison Lv 2:** elite death-row prisoners: strong, but arrive with traumas.
 
@@ -64,7 +64,7 @@ The plan tackles these in the order that most changes how the game *feels*, smal
 2. **F1 portraits** alongside A: cheap, and makes fighters people.
 3. **B1 events + B2 Gods' Days**: variety from week to week.
 4. **D1 + D2**: reasons to play again.
-5. **B3 rival houses → E1 auctions**: the biggest build; the world becomes competitive.
+5. **B3 rival houses** (E1 auctions on hold): the biggest build; the world becomes competitive.
 6. **C**, **F2/F3**, then the alternate victory.
 
 Each step: write the rules into `docs/fight-rules.md` first, tests and gates, a playtest, then a short report.

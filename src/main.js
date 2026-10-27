@@ -1,6 +1,6 @@
 // App state, saving, coach tips and event wiring. Game rules live in run.js / fight.js; markup in src/ui/.
 
-import { mortalDanger, canThrowTowel } from './fight.js';
+import { mortalDanger, canThrowTowel, suggestTactic } from './fight.js';
 import { createRun, matchOptions, serialize, deserialize } from './run.js';
 import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
@@ -131,8 +131,9 @@ function scheduleAuto() {
   if (match.round > 0 && mortalDanger(match.a) && canThrowTowel(match)) return;
   autoTimer = setTimeout(() => guard('auto-play', () => {
     if (!match || match.over) return;
-    lastAction = ['next-round'];
-    act('next-round');
+    const stance = suggestTactic(match);
+    lastAction = ['next-round', { stance }];
+    act('next-round', { stance });
     ui.animateRound = match.round;
     save();
     render();
@@ -296,7 +297,7 @@ document.addEventListener('keydown', (e) => {
   if (introPage !== null) return;
   if (e.key === ' ' || e.key === 'Enter') {
     if (e.target.closest?.('button, summary')) return; // let focused buttons and fold-outs work as usual
-    const done = match ? pressButton('#fight [data-action=next-round]') || pressButton('#fight [data-action=leave-fight]') : pressButton('#app [data-action=advance]');
+    const done = match ? pressButton('#fight [data-action=next-round].primary') || pressButton('#fight [data-action=next-round]') || pressButton('#fight [data-action=leave-fight]') : pressButton('#app [data-action=advance]');
     if (done) e.preventDefault();
   } else if ((e.key === 't' || e.key === 'T') && !match) pressButton('#app [data-action=advance-tournament]');
   else if (/^[1-4]$/.test(e.key) && !match) pressButton(`#app [data-action=tab][data-tab=${['ludus', 'estate', 'market', 'codex'][Number(e.key) - 1]}]`);

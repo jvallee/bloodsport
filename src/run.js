@@ -6,7 +6,7 @@
 import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
-  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED,
+  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks } from './fight.js';
 import { Refused } from './errors.js';
@@ -22,6 +22,9 @@ const KIND_IDS = Object.keys(KINDS);
 const CLASS_IDS = Object.keys(CLASSES);
 const WEAPON_IDS = Object.keys(WEAPONS);
 const DEBUFF_IDS = Object.keys(BOSS_DEBUFFS);
+const HUMOR_IDS = Object.keys(HUMORS);
+// Fighters from saves made before humors get one from their name, so it never changes between loads.
+const humorFor = (f) => HUMOR_IDS[[...f.name].reduce((n, ch) => n + ch.charCodeAt(0), 0) % HUMOR_IDS.length];
 const COMBAT_PERKS = ['thickSkin', 'killer', 'fastStart', 'closer', 'survivor', 'duelist'];
 export const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
 
@@ -35,11 +38,12 @@ export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel
   const weapon = cls === 'fighter' ? pick(rng, WEAPON_IDS) : null;
   const free = NAMES.filter((n) => !takenNames.includes(n));
   const name = pick(rng, free.length ? free : NAMES);
+  const humor = pick(rng, HUMOR_IDS);
   const decor = emptyDecor();
   if (cls === 'ornitharius') decor.bird = decorLevel;
   if (kindTrait === 'firebug') decor.fireBrazier = decorLevel;
   return {
-    id, name, kind, kindTrait, cls, weapon,
+    id, name, kind, kindTrait, cls, weapon, humor,
     power: (power ?? KINDS[kind].basePower) + bonusPower,
     speed: ECONOMY.startSpeed,
     trained: 0, decor, injuries: [], alive: true,
@@ -1048,6 +1052,7 @@ export function deserialize(text) {
   run.inventory.items = { ...emptyItems(), ...(run.inventory.items ?? {}) }; // saves from before consumables
   run.inventory.decor = { ...emptyDecor(), ...run.inventory.decor }; // saves from before new decor
   for (const f of run.roster) f.decor = { ...emptyDecor(), ...f.decor };
+  for (const f of [...run.roster, ...run.market, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : [])]) f.humor ??= humorFor(f);
   // Careers from before action recording: start recording now, from a snapshot of this point.
   if (!Array.isArray(run.actions)) {
     run.actions = [];

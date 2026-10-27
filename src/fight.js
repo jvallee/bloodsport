@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER_WIN, HUMORS } from './data.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -33,6 +33,8 @@ export function makeCombatant(fighter, side, arena = null) {
     riposteRound: null, // Sword parry
     roundsWon: 0,
     firstInjuryTaken: false, // boss debuff
+    stance: null, // this round's tactic (TACTICS); cleared after the round
+    lastStance: null,
   };
 }
 
@@ -43,6 +45,35 @@ function slotActive(c, slot, round) {
 export const kindActive = (c, trait, round) => c.f.kindTrait === trait && slotActive(c, 'kind', round);
 export const classActive = (c, cls, round) => c.f.cls === cls && slotActive(c, 'class', round);
 export const weaponActive = (c, weapon, round) => c.f.cls === 'fighter' && c.f.weapon === weapon && slotActive(c, 'class', round);
+
+// Tactics and humors (roadmap v3 phase A).
+const tacticOf = (c) => (c.stance ? TACTICS[c.stance] : null);
+const humorOf = (c) => (c.f.humor ? HUMORS[c.f.humor] : null);
+const beats = (stance) => Object.keys(COUNTERS).find((k) => COUNTERS[k] === stance); // the tactic that counters `stance`
+
+// The tactic an opponent (side B) picks this round, from its humor. Uses the match RNG, so fights replay.
+export function opponentTactic(m, round) {
+  const h = humorOf(m.b);
+  if (!h) return 'steady';
+  if (h.adapts && round > 1 && m.a.lastStance && m.a.lastStance !== 'steady' && next(m.rng) * 100 < h.adapts) return beats(m.a.lastStance);
+  let roll = next(m.rng) * 100;
+  for (const [stance, weight] of Object.entries(h.leans)) {
+    if ((roll -= weight) < 0) return stance;
+  }
+  return 'steady';
+}
+
+// The tactic auto-play (and the careful bot) picks for your fighter: Guard at the Death Gate,
+// otherwise counter what the opponent is most likely to do.
+export function suggestTactic(m) {
+  if (mortalDanger(m.a)) return 'guard';
+  const h = humorOf(m.b);
+  if (!h) return 'steady';
+  const round = m.round + 1;
+  if (h.adapts && round > 1 && m.a.lastStance && m.a.lastStance !== 'steady') return beats(beats(m.a.lastStance));
+  const favourite = Object.entries(h.leans).sort((x, y) => y[1] - x[1])[0][0];
+  return beats(favourite);
+}
 
 // Iron Rules: decor gives no bonus.
 const decorOf = (c, item) => (c.arena === 'ironRules' ? 0 : c.f.decor[item]);
@@ -59,6 +90,8 @@ export function computeSpeed(c, round) {
   if (c.arena === 'rainyMud') mods.push({ source: 'Rainy Mud', value: -2 });
   if (c.boost?.round === round && c.boost.speed) mods.push({ source: c.boost.name, value: c.boost.speed });
   for (const g of gearOf(c.f)) if (g.speed) mods.push({ source: g.name, value: g.speed });
+  if (tacticOf(c)?.speed) mods.push({ source: tacticOf(c).name, value: tacticOf(c).speed });
+  if (humorOf(c)?.speed?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).speed[round] });
   return { base: c.f.speed, mods, total: c.f.speed + sum(mods) };
 }
 
@@ -100,6 +133,7 @@ export function computePower(c, opp, round, raw = false) {
   if (c.boost?.round === round && c.boost.power) mods.push({ source: c.boost.name, value: c.boost.power });
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
   if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
+  if (humorOf(c)?.power?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).power[round] });
   if (!raw && kindActive(c, 'underdog', round) && computePower(opp, c, round, true).total >= f.power + sum(mods)) mods.push({ source: 'Underdog', value: 2 });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
@@ -156,6 +190,15 @@ export function computePhase2(c, opp, round, volley = {}) {
     win.push({ source: 'Duelist', value: 5000 });
     enemy.push({ source: 'Duelist', value: 5000 });
   }
+  // Tactics and humor.
+  const t = tacticOf(c);
+  if (t?.win) win.push({ source: t.name, value: t.win });
+  if (t?.injure) enemy.push({ source: t.name, value: t.injure });
+  if (t?.self) self.push({ source: t.name, value: t.self });
+  if (c.stance && COUNTERS[c.stance] === opp.stance) win.push({ source: `Counter (${t.name} beats ${TACTICS[opp.stance].name})`, value: COUNTER_WIN });
+  const h = humorOf(c);
+  if (h?.win?.[round]) win.push({ source: h.name, value: h.win[round] });
+  if (h?.self) self.push({ source: h.name, value: h.self });
   // Morale: an inspired fighter fights better.
   if (f.morale >= MORALE.inspired) win.push({ source: 'Inspired', value: MORALE.inspiredWin });
   // Speed as evasion: faster fighters are harder to wound.
@@ -291,11 +334,17 @@ export function applyRoundEnd(m, r) {
   r.endEffects = effects;
 }
 
-export function playRound(m) {
+export function playRound(m, { stance = 'steady' } = {}) {
   if (m.over) throw new Error('The match is over.');
   const round = (m.round += 1);
   const { a: A, b: B, rng } = m;
   const r = { round, checks: [], endEffects: [] };
+
+  // Step 0 — tactics: yours as chosen, the opponent's from its humor.
+  A.stance = TACTICS[stance] ? stance : 'steady';
+  B.stance = opponentTactic(m, round);
+  r.stances = { A: A.stance, B: B.stance };
+  r.counter = COUNTERS[A.stance] === B.stance ? 'A' : COUNTERS[B.stance] === A.stance ? 'B' : null;
 
   // Step 1 — strike order.
   r.initiative = initiative(A, B, round, rng);
@@ -316,6 +365,9 @@ export function playRound(m) {
   // First Strike: striking first is worth +10% to win the round (+15% with the Tactician perk).
   const firstStriker = sideOf(m, r.initiative.first).f;
   p2[r.initiative.first].win.push({ source: 'First Strike', value: FIRST_STRIKE + (hasPerk(firstStriker, 'tactician') ? 5000 : 0) });
+  // Feint pays off only for the side that strikes first (so it rewards Speed).
+  const firstSide = sideOf(m, r.initiative.first);
+  if (tacticOf(firstSide)?.firstStrike) p2[r.initiative.first].win.push({ source: tacticOf(firstSide).name, value: tacticOf(firstSide).firstStrike });
   r.win = { base: r.row.win, modsA: p2.A.win, modsB: p2.B.win };
   r.win.chance = clamp(r.row.win + sum(p2.A.win) - sum(p2.B.win), 1, 99999);
 
@@ -329,6 +381,10 @@ export function playRound(m) {
 
   sideOf(m, r.winner).roundsWon += 1;
   m.rounds.push(r);
+  for (const c of [A, B]) {
+    c.lastStance = c.stance;
+    c.stance = null;
+  }
 
   // Step 5 — round end and match result.
   const dead = [A, B].find((c) => !c.f.alive);
@@ -355,8 +411,8 @@ export function throwTowel(m) {
   m.result = { winner: 'B', reason: 'towel' };
 }
 
-// Plays a whole match without capitulate decisions (simulator and tests).
-export function autoPlay(m) {
-  while (!m.over) playRound(m);
+// Plays a whole match without capitulate decisions (simulator and tests). `tactic(m)` picks your tactic each round.
+export function autoPlay(m, tactic = () => 'steady') {
+  while (!m.over) playRound(m, { stance: tactic(m) });
   return m.result;
 }

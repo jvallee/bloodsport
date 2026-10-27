@@ -6,10 +6,10 @@
 
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
-import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES } from '../src/data.js';
+import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries } from '../src/fight.js';
+import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
@@ -51,7 +51,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
   pay-tribute                   pay this year's tribute early
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
-  next | capitulate             during a fight: play the next round, or capitulate ("towel" also works)
+  next [tactic] | capitulate    during a fight: play the next round with a tactic (steady, press, guard, feint; default: the suggestion), or capitulate ("towel" also works)
   math                          toggle the round-by-round math in fight narration
   end-week | to-tournament      run one week of jobs, or keep ending weeks until the next tournament`;
 
@@ -289,10 +289,14 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (match.debuff) lines.push(`  Arena rule: ${BOSS_DEBUFFS[match.debuff].name}. ${BOSS_DEBUFFS[match.debuff].desc}`);
     if (mortalDanger(match.a)) lines.push(`  MORTAL DANGER: ${match.a.f.name} has ${effectiveInjuries(match.a.f)} injuries and can die if they lose the next round.`);
     const owned = Object.entries(run.inventory.items ?? {}).filter(([, n]) => n > 0);
-    if (match.round > 0 && !match.over) {
+    if (!match.over) {
+      const h = match.b.f.humor ? HUMORS[match.b.f.humor] : null;
+      const last = match.rounds.at(-1);
+      lines.push(`  Tactics: ${Object.entries(TACTICS).map(([k, t]) => `${k} (${t.desc})`).join('; ')}. Press beats Feint, Feint beats Guard, Guard beats Press (+10% win chance).`);
+      lines.push(`  ${match.b.f.name} is ${h ? `${h.name}: ${h.tell}` : 'without clear habits'}.${last ? ` Last round they chose ${last.stances.B}.` : ''} Suggested: ${suggestTactic(match)}.`);
       lines.push(match.itemUsed ? `  Item used this fight: ${CONSUMABLES[match.itemUsed].name}.` : owned.length ? `  Items (one per fight, \`use <item>\`): ${owned.map(([k, n]) => `${k} ×${n} (${CONSUMABLES[k].desc})`).join('; ')}` : '  No fight items (the Apothecary in the `market` sells them).');
     }
-    lines.push(match.round === 0 ? '  `next` to begin Round 1.' : `  \`next\` to fight Round ${match.round + 1}${canThrowTowel(match) ? `, or \`capitulate\` (lose the match and ${bout.buyIn} Prestige buy-in; your fighter survives)` : ''}.`);
+    lines.push(match.round === 0 ? '  `next <tactic>` to begin Round 1 (`next` alone uses the suggestion).' : `  \`next <tactic>\` to fight Round ${match.round + 1}${canThrowTowel(match) ? `, or \`capitulate\` (lose the match and ${bout.buyIn} Prestige buy-in; your fighter survives)` : ''}.`);
     const tip = fightTutorial();
     if (tip) lines.push(tip);
     return lines.join('\n');
@@ -321,10 +325,11 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     return out.join('\n');
   }
 
-  function playNext() {
+  function playNext(tactic) {
     if (!match) throw new Error('No match in progress.');
     if (match.over) throw new Error('The match is over.');
-    const r = playRound(match);
+    if (tactic && !TACTICS[tactic]) throw new Error(`Unknown tactic "${tactic}". Choose: ${Object.keys(TACTICS).join(', ')}.`);
+    const r = playRound(match, { stance: tactic ?? suggestTactic(match) });
     const narrate = showMath ? narrateRound : narrateStory;
     const out = [`Round ${r.round}:`, ...narrate(match, r).map((l) => `  ${l.text}`)];
     if (match.over) out.push('', endFight(), '', look());
@@ -456,7 +461,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       const pre = match.preMatch.map((p) => `${match.a.f.name} is overtrained and loses ${p.disabled.map((s) => slotName(match.a.f, s)).join(', ') || 'focus'} for this match.`);
       return [`${match.a.f.name} walks into ${arenaName(t)} to face ${match.b.f.name}. The crowd roars.`, ...pre, fightStatus()].join('\n');
     },
-    next: () => playNext(),
+    next: ([tactic]) => playNext(tactic),
     towel: () => {
       if (!match) throw new Error('No match in progress.');
       throwTowel(match);

@@ -61,6 +61,25 @@ export const TRAITS = {
   bloodlust: { name: 'Bloodlust', desc: '+1 Power once the opponent is injured.' },
 };
 
+// Tactics: chosen before each round. Press beats Feint, Feint beats Guard, Guard beats Press (+10% win chance to the counter).
+export const TACTICS = {
+  steady: { name: 'Steady', icon: '•', desc: 'No change: fight your usual fight.' },
+  press: { name: 'Press', icon: '🗡', desc: '+3% win chance and +5% chance to injure, but +10% chance to be injured.', win: 3000, injure: 5000, self: 10000 },
+  guard: { name: 'Guard', icon: '🛡', desc: '−15% chance to be injured, −5% win chance.', win: -5000, self: -15000 },
+  feint: { name: 'Feint', icon: '↯', desc: '+10% win chance if you strike first this round (faster fighters strike first more often).', firstStrike: 10000 },
+};
+export const COUNTERS = { press: 'feint', feint: 'guard', guard: 'press' }; // key beats value
+export const COUNTER_WIN = 10000;
+
+// Four Humors: every fighter's temperament. Small round-by-round effects, and the tactics they lean towards
+// (what an opponent picks; `adapts` counters the tactic you used last round).
+export const HUMORS = {
+  choleric: { name: 'Choleric', tell: 'loves to Press', desc: 'Hot-blooded: +1 Power in Round 1, −1 Power in Round 3. Loves to Press.', power: { 1: 1, 3: -1 }, leans: { press: 60, feint: 20, guard: 20 } },
+  sanguine: { name: 'Sanguine', tell: 'loves to Feint', desc: 'Quick tempo: +3 Speed in Round 1. Loves to Feint.', speed: { 1: 3 }, leans: { feint: 55, press: 25, guard: 20 } },
+  melancholic: { name: 'Melancholic', tell: 'prefers to Guard', desc: 'Stoic: −5% chance to be injured; +1 Power in Round 3. Prefers to Guard.', self: -5000, power: { 3: 1 }, leans: { guard: 55, press: 25, feint: 20 } },
+  phlegmatic: { name: 'Phlegmatic', tell: 'Guards first, then counters your last tactic', desc: 'Studies the opponent: +5% win chance in Rounds 2 and 3. Guards first, then counters the tactic you used last round.', win: { 2: 5000, 3: 5000 }, leans: { guard: 50, press: 25, feint: 25 }, adapts: 70 },
+};
+
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
 export const KILL_MARKS = [
   { id: 'dreaded', at: 3, name: 'Dreaded', desc: '+5% win chance: opponents fear a proven killer.' },
