@@ -59,7 +59,7 @@ function oddsFor(f) {
 // ---------- Coach tips: one at a time, shown once ----------
 
 const TIPS = [
-  { id: 'recruit', when: (r) => !r.roster.length, text: 'Welcome, Lanista. Start by recruiting two gladiators in the <b>Market</b> tab. Orcs are sturdy; hover over any trait to see what it does.' },
+  { id: 'recruit', when: (r) => !r.roster.length, text: 'Welcome, Lanista. Start by recruiting two gladiators in the <b>Market</b> tab. Hover over any trait to see what it does.' },
   { id: 'jobs', when: (r) => r.roster.length > 0 && !r.boutPending && r.week < 3, text: 'Give each fighter a <b>weekly job</b>, then press <b>End week</b>. Training raises a stat but adds Stress. Rest them the week before a fight.' },
   { id: 'bout', when: (r) => r.boutPending, text: '<b>Fight day!</b> Check each fighter\'s odds, then send one. Tournaments 1 and 2 can be skipped; Bosses can\'t.' },
   { id: 'injury', when: (r) => r.roster.some((f) => f.injuries.length), text: 'Injuries stay until healed. Put the fighter in the <b>Medbay</b> job. Two injuries open the <b>Death Gate</b>.' },

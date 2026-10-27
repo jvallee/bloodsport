@@ -231,7 +231,7 @@ export function marketTab(run) {
     : '<p class="sub">Build a Liaison (Prestige level 2) for a cheap monthly prisoner.</p>';
   return `
     <div class="grid market">
-      <section class="panel"><h2>Slave market <small>${circuitInfo(run).name}</small></h2>
+      <section class="panel"><h2>Market <small>${circuitInfo(run).name}</small></h2>
         <p class="sub">${price} Gold each. New fighters arrive at the start of every month, stronger as you climb the tiers. Roster: ${run.roster.length}/${rosterCap(run)}.</p>
         <div class="cards two">${cards || '<div class="empty">Sold out until next month.</div>'}</div></section>
       <section class="panel"><h2>The Liaison</h2>${liaison}</section>
