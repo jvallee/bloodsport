@@ -82,9 +82,10 @@ export const WEAPONS = {
   gun: { name: 'Gun', ability: 'Armor-Piercing Volley', desc: 'Rounds 1 and 3 (unless Blinded): +15% injure chance, ignores armor.' },
 };
 
+// Decor only helps specific builds (for now). `helps` says whether a fighter gets anything from it.
 export const DECOR = {
-  bird: { name: 'Bird', feeds: 'Ornitharius' },
-  fireBrazier: { name: 'Fire Brazier', feeds: 'Firebug' },
+  bird: { name: 'Bird', feeds: 'Ornitharius', effect: 'Ornitharius fighters get +5% injure chance per Bird once they are injured (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
+  fireBrazier: { name: 'Fire Brazier', feeds: 'Firebug', effect: 'Elves with Firebug get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
 };
 
 // ---- Career placeholders (docs/fight-rules.md, "Career rules"); tune with scripts/simulate.js ----
