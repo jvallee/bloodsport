@@ -170,7 +170,7 @@ export function startMatch(run, id) {
   const t = currentTournament(run);
   run.prestige -= t.buyIn;
   run.inMatch = true;
-  return createMatch({ a: findFighter(run, id), b: run.opponent, rng: run.rng.fight, bossDebuff: t.bossDebuff });
+  return createMatch({ a: findFighter(run, id), b: run.opponent, rng: run.rng.fight, debuff: t.bossDebuff ? 'firstInjuryDouble' : null });
 }
 
 export function finishMatch(run, match) {

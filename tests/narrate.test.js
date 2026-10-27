@@ -26,7 +26,7 @@ test('narration covers every round of random matches without gaps', () => {
     const a = createFighter(rng, { id: 'a', decorLevel: 2 });
     const b = createFighter(rng, { id: 'b', power: 5 + (i % 5), decorLevel: 2 });
     a.injuries = i % 3 === 0 ? [{ tag: 'poisoned', weight: 2 }] : [];
-    const m = createMatch({ a, b, rng, bossDebuff: i % 2 === 0 });
+    const m = createMatch({ a, b, rng, debuff: i % 2 === 0 ? 'firstInjuryDouble' : null });
     autoPlay(m);
     for (const r of m.rounds) {
       const lines = narrateRound(m, r);

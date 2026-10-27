@@ -1,6 +1,6 @@
 // DOM rendering and event wiring only. Game rules live in run.js and fight.js.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, ECONOMY, TOURNAMENTS, BOSS_DEBUFF } from './data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, ECONOMY, TOURNAMENTS, BOSS_DEBUFFS } from './data.js';
 import { effectiveInjuries, mortalDanger, playRound, throwTowel, canThrowTowel } from './fight.js';
 import {
   createRun, currentTournament, recruit, train, buyDecor, heal, startMatch, finishMatch,
@@ -123,7 +123,7 @@ function nextBout() {
     <section class="panel">
       <h2>Next bout</h2>
       <p class="sub">${esc(t.name)} · Buy-in ${t.buyIn} Prestige · Win: +${t.winGold} Gold, buy-in back ×2 · Loss: +${t.lossGold} Gold</p>
-      ${t.bossDebuff ? `<p class="sub" style="color:#f1b3ad"><b>Boss debuff: ${BOSS_DEBUFF.name}.</b> ${BOSS_DEBUFF.desc}</p>` : ''}
+      ${t.bossDebuff ? `<p class="sub" style="color:#f1b3ad"><b>Boss debuff: ${BOSS_DEBUFFS.firstInjuryDouble.name}.</b> ${BOSS_DEBUFFS.firstInjuryDouble.desc}</p>` : ''}
       ${run.status === 'active' ? fighterCard(run.opponent) : ''}
       <div class="actions">
         ${run.status !== 'active' ? '<span class="label">The run is over.</span>' : run.roster.length ? `<span class="label">Choose your gladiator</span>${sendButtons}` : '<span class="label">Recruit a fighter from the market first.</span>'}
@@ -273,7 +273,7 @@ function renderFight() {
   fightEl.innerHTML = `
     <div class="fight">
       <div class="fight-head">
-        <h2>${esc(t.name)}${t.bossDebuff ? ` · ${BOSS_DEBUFF.name}` : ''}</h2>
+        <h2>${esc(t.name)}${t.bossDebuff ? ` · ${BOSS_DEBUFFS.firstInjuryDouble.name}` : ''}</h2>
         <div class="score"><span class="a">${m.a.roundsWon}</span> – <span class="b">${m.b.roundsWon}</span></div>
       </div>
       <div class="arena${shook}">

@@ -63,7 +63,7 @@ export const KINDS = {
 };
 
 export const CLASSES = {
-  cestus: { name: 'Cestus', ability: 'Progressive Overload', desc: 'Each round: +5% win and +5% injure chance per round number (5/10/15%).' },
+  cestus: { name: 'Cestus', ability: 'Progressive Overload', desc: 'Each round: +3/6/9% win chance and +5/10/15% injure chance.' },
   sagittarius: { name: 'Sagittarius', ability: 'First Volley', desc: 'Each round (unless Blinded): coin flip for +10% win chance or +10% injure chance.' },
   ornitharius: { name: 'Ornitharius', ability: 'Birds of Prey', desc: 'Once injured: +5% injure chance per Bird in quarters.' },
   fighter: { name: 'Fighter', ability: 'Weaponsmaster', desc: 'Fights with a weapon specialty.' },
@@ -104,7 +104,14 @@ export const TOURNAMENTS = [
   { name: 'Boss Tournament', buyIn: 3, winGold: 8, lossGold: 1, oppPower: 9, oppDecor: 3, bossDebuff: true },
 ];
 
-export const BOSS_DEBUFF = { name: 'First Injury Counts Double', desc: 'The first injury your fighter takes this match counts as two, opening the Death Gate at once.' };
+export const BOSS_DEBUFFS = {
+  firstInjuryDouble: { name: 'First Blood Counts Double', desc: 'The first injury your fighter takes counts as two, opening the Death Gate at once.' },
+  rainyMud: { name: 'Rainy Mud', desc: 'Your fighter has −2 Speed every round.' },
+  noArmor: { name: 'Stripped of Armor', desc: "Your fighter's armor (Alloyed Skin, Ego Armour) doesn't work." },
+  ironRules: { name: 'Iron Rules', desc: 'Room decor gives no bonus to your fighter.' },
+  bloodMoon: { name: 'Blood Moon', desc: 'Both fighters have +10% chance to be injured.' },
+  crowdFavorite: { name: 'Crowd Favorite', desc: 'The champion fights with +1 Power.' },
+};
 
 export const NAMES = [
   'Aurelia', 'Brutus', 'Cassia', 'Drusus', 'Flamma', 'Gaius', 'Hilarus', 'Ixa', 'Juno', 'Krell',

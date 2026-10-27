@@ -218,11 +218,11 @@ test('Quantum Analyzer adds its stacks; Blinded is −2 per instance', () => {
 
 // ---- Phase 2 percentages ----
 
-test('Cestus Progressive Overload scales 5/10/15%', () => {
+test('Cestus Progressive Overload: +3/6/9% win, +5/10/15% injure (nerfed per roadmap)', () => {
   const [A, B] = pair({ cls: 'cestus' }, {});
   for (const round of [1, 2, 3]) {
     const p = computePhase2(A, B, round);
-    assert.equal(p.win[0].value, 5000 * round);
+    assert.equal(p.win[0].value, 3000 * round);
     assert.equal(p.enemy[0].value, 5000 * round);
   }
 });
@@ -286,7 +286,7 @@ test('Prone is −5% win; Flesh Wound −10% injure; Senseless +10% per injury',
 
 // ---- Injury checks (scripted rolls) ----
 
-const matchOf = (a, b, values, bossDebuff = false) => createMatch({ a: blank(a), b: blank(b), rng: scripted(values), bossDebuff });
+const matchOf = (a, b, values, debuff = null) => createMatch({ a: blank(a), b: blank(b), rng: scripted(values), debuff });
 
 test('a hit rolls on the injury table and records the injury', () => {
   const m = matchOf({}, {}, [e5(1), pct(30)]);
@@ -366,7 +366,7 @@ test('a fatal roll kills a fighter on 2+ injuries who lost the round', () => {
 });
 
 test('Boss debuff: the player fighter’s first injury counts double, later ones do not', () => {
-  const m = matchOf({}, {}, [e5(1), pct(30), e5(1), pct(30)], true);
+  const m = matchOf({}, {}, [e5(1), pct(30), e5(1), pct(30)], 'firstInjuryDouble');
   injuryCheck(m, m.b, m.a, roundRecord({ winner: 'B' }), 'x');
   assert.deepEqual(m.a.f.injuries, [{ tag: 'fleshWound', weight: 2 }]);
   assert.equal(effectiveInjuries(m.a.f), 2);
@@ -375,7 +375,7 @@ test('Boss debuff: the player fighter’s first injury counts double, later ones
 });
 
 test('Boss debuff only affects the player side', () => {
-  const m = matchOf({}, {}, [e5(1), pct(30)], true);
+  const m = matchOf({}, {}, [e5(1), pct(30)], 'firstInjuryDouble');
   injuryCheck(m, m.a, m.b, roundRecord({ winner: 'A' }), 'x');
   assert.equal(m.b.f.injuries[0].weight, 1);
 });
@@ -392,4 +392,42 @@ test('round-end effects: Club, Fists, Perpetual Motion, Quantum Analyzer', () =>
   applyRoundEnd(f, { round: 1, winner: 'A' });
   assert.equal(computePhase2(f.b, f.a, 2).win.length, 0, 'disarmed next round');
   assert.equal(computePhase2(f.b, f.a, 3).win.length, 1, 'back in round 3');
+});
+
+// ---- Boss debuffs and Stress ----
+
+test('Rainy Mud gives your fighter −2 Speed', () => {
+  const m = createMatch({ a: blank(), b: blank(), rng: createRng(1), debuff: 'rainyMud' });
+  assert.equal(computeSpeed(m.a, 1).total, 1);
+  assert.equal(computeSpeed(m.b, 1).total, 3);
+});
+
+test('Stripped of Armor removes your armor only', () => {
+  const m = createMatch({ a: blank({ kindTrait: 'alloyedSkin' }), b: blank({ kindTrait: 'alloyedSkin' }), rng: createRng(1), debuff: 'noArmor' });
+  assert.equal(computePhase2(m.a, m.b, 1).self.length, 0);
+  assert.equal(computePhase2(m.b, m.a, 1).self.length, 1);
+});
+
+test('Iron Rules turns off your decor bonuses', () => {
+  const m = createMatch({ a: blank({ kindTrait: 'firebug', decor: { bird: 0, fireBrazier: 3 } }), b: blank(), rng: createRng(1), debuff: 'ironRules' });
+  assert.equal(computePower(m.a, m.b, 1).total, 5);
+});
+
+test('Blood Moon raises injury chance for both fighters', () => {
+  const m = createMatch({ a: blank(), b: blank(), rng: createRng(1), debuff: 'bloodMoon' });
+  for (const [x, y] of [[m.a, m.b], [m.b, m.a]]) assert.deepEqual(sources(computePhase2(x, y, 1).self), ['Blood Moon:10000']);
+});
+
+test('Crowd Favorite gives the opponent +1 Power', () => {
+  const m = createMatch({ a: blank(), b: blank(), rng: createRng(1), debuff: 'crowdFavorite' });
+  assert.equal(computePower(m.b, m.a, 1).total, 6);
+  assert.equal(computePower(m.a, m.b, 1).total, 5);
+});
+
+test('an overtrained fighter starts the match with one slot disabled', () => {
+  const m = createMatch({ a: blank({ kindTrait: 'hateful', cls: 'cestus' }), b: blank(), rng: createRng(1), overtrained: true });
+  assert.equal(m.a.disabled.length, 1);
+  assert.equal(m.preMatch[0].source, 'Overtrained');
+  const calm = createMatch({ a: blank({ kindTrait: 'hateful' }), b: blank(), rng: createRng(1) });
+  assert.equal(calm.a.disabled.length, 0);
 });

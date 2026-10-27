@@ -12,9 +12,11 @@ export const effectiveInjuries = (f) => f.injuries.reduce((s, i) => s + i.weight
 export const hasInjury = (f, tag) => f.injuries.some((i) => i.tag === tag);
 const countInjury = (f, tag) => f.injuries.filter((i) => i.tag === tag).length;
 
-export function makeCombatant(fighter, side) {
+// `arena` is the Boss debuff affecting this fighter (see BOSS_DEBUFFS in data.js).
+export function makeCombatant(fighter, side, arena = null) {
   return {
     side,
+    arena,
     f: structuredClone(fighter),
     disabled: [], // 'kind' | 'class', for the rest of the match (Distracted, Maimed)
     classDisabledRound: null, // Fists disarm
@@ -35,6 +37,9 @@ export const kindActive = (c, trait, round) => c.f.kindTrait === trait && slotAc
 export const classActive = (c, cls, round) => c.f.cls === cls && slotActive(c, 'class', round);
 export const weaponActive = (c, weapon, round) => c.f.cls === 'fighter' && c.f.weapon === weapon && slotActive(c, 'class', round);
 
+// Iron Rules: decor gives no bonus.
+const decorOf = (c, item) => (c.arena === 'ironRules' ? 0 : c.f.decor[item]);
+
 const RANGED_WEAPONS = ['bow', 'gun', 'spear'];
 const meleeOnly = (c) => c.f.cls !== 'sagittarius' && !(c.f.cls === 'fighter' && RANGED_WEAPONS.includes(c.f.weapon));
 
@@ -44,6 +49,7 @@ export function computeSpeed(c, round) {
   if (round === 1 && weaponActive(c, 'spear', round)) mods.push({ source: 'Spear', value: 3 });
   if (c.proneRound === round) mods.push({ source: 'Prone', value: -2 });
   if (c.riposteRound === round) mods.push({ source: 'Riposte', value: 3 });
+  if (c.arena === 'rainyMud') mods.push({ source: 'Rainy Mud', value: -2 });
   return { base: c.f.speed, mods, total: c.f.speed + sum(mods) };
 }
 
@@ -73,11 +79,12 @@ export function computePower(c, opp, round) {
     const n = effectiveInjuries(f);
     if (n) mods.push({ source: 'Masochist', value: n });
   }
-  if (kindActive(c, 'firebug', round) && f.decor.fireBrazier) mods.push({ source: 'Firebug', value: f.decor.fireBrazier });
+  if (kindActive(c, 'firebug', round) && decorOf(c, 'fireBrazier')) mods.push({ source: 'Firebug', value: decorOf(c, 'fireBrazier') });
   if (weaponActive(c, 'bow', round) && round <= 2 && !hasInjury(f, 'blinded') && meleeOnly(opp)) mods.push({ source: 'Bow', value: 1 });
   if (kindActive(c, 'quantumAnalyzer', round) && c.analyzed) mods.push({ source: 'Quantum Analyzer', value: c.analyzed });
   const blinded = countInjury(f, 'blinded');
   if (blinded) mods.push({ source: 'Blinded', value: -2 * blinded });
+  if (c.side === 'B' && c.arena === 'crowdFavorite') mods.push({ source: 'Crowd Favorite', value: 1 });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
 
@@ -91,13 +98,13 @@ export function computePhase2(c, opp, round, volley = {}) {
   const enemy = [];
   const self = [];
   if (classActive(c, 'cestus', round)) {
-    win.push({ source: 'Progressive Overload', value: 5000 * round });
+    win.push({ source: 'Progressive Overload', value: 3000 * round });
     enemy.push({ source: 'Progressive Overload', value: 5000 * round });
   }
   if (classActive(c, 'sagittarius', round) && !blind && volley[c.side]) {
     (volley[c.side] === 'win' ? win : enemy).push({ source: 'First Volley', value: 10000 });
   }
-  if (classActive(c, 'ornitharius', round) && eff >= 1 && f.decor.bird) enemy.push({ source: 'Birds of Prey', value: 5000 * f.decor.bird });
+  if (classActive(c, 'ornitharius', round) && eff >= 1 && decorOf(c, 'bird')) enemy.push({ source: 'Birds of Prey', value: 5000 * decorOf(c, 'bird') });
   if (kindActive(c, 'hateful', round)) enemy.push({ source: 'Hateful', value: 10000 });
   if (kindActive(c, 'perpetualMotion', round) && c.overclockedRound === round) {
     win.push({ source: 'Overclocked', value: 10000 });
@@ -114,8 +121,10 @@ export function computePhase2(c, opp, round, volley = {}) {
   const fleshWounds = countInjury(f, 'fleshWound');
   if (fleshWounds) enemy.push({ source: 'Flesh Wound', value: -10000 * fleshWounds });
   if (hasInjury(f, 'senseless')) self.push({ source: 'Senseless', value: 10000 * eff });
+  if (c.arena === 'bloodMoon') self.push({ source: 'Blood Moon', value: 10000 });
+  const armorWorks = c.arena !== 'noArmor';
   const flail = weaponActive(c, 'flail', round);
-  return { win, enemy, self, piercing: gunActive || flail, ignoresParry: flail };
+  return { win, enemy, self: armorWorks ? self : self.filter((m) => !m.armor), piercing: gunActive || flail, ignoresParry: flail };
 }
 
 // Escalating Injury Table roll with the 2-Injury Death Gate.
@@ -149,7 +158,7 @@ function inflictInjury(m, X, Y, r) {
     return result;
   }
   let weight = sev.injury.weight;
-  if (m.bossDebuff && Y.side === 'A' && !Y.firstInjuryTaken) {
+  if (Y.arena === 'firstInjuryDouble' && !Y.firstInjuryTaken) {
     weight += 1;
     result.doubled = true;
   }
@@ -196,8 +205,18 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
   return check;
 }
 
-export function createMatch({ a, b, rng, bossDebuff = false }) {
-  return { a: makeCombatant(a, 'A'), b: makeCombatant(b, 'B'), rng, bossDebuff, round: 0, rounds: [], over: false, result: null };
+// Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favorite boosts the opponent (B).
+const BOTH_SIDES = ['bloodMoon', 'crowdFavorite'];
+
+export function createMatch({ a, b, rng, debuff = null, overtrained = false }) {
+  const m = {
+    a: makeCombatant(a, 'A', debuff),
+    b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
+    rng, debuff, round: 0, rounds: [], over: false, result: null, preMatch: [],
+  };
+  // Stress: an overtrained fighter starts Distracted (one random slot disabled).
+  if (overtrained) m.preMatch.push({ side: 'A', source: 'Overtrained', disabled: disableRandom(m.a, 1, rng) });
+  return m;
 }
 
 const sideOf = (m, side) => (side === 'A' ? m.a : m.b);
