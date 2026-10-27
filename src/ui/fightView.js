@@ -3,9 +3,13 @@
 import { BOSS_DEBUFFS, GEAR, CONSUMABLES } from '../data.js';
 
 const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
+
+// What this side actually brings to the coming round (everything applied), so the card never misleads.
+const statLine = (stats, side) => `<div class="round-stats" title="Power and Speed in Round ${stats.round}, with gear, Titles, items, injuries, Scouted, Challenger and arena rules applied">Round ${stats.round}: <b>Power ${stats[side].power}</b> · <b>Speed ${stats[side].speed}</b></div>`;
 import { effectiveInjuries, mortalDanger, canThrowTowel } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, fighterCard } from './components.js';
+import { roundStats } from '../explain.js';
 
 function tagPills(r) {
   const pills = [];
@@ -145,6 +149,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}) {
   const animate = Boolean(last) && last.round === ui.animateRound;
   const shook = animate && last.checks.some((c) => c.injury) ? ' shake' : '';
   const debuff = m.debuff ? BOSS_DEBUFFS[m.debuff] : null;
+  const stats = roundStats(m);
   // While the dice roll, hold back the score and the round winner so the result isn't spoiled.
   const hold = (delay) => (animate ? ` late" style="animation-delay:${delay}s` : '');
   return `
@@ -154,7 +159,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}) {
         <div class="score${hold(DICE_TIME + 1.2)}" aria-label="Score"><span class="a">${m.a.roundsWon}</span> – <span class="b">${m.b.roundsWon}</span></div>
       </div>
       <div class="arena${shook}">
-        <div><div class="side-label a">Your gladiator</div>${fighterCard(m.a.f, { combatant: m.a, compact: true })}</div>
+        <div><div class="side-label a">Your gladiator</div>${fighterCard(m.a.f, { combatant: m.a, compact: true })}${statLine(stats, 'A')}</div>
         <div class="center">
           <div class="gauge-labels"><span>They're stronger</span><span>Power Delta ${last ? signed(delta) : '0'}</span><span>You're stronger</span></div>
           <div class="gauge"><div class="needle" style="left:${((delta + 10) / 20) * 100}%"></div></div>
@@ -164,7 +169,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}) {
           <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the math'}</button></div>
           <div class="feed" id="feed">${feed(m, ui)}</div>
         </div>
-        <div><div class="side-label b">Opponent</div>${fighterCard(m.b.f, { combatant: m.b, compact: true, stress: false })}</div>
+        <div><div class="side-label b">Opponent</div>${fighterCard(m.b.f, { combatant: m.b, compact: true, stress: false })}${statLine(stats, 'B')}</div>
       </div>
       ${tutorial}
       <div class="controls${hold(DICE_TIME + 1.4)}">${controls(m, ui, bout, items)}</div>

@@ -12,6 +12,7 @@ import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel,
 } from '../ludus.js';
 import { describeOdds } from '../odds.js';
+import { fighterWarnings, arenaStakes } from '../explain.js';
 import { gearText } from '../codex.js';
 import { esc, button, fighterCard, ICON, BUILDING_ICON } from './components.js';
 
@@ -209,18 +210,11 @@ function oddsRow(run, f, tier, oddsFor) {
   const bout = boutFor(run, tier);
   const odds = describeOdds(oddsFor(f, tier), oracleLevel(run));
   const pct = (p) => (p ? ` <small>${p}</small>` : '');
-  const warn = [];
-  if (f.stress >= STRESS.overtrained) warn.push('Overtrained');
-  if (f.injuries.length) warn.push(`${f.injuries.length} injur${f.injuries.length === 1 ? 'y' : 'ies'}`);
-  if (!bout.top && tier !== GRAND_TIER && isChampionOf(f, tier)) warn.push(`Champion here: a win earns no Prestige or Renown, and costs ${FAVOR.championReturn} Favor and ${-MORALE.crowdJeers} Morale`);
-  else if (!bout.top && f.renown >= ECONOMY.knownRenown && effectivePower(f) - effectivePower(run.arenas[tier].opponent) >= ECONOMY.crushingGap) warn.push(`Crushing mismatch (${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale if they win)`);
-  else if (!bout.top && f.renown < ECONOMY.knownRenown) warn.push('Rookie: the crowd won\'t jeer them here');
-  const scouted = matchOptions(run, f, tier).scouted;
-  if (scouted) warn.push(`Scouted: opponent +${scouted} Power (they've studied ${esc(f.name)}; a month out of the top arena resets it)`);
+  const warn = fighterWarnings(run, f, tier).map((w) => esc(w.text));
   const tone = odds.win === 'Strong favorite' || odds.win === 'Favored' ? 'good' : odds.win === 'Even fight' ? '' : 'bad';
   return `<div class="odds-row">
     <div class="who"><b>${esc(f.name)}</b> ${warn.length ? `<span class="warn">${warn.join(' · ')}</span>` : ''}</div>
-    <div class="o ${tone}" title="Chance to win the match">${odds.win}${pct(odds.winPct)}</div>
+    <div class="o ${tone}" title="Chance to win the whole match (best of 3), not one round">Match: ${odds.win}${pct(odds.winPct)}</div>
     <div class="o" title="Chance of picking up at least one injury">Injury: ${odds.injury}${pct(odds.injuryPct)}</div>
     <div class="o ${odds.death === 'None' || odds.death === 'Low' ? '' : 'bad'}" title="Chance of dying if you never capitulate">Death: ${odds.death}${pct(odds.deathPct)}</div>
     ${run.bouts?.[tier] === 'open' ? button(`Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id, tier }, fightBlocker(run, f.id, tier), 'btn primary small') : ''}
@@ -231,14 +225,13 @@ function arenaBlock(run, tier, oddsFor) {
   const bout = boutFor(run, tier);
   const arena = run.arenas[tier];
   const state = run.bouts?.[tier];
-  const showDebuff = bout.boss || (bout.top && oracleLevel(run) >= 2);
-  const debuff = BOSS_DEBUFFS[arena.debuff];
-  const debuffNote = showDebuff
+  // The Dirt Pits Boss has no arena rule; the Oracle (Lv 2) previews the top Boss's rule early.
+  const ruleId = bout.boss ? bout.debuff : bout.top && oracleLevel(run) >= 2 && tier > 1 ? arena.debuff : null;
+  const debuff = ruleId ? BOSS_DEBUFFS[ruleId] : null;
+  const debuffNote = debuff
     ? `<div class="debuff">☠ ${bout.boss ? 'Boss arena' : 'Oracle foresees the Boss arena'}: <b>${esc(debuff.name)}</b>. ${esc(debuff.desc)}</div>`
-    : '';
-  const stakes = bout.top
-    ? bout.boss ? `Win: ${tier === GRAND_TIER ? 'the career' : `a Title (+1 Power), +${FAVOR.bossWin} Favor and the next arena`}. Loss: ${bossLossFavor(tier)} Favor.` : ''
-    : `Lower arena: winning earns no Favor and Prestige is halved per tier below your top arena. Rookies (under ${ECONOMY.knownRenown} Renown) fight here freely. A <b>known fighter</b> who wins with ${ECONOMY.crushingGap}+ more Power (gear included) is jeered: ${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale, no Renown. A <b>Champion of this arena</b> gets no Prestige or Renown and costs ${FAVOR.championReturn} Favor. Win ${ECONOMY.titleWins} times here (or beat the Boss) to become its Champion.`;
+    : bout.boss && tier === 1 ? '<div class="sub">This first Boss fights without an arena rule.</div>' : '';
+  const stakes = esc(arenaStakes(run, tier));
   const rival = arena.opponent.rival ? '<div class="warn">⚔ A rival returns: this Boss beat you before, and has grown stronger.</div>' : '';
   const rows = state === 'open' || !run.bouts ? run.roster.map((f) => oddsRow(run, f, tier, oddsFor)).join('') : '';
   const choice = bout.top && run.boutPending

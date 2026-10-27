@@ -7,11 +7,15 @@
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
 import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES } from '../src/data.js';
+import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
+import { nextHint } from '../src/hints.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, recruitBlocker, fightBlocker, GRAND_TIER,
+  matchOptions,
+  bossLossFavor,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter } from '../src/calendar.js';
@@ -20,7 +24,12 @@ import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotNa
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText } from '../src/codex.js';
 
-const plain = (html) => html.replace(/<\/p>\s*<p>/g, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/\s*\n\s*/g, '\n').trim();
+// Web-only phrasing ("hover", "on the right", key shortcuts) translated for the text port.
+const textHint = (t) => t
+  .replace(/\s*\(Space\)/g, ' (`end-week`)').replace(/\s*\(T\)/g, ' (`to-tournament`)')
+  .replace(/Odds are on the right\./g, 'Odds are listed under each arena.')
+  .replace(/hover over (them|any trait)[^.]*\./gi, 'use `codex` to read what they do.');
+const plain = (html) => textHint(html.replace(/<\/p>\s*<p>/g, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/\s*\n\s*/g, '\n').trim());
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const injuryName = (tag) => INJURY_BY_TAG[tag].name;
 
@@ -66,11 +75,11 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   function oddsFor(f, tier) {
     const bout = boutFor(run, tier);
     const opp = run.arenas[tier].opponent;
-    const overtrained = f.stress >= STRESS.overtrained;
-    const key = JSON.stringify([f, opp, bout.debuff, overtrained]);
+    const opts = matchOptions(run, f, tier);
+    const key = JSON.stringify([f, opp, opts]);
     if (!oddsCache.has(key)) {
       if (oddsCache.size > 400) oddsCache.clear();
-      oddsCache.set(key, estimateOdds(f, opp, { debuff: bout.debuff, overtrained, n: oddsSamples }));
+      oddsCache.set(key, estimateOdds(f, opp, { ...opts, n: oddsSamples }));
     }
     return oddsCache.get(key);
   }
@@ -131,25 +140,21 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const name = state === 'done' ? `${arenaName(tier)} · settled this week · next month: ${bout.name.split(' · ')[1] ?? bout.name}` : `${bout.name}${state ? ' · OPEN this week' : ''}`;
     const lines = [`${name} · tier ${tier}${bout.top ? ' (your top arena)' : ' (lower arena)'}`];
     lines.push(`     Buy-in ${bout.buyIn} Prestige · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold`);
-    if (bout.top && bout.boss) lines.push(`     Stakes: ${tier === GRAND_TIER ? 'win the career' : `win a Title (+1 Power), +${FAVOR.bossWin} Favor and the next arena`}. Lose: ${FAVOR.bossLoss} Favor.`);
-    if (!bout.top) lines.push('     Lower arena: no Favor at stake, half Prestige per tier below, and the crowd jeers crushing mismatches.');
-    if (bout.boss || (bout.top && oracleLevel(run) >= 2)) {
-      const d = BOSS_DEBUFFS[arena.debuff];
-      lines.push(`     ${bout.boss ? 'Boss arena rule' : 'The Oracle foresees the Boss arena rule'}: ${d.name}. ${d.desc}`);
-    }
+    const stakes = arenaStakes(run, tier);
+    if (stakes) lines.push(`     ${stakes}`);
+    const ruleId = bout.boss ? bout.debuff : bout.top && oracleLevel(run) >= 2 && tier > 1 ? arena.debuff : null;
+    if (ruleId) lines.push(`     ${bout.boss ? 'Boss arena rule' : 'The Oracle foresees the Boss arena rule'}: ${BOSS_DEBUFFS[ruleId].name}. ${BOSS_DEBUFFS[ruleId].desc}`);
+    else if (bout.boss && tier === 1) lines.push('     This first Boss fights without an arena rule.');
     lines.push(opponentBlock(arena.opponent));
     if (state === 'done' || quiet || run.status !== 'active') return lines.join('\n');
     for (const f of run.roster) {
       const o = describeOdds(oddsFor(f, tier), oracleLevel(run));
       const pct = (p) => (p ? ` ${p}` : '');
-      const warn = [];
-      if (f.stress >= STRESS.overtrained) warn.push('overtrained');
-      if (f.injuries.length) warn.push(plural(f.injuries.length, 'injury').replace('injurys', 'injuries'));
-      if (!bout.top && f.power - arena.opponent.power >= ECONOMY.crushingGap) warn.push('crushing mismatch: the crowd will jeer');
+      const warn = fighterWarnings(run, f, tier).map((w) => w.text);
       const blocker = state === 'open' ? fightBlocker(run, f.id, tier) : null;
-      lines.push(`     ${f.name} [${f.id}]: ${o.win}${pct(o.winPct)} · Injury ${o.injury}${pct(o.injuryPct)} · Death ${o.death}${pct(o.deathPct)}${warn.length ? ` · ${warn.join(', ')}` : ''}${blocker ? ` · can't fight: ${blocker}` : ''}`);
+      lines.push(`     ${f.name} [${f.id}]: match ${o.win}${pct(o.winPct)} · Injury ${o.injury}${pct(o.injuryPct)} · Death ${o.death}${pct(o.deathPct)}${warn.length ? ` · ${warn.join(', ')}` : ''}${blocker ? ` · can't fight: ${blocker}` : ''}`);
     }
-    if (bout.top && run.boutPending) lines.push(`     ${bout.boss ? `Bosses can't be skipped: fight or \`forfeit\` (${FAVOR.forfeit} Favor).` : `Or \`skip\` (+${ECONOMY.skipGold} Gold, the roster rests).`}`);
+    if (bout.top && run.boutPending) lines.push(`     ${bout.boss ? `Bosses can't be skipped: fight or \`forfeit\` (${bossLossFavor(tier) + FAVOR.forfeitExtra} Favor).` : `Or \`skip\` (+${ECONOMY.skipGold} Gold, the roster rests).`}`);
     return lines.join('\n');
   }
 
@@ -183,6 +188,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     out.push(unlockedTiers(run).sort((a, b) => b - a).map(arenaBlock).join('\n'));
     if (!oracleLevel(run)) out.push('(Build an Oracle to see exact percentages.)');
     out.push(`\nMarket: ${run.market.length} fighters at ${marketPrice(run)} Gold${run.liaisonOffer ? ', plus a Liaison offer' : ''} · Estate: ${run.buildings.length}/${plotCount(run)} plots · Storeroom: ${run.inventory.gear.length} gear`);
+    const hint = nextHint(run);
+    if (hint) out.push(`\nNext: ${textHint(hint.text)}`);
     const card = tutorialCard();
     if (card) out.push(`\n${card}`);
     out.push(`\n-- House log --\n${run.log.slice(-8).map((l) => `  ${l.text}`).join('\n')}`);
@@ -202,9 +209,11 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const offer = run.liaisonOffer;
     out.push(offer
       ? `\nLiaison (${offer.origin}, ${offer.price} Gold): [${offer.id}] ${identity(offer)} · Power ${offer.power} · Speed ${offer.speed} · Stress ${offer.stress} · Morale ${offer.morale} · Injuries: ${injuriesText(offer)}\n     ${abilities(offer)}`
-      : '\nLiaison: build one (Prestige level 2) for a cheap monthly prisoner.');
+      : maxLevel(run, 'liaison') ? '\nLiaison: no prisoner on offer this month.' : `\nLiaison: build one${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for a cheap monthly prisoner.`);
     out.push('\nDecor merchant:');
     for (const [k, d] of Object.entries(DECOR)) out.push(`  ${k} · ${d.name} · ${d.price} Gold (${run.inventory.decor[k]} in storeroom): ${d.effect}`);
+    out.push('\nApothecary (single-use fight items, `buy-item <item>`; use one between rounds with `use <item>`):');
+    for (const [k, c] of Object.entries(CONSUMABLES)) out.push(`  ${k} · ${c.name} · ${c.price} Gold (${run.inventory.items?.[k] ?? 0} in storeroom): ${c.desc}`);
     out.push('\nArmourer:');
     if (!maxLevel(run, 'armourer')) out.push('  Build an Armourer (Prestige level 2) to buy weapons and armor. Beaten opponents sometimes drop theirs; Bosses always do.');
     else if (!run.armourerStock.length) out.push('  Sold out until next month.');
@@ -271,12 +280,17 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   function fightStatus() {
     const bout = boutFor(run, run.matchInfo.tier);
     const lines = [`-- ${bout.name} · ${match.a.f.name} vs ${match.b.f.name} · score ${match.a.roundsWon}–${match.b.roundsWon} (first to two) --`];
-    for (const [label, c] of [['You', match.a], ['Them', match.b]]) {
+    const stats = roundStats(match);
+    for (const [label, c, side] of [['You', match.a, 'A'], ['Them', match.b, 'B']]) {
       const off = c.disabled.length ? ` · lost for this match: ${c.disabled.map((s) => slotName(c.f, s)).join(', ')}` : '';
-      lines.push(`  ${label}: ${c.f.name} · Power ${c.f.power} · Speed ${c.f.speed} · Injuries: ${injuriesText(c.f)}${off}`);
+      lines.push(`  ${label}: ${c.f.name} · Round ${stats.round}: Power ${stats[side].power} · Speed ${stats[side].speed} (everything applied) · Injuries: ${injuriesText(c.f)}${off}`);
     }
     if (match.debuff) lines.push(`  Arena rule: ${BOSS_DEBUFFS[match.debuff].name}. ${BOSS_DEBUFFS[match.debuff].desc}`);
     if (mortalDanger(match.a)) lines.push(`  MORTAL DANGER: ${match.a.f.name} has ${effectiveInjuries(match.a.f)} injuries and can die if they lose the next round.`);
+    const owned = Object.entries(run.inventory.items ?? {}).filter(([, n]) => n > 0);
+    if (match.round > 0 && !match.over) {
+      lines.push(match.itemUsed ? `  Item used this fight: ${CONSUMABLES[match.itemUsed].name}.` : owned.length ? `  Items (one per fight, \`use <item>\`): ${owned.map(([k, n]) => `${k} ×${n} (${CONSUMABLES[k].desc})`).join('; ')}` : '  No fight items (the Apothecary in the `market` sells them).');
+    }
     lines.push(match.round === 0 ? '  `next` to begin Round 1.' : `  \`next\` to fight Round ${match.round + 1}${canThrowTowel(match) ? `, or \`capitulate\` (lose the match and ${bout.buyIn} Prestige buy-in; your fighter survives)` : ''}.`);
     const tip = fightTutorial();
     if (tip) lines.push(tip);

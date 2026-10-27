@@ -329,8 +329,11 @@ export function jobBlocker(run, id, job) {
   if (!JOBS.includes(job)) return 'Unknown job.';
   if (f.job === job) return null; // keeping the current job is always allowed
   if (isTraining(job)) {
-    const busy = run.roster.filter((x) => x.id !== id && isTraining(x.job)).length;
-    if (busy >= trainerRooms(run)) return `All ${trainerRooms(run)} Trainer Room${trainerRooms(run) > 1 ? 's are' : ' is'} busy.`;
+    const busy = run.roster.filter((x) => x.id !== id && isTraining(x.job));
+    if (busy.length >= trainerRooms(run)) {
+      const who = busy.map((x) => x.name).join(' and ');
+      return `${who} ${busy.length > 1 ? 'are' : 'is'} training (${trainerRooms(run)} Trainer Room${trainerRooms(run) > 1 ? 's' : ''}). Set ${busy.length > 1 ? 'one of them' : 'them'} to Rest, or build another Trainer Room.`;
+    }
     const cannot = trainBlocker(run, f);
     if (cannot) return cannot;
   }

@@ -151,7 +151,7 @@ test('one Trainer Room trains one fighter at a time', () => {
   const run = createRun(1);
   const [a, b] = [recruit(run, run.market[0].id), recruit(run, run.market[0].id)];
   setJob(run, a.id, 'trainPower');
-  assert.match(jobBlocker(run, b.id, 'trainPower'), /busy/);
+  assert.match(jobBlocker(run, b.id, 'trainPower'), /is training/);
 });
 
 test('training without Gold falls back to rest', () => {
@@ -1048,4 +1048,12 @@ test('Challengers only appear in your top arena, and never in the first two tier
   run.topTier = 2;
   run.arenas[2] = { ...run.arenas[1], tier: 2 };
   assert.equal(matchOptions(run, f, 1).challenger, 0);
+});
+
+test('a busy Trainer Room says who is using it and what to do', () => {
+  const run = createRun(1);
+  const [a, b] = [recruit(run, run.market[0].id), recruit(run, run.market[0].id)];
+  setJob(run, a.id, 'trainPower');
+  assert.match(jobBlocker(run, b.id, 'trainPower'), new RegExp(`${a.name} is training`));
+  assert.match(jobBlocker(run, b.id, 'trainPower'), /Rest|another Trainer Room/);
 });

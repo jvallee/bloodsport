@@ -160,6 +160,9 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Champions in lower arenas:** a Champion who fights back in a lower arena gets no Prestige and no Renown for a win, loses 10 Morale, and costs 3 Favor ("a champion picking on newcomers").
 - **Rookies:** fighters under 5 Renown are never jeered for mismatches; only known fighters (5+ Renown) crushing a weak opponent by 3+ Power are.
 - **Injuries go both ways every round:** whoever wins the round, both fighters roll to injure. The round loser is much easier to hurt (25% vs 10% at even Power).
+- **Gentle start, tough finish:** the Dirt Pits Boss fights without an arena rule, and Tier 1 opponents are 6 / 6 / 7.
+- **Challengers:** from the Silver Coliseum on, top-arena opponents gain +1 Power per 30 Renown of the fighter they face (max +2). Famous stars draw tougher opponents. Shown on the odds and in the fight.
+- **Fights show real numbers:** each fight card shows the Power and Speed that side brings to the coming round, with everything applied (gear, Titles, items, injuries, Scouted, Challenger, arena rules). Odds labels say "Match:" because they're for the whole best-of-3, not one round.
 - **Training never fails silently:** training can't be chosen when it can't happen (trainer cap reached, Restless, Stress 50+, or Gold short for every trainee's fee), and the button says why. If it can't happen anyway when the week ends, it counts as a Rest week (−40 Stress); a fighter who becomes unable to train switches to Rest at the end of the week. Either way the card shows "Switched to Rest: …".
 - **Calming decor:** each Bird or Fire Brazier in a fighter's quarters gives −5 Stress a week (Trophy Racks are Morale only).
 - **Fight items** (Apothecary, in the Market): War Paint (+1 Power next round, 10 Gold), Adrenaline Draught (+3 Speed next round, +15 Stress after, 8), Blessed Bandage (−10% to be injured next round, not armor, 10), Crowd Bribe (no Favor or Renown lost for capitulating this fight; a Boss loss still counts, 12). Used between rounds after Round 1, one per fight.
@@ -197,7 +200,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 ### Opponents
 - Opponents get one combat perk per tier above 1 (+1 for Bosses), a weapon from Tier 2, armor from Tier 3, and tier-2 gear in Tier 4.
 - **Opponent Power** (T1 / T2 / Boss by tier):
-  - Tier 1: 6 / 7 / 8
+  - Tier 1: 6 / 6 / 7 (the first Boss also has no arena rule)
   - Tier 2: 9 / 10 / 11
   - Tier 3: 13 / 14 / 15
   - Tier 4: 19 / 20 / 21

@@ -194,3 +194,11 @@ Known gaps:
 - **"More fun" passes, after the numbers pass:** e.g. "make tournament weeks more dramatic; don't change the balance numbers."
 - **Keep it static:** plain HTML/JS on GitHub Pages, `localStorage` only, versioned saves (career v3; Codex stored separately).
 - **Optional flavor:** procedurally generated music that intensifies during fights; art for Codex lore entries.
+
+## Difficulty-curve gates (added 2026-10-27, after LLM playtest #2)
+
+Both LLM playtests found Year 1 the hardest part and the finale easy. Two gates now encode the intended curve (`npm run check`):
+- **Gentle start:** the careful bot wins the first Boss at least 55% of the time (now **59%**).
+- **Tough finish:** the Grand Tournament is at least 10 points harder than the first Boss (now **+22**).
+
+Values chosen with `npm run sweep -- --curve`: first-Boss Power 7 with no arena rule, and Challengers at +1 opponent Power per 30 Renown from Tier 3 (max +2). Steeper Challenger settings (+1 per 5–20 Renown) cut careful wins to 7–23%. The bot doesn't snowball as hard as a thoughtful player, so the Challenger threshold is aimed at genuinely famous stars.

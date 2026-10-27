@@ -48,3 +48,14 @@ test('fight steps follow the match: start → towel → danger → over', () => 
 test('step text has no template leftovers', () => {
   for (const s of [...INTRO, ...STEPS, ...FIGHT_STEPS]) assert.doesNotMatch(s.body + (s.title ?? ''), /undefined|NaN|\$\{/);
 });
+
+test('the tutorial explains the trainer cap the first time a fighter reaches it', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  f.trained = 3;
+  const done = STEPS.map((s) => s.id).filter((id) => id !== 'trainerCap');
+  const step = nextStep(STEPS, done, run);
+  assert.equal(step?.id, 'trainerCap');
+  assert.match(step.body, /Trainer Room/);
+  assert.match(step.body, /Gold/);
+});

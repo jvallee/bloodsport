@@ -17,7 +17,7 @@ test('a scripted text career prints cleanly: intro, shops, jobs, a fight, the Co
   const outputs = script.map((line) => s.exec(line));
   for (const out of outputs) clean(out);
   assert.match(outputs[1], /joins the Ludus/);
-  assert.match(outputs[5], /All 1 Trainer Room is busy/, 'a failed command prints the blocker');
+  assert.match(outputs[5], /is training \(1 Trainer Room\)/, 'a failed command prints the blocker');
   assert.match(outputs[18], /Unknown command/);
   assert.match(outputs[20], /Fight day/);
   assert.match(outputs[21], /walks into/);
