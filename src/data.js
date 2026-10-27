@@ -167,6 +167,17 @@ export const HEAL_WEEKS = { distracted: 1, fleshWound: 1, concussed: 2, poisoned
 export const MONTHS = ['Martius', 'Aprilis', 'Maius', 'Iunius', 'Quintilis', 'Sextilis', 'September', 'October', 'November', 'December'];
 export const CALENDAR = { weeksPerMonth: 4, winterWeeks: 4 };
 
+// Gods' Days (roadmap v3, phase B2): festivals on some months' tournament week. Each favours a style or pays out more.
+export const FESTIVALS = {
+  Maius: { id: 'floralia', name: 'Floralia', god: 'Flora', desc: 'Flowers, wine and a generous crowd: wins pay +50% Gold.', gold: 1.5 },
+  Quintilis: { id: 'apollo', name: 'Ludi Apollinares', god: 'Apollo', desc: 'Games for the archer god: ranged fighters (Sagittarius, or a Bow, Gun or Spear) get +1 Power.', ranged: 1 },
+  September: { id: 'romani', name: 'Ludi Romani', god: 'Jupiter', desc: 'The great games of Rome: wins pay +50% Prestige.', prestige: 1.5 },
+  October: { id: 'mars', name: 'Armilustrium', god: 'Mars', desc: 'The god of war loves aggression: fighters who Press get +5% win chance, and every win earns +1 Renown.', tactic: { press: 5000 }, renown: 1 },
+  November: { id: 'plebeii', name: 'Ludi Plebeii', god: 'Fortuna', desc: "The people's games, blessed by Fortuna: an upset win pays double Gold and double Favor.", upset: 2 },
+  December: { id: 'saturnalia', name: 'Saturnalia', god: 'Saturn', desc: 'The world turned upside down: no buy-ins this tournament week.', freeEntry: true },
+};
+export const FESTIVAL_BY_ID = Object.fromEntries(Object.values(FESTIVALS).map((f) => [f.id, f]));
+
 export const STAGES = ['Tournament 1', 'Tournament 2', 'Boss Tournament'];
 
 // One circuit per tier: Tournament 1 → Tournament 2 → Boss. Arrays are per stage.

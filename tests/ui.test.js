@@ -220,3 +220,15 @@ test('a pending event shows as a card with its choices; a costly one says why it
   assert.match(html, /data-action="event-choice" data-index="1"/);
   assert.equal(eventCard({ ...run, event: null }), '');
 });
+
+test('the week panel names the coming Gods\' Day, and a festival tournament shows its banner', () => {
+  const run = createRun(1);
+  recruit(run, run.market[0].id);
+  run.week = 8; // Maius, week 1: Floralia in 3 weeks
+  assert.match(ludusTab(run, fakeOdds), /In <b>3<\/b> weeks: <b>Floralia<\/b> \(Flora\)/);
+  run.week = 11;
+  run.bouts = { 1: 'open' };
+  run.boutPending = true;
+  assert.match(ludusTab(run, fakeOdds), /<b>This tournament week<\/b>: <b>Floralia<\/b>/);
+  assert.match(ludusTab(run, fakeOdds), /class="festival now">🏛 <b>Floralia<\/b>: wins pay|class="festival now">🏛 <b>Floralia<\/b>:/);
+});

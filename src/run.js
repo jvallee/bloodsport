@@ -6,12 +6,12 @@
 import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
-  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS,
+  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks } from './fight.js';
 import { Refused } from './errors.js';
 import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, choiceLabel } from './events.js';
-import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR } from './calendar.js';
+import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
   maxLevel, effectAt, build,
@@ -85,14 +85,18 @@ export function boutFor(run, tier = run.topTier) {
   }
   const c = CIRCUITS[tier - 1];
   const s = arena.stage;
+  // This tournament week's festival (or the coming one's, for previews).
+  const fest = festivalOn(run.week + weeksUntilTournament(run.week));
   // The Dirt Pits never turn a house away: one that can't afford the buy-in pays what Prestige it has (even 0),
   // so a career can always win its way back.
   const pauper = tier === 1 && run.prestige < c.buyIn[s];
   return {
     tier, top, below,
     name: `${c.name} · ${STAGES[s]}`, stage: s, boss: s === 2,
-    buyIn: pauper ? Math.max(0, run.prestige) : c.buyIn[s], fullBuyIn: c.buyIn[s], pauper, winGold: c.winGold[s],
-    winPrestige: Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below),
+    buyIn: fest?.freeEntry ? 0 : pauper ? Math.max(0, run.prestige) : c.buyIn[s], fullBuyIn: c.buyIn[s], pauper: pauper && !fest?.freeEntry,
+    winGold: Math.round(c.winGold[s] * (fest?.gold ?? 1)),
+    winPrestige: Math.round(Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below) * (fest?.prestige ?? 1)),
+    festival: fest?.id ?? null,
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
     lossGold: c.lossGold, oppPower: c.oppPower[s], oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
     conquered: arena.conquered,
@@ -148,6 +152,7 @@ function restartCircuit(run, tier) {
 export function matchOptions(run, f, tier = run.topTier) {
   return {
     debuff: boutFor(run, tier).debuff,
+    festival: boutFor(run, tier).festival,
     overtrained: f.stress >= STRESS.overtrained,
     scouted: tier === run.topTier ? Math.min(ECONOMY.scoutedMax, f.topStreak ?? 0) : 0,
     challenger: tier === run.topTier && tier >= ECONOMY.challengerFromTier ? Math.min(ECONOMY.challengerMax, Math.floor((f.renown ?? 0) / ECONOMY.challengerRenown)) : 0,
@@ -953,11 +958,13 @@ export function finishMatch(run, match) {
   const favorBefore = run.favor;
 
   if (won) {
+    const fest = bout.festival ? FESTIVAL_BY_ID[bout.festival] : null;
     summary.gold = bout.winGold + Math.floor(fighter.renown / RENOWN.goldPer);
+    if (upset && fest?.upset) summary.gold *= fest.upset;
     summary.prestige += bout.buyIn + (champion ? 0 : bout.winPrestige);
     if (!crushing && !champion) {
       summary.renown = RENOWN.win + (bout.boss ? RENOWN.bossWin : 0) + (upset ? RENOWN.upset : 0) + (fighter.perks.includes('crowdPleaser') ? 1 : 0)
-        + (fighter.decor.warBanner ?? 0) * DECOR.warBanner.renown + (bloodied ? BLOODIED.renown : 0);
+        + (fighter.decor.warBanner ?? 0) * DECOR.warBanner.renown + (bloodied ? BLOODIED.renown : 0) + (fest?.renown ?? 0);
     }
     if (bloodied) bumpMorale(fighter, BLOODIED.morale);
     // Kill tally and marks.
@@ -980,7 +987,7 @@ export function finishMatch(run, match) {
       changeFavor(run, FAVOR.crushingWin, 'a crushing win in a lower arena');
     }
     if (bout.top && bout.boss) changeFavor(run, FAVOR.bossWin, `beat ${bout.name}`);
-    if (upset) changeFavor(run, FAVOR.upsetWin, 'an upset');
+    if (upset) changeFavor(run, FAVOR.upsetWin * (fest?.upset ?? 1), fest?.upset ? `an upset at the ${fest.name}` : 'an upset');
     if (bloodied) changeFavor(run, FAVOR.spectacleWin, 'a Bloodied Victory (won with 2+ injuries)');
     // Loot: claim the loser's gear.
     const drops = [opp.gear.weapon, opp.gear.armor].filter(Boolean);

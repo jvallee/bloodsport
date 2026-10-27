@@ -1,7 +1,7 @@
 // Roman calendar in weeks: 10 months × 4 weeks, then a 4-week Winter Dead Season (44 weeks a year).
 // The last week of every month is a tournament week. Pure.
 
-import { MONTHS, CALENDAR } from './data.js';
+import { MONTHS, CALENDAR, FESTIVALS } from './data.js';
 
 const ACTIVE_WEEKS = MONTHS.length * CALENDAR.weeksPerMonth;
 export const WEEKS_PER_YEAR = ACTIVE_WEEKS + CALENDAR.winterWeeks;
@@ -34,3 +34,12 @@ export const formatDate = (week) => {
   const d = dateOf(week);
   return d.winter ? `Winter, week ${d.weekOfMonth} · Year ${d.year}` : `${d.month}, week ${d.weekOfMonth} · Year ${d.year}`;
 };
+
+// The festival held this week, if any (festivals fall on their month's tournament week).
+export const festivalOn = (week) => (isTournamentWeek(week) ? FESTIVALS[dateOf(week).month] ?? null : null);
+
+// The next festival from this week on: { festival, weeks } (weeks = 0 if it's this week).
+export function nextFestival(week) {
+  for (let n = 0; n <= 44; n++) if (festivalOn(week + n)) return { festival: festivalOn(week + n), weeks: n };
+  return null;
+}

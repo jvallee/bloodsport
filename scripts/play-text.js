@@ -19,7 +19,7 @@ import {
   bossLossFavor,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo } from '../src/ludus.js';
-import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter } from '../src/calendar.js';
+import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival } from '../src/calendar.js';
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
@@ -165,6 +165,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const next = PRESTIGE_LEVELS[run.prestigeLevel];
     const due = tributeDue(run);
     const toTribute = weeksUntilWinter(run.week);
+    const fest = nextFestival(run.week);
+    const festival = fest ? `Next Gods' Day: ${fest.festival.name} (${fest.festival.god}) ${fest.weeks ? `in ${plural(fest.weeks, 'week')}` : 'THIS tournament week'}: ${fest.festival.desc}` : '';
     const tribute = tributePaid(run) ? 'Tribute paid for this year' : toTribute > 0 ? `Tribute ${due} Gold due at the start of winter (in ${plural(toTribute, 'week')})${toTribute <= 4 && run.gold < due ? ` · SHORT by ${due - run.gold}: unpaid tribute takes all your Gold and ${-FAVOR.unpaidTribute} Favor` : ''} (\`pay-tribute\` to pay early)` : 'Tribute collected for this year';
     const when = run.boutPending ? 'TOURNAMENT WEEK: settle your top arena before ending the week.'
       : run.bouts ? 'Your top arena is settled. Send fighters to other open arenas, or end the week.'
@@ -173,6 +175,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       `=== ${formatDate(run.week)} ===`,
       `Gold ${run.gold} · Prestige ${run.prestige} (House level ${run.prestigeLevel}${next ? `, level ${next.level} at ${next.at}` : ''}) · Imperial Favor ${run.favor}/${FAVOR.max}${run.favor <= FAVOR.warning ? ' (DANGER)' : ''}`,
       tribute,
+      festival,
       when,
     ].join('\n');
   }

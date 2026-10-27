@@ -1,7 +1,7 @@
 // The Codex: an unlockable glossary that persists across careers. Pure.
 // Rules entries unlock the first time you see something; lore unlocks when you defeat it.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE, FAVOR, BLOODIED, KILL_MARKS, TACTICS, HUMORS } from './data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE, FAVOR, BLOODIED, KILL_MARKS, TACTICS, HUMORS, FESTIVALS } from './data.js';
 import { oracleLevel } from './ludus.js';
 import { boutFor, unlockedTiers } from './run.js';
 
@@ -47,6 +47,7 @@ const BASICS = [
   ['tactics', 'Tactics', `Before each round you pick a tactic. ${Object.values(TACTICS).map((t) => `${t.name}: ${t.desc}`).join(' ')} Press beats Feint, Feint beats Guard, Guard beats Press: the side that reads the other gets +10% to win the round. Opponents choose by their humor.`],
   ['humors', 'The Four Humors', `Every fighter has a temperament that shapes how they fight round by round, and which tactic they lean towards. ${Object.values(HUMORS).map((h) => `${h.name}: ${h.desc}`).join(' ')}`],
   ['events', 'Weekly events', 'About one week in three, something happens in or around the Ludus: a brawl, a senator\'s offer, a fever, a wandering trainer. Each card offers a choice with visible stakes; some are a gamble. The week can\'t end until you decide.'],
+  ['festivals', "Gods' Days", `Some months end in a festival tournament that favours a style or pays out more. ${Object.entries(FESTIVALS).map(([month, f]) => `${f.name} (${f.god}, end of ${month}): ${f.desc}`).join(' ')}`],
   ['towel', 'Capitulating', 'Between rounds you can forfeit the match. You lose the buy-in and the match, but your fighter is guaranteed to survive.'],
   ['stress', 'Stress', `Training (+${STRESS.train}) and fighting (+${STRESS.fight}) raise it; rest (${STRESS.rest}) lowers it. At ${STRESS.overtrained}+ a fighter is overtrained: no training, and −1 Power with one ability lost in the arena.`],
   ['armor', 'Armor', 'Alloyed Skin and Ego Armour lower your chance to be injured. Gun (rounds 1 and 3) and Flail ignore armor, but not Speed evasion.'],

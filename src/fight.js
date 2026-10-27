@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER_WIN, HUMORS } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER_WIN, HUMORS, FESTIVAL_BY_ID } from './data.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -134,6 +134,7 @@ export function computePower(c, opp, round, raw = false) {
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
   if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
   if (humorOf(c)?.power?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).power[round] });
+  if (c.festival?.ranged && !meleeOnly(c)) mods.push({ source: c.festival.name, value: c.festival.ranged });
   if (!raw && kindActive(c, 'underdog', round) && computePower(opp, c, round, true).total >= f.power + sum(mods)) mods.push({ source: 'Underdog', value: 2 });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
@@ -196,6 +197,7 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (t?.injure) enemy.push({ source: t.name, value: t.injure });
   if (t?.self) self.push({ source: t.name, value: t.self });
   if (c.stance && COUNTERS[c.stance] === opp.stance) win.push({ source: `Counter (${t.name} beats ${TACTICS[opp.stance].name})`, value: COUNTER_WIN });
+  if (c.festival?.tactic?.[c.stance]) win.push({ source: c.festival.name, value: c.festival.tactic[c.stance] });
   const h = humorOf(c);
   if (h?.win?.[round]) win.push({ source: h.name, value: h.win[round] });
   if (h?.self) self.push({ source: h.name, value: h.self });
@@ -290,12 +292,17 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
 // Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favorite boosts the opponent (B).
 const BOTH_SIDES = ['bloodMoon', 'crowdFavorite'];
 
-export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0 }) {
+export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null }) {
   const m = {
     a: makeCombatant(a, 'A', debuff),
     b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
     rng, debuff, round: 0, rounds: [], over: false, result: null, preMatch: [],
   };
+  // A Gods' Day favours a style, for both fighters.
+  if (festival) {
+    m.festival = festival;
+    m.a.festival = m.b.festival = FESTIVAL_BY_ID[festival];
+  }
   // Scouted: opponents who have studied your fighter fight them with extra Power.
   if (scouted) m.b.scouted = scouted;
   // Challenger: famous fighters draw tougher opponents in your top arena.

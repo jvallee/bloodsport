@@ -432,3 +432,7 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .event-card p { margin: 0 0 10px; }
 .event-choices { flex-wrap: wrap; gap: 8px; }
 @media (max-width: 600px) { .event-card { flex-direction: column; } .event-card .event-faces { flex-direction: row; } }
+
+/* Gods' Days (phase B2) */
+.festival { font-size: 13px; color: var(--muted); margin: 6px 0; }
+.festival.now { color: var(--gold); border: 1px solid var(--gold); border-radius: 8px; padding: 6px 10px; background: rgba(217, 180, 90, 0.08); }

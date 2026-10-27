@@ -1,7 +1,7 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES } from '../data.js';
-import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter } from '../calendar.js';
+import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID } from '../data.js';
+import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
@@ -57,6 +57,15 @@ export function topbar(run, tab, codexNew = 0) {
       <button class="btn small" data-action="new-run">New career</button>
     </header>
     <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
+}
+
+// The coming Gods' Day: what it favours, so you can plan for it.
+function festivalNote(run) {
+  const next = nextFestival(run.week);
+  if (!next) return '';
+  const f = next.festival;
+  const when = next.weeks === 0 ? '<b>This tournament week</b>' : `In <b>${next.weeks}</b> week${next.weeks === 1 ? '' : 's'}`;
+  return `<div class="festival${next.weeks === 0 ? ' now' : ''}">🏛 ${when}: <b>${esc(f.name)}</b> (${esc(f.god)}). ${esc(f.desc)}</div>`;
 }
 
 // Always-visible countdown to the Emperor's tribute.
@@ -155,6 +164,7 @@ function weekPanel(run) {
     <section class="panel week">
       <h2>${formatDate(run.week)}</h2>
       ${status}
+      ${festivalNote(run)}
       ${tribute}
       <div class="row">
         ${button('End week', 'advance', {}, blocked, 'btn primary')}
@@ -262,6 +272,7 @@ function arenaBlock(run, tier, oddsFor) {
   const buyIn = bout.pauper ? `Buy-in ${bout.buyIn} Prestige <i>(normally ${bout.fullBuyIn}: the Dirt Pits take whatever Prestige you have)</i>` : `Buy-in ${bout.buyIn} Prestige`;
   const body = `<p class="sub"><b>${esc(bout.name)}</b> · ${buyIn} · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
       ${stakes ? `<p class="sub">${stakes}</p>` : ''}${rival}${debuffNote}
+      ${bout.festival ? `<div class="festival now">🏛 <b>${esc(FESTIVAL_BY_ID[bout.festival].name)}</b>: ${esc(FESTIVAL_BY_ID[bout.festival].desc)}</div>` : ''}
       ${fighterCard(arena.opponent, { compact: true, stress: false, tag: 'Opponent' })}
       ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
       ${choice}`;

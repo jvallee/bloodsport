@@ -1,6 +1,6 @@
 // The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
 
-import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS } from '../data.js';
+import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS, FESTIVAL_BY_ID } from '../data.js';
 
 const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 
@@ -176,7 +176,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}) {
   return `
     <div class="fight">
       <div class="fight-head">
-        <div><h2>${esc(bout.name)}</h2>${debuff ? `<div class="debuff" title="${esc(debuff.desc)}">☠ ${esc(debuff.name)}: ${esc(debuff.desc)}</div>` : ''}</div>
+        <div><h2>${esc(bout.name)}</h2>${debuff ? `<div class="debuff" title="${esc(debuff.desc)}">☠ ${esc(debuff.name)}: ${esc(debuff.desc)}</div>` : ''}${m.festival ? `<div class="festival now">🏛 ${esc(FESTIVAL_BY_ID[m.festival].name)}: ${esc(FESTIVAL_BY_ID[m.festival].desc)}</div>` : ''}</div>
         <div class="score${hold(DICE_TIME + 1.2)}" aria-label="Score"><span class="a">${m.a.roundsWon}</span> – <span class="b">${m.b.roundsWon}</span></div>
       </div>
       <div class="arena${shook}">
