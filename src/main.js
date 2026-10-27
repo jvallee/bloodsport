@@ -8,13 +8,16 @@ import {
 } from './run.js';
 import { build, upgrade } from './ludus.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tipBanner, ludusTab, estateTab, marketTab, helpModal } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal } from './ui/views.js';
+import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
+import { INTRO, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
 import { fightView } from './ui/fightView.js';
 
 const app = document.getElementById('app');
 const fightEl = document.getElementById('fight');
 const SAVE_KEY = 'bloodsport.career';
 const PREFS_KEY = 'bloodsport.prefs';
+const CODEX_KEY = 'bloodsport.codex';
 
 let run = null;
 let match = null;
@@ -23,7 +26,10 @@ let tab = 'ludus';
 let showHelp = false;
 let autoTimer = null;
 const ui = { animateRound: 0, showMath: false, auto: false };
-let prefs = { tips: [], showMath: false };
+let prefs = { tutorial: [], showMath: false, introSeen: false };
+let codex = loadCodex(null);
+let codexShownNew = []; // entries highlighted as new while the Codex tab is open
+let introPage = null; // index into INTRO while the intro is showing
 
 // ---------- Storage (every access guarded: private mode or blocked storage must not break the game) ----------
 
@@ -38,8 +44,11 @@ const storage = {
 
 function loadPrefs() {
   try { prefs = { ...prefs, ...JSON.parse(storage.get(PREFS_KEY) ?? '{}') }; } catch { /* keep defaults */ }
+  if (!Array.isArray(prefs.tutorial)) prefs.tutorial = [];
   ui.showMath = prefs.showMath;
+  codex = loadCodex(storage.get(CODEX_KEY));
 }
+const saveCodex = () => storage.set(CODEX_KEY, JSON.stringify(codex));
 const savePrefs = () => storage.set(PREFS_KEY, JSON.stringify(prefs));
 const save = () => run && storage.set(SAVE_KEY, serialize(run));
 
@@ -56,26 +65,22 @@ function oddsFor(f) {
   return oddsCache.get(key);
 }
 
-// ---------- Coach tips: one at a time, shown once ----------
+// ---------- Tutorial ----------
 
-const TIPS = [
-  { id: 'recruit', when: (r) => !r.roster.length, text: 'Welcome, Lanista. Start by recruiting two gladiators in the <b>Market</b> tab. Hover over any trait to see what it does.' },
-  { id: 'jobs', when: (r) => r.roster.length > 0 && !r.boutPending && r.week < 3, text: 'Give each fighter a <b>weekly job</b>, then press <b>End week</b>. Training raises a stat but adds Stress. Rest them the week before a fight.' },
-  { id: 'bout', when: (r) => r.boutPending, text: '<b>Fight day!</b> Check each fighter\'s odds, then send one. Tournaments 1 and 2 can be skipped; Bosses can\'t.' },
-  { id: 'injury', when: (r) => r.roster.some((f) => f.injuries.length), text: 'Injuries stay until healed. Put the fighter in the <b>Medbay</b> job. Two injuries open the <b>Death Gate</b>.' },
-  { id: 'stress', when: (r) => r.roster.some((f) => f.stress >= STRESS.overtrained), text: 'A fighter is <b>overtrained</b> (Stress 50+): they can\'t train, and they\'d fight at −1 Power with an ability lost. Let them Rest.' },
-  { id: 'estate', when: (r) => r.prestigeLevel >= 2, text: 'Your house grew! New <b>plots</b> and buildings are open in the <b>Estate</b> tab.' },
-];
-const currentTip = () => (run.status === 'active' ? TIPS.find((t) => !prefs.tips.includes(t.id) && t.when(run)) : null);
+const tutorialStep = () => (run.status === 'active' && introPage === null ? nextStep(STEPS, prefs.tutorial, run) : null);
+const fightTutorial = () => (match ? nextStep(FIGHT_STEPS, prefs.tutorial, match) : null);
 
 // ---------- Rendering ----------
 
 function render() {
+  if (discover(codex, run).length) saveCodex();
   let body;
   if (tab === 'estate') body = estateTab(run);
   else if (tab === 'market') body = marketTab(run);
+  else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore);
   else body = ludusTab(run, oddsFor);
-  app.innerHTML = `${topbar(run, tab)}<main>${run.status !== 'active' ? endBanner(run) : ''}${summaryBanner(lastSummary)}${tipBanner(currentTip())}${body}</main>${showHelp ? helpModal() : ''}`;
+  const modal = introPage !== null ? introModal(introPage, INTRO) : showHelp ? helpModal() : '';
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run) : ''}${summaryBanner(lastSummary)}${tutorialCard(tutorialStep())}${body}</main>${modal}`;
   renderFight();
 }
 
@@ -86,7 +91,7 @@ function renderFight() {
     return;
   }
   fightEl.hidden = false;
-  fightEl.innerHTML = fightView(match, ui, currentBout(run));
+  fightEl.innerHTML = fightView(match, ui, currentBout(run), tutorialCard(fightTutorial(), 'fight'));
   const feed = document.getElementById('feed');
   if (feed) feed.scrollTop = feed.scrollHeight;
 }
@@ -113,6 +118,7 @@ function newRun(seed) {
   lastSummary = null;
   tab = 'market';
   oddsCache.clear();
+  if (!prefs.introSeen) introPage = 0;
   const url = new URL(location.href);
   url.searchParams.set('seed', run.seed);
   history.replaceState(null, '', url);
@@ -146,9 +152,23 @@ const actions = {
     newRun();
   },
   'replay-seed': () => newRun(run.seed),
-  tab: (d) => { tab = d.tab; },
+  tab: (d) => {
+    tab = d.tab;
+    showHelp = false;
+    if (tab === 'codex') {
+      codexShownNew = [...codex.fresh];
+      codex.fresh = [];
+      saveCodex();
+    }
+  },
   help: () => { showHelp = !showHelp; },
-  'dismiss-tip': (d) => { prefs.tips.push(d.tip); savePrefs(); },
+  'tutorial-done': (d) => { prefs.tutorial.push(d.step); savePrefs(); },
+  'tutorial-skip': () => { prefs.tutorial = [...STEPS, ...FIGHT_STEPS].map((s) => s.id); savePrefs(); },
+  'tutorial-replay': () => { prefs.tutorial = []; showHelp = false; savePrefs(); },
+  'intro-next': () => { introPage = Math.min(INTRO.length - 1, introPage + 1); },
+  'intro-back': () => { introPage = Math.max(0, introPage - 1); },
+  'intro-close': () => { introPage = null; prefs.introSeen = true; savePrefs(); },
+  'intro-replay': () => { introPage = 0; showHelp = false; },
   'dismiss-summary': () => { lastSummary = null; },
   recruit: (d) => recruit(run, d.id),
   release: (d) => { if (confirm('Release this fighter for good?')) release(run, d.id); },
@@ -174,6 +194,7 @@ const actions = {
     savePrefs();
   },
   'leave-fight': () => {
+    if (discoverMatch(codex, match).length) saveCodex();
     lastSummary = finishMatch(run, match);
     match = null;
     tab = 'ludus';
@@ -199,8 +220,9 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && showHelp) {
+  if (e.key === 'Escape' && (showHelp || introPage !== null)) {
     showHelp = false;
+    if (introPage !== null) actions['intro-close']();
     render();
   }
 });

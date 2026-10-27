@@ -9,9 +9,9 @@ v1 (tag `v1.0`, playable at `/v1/`) proved the career loop: weekly jobs, the est
 | Feedback | Plan | Phase |
 | :--- | :--- | :---: |
 | "Slave market" wording; awkward "Orcs are sturdy" tip | Renamed to Market; tip simplified | ✅ done |
-| More tutorial and exposition: how you win and fail, what Power is | Intro story, then a guided first month that explains each step as it happens | A |
-| Glossary that unlocks as you encounter things; define Orc, Sagittarius, etc. | **Codex** tab: rules entries unlock on first encounter (free); deeper lore unlocks by defeating that kind/class. Persists across careers. | A |
-| Unclear what decor does | Every decor button says what it does for *this* fighter, or that it does nothing; in B, all decor also feeds Morale | A → B |
+| More tutorial and exposition: how you win and fail, what Power is | Intro story, then a guided first month that explains each step as it happens | ✅ A |
+| Glossary that unlocks as you encounter things; define Orc, Sagittarius, etc. | **Codex** tab: rules entries unlock on first encounter (free); deeper lore unlocks by defeating that kind/class. Persists across careers. | ✅ A |
+| Unclear what decor does | Every decor button says what it does for *this* fighter, or that it does nothing; in B, all decor also feeds Morale | ✅ A → B |
 | Wins should give fighters bonuses | **XP and levels:** each level-up offers a choice of 3 perks | B |
 | Fighter Morale and Renown; better rooms → better Morale; fame raises expectations | **Renown** grows with wins; **Morale** = comfort (decor, Quarters, Entertainment) vs expectations (Renown) | B |
 | Pass decor/items between fighters (especially from the dead); own inventory; Armourer | **House inventory:** decor and gear belong to the house and are assigned to fighters; returned on death. **Armourer** building sells/crafts gear; beaten opponents sometimes drop theirs. | B |
@@ -51,7 +51,7 @@ Measured with the real engine (`estimateOdds`, 6,000 fights per row) against eac
 
 ---
 
-## Phase A — Clarity: tutorial, Codex, decor (start now)
+## Phase A — Clarity: tutorial, Codex, decor ✅ shipped 2026-10-26
 
 ### A1. Intro and guided first month
 - **New career intro**, 4 short pages, skippable:

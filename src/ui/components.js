@@ -49,7 +49,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
     return `<span class="chip injury" title="${esc(def.desc)}${i.weeksLeft ? ` Heals in ${i.weeksLeft} Medbay week(s).` : ''}">${ICON.injury}${def.name}${i.weight > 1 ? ' ×' + i.weight : ''}${weeks}</span>`;
   }).join('');
   const decor = Object.entries(f.decor).filter(([, n]) => n > 0)
-    .map(([k, n]) => `<span class="chip decor" title="Feeds ${DECOR[k].feeds}">${DECOR[k].name} ×${n}</span>`).join('');
+    .map(([k, n]) => `<span class="chip decor${DECOR[k].helps(f) ? '' : ' off'}" title="${esc(DECOR[k].effect)}${DECOR[k].helps(f) ? '' : ' (No effect for this fighter.)'}">${DECOR[k].name} ×${n}</span>`).join('');
   const titles = (f.titles ?? []).map((t) => `<span class="chip title" title="+1 Power">🏆 ${esc(t)}</span>`).join('');
   const danger = combatant ? mortalDanger(combatant) : f.alive && effectiveInjuries(f) >= 2;
   return `

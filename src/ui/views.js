@@ -22,7 +22,7 @@ const JOB_HELP = {
 
 // ---------- Top bar ----------
 
-export function topbar(run, tab) {
+export function topbar(run, tab, codexNew = 0) {
   const next = PRESTIGE_LEVELS[run.prestigeLevel];
   const progress = next ? Math.min(100, (run.prestige / next.at) * 100) : 100;
   const strikes = Array.from({ length: ECONOMY.maxStrikes }, (_, i) => `<i class="${i < run.strikes ? 'on' : ''}"></i>`).join('');
@@ -32,6 +32,7 @@ export function topbar(run, tab) {
   }).join('') + `<span class="step ${run.grand ? 'now' : ''}" title="The Grand Tournament">👑</span>`;
   const tabBtn = (id, label, badge = '') => `<button class="tab${tab === id ? ' on' : ''}" data-action="tab" data-tab="${id}">${label}${badge}</button>`;
   const marketBadge = run.liaisonOffer ? '<span class="dot" title="Liaison offer"></span>' : '';
+  const codexBadge = codexNew ? `<span class="count" title="New Codex entries">${codexNew}</span>` : '';
   return `
     <header class="topbar">
       <h1>BLOODSPORT</h1>
@@ -44,7 +45,7 @@ export function topbar(run, tab) {
       <button class="btn small" data-action="help">How to play</button>
       <button class="btn small" data-action="new-run">New career</button>
     </header>
-    <nav class="tabs">${tabBtn('ludus', 'Ludus')}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}</nav>`;
+    <nav class="tabs">${tabBtn('ludus', 'Ludus')}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
 }
 
 // ---------- Banners ----------
@@ -72,8 +73,25 @@ export function summaryBanner(s) {
     <h2>${esc(s.name)}: ${esc(s.fighter)} ${verdict}</h2><div>${bits.map(esc).join(' · ')}</div></div>`;
 }
 
-export function tipBanner(tip) {
-  return tip ? `<div class="tip"><span>💡 ${tip.text}</span><button class="btn small" data-action="dismiss-tip" data-tip="${tip.id}">Got it</button></div>` : '';
+export function tutorialCard(step, where = 'ludus') {
+  if (!step) return '';
+  return `<div class="tip tutorial ${where}" role="note">
+    <div><div class="tip-title">📜 ${step.title}</div><div>${step.body}</div></div>
+    <div class="tip-actions"><button class="btn small primary" data-action="tutorial-done" data-step="${step.id}">Got it</button>
+    <button class="link small" data-action="tutorial-skip">Skip tutorial</button></div></div>`;
+}
+
+export function introModal(page, pages) {
+  const p = pages[page];
+  const dots = pages.map((_, i) => `<i class="${i === page ? 'on' : ''}"></i>`).join('');
+  const last = page === pages.length - 1;
+  return `<div class="modal intro" role="dialog" aria-label="${esc(p.title)}"><div class="modal-body">
+    <div class="intro-kicker">Bloodsport</div>
+    <h2>${p.title}</h2>${p.body}
+    <div class="intro-nav"><span class="dots">${dots}</span>
+      <span class="row">${page > 0 ? '<button class="btn" data-action="intro-back">Back</button>' : '<button class="link" data-action="intro-close">Skip intro</button>'}
+      <button class="btn primary" data-action="${last ? 'intro-close' : 'intro-next'}">${last ? 'Enter the Ludus' : 'Next'}</button></span></div>
+  </div></div>`;
 }
 
 // ---------- Ludus tab ----------
@@ -107,13 +125,16 @@ function rosterPanel(run) {
       const reason = f.job === job ? null : jobBlocker(run, f.id, job);
       return `<button class="seg${f.job === job ? ' on' : ''}" data-action="job" data-id="${f.id}" data-job="${job}" ${reason ? `disabled title="${esc(reason)}"` : `title="${esc(JOB_HELP[job])}"`}>${JOB_LABELS[job]}</button>`;
     }).join('');
-    const decor = Object.keys(DECOR).map((k) => button(`+${DECOR[k].name}`, 'decor', { id: f.id, item: k }, decorBlocker(run, f.id, k))).join('');
+    const useful = Object.keys(DECOR).filter((k) => DECOR[k].helps(f));
+    const decor = useful.length
+      ? useful.map((k) => `<div class="decor-opt">${button(`+${DECOR[k].name} (${ECONOMY.decorCost} Gold)`, 'decor', { id: f.id, item: k }, decorBlocker(run, f.id, k))}<small>${esc(DECOR[k].effect)} Has ${f.decor[k]}.</small></div>`).join('')
+      : '<small class="sub">No decor helps this fighter. Birds help Ornitharius; Fire Braziers help Firebug elves.</small>';
     const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(inj.tag === 'fleshWound' ? 'Flesh Wound' : inj.tag)} (${surgeonPrice(run)}g)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
     const actions = `<div class="actions">
       <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week</small></div>
       <div class="segs">${jobs}</div>
-      <details class="more"><summary>Decor, surgeon, release</summary>
-        <div class="label">Quarters decor (${ECONOMY.decorCost} Gold each)</div><div class="row">${decor}</div>
+      <details class="more"><summary>Decor${useful.length ? ' ✦' : ''}, surgeon, release</summary>
+        <div class="label">Quarters decor</div><div class="decor-list">${decor}</div>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : ''}
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>
@@ -252,15 +273,26 @@ export function helpModal() {
       <li><b>Climb</b> four arena tiers: Tournament 1 → Tournament 2 → Boss. Win the Grand Tournament to win the game. Each Boss loss is an Imperial Strike; three and you're executed.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
     </ol>
-    <h2>Glossary</h2>
-    <dl>
-      <dt>Power</dt><dd>Decides who wins rounds. The difference (Delta) matters: +1 is 55%, +3 is 70%, +5 is 95% per round.</dd>
-      <dt>Speed</dt><dd>Decides who strikes first (Speed + a d6 roll). The first striker gets +10% to win the round and rolls to injure before the other can hit back. Speed trains at +2 a week, but its value levels off once you're much faster.</dd>
-      <dt>Death Gate</dt><dd>Fighters with fewer than 2 injuries can't die. At 2+ injuries, losing a round can be fatal. Poisoned counts as 2.</dd>
-      <dt>Stress</dt><dd>Training (+20) and fighting (+15) raise it; rest (−40) lowers it. At 50+ the fighter is overtrained: no training, and −1 Power and one lost ability in the arena. Train, train, rest is a safe rhythm.</dd>
-      <dt>Armor</dt><dd>Alloyed Skin and Ego Armour lower your chance to be injured. Gun and Flail ignore it.</dd>
-      <dt>Prestige</dt><dd>Your reputation. Staked as buy-ins, won back with interest. Thresholds raise your House level for good.</dd>
-      <dt>Imperial Strike</dt><dd>Given for every Boss loss or forfeit. Three ends your career.</dd>
-    </dl>
+    <p class="sub">Every rule, trait, class and injury is explained in the <b>Codex</b> tab as you discover it.</p>
+    <div class="row"><button class="btn small" data-action="intro-replay">Replay the intro</button><button class="btn small" data-action="tutorial-replay">Restart the tutorial</button><button class="btn small" data-action="tab" data-tab="codex">Open the Codex</button></div>
   </div></div>`;
+}
+
+// ---------- Codex tab ----------
+
+export function codexTab(codex, entries, sections, fresh, prog, isUnlocked, hasLore) {
+  const groups = Object.entries(sections).map(([cat, title]) => {
+    const list = entries.filter((e) => e.cat === cat);
+    const open = list.filter((e) => isUnlocked(codex, e)).length;
+    const items = list.map((e) => {
+      if (!isUnlocked(codex, e)) return `<div class="entry locked"><b>???</b><small>Meet one in the arena to learn more.</small></div>`;
+      const lore = e.lore
+        ? hasLore(codex, e) ? `<p class="lore">${esc(e.lore)}</p>` : '<p class="lore locked">🔒 Lore: defeat one in the arena to learn its story.</p>'
+        : '';
+      return `<div class="entry${fresh.includes(e.key) ? ' fresh' : ''}"><b>${esc(e.name)}${fresh.includes(e.key) ? ' <span class="new">new</span>' : ''}</b><p>${esc(e.rules)}</p>${lore}</div>`;
+    }).join('');
+    return `<section class="codex-group"><h3>${title} <small>${cat === 'basics' ? '' : `${open}/${list.length}`}</small></h3><div class="entries">${items}</div></section>`;
+  }).join('');
+  return `<section class="panel codex"><h2>The Codex <small>${prog.found}/${prog.total} discovered · carries over between careers</small></h2>
+    <p class="sub">Entries unlock the first time you see something. Defeat a Kind, Class or weapon in the arena to unlock its lore.</p>${groups}</section>`;
 }

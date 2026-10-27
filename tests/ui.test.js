@@ -3,15 +3,21 @@ import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
 import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, currentBout } from '../src/run.js';
-import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal } from '../src/ui/views.js';
+import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard } from '../src/ui/views.js';
+import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
+import { INTRO, STEPS, FIGHT_STEPS } from '../src/tutorial.js';
 import { fightView } from '../src/ui/fightView.js';
 
 const BAD = /undefined|NaN|\[object Object\]/;
 const fakeOdds = () => ({ win: 0.5, injury: 0.3, death: 0.01 });
 const ui = { animateRound: 1, showMath: false, auto: false };
 
+const codex = createCodex();
+
 function checkScreens(run) {
-  for (const html of [topbar(run, 'ludus'), ludusTab(run, fakeOdds), estateTab(run), marketTab(run), helpModal()]) {
+  discover(codex, run);
+  const codexHtml = codexTab(codex, ENTRIES, SECTIONS, codex.fresh, progress(codex), isUnlocked, hasLore);
+  for (const html of [topbar(run, 'ludus', 3), ludusTab(run, fakeOdds), estateTab(run), marketTab(run), helpModal(), codexHtml]) {
     assert.doesNotMatch(html, BAD, html.match(new RegExp(`.{0,80}(${BAD.source}).{0,40}`))?.[0]);
   }
   if (run.status !== 'active') assert.doesNotMatch(endBanner(run), BAD);
@@ -36,6 +42,7 @@ test('every screen renders cleanly through whole careers', () => {
           for (const showMath of [true, false]) assert.doesNotMatch(fightView(m, { ...ui, showMath }, currentBout(run)), BAD);
           autoPlay(m);
           assert.doesNotMatch(fightView(m, ui, currentBout(run)), BAD);
+          discoverMatch(codex, m);
           assert.doesNotMatch(summaryBanner(finishMatch(run, m)), BAD);
         } else if (!skipBlocker(run)) skipBout(run);
         else forfeitBout(run);
@@ -43,4 +50,19 @@ test('every screen renders cleanly through whole careers', () => {
       checkScreens(run);
     }
   }
+});
+
+test('intro pages and tutorial cards render cleanly', () => {
+  INTRO.forEach((_, i) => assert.doesNotMatch(introModal(i, INTRO), BAD));
+  for (const step of [...STEPS, ...FIGHT_STEPS]) assert.doesNotMatch(tutorialCard(step), BAD);
+  assert.equal(tutorialCard(null), '');
+});
+
+test('the Codex shows locked entries as ??? and opened ones with rules', () => {
+  const c = createCodex();
+  const html = codexTab(c, ENTRIES, SECTIONS, [], progress(c), isUnlocked, hasLore);
+  assert.match(html, /\?\?\?/);
+  assert.match(html, /The Death Gate/);
+  c.seen.push('kind:orc');
+  assert.match(codexTab(c, ENTRIES, SECTIONS, ['kind:orc'], progress(c), isUnlocked, hasLore), /Orc <span class="new">new/);
 });

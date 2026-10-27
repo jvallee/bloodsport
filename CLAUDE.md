@@ -20,7 +20,7 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - `npm run career [n]`: whole-career balance with a careful and a reckless bot (targets in `docs/roadmap.md`).
 
 ## Layout
-- Pure logic: `src/rng.js` seeded RNG · `src/data.js` all tables and tunable numbers · `src/fight.js` fight engine · `src/calendar.js` weeks · `src/ludus.js` estate · `src/run.js` career coordinator · `src/odds.js` pre-fight odds · `src/narrate.js` text.
+- Pure logic: `src/rng.js` seeded RNG · `src/data.js` all tables and tunable numbers · `src/fight.js` fight engine · `src/calendar.js` weeks · `src/ludus.js` estate · `src/run.js` career coordinator · `src/odds.js` pre-fight odds · `src/narrate.js` text · `src/codex.js` unlockable glossary · `src/tutorial.js` intro and tutorial steps.
 - UI: `src/ui/components.js`, `src/ui/views.js`, `src/ui/fightView.js` return HTML strings; `src/main.js` holds state, saving and events.
 - `scripts/bots.js`: careful and reckless career bots used by `career-sim.js` and tests.
 - Every rules change gets re-checked with `npm run career` before it ships; record the numbers in `docs/roadmap.md`.
@@ -33,5 +33,6 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - **Never delete, skip or weaken a test to make it pass.** If a test fails, fix the code. If the test itself is wrong, explain why and get agreement before changing it.
 - **Fix bugs test-first.** Write a failing test that reproduces the bug, then fix it.
 - Don't change balance numbers or rules without saying so. Record each new placeholder decision in `docs/fight-rules.md`.
-- Keep the MVP scope in `docs/fight-rules.md`. Deferred features stay deferred unless asked.
+- Current plan: `docs/roadmap-v2.md`. Deferred features stay deferred unless asked.
+- `v1/` is a frozen copy of tag `v1.0`. Don't edit it.
 - Check that the site works when opened from GitHub Pages (relative paths only, no absolute `/` links).

@@ -77,7 +77,7 @@ function controls(m, ui, bout) {
     </div>`;
 }
 
-export function fightView(m, ui, bout) {
+export function fightView(m, ui, bout, tutorial = '') {
   const last = m.rounds.at(-1);
   const delta = last ? last.delta : 0;
   const pills = last ? tagPills(last) : [];
@@ -101,6 +101,7 @@ export function fightView(m, ui, bout) {
         </div>
         <div><div class="side-label b">Opponent</div>${fighterCard(m.b.f, { combatant: m.b, compact: true, stress: false })}</div>
       </div>
+      ${tutorial}
       <div class="controls">${controls(m, ui, bout)}</div>
     </div>`;
 }
