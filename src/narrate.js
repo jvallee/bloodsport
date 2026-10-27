@@ -59,7 +59,7 @@ export function narrateRound(m, r) {
     const prefix = c.counter ? `Elven Eyes! ${att} counters` : `${att} strikes at ${def}`;
     const pierce = c.pierced ? ' (armor pierced)' : '';
     add(c.hit ? 'hit' : 'miss', `${prefix}: needs ${roll100(c.chance)} or less to wound${pierce}, rolled ${roll100(c.roll)}. ${c.hit ? 'Hit!' : 'Miss.'}`);
-    if (c.parry) add(c.parry.success ? 'parry' : 'hit', c.parry.success ? `${def} parries with the Sword! Riposte: +3 Speed next round.` : `${def}'s parry fails.`);
+    if (c.parry) add(c.parry.success ? 'parry' : 'hit', c.parry.success ? (c.parry.shield ? `${def} catches it on the shield!` : `${def} parries with the Sword! Riposte: +3 Speed next round.`) : `${def}'s parry fails.`);
     const inj = c.injury;
     if (!inj) continue;
     const severity = inj.raw === inj.score ? `${inj.score}` : `${inj.raw}, capped at ${inj.score}`;

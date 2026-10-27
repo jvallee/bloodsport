@@ -1,6 +1,7 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID } from '../data.js';
+import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES } from '../data.js';
+import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
@@ -79,16 +80,62 @@ function tributeStat(run) {
 
 // ---------- Banners ----------
 
-export function endBanner(run) {
+// The end of a career: how it ended, its score, its best fighter, the fallen and the final standings.
+export function endBanner(run, legacy = null) {
   const won = run.status === 'won';
   const deaths = run.fallen.length;
-  const wins = run.history.filter((h) => h.won).length;
-  return `<div class="banner ${won ? 'win' : 'loss'}">
+  const fought = run.history.filter((h) => !h.skipped && !h.forfeit);
+  const wins = fought.filter((h) => h.won).length;
+  const score = careerScore(run);
+  const best = bestFighter(run);
+  const bestWins = best ? run.history.filter((h) => h.won && h.fighterId === best.id).length : 0;
+  const rank = standings(run).findIndex((h) => h.you) + 1;
+  const kills = [...run.roster, ...run.fallen].reduce((n, f) => n + (f.kills ?? 0), 0);
+  return `<div class="banner end ${won ? 'win' : 'loss'}">
     <h2>${won ? '👑 Master of the Games' : 'Your house has fallen'}</h2>
     <div>${esc(run.endReason)}</div>
-    <div class="sub">${formatDate(run.week)} · ${wins} bouts won · ${deaths} gladiator${deaths === 1 ? '' : 's'} lost · Prestige level ${run.prestigeLevel}</div>
+    <div class="end-score">Score <b>${score}</b>${legacy ? ` · best ever ${Math.max(legacy.best, score)} · career ${legacy.careers}` : ''}</div>
+    <div class="end-grid">
+      <div><div class="label">The career</div>${formatDate(run.week)}<br>${wins} won, ${fought.length - wins} lost · ${kills} kill${kills === 1 ? '' : 's'}<br>Top arena: ${esc(arenaName(run.topTier))}<br>House rank: #${rank} of ${standings(run).length} · Glory ${run.glory ?? 0}</div>
+      ${best ? `<div class="end-best">${portrait(best, 64)}<div><div class="label">Best fighter</div><b>${esc(best.name)}</b> (${esc(KINDS[best.kind].name)})<br>${bestWins} win${bestWins === 1 ? '' : 's'} · Renown ${best.renown}${best.titles?.length ? `<br>🏆 ${esc(best.titles.join(', '))}` : ''}${best.alive ? '' : '<br>Fell in the arena'}</div></div>` : ''}
+      ${deaths ? `<div><div class="label">The fallen</div><div class="fallen-faces">${run.fallen.map((f) => `<span title="${esc(f.name)}">${portrait(f, 40)}</span>`).join('')}</div></div>` : ''}
+    </div>
     <div class="row"><button class="btn primary" data-action="new-run">New career</button><button class="btn" data-action="replay-seed">Replay seed ${run.seed}</button></div></div>`;
 }
+
+// Choosing how the next career starts (once a past career has unlocked anything).
+export function setupModal(legacy, choice) {
+  const patrons = unlockedPatrons(legacy);
+  const patronList = [['', { name: 'No patron', desc: 'Start as the game intends.' }], ...patrons.map((p) => [p, PATRONS[p]])]
+    .map(([id, p]) => `<label class="opt"><input type="radio" name="patron" value="${id}" ${choice.patron === id ? 'checked' : ''}> <b>${esc(p.name)}</b> <small>${esc(p.desc)}</small></label>`).join('');
+  const decrees = decreesUnlocked(legacy)
+    ? Object.entries(DECREES).map(([id, d]) => `<label class="opt"><input type="checkbox" name="decree" value="${id}" ${choice.decrees.includes(id) ? 'checked' : ''}> <b>${esc(d.name)}</b> <small>${esc(d.desc)} (+${d.score} score if you win)</small></label>`).join('')
+    : '<p class="sub">Win a career to unlock the Emperor\'s Decrees: harder rules for a higher score.</p>';
+  const classes = unlockedClasses(legacy);
+  return `<div class="modal setup" role="dialog" aria-label="A new career"><div class="modal-body">
+    <button class="close" data-action="setup-cancel" aria-label="Close">×</button>
+    <h2>A new career</h2>
+    <div class="label">Patron</div>${patronList}
+    <div class="label">The Emperor's Decrees</div>${decrees}
+    ${classes.length ? `<p class="sub">Unlocked classes in the market: ${classes.map((c) => esc(CLASSES[c].name)).join(', ')}.</p>` : ''}
+    <div class="row"><button class="btn primary" data-action="start-career">Begin</button><button class="btn" data-action="setup-cancel">Cancel</button></div>
+  </div></div>`;
+}
+
+// Achievements: earned ones and what the rest would unlock.
+export function legacyPanel(legacy) {
+  const rows = ACHIEVEMENTS.map((a) => {
+    const got = legacy.achievements.includes(a.id);
+    return `<li class="${got ? 'got' : ''}"><b>${got ? '★' : '☆'} ${esc(a.name)}</b>: ${esc(a.desc)} <small>${esc(unlockText(a))}</small></li>`;
+  }).join('');
+  const past = legacy.past.map((p) => `<li>${p.won ? '👑' : '⚰'} Seed ${p.seed}: score <b>${p.score}</b>, ${p.weeks} weeks${p.endReason ? ` · ${esc(p.endReason)}` : ''}</li>`).join('');
+  return `<section class="panel legacy"><h2>Legacy <small>${legacy.achievements.length}/${ACHIEVEMENTS.length} · ${legacy.careers} career${legacy.careers === 1 ? '' : 's'} · best score ${legacy.best}</small></h2>
+    <p class="sub">Achievements carry over between careers and unlock patrons, new classes and the Emperor's Decrees.</p>
+    <ul class="achievements">${rows}</ul>${past ? `<h3 class="mini">Past careers</h3><ul class="past">${past}</ul>` : ''}</section>`;
+}
+
+// A notice when something is earned mid-career.
+export const achievementNotice = (a) => `<div class="banner achievement"><h2>★ Achievement: ${esc(a.name)}</h2><div>${esc(a.desc)} ${esc(unlockText(a))} (from your next career)</div></div>`;
 
 const plus = (n) => `${n >= 0 ? '+' : ''}${n}`;
 
@@ -287,7 +334,7 @@ function arenaBlock(run, tier, oddsFor) {
   const rival = arena.opponent.rival ? '<div class="warn">⚔ A rival returns: this Boss beat you before, and has grown stronger.</div>' : '';
   const rows = state === 'open' || !run.bouts ? run.roster.map((f) => oddsRow(run, f, tier, oddsFor)).join('') : '';
   const choice = bout.top && run.boutPending
-    ? `<div class="row">${bout.boss ? button(`Forfeit (${bossLossFavor(tier) + FAVOR.forfeitExtra} Favor)`, 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
+    ? `<div class="row">${bout.boss ? button(`Forfeit (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favor)`, 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
     : '';
   const buyIn = bout.pauper ? `Buy-in ${bout.buyIn} Prestige <i>(normally ${bout.fullBuyIn}: the Dirt Pits take whatever Prestige you have)</i>` : `Buy-in ${bout.buyIn} Prestige`;
   const body = `<p class="sub"><b>${esc(bout.name)}</b> · ${buyIn} · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>

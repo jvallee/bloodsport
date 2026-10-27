@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
 import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, advanceToTournament, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute } from '../src/run.js';
-import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal, eventCard } from '../src/ui/views.js';
+import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal, eventCard, setupModal, legacyPanel } from '../src/ui/views.js';
 import { TRIBUTE } from '../src/data.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
 import { INTRO, STEPS, FIGHT_STEPS } from '../src/tutorial.js';
@@ -231,4 +231,30 @@ test('the week panel names the coming Gods\' Day, and a festival tournament show
   run.boutPending = true;
   assert.match(ludusTab(run, fakeOdds), /<b>This tournament week<\/b>: <b>Floralia<\/b>/);
   assert.match(ludusTab(run, fakeOdds), /class="festival now">🏛 <b>Floralia<\/b>: wins pay|class="festival now">🏛 <b>Floralia<\/b>:/);
+});
+
+test('the end of a career shows its score, best fighter and the fallen', () => {
+  const run = createRun(3);
+  const f = recruit(run, run.market[0].id);
+  run.history.push({ won: true, fighterId: f.id });
+  run.fallen.push({ ...run.market[0], alive: false });
+  run.status = 'lost';
+  run.endReason = 'Executed by the Emperor.';
+  const html = endBanner(run, { best: 12, careers: 2 });
+  assert.match(html, /Your house has fallen/);
+  assert.match(html, /Score <b>\d+<\/b> · best ever/);
+  assert.match(html, new RegExp(`Best fighter</div><b>${f.name}</b>`));
+  assert.match(html, /The fallen/);
+});
+
+test('the new-career dialog offers unlocked patrons, and decrees only after a win', () => {
+  const legacy = { achievements: ['firstBoss', 'bronze'], careers: 1, best: 0, past: [] };
+  const html = setupModal(legacy, { patron: '', decrees: [] });
+  assert.match(html, /value="veteran"/);
+  assert.doesNotMatch(html, /value="purse"/);
+  assert.match(html, /Win a career to unlock the Emperor/);
+  assert.match(html, /Unlocked classes in the market: Thorn-Blade/);
+  assert.match(setupModal({ ...legacy, achievements: ['champion'] }, { patron: '', decrees: [] }), /value="ironBosses"/);
+  assert.match(legacyPanel(legacy), /★ First Blood/);
+  assert.match(legacyPanel(legacy), /☆ Master of the Games/);
 });

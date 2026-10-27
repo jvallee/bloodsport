@@ -52,7 +52,7 @@ export function parseReport(text) {
 // (a refused action shows a message and the game carries on). Stops after `stopAt` actions if given.
 export function replay(report, { stopAt = Infinity, onStep = null } = {}) {
   const base = report.save?.actionsBase;
-  const state = { run: base ? deserialize(base) : createRun(report.seed), match: null };
+  const state = { run: base ? deserialize(base) : createRun(report.seed, report.save?.setup ?? {}), match: null };
   const errors = [];
   const actions = report.actions.slice(0, stopAt);
   actions.forEach(([name, data], index) => {

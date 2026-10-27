@@ -6,7 +6,8 @@ import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice } from './ui/views.js';
+import { loadLegacy, checkAchievements, recordCareer, unlockedPatrons, unlockedClasses, decreesUnlocked } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
@@ -17,6 +18,7 @@ const fightEl = document.getElementById('fight');
 const SAVE_KEY = 'bloodsport.career';
 const PREFS_KEY = 'bloodsport.prefs';
 const CODEX_KEY = 'bloodsport.codex';
+const LEGACY_KEY = 'bloodsport.legacy';
 
 let run = null;
 let match = null;
@@ -30,6 +32,9 @@ let prefs = { tutorial: [], showMath: false, introSeen: false };
 let codex = loadCodex(null);
 let codexShownNew = []; // entries highlighted as new while the Codex tab is open
 let introPage = null; // index into INTRO while the intro is showing
+let legacy = loadLegacy(null);
+let achieved = []; // achievements earned this week, shown as notices
+let setupChoice = null; // the New career dialog: { patron, decrees } while it's open
 // Bug reports: `bug` is null, or { error, where } (error null for a report the player asked for).
 let bug = null;
 let bugNotes = '';
@@ -52,7 +57,9 @@ function loadPrefs() {
   if (!Array.isArray(prefs.tutorial)) prefs.tutorial = [];
   ui.showMath = prefs.showMath;
   codex = loadCodex(storage.get(CODEX_KEY));
+  legacy = loadLegacy(storage.get(LEGACY_KEY));
 }
+const saveLegacy = () => storage.set(LEGACY_KEY, JSON.stringify(legacy));
 const saveCodex = () => storage.set(CODEX_KEY, JSON.stringify(codex));
 const savePrefs = () => storage.set(PREFS_KEY, JSON.stringify(prefs));
 const save = () => run && storage.set(SAVE_KEY, serialize(run));
@@ -80,16 +87,23 @@ const fightTutorial = () => (match ? nextStep(FIGHT_STEPS, prefs.tutorial, match
 
 function render() {
   if (discover(codex, run).length) saveCodex();
+  // Legacy: achievements as they happen, and the career once it ends.
+  const fresh = checkAchievements(legacy, run);
+  if (fresh.length) {
+    achieved.push(...fresh);
+    noticePage = 0;
+  }
+  if (fresh.length + (recordCareer(legacy, run) ? 1 : 0)) saveLegacy();
   let body;
   if (tab === 'estate') body = estateTab(run);
   else if (tab === 'market') body = marketTab(run);
-  else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore);
+  else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore) + legacyPanel(legacy);
   else body = ludusTab(run, oddsFor);
-  const modal = introPage !== null ? introModal(introPage, INTRO) : showHelp ? helpModal() : '';
+  const modal = setupChoice ? setupModal(legacy, setupChoice) : introPage !== null ? introModal(introPage, INTRO) : showHelp ? helpModal() : '';
   // Notifications: the tutorial step first, then this week's results (newest first), one page at a time.
-  const notices = [tutorialCard(tutorialStep()), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
+  const notices = [tutorialCard(tutorialStep()), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run) : ''}${nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
   renderFight();
@@ -143,8 +157,10 @@ function scheduleAuto() {
 
 // ---------- Careers ----------
 
-function newRun(seed) {
-  run = createRun(seed ?? undefined);
+function newRun(seed, setup = { classes: unlockedClasses(legacy) }) {
+  run = createRun(seed ?? undefined, setup);
+  achieved = [];
+  setupChoice = null;
   match = null;
   summaries = [];
   tab = 'market';
@@ -180,9 +196,21 @@ function boot() {
 const actions = {
   'new-run': () => {
     if (run.status === 'active' && run.week > 0 && !confirm('Abandon this career and start a new one?')) return;
-    newRun();
+    // Once a past career has unlocked something, choose a patron and decrees first.
+    if (unlockedPatrons(legacy).length || decreesUnlocked(legacy)) {
+      setupChoice = { patron: '', decrees: [] };
+      render();
+    } else {
+      newRun();
+    }
   },
-  'replay-seed': () => newRun(run.seed),
+  'start-career': () => {
+    const patron = document.querySelector('input[name=patron]:checked')?.value || null;
+    const decrees = [...document.querySelectorAll('input[name=decree]:checked')].map((i) => i.value);
+    newRun(null, { patron, decrees, classes: unlockedClasses(legacy) });
+  },
+  'setup-cancel': () => { setupChoice = null; },
+  'replay-seed': () => newRun(run.seed, run.setup),
   tab: (d) => {
     tab = d.tab;
     showHelp = false;
@@ -222,8 +250,8 @@ const actions = {
 const before = {
   release: () => confirm('Release this fighter for good?'),
   forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favor than losing the fight.'),
-  advance: () => { summaries = []; return true; },
-  'advance-tournament': () => { summaries = []; return true; },
+  advance: () => { summaries = []; achieved = []; return true; },
+  'advance-tournament': () => { summaries = []; achieved = []; return true; },
 };
 const after = {
   fight: () => {
@@ -261,7 +289,7 @@ document.addEventListener('click', (e) => {
       alert(err.message);
     }
   });
-  if (name === 'new-run' || name === 'replay-seed' || name === 'bug-reload') return;
+  if (name === 'new-run' || name === 'replay-seed' || name === 'start-career' || name === 'bug-reload') return;
   guard('render', () => {
     save();
     render();

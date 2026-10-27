@@ -27,6 +27,8 @@ const LORE = {
   'class:sagittarius': 'Archers. In old Rome, sagittarii were auxiliaries from the eastern provinces; on Battleworld they open every exchange with a volley, gambling on a quick lead or a crippling wound.',
   'class:ornitharius': 'Bird-handlers who fight beside hawks and ravens kept in their quarters. The birds smell blood: once their master is hurt, they go for the eyes.',
   'class:fighter': 'Weapon masters with no single tradition, just a favorite tool and a lifetime of practice with it.',
+  'class:thornBlade': 'Duelists who fight with a barbed blade and a cruel patience. Every exchange they win leaves something in the wound that slows the next.',
+  'class:samnite': 'The oldest gladiators of Rome, armed like the Samnite warriors Rome defeated: a big shield, a short sword, and a wall-like calm even when their head is ringing.',
   'weapon:club': 'Crude, heavy and humiliating. A good hit leaves a champion face-down in the sand.',
   'weapon:fists': "A fist-fighter has no weapon to lose. Their specialty is taking yours away.",
   'weapon:bow': 'Range wins the opening exchanges, before a melee fighter can close the gap.',

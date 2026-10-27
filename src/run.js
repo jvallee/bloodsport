@@ -6,7 +6,7 @@
 import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
-  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES,
+  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks } from './fight.js';
 import { Refused } from './errors.js';
@@ -20,7 +20,7 @@ import {
 export const SAVE_VERSION = 3;
 export const GRAND_TIER = CIRCUITS.length + 1;
 const KIND_IDS = Object.keys(KINDS);
-const CLASS_IDS = Object.keys(CLASSES);
+const CLASS_IDS = Object.keys(CLASSES).filter((c) => !CLASSES[c].legacy); // legacy classes join via run.setup.classes
 const WEAPON_IDS = Object.keys(WEAPONS);
 const DEBUFF_IDS = Object.keys(BOSS_DEBUFFS);
 const HUMOR_IDS = Object.keys(HUMORS);
@@ -32,10 +32,10 @@ export const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
 const emptyDecor = () => Object.fromEntries(Object.keys(DECOR).map((k) => [k, 0]));
 const emptyItems = () => Object.fromEntries(Object.keys(CONSUMABLES).map((k) => [k, 0]));
 
-export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel = 0, takenNames = [] } = {}) {
+export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel = 0, takenNames = [], classes = [] } = {}) {
   kind ??= pick(rng, KIND_IDS);
   const kindTrait = pick(rng, KINDS[kind].traits);
-  const cls = pick(rng, CLASS_IDS);
+  const cls = pick(rng, [...CLASS_IDS, ...(classes ?? [])]);
   const weapon = cls === 'fighter' ? pick(rng, WEAPON_IDS) : null;
   const free = NAMES.filter((n) => !takenNames.includes(n));
   const name = pick(rng, free.length ? free : NAMES);
@@ -66,7 +66,9 @@ export const effectiveSpeed = (f) => f.speed + [f.gear?.weapon, f.gear?.armor].f
 export const effectivePower = (f) => f.power + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].power ?? 0), 0);
 export const championTitle = (tier) => `Champion of ${arenaName(tier).replace(/^The /, 'the ')}`;
 export const isChampionOf = (f, tier) => (f.titles ?? []).includes(championTitle(tier));
-export const bossLossFavor = (tier) => FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1];
+// Harsh Judges (a decree) makes every Boss loss cost 5 more.
+export const bossLossFavor = (tier, run = null) => FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1] - (hasDecree(run, 'harshJudges') ? 5 : 0);
+export const hasDecree = (run, id) => Boolean(run?.setup?.decrees?.includes(id));
 
 // ---------- Arenas and bouts ----------
 
@@ -81,7 +83,7 @@ export function boutFor(run, tier = run.topTier) {
   const below = run.topTier - tier;
   const arena = run.arenas[tier];
   if (tier === GRAND_TIER) {
-    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: GRAND.oppPower, oppDecor: GRAND.oppDecor, debuff: arena.debuff, conquered: false };
+    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: GRAND.oppPower + (hasDecree(run, 'ironBosses') ? 1 : 0), oppDecor: GRAND.oppDecor, debuff: arena.debuff, conquered: false };
   }
   const c = CIRCUITS[tier - 1];
   const s = arena.stage;
@@ -98,7 +100,7 @@ export function boutFor(run, tier = run.topTier) {
     winPrestige: Math.round(Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below) * (fest?.prestige ?? 1)),
     festival: fest?.id ?? null,
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
-    lossGold: c.lossGold, oppPower: c.oppPower[s], oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
+    lossGold: c.lossGold, oppPower: c.oppPower[s] + (s === 2 && hasDecree(run, 'ironBosses') ? 1 : 0), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
     conquered: arena.conquered,
   };
 }
@@ -129,7 +131,7 @@ function newOpponent(run, tier) {
     arena.opponent = arena.rival; // a Boss who beat you comes back, stronger
     return;
   }
-  const f = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower, decorLevel: bout.oppDecor, takenNames: takenNames(run) });
+  const f = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower, decorLevel: bout.oppDecor, takenNames: takenNames(run), classes: run.setup?.classes });
   f.speed = opponentSpeed(run, bout);
   seasonOpponent(run, f, bout);
   // Every opponent fights for a rival house; the Grand Tournament's champion is the leading rival's.
@@ -171,7 +173,7 @@ function refreshMarket(run) {
   const rng = run.rng.market;
   const bonus = circuitInfo(run).marketPower;
   const market = [];
-  const make = (kind) => createFighter(rng, { id: newId(run, 'f'), kind, bonusPower: bonus, takenNames: takenNames({ ...run, market: [] }, market) });
+  const make = (kind) => createFighter(rng, { id: newId(run, 'f'), kind, bonusPower: bonus, takenNames: takenNames({ ...run, market: [] }, market), classes: run.setup?.classes });
   for (let i = 0; i < ECONOMY.marketSize - 1; i++) market.push(make());
   market.splice(int(rng, 0, market.length), 0, make('orc'));
   run.market = market;
@@ -183,7 +185,7 @@ function refreshLiaison(run) {
   run.liaisonOffer = null;
   if (!lv) return;
   const elite = lv >= 2;
-  const f = createFighter(run.rng.market, { id: newId(run, 'f'), power: Math.max(3, currentBout(run).oppPower + (elite ? 1 : -2)), takenNames: takenNames(run) });
+  const f = createFighter(run.rng.market, { id: newId(run, 'f'), power: Math.max(3, currentBout(run).oppPower + (elite ? 1 : -2)), takenNames: takenNames(run), classes: run.setup?.classes });
   f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
   f.stress = elite ? 30 : 40;
   f.morale = elite ? 40 : 30;
@@ -240,11 +242,13 @@ function rivalsCompete(run) {
   }
 }
 
-export function createRun(seed = randomSeed()) {
+// `setup` (legacy, chosen when a career starts): { patron, decrees: [], classes: [] }. Stored, so careers replay.
+export function createRun(seed = randomSeed(), setup = {}) {
   const housesRng = createRng(deriveSeed(seed, 6));
   const run = {
     version: SAVE_VERSION,
     seed,
+    setup: { patron: setup.patron ?? null, decrees: [...(setup.decrees ?? [])], classes: [...(setup.classes ?? [])] },
     gold: ECONOMY.startGold,
     prestige: ECONOMY.startPrestige,
     prestigeLevel: 1,
@@ -286,7 +290,28 @@ export function createRun(seed = randomSeed()) {
   openArena(run, 1);
   refreshMarket(run);
   log(run, `You take charge of a bottom-tier Ludus in ${arenaName(1)}.`);
+  applyPatron(run);
   return run;
+}
+
+// A patron's gift at the start of a career (seeded on its own stream, so it never shifts the market).
+function applyPatron(run) {
+  const p = run.setup.patron;
+  if (!p || !PATRONS[p]) return;
+  const rng = createRng(deriveSeed(run.seed, 7));
+  if (p === 'purse') run.gold += 10;
+  if (p === 'friend') run.favor = Math.min(FAVOR.max, run.favor + 15);
+  if (p === 'warChest') {
+    run.inventory.items.warPaint += 2;
+    run.inventory.items.blessedBandage += 1;
+  }
+  if (p === 'veteran' || p === 'defector') {
+    const f = createFighter(rng, { id: newId(run, 'f'), bonusPower: p === 'defector' ? 3 : 2, takenNames: takenNames(run), classes: run.setup.classes });
+    if (p === 'veteran') Object.assign(f, { level: 3, xp: XP.levels[1], perks: ['thickSkin', 'killer'], speed: f.speed + 3, renown: 4 });
+    else Object.assign(f, { renown: 5, origin: pick(rng, run.houses).name });
+    run.roster.push(f);
+  }
+  log(run, `Your patron: ${PATRONS[p].name}. ${PATRONS[p].desc}`, 'event');
 }
 
 // ---------- Shared checks ----------
@@ -623,7 +648,7 @@ export function chooseEvent(run, index) {
 
 // The year whose tribute comes next: in winter this year's is already settled, so it's next year's.
 const tributeYear = (run) => dateOf(run.week).year + (dateOf(run.week).winter ? 1 : 0);
-export const tributeDue = (run) => TRIBUTE.perYear * tributeYear(run);
+export const tributeDue = (run) => Math.round(TRIBUTE.perYear * tributeYear(run) * (hasDecree(run, 'greedyEmperor') ? 1.5 : 1));
 export const tributePaid = (run) => run.tributePaid === tributeYear(run);
 
 export function payTributeBlocker(run) {
@@ -645,7 +670,7 @@ export function payTribute(run) {
 
 function collectTribute(run) {
   const year = dateOf(run.week).year;
-  const due = TRIBUTE.perYear * year;
+  const due = Math.round(TRIBUTE.perYear * year * (hasDecree(run, 'greedyEmperor') ? 1.5 : 1));
   if (run.tributePaid === year) {
     log(run, 'The Emperor\'s collectors find your tribute already paid.', 'event');
   } else if (run.gold >= due) {
@@ -951,7 +976,7 @@ export function forfeitBout(run) {
   run.history.push({ week: run.week, tier: bout.tier, name: bout.name, won: false, forfeit: true });
   log(run, `You forfeit ${bout.name}.`, 'bad');
   settleBout(run, bout.tier);
-  changeFavor(run, bossLossFavor(bout.tier) + FAVOR.forfeitExtra, 'forfeited a Boss');
+  changeFavor(run, bossLossFavor(bout.tier, run) + FAVOR.forfeitExtra, 'forfeited a Boss');
   if (bout.tier === GRAND_TIER) newOpponent(run, bout.tier);
   else restartCircuit(run, bout.tier);
   checkLoss(run);
@@ -991,7 +1016,7 @@ export function finishMatch(run, match) {
     week: run.week, tier, name: bout.name, boss: bout.boss, top: bout.top, won, reason: match.result.reason,
     fighter: fighter.name, fighterId: fighter.id, died: !fighter.alive, gold: 0, prestige: -bout.buyIn, bloodFaith: false,
     title: null, favor: 0, xp: 0, renown: 0, loot: null, levelUp: null, crushing, champion: won && champion,
-    injuries: fighter.alive ? newInjuries : [], morale: 0, levels: 0, bloodied, kill: false, mark: null,
+    injuries: fighter.alive ? newInjuries : [], morale: 0, levels: 0, bloodied, kill: false, mark: null, festival: bout.festival ?? null,
   };
   const favorBefore = run.favor;
 
@@ -1059,7 +1084,7 @@ export function finishMatch(run, match) {
       summary.bloodFaith = true;
       summary.prestige += bout.buyIn;
     }
-    if (bout.top && bout.boss) changeFavor(run, bossLossFavor(tier), `lost ${bout.name}`);
+    if (bout.top && bout.boss) changeFavor(run, bossLossFavor(tier, run), `lost ${bout.name}`);
     else if (bout.top && match.result.reason === 'towel' && !bribed) changeFavor(run, FAVOR.topTowel, 'capitulated in your top arena');
   }
   // Rival houses: Glory changes hands; kills start feuds.
@@ -1210,6 +1235,7 @@ export function deserialize(text) {
   run.inventory.items = { ...emptyItems(), ...(run.inventory.items ?? {}) }; // saves from before consumables
   run.rng.events ??= createRng(deriveSeed(run.seed, 5)); // saves from before events
   run.event ??= null;
+  run.setup ??= { patron: null, decrees: [], classes: [] };
   if (!run.houses) { // saves from before rival houses
     run.rng.houses = createRng(deriveSeed(run.seed, 6));
     run.houses = makeHouses(run.rng.houses);

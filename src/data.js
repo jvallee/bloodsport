@@ -99,6 +99,23 @@ export const HOUSES = {
   vengeanceWin: 5000,
 };
 
+// Legacy (src/legacy.js): patrons and decrees chosen when a career starts (run.setup).
+// Patrons: one per career, chosen when it starts.
+export const PATRONS = {
+  veteran: { name: 'The Old Veteran', desc: 'Start with a level-3 veteran in your roster.' },
+  friend: { name: 'A Friend at Court', desc: 'Start with +15 Imperial Favor.' },
+  purse: { name: "A Merchant's Purse", desc: 'Start with +10 Gold.' },
+  warChest: { name: 'The War Chest', desc: 'Start with 2 War Paint and a Blessed Bandage.' },
+  defector: { name: 'A Defector', desc: 'A strong fighter from a rival house joins you at the start (Power +3).' },
+};
+
+// Emperor's Decrees: optional harder rules for a career, after your first win. Each adds to the score.
+export const DECREES = {
+  ironBosses: { name: 'Iron Bosses', desc: 'Every Boss fights with +1 Power.', score: 30 },
+  greedyEmperor: { name: 'A Greedy Emperor', desc: 'Tribute costs 50% more.', score: 20 },
+  harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favor.', score: 20 },
+};
+
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
 export const KILL_MARKS = [
   { id: 'dreaded', at: 3, name: 'Dreaded', desc: '+5% win chance: opponents fear a proven killer.' },
@@ -117,6 +134,9 @@ export const CLASSES = {
   sagittarius: { name: 'Sagittarius', ability: 'First Volley', desc: 'Each round (unless Blinded): coin flip for +10% win chance or +10% injure chance.' },
   ornitharius: { name: 'Ornitharius', ability: 'Birds of Prey', desc: 'Once injured: +5% injure chance per Bird in quarters.' },
   fighter: { name: 'Fighter', ability: 'Weaponsmaster', desc: 'Fights with a weapon specialty.' },
+  // Legacy classes: they appear in the market once a past career has unlocked them (src/legacy.js).
+  thornBlade: { name: 'Thorn-Blade', ability: 'Thorn Lash', desc: 'Winning a round gives the opponent −2 Speed and −1 Power next round.', legacy: true },
+  samnite: { name: 'Samnite', ability: 'Shield Wall', desc: '20% chance to parry an injury with the shield; Concussed never costs them the first strike.', legacy: true },
 };
 
 export const WEAPONS = {

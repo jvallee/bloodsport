@@ -35,8 +35,8 @@ export function arenaStakes(run, tier) {
       + `Win ${ECONOMY.titleWins} times here (or beat the Boss) to become its Champion. Upsets and Bloodied Victories (wins with 2+ injuries) still earn Favor.`;
   }
   if (!bout.boss) return '';
-  if (tier === GRAND_TIER) return `Win: the career. Lose: ${bossLossFavor(tier)} Favor and try again next month.`;
-  return `Win: a Title (+1 Power), +${FAVOR.bossWin} Favor and the next arena. Lose: ${bossLossFavor(tier)} Favor. Forfeit: ${bossLossFavor(tier) + FAVOR.forfeitExtra} Favor.`;
+  if (tier === GRAND_TIER) return `Win: the career. Lose: ${bossLossFavor(tier, run)} Favor and try again next month.`;
+  return `Win: a Title (+1 Power), +${FAVOR.bossWin} Favor and the next arena. Lose: ${bossLossFavor(tier, run)} Favor. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favor.`;
 }
 
 // The Power and Speed each side brings to the next round (everything included: gear, Titles,

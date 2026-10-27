@@ -639,3 +639,27 @@ test('Feint: +10% win chance only for the side that strikes first', () => {
   const r2 = playRound(slow, { stance: 'feint' });
   assert.equal(sources(r2.win.modsA).some((x) => x.startsWith('Feint:')), false);
 });
+
+// ---- Legacy classes (roadmap v3, phase D2) ----
+
+test('Thorn-Blade: winning a round gives the opponent −2 Speed and −1 Power next round', () => {
+  const m = createMatch({ a: blank({ cls: 'thornBlade', power: 15 }), b: blank(), rng: createRng(1) });
+  const r = playRound(m);
+  assert.equal(r.winner, 'A');
+  assert.ok(r.endEffects.some((e) => e.source === 'Thorn Lash' && e.side === 'B'));
+  assert.ok(sources(computePower(m.b, m.a, 2).mods).includes('Thorn Lash:-1'));
+  assert.ok(sources(computeSpeed(m.b, 2).mods).includes('Thorn Lash:-2'));
+  assert.equal(sources(computePower(m.b, m.a, 3).mods).includes('Thorn Lash:-1'), false);
+});
+
+test('Samnite: a 20% shield parry, and Concussed does not cost them the first strike', () => {
+  let parries = 0;
+  for (let seed = 1; seed <= 400; seed++) {
+    const m = createMatch({ a: blank({ power: 15 }), b: blank({ cls: 'samnite' }), rng: createRng(seed) });
+    const r = playRound(m);
+    parries += r.checks.filter((c) => c.parry?.success).length;
+  }
+  assert.ok(parries > 10, `${parries} parries`);
+  const [S, X] = pair({ cls: 'samnite', injuries: injuries('concussed'), speed: 30 }, {});
+  assert.notEqual(initiative(S, X, 1, createRng(1)).reason, 'concussed');
+});

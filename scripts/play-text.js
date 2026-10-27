@@ -159,7 +159,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       const blocker = state === 'open' ? fightBlocker(run, f.id, tier) : null;
       lines.push(`     ${f.name} [${f.id}]: match ${o.win}${pct(o.winPct)} · Injury ${o.injury}${pct(o.injuryPct)} · Death ${o.death}${pct(o.deathPct)}${warn.length ? ` · ${warn.join(', ')}` : ''}${blocker ? ` · can't fight: ${blocker}` : ''}`);
     }
-    if (bout.top && run.boutPending) lines.push(`     ${bout.boss ? `Bosses can't be skipped: fight or \`forfeit\` (${bossLossFavor(tier) + FAVOR.forfeitExtra} Favor).` : `Or \`skip\` (+${ECONOMY.skipGold} Gold, the roster rests).`}`);
+    if (bout.top && run.boutPending) lines.push(`     ${bout.boss ? `Bosses can't be skipped: fight or \`forfeit\` (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favor).` : `Or \`skip\` (+${ECONOMY.skipGold} Gold, the roster rests).`}`);
     return lines.join('\n');
   }
 

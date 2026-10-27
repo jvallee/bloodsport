@@ -86,6 +86,7 @@ export function computeSpeed(c, round) {
   const mods = [];
   if (round === 1 && weaponActive(c, 'spear', round)) mods.push({ source: 'Spear', value: 3 });
   if (c.proneRound === round) mods.push({ source: 'Prone', value: -2 });
+  if (c.thornRound === round) mods.push({ source: 'Thorn Lash', value: -2 });
   if (c.riposteRound === round) mods.push({ source: 'Riposte', value: 3 });
   if (c.arena === 'rainyMud') mods.push({ source: 'Rainy Mud', value: -2 });
   if (c.boost?.round === round && c.boost.speed) mods.push({ source: c.boost.name, value: c.boost.speed });
@@ -97,8 +98,9 @@ export function computeSpeed(c, round) {
 
 export function initiative(A, B, round, rng) {
   const speed = { A: computeSpeed(A, round), B: computeSpeed(B, round) };
-  const concA = hasInjury(A.f, 'concussed');
-  const concB = hasInjury(B.f, 'concussed');
+  // Samnite shield discipline: Concussed doesn't cost them the first strike.
+  const concA = hasInjury(A.f, 'concussed') && !classActive(A, 'samnite', round);
+  const concB = hasInjury(B.f, 'concussed') && !classActive(B, 'samnite', round);
   // Concussed (P:55) is resolved before Footwork (P:60) and overrides it.
   if (concA !== concB) return { first: concA ? 'B' : 'A', reason: 'concussed', speed };
   if (!concA) {
@@ -128,6 +130,7 @@ export function computePower(c, opp, round, raw = false) {
   if (blinded) mods.push({ source: 'Blinded', value: -2 * blinded });
   if (c.side === 'B' && c.arena === 'crowdFavorite') mods.push({ source: 'Crowd Favorite', value: 1 });
   if (c.overtrained) mods.push({ source: 'Overtrained', value: -1 });
+  if (c.thornRound === round) mods.push({ source: 'Thorn Lash', value: -1 });
   if (c.scouted) mods.push({ source: 'Scouted', value: c.scouted });
   if (c.challenger) mods.push({ source: 'Challenger', value: c.challenger });
   if (c.grudge) mods.push({ source: 'Feud', value: c.grudge });
@@ -283,6 +286,10 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
         Y.riposteRound = round + 1;
         return check;
       }
+    } else if (classActive(Y, 'samnite', round) && !pX.ignoresParry) {
+      const parryRoll = rollE5(m.rng);
+      check.parry = { roll: parryRoll, chance: 20000, success: parryRoll <= 20000, shield: true };
+      if (check.parry.success) return check;
     }
     check.injury = inflictInjury(m, X, Y, r);
   } else if (!counter && roll - chance >= 50000 && kindActive(Y, 'elvenEyes', round)) {
@@ -330,6 +337,10 @@ export function applyRoundEnd(m, r) {
   if (weaponActive(W, 'club', round)) {
     L.proneRound = round + 1;
     effects.push({ source: 'Club', side: L.side, text: 'knocked Prone' });
+  }
+  if (classActive(W, 'thornBlade', round)) {
+    L.thornRound = round + 1;
+    effects.push({ source: 'Thorn Lash', side: L.side, text: 'lashed (−2 Speed, −1 Power next round)' });
   }
   if (weaponActive(W, 'fists', round)) {
     L.classDisabledRound = round + 1;

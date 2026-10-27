@@ -446,3 +446,16 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .standings .feud, .standings .vengeance { font-size: 11px; padding: 0 5px; border-radius: 9px; margin-left: 4px; }
 .standings .feud { border: 1px solid var(--blood); color: #f1b3ad; }
 .standings .vengeance { border: 1px solid var(--good); color: #b7d8b3; }
+
+/* Legacy and the end of a career (phase D) */
+.banner.end .end-score { font-size: 20px; margin: 8px 0; color: var(--gold); }
+.end-grid { display: flex; flex-wrap: wrap; gap: 18px; margin: 10px 0; text-align: left; }
+.end-best { display: flex; gap: 10px; align-items: center; }
+.fallen-faces { display: flex; flex-wrap: wrap; gap: 4px; }
+.banner.achievement { border-color: var(--gold); }
+.legacy .achievements { list-style: none; padding: 0; margin: 8px 0; }
+.legacy .achievements li { padding: 4px 0; color: var(--muted); border-top: 1px solid var(--line); }
+.legacy .achievements li.got { color: var(--text); }
+.legacy .achievements li.got b { color: var(--gold); }
+.modal.setup .opt { display: block; padding: 6px 0; border-top: 1px solid var(--line); }
+.modal.setup .opt small { color: var(--muted); }
