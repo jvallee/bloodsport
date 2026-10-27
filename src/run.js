@@ -9,6 +9,7 @@ import {
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks } from './fight.js';
+import { Refused } from './errors.js';
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
@@ -221,6 +222,7 @@ export function createRun(seed = randomSeed()) {
     revoltWeeks: 0,
     history: [],
     log: [],
+    actions: [], // every player choice, for bug reports and scripts/replay.js (see src/game.js)
     nextId: 1,
     rng: {
       market: createRng(deriveSeed(seed, 1)),
@@ -245,7 +247,7 @@ function idleBlocker(run) {
 }
 
 function assertOk(reason) {
-  if (reason) throw new Error(reason);
+  if (reason) throw new Refused(reason);
 }
 
 // Return a fighter's decor and gear to the house storeroom (on death or release).
@@ -1044,9 +1046,15 @@ export function deserialize(text) {
   run.inventory.items = { ...emptyItems(), ...(run.inventory.items ?? {}) }; // saves from before consumables
   run.inventory.decor = { ...emptyDecor(), ...run.inventory.decor }; // saves from before new decor
   for (const f of run.roster) f.decor = { ...emptyDecor(), ...f.decor };
+  // Careers from before action recording: start recording now, from a snapshot of this point.
+  if (!Array.isArray(run.actions)) {
+    run.actions = [];
+    run.actionsBase = JSON.stringify(run);
+  }
   // A match in progress isn't saved. Reloading mid-fight counts as capitulating,
   // so quitting can't be used to escape a losing fight for free.
   if (run.inMatch) {
+    run.actions.push(['reload']);
     const f = structuredClone(findFighter(run, run.matchInfo.fighterId));
     const progress = run.matchInfo.progress;
     if (progress) Object.assign(f, { injuries: progress.injuries, alive: progress.alive });

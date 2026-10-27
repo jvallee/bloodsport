@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
 import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute } from '../src/run.js';
-import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager } from '../src/ui/views.js';
+import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal } from '../src/ui/views.js';
 import { TRIBUTE } from '../src/data.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
 import { INTRO, STEPS, FIGHT_STEPS } from '../src/tutorial.js';
@@ -143,4 +143,24 @@ test('the top bar always counts down to tribute, and the week panel can pay it e
   payTribute(run);
   assert.match(topbar(run), /⚖ <b>Paid<\/b>/);
   assert.doesNotMatch(ludusTab(run, fakeOdds), /data-action="pay-tribute"/);
+});
+
+test('the bug report box: a crash shows the error and a reload; a manual report can be closed', () => {
+  const crashed = bugModal({ crashed: true, message: 'x is <undefined>', notes: 'I clicked', status: '', version: '9.9.9' });
+  assert.match(crashed, /Something went wrong/);
+  assert.match(crashed, /x is &lt;undefined&gt;/);
+  assert.match(crashed, /data-action="bug-reload"/);
+  assert.match(crashed, />I clicked<\/textarea>/);
+  assert.doesNotMatch(crashed, /bug-close/);
+  const manual = bugModal({ crashed: false, message: '', notes: '', status: 'Copied.', version: '9.9.9' });
+  assert.match(manual, /data-action="bug-close"/);
+  assert.match(manual, /data-action="bug-copy"/);
+  assert.match(manual, /Copied\./);
+  assert.match(topbar(createRun(1)), /data-action="bug-open"/);
+});
+
+test('the week panel offers the full house log once it outgrows the recent list', () => {
+  const run = createRun(2);
+  for (let i = 0; i < 12; i++) run.log.push({ week: 0, text: `entry ${i}`, tone: 'info' });
+  assert.match(ludusTab(run, fakeOdds), /Full house log \(13 entries\)/);
 });

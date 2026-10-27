@@ -51,6 +51,7 @@ export function topbar(run, tab, codexNew = 0) {
       <div class="track" title="Arena tiers">${tiers}</div>
       <div class="spacer"></div>
       <button class="btn small" data-action="help">How to play</button>
+      <button class="btn small" data-action="bug-open" title="Something wrong or confusing? Send the developer a report they can replay.">Report a bug</button>
       <button class="btn small" data-action="new-run">New career</button>
     </header>
     <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
@@ -162,6 +163,8 @@ function weekPanel(run) {
         ${tributePaid(run) ? 'This year\'s tribute is paid.' : `Tribute of <b>${tributeDue(run)} Gold</b> is due in ${toTribute} week${toTribute === 1 ? '' : 's'}. ${button('Pay now', 'pay-tribute', {}, payTributeBlocker(run), 'btn small')}`}</p>
       <h3 class="mini">House log</h3>
       <ul class="log">${recent}</ul>
+      ${run.log.length > 9 ? `<details class="more" data-key="full-log"><summary>Full house log (${run.log.length} entries)</summary>
+        <ul class="log full">${[...run.log].reverse().map((l) => `<li class="${l.tone}"><small>${esc(formatDate(l.week))}</small> ${esc(l.text)}</li>`).join('')}</ul></details>` : ''}
     </section>`;
 }
 
@@ -417,4 +420,24 @@ export function nextBar(hint) {
   if (!hint) return '';
   const go = hint.action === 'tab' ? `<button class="btn small primary" data-action="tab" data-tab="${hint.tab}">${esc(hint.label)}</button>` : '';
   return `<div class="nextbar ${hint.tone ?? ''}" role="status"><span>➜ <b>Next:</b> ${esc(hint.text)}</span>${go}<span class="keys" title="Keyboard shortcuts">Space · T · 1–4 · ?</span></div>`;
+}
+
+// The bug report box: shown when the game hits an error, or when the player asks for it.
+export function bugModal({ crashed, message, notes, status, version }) {
+  return `<div class="modal bug" role="dialog" aria-label="${crashed ? 'Something went wrong' : 'Report a bug'}"><div class="modal-body">
+    ${crashed ? '' : '<button class="close" data-action="bug-close" aria-label="Close">×</button>'}
+    <h2>${crashed ? '⚠ Something went wrong' : 'Report a bug'}</h2>
+    ${crashed
+    ? `<p>The game hit an error it didn't expect. Sorry! Your progress up to your last action is saved.</p><pre class="bug-error">${esc(message)}</pre>`
+    : '<p>Something broken, wrong or confusing? Send a report: the developer can replay your career exactly, step by step.</p>'}
+    <label class="label" for="bug-notes">What happened? (optional)</label>
+    <textarea id="bug-notes" rows="3" placeholder="e.g. I clicked Fight and my fighter's injuries disappeared">${esc(notes)}</textarea>
+    <div class="row">
+      <button class="btn primary" data-action="bug-copy">Copy bug report</button>
+      <button class="btn" data-action="bug-download">Download it</button>
+      ${crashed ? '<button class="btn" data-action="bug-reload">Reload the game</button>' : ''}
+    </div>
+    ${status ? `<p class="bug-status">${esc(status)}</p>` : ''}
+    <p class="sub">The report holds your career's seed, your choices, your save${crashed ? ' and the error' : ''}. Nothing is sent automatically. Game version ${esc(version)}.</p>
+  </div></div>`;
 }

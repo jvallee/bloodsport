@@ -1,15 +1,12 @@
 // App state, saving, coach tips and event wiring. Game rules live in run.js / fight.js; markup in src/ui/.
 
-import { STRESS } from './data.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel } from './fight.js';
-import {
-  createRun, boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, matchOptions, buildRoom,
-  assignDecor, removeDecor, buyGear, equip, unequip,
-  startMatch, finishMatch, skipBout, forfeitBout, serialize, deserialize, recordMatchProgress, buyItem, useItem, payTribute, sellGear,
-} from './run.js';
-import { upgrade } from './ludus.js';
+import { mortalDanger, canThrowTowel } from './fight.js';
+import { createRun, matchOptions, serialize, deserialize } from './run.js';
+import { applyGameAction, isGameAction } from './game.js';
+import { buildReport } from './debug.js';
+import { VERSION } from './version.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal } from './ui/views.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
@@ -33,6 +30,11 @@ let prefs = { tutorial: [], showMath: false, introSeen: false };
 let codex = loadCodex(null);
 let codexShownNew = []; // entries highlighted as new while the Codex tab is open
 let introPage = null; // index into INTRO while the intro is showing
+// Bug reports: `bug` is null, or { error, where } (error null for a report the player asked for).
+let bug = null;
+let bugNotes = '';
+let bugStatus = '';
+let lastAction = null;
 
 // ---------- Storage (every access guarded: private mode or blocked storage must not break the game) ----------
 
@@ -93,15 +95,20 @@ function render() {
   renderFight();
 }
 
-// A finished match is settled at once, so the fight screen can show the full report.
-function afterRound() {
-  if (!match) return;
-  recordMatchProgress(run, match);
-  if (match.over && !match.summary) {
-    if (discoverMatch(codex, match).length) saveCodex();
-    match.summary = finishMatch(run, match);
-    summaries.push(match.summary);
-    noticePage = 0;
+// Run a game action (recorded for bug reports; see src/game.js) and do the page's bookkeeping.
+function act(name, data = {}) {
+  const state = { run, match };
+  const before = match;
+  try {
+    const summary = applyGameAction(state, name, data);
+    if (summary) {
+      if (discoverMatch(codex, before ?? state.match).length) saveCodex();
+      summaries.push(summary);
+      noticePage = 0;
+    }
+  } finally {
+    run = state.run;
+    match = state.match;
   }
 }
 
@@ -122,14 +129,15 @@ function scheduleAuto() {
   clearTimeout(autoTimer);
   if (!ui.auto || !match || match.over) return;
   if (match.round > 0 && mortalDanger(match.a) && canThrowTowel(match)) return;
-  autoTimer = setTimeout(() => {
+  autoTimer = setTimeout(() => guard('auto-play', () => {
     if (!match || match.over) return;
-    ui.animateRound = playRound(match).round;
-    afterRound();
+    lastAction = ['next-round'];
+    act('next-round');
+    ui.animateRound = match.round;
     save();
     render();
     scheduleAuto();
-  }, match.round === 0 ? 300 : 3600);
+  }), match.round === 0 ? 300 : 3600);
 }
 
 // ---------- Careers ----------
@@ -195,43 +203,6 @@ const actions = {
     summaries = summaries.filter((s) => `${s.week}-${s.tier}-${s.fighterId}` !== d.key);
   },
   'notice-page': (d) => { noticePage = Number(d.page); },
-  recruit: (d) => recruit(run, d.id),
-  release: (d) => { if (confirm('Release this fighter for good?')) release(run, d.id); },
-  job: (d) => setJob(run, d.id, d.job),
-  'buy-decor': (d) => buyDecor(run, d.item),
-  'buy-item': (d) => buyItem(run, d.item),
-  'use-item': (d) => useItem(run, match, d.item),
-  'assign-decor': (d) => assignDecor(run, d.id, d.item),
-  'remove-decor': (d) => removeDecor(run, d.id, d.item),
-  'buy-gear': (d) => buyGear(run, Number(d.index)),
-  equip: (d) => equip(run, d.id, Number(d.index)),
-  unequip: (d) => unequip(run, d.id, d.slot),
-  perk: (d) => choosePerk(run, d.id, d.perk),
-  surgeon: (d) => surgeon(run, d.id, Number(d.index)),
-  build: (d) => buildRoom(run, d.type),
-  upgrade: (d) => upgrade(run, d.id),
-  advance: () => { summaries = []; advanceWeek(run); },
-  'advance-tournament': () => { summaries = []; advanceToTournament(run); },
-  skip: () => skipBout(run),
-  'pay-tribute': () => payTribute(run),
-  'sell-gear': (d) => sellGear(run, Number(d.index)),
-  forfeit: () => { if (confirm('Forfeit the Boss? It costs more Imperial Favor than losing the fight.')) forfeitBout(run); },
-  fight: (d) => {
-    const tier = Number(d.tier) || run.topTier;
-    const bout = boutFor(run, tier); // snapshot before the match changes the arena
-    match = startMatch(run, d.id, tier);
-    match.bout = bout;
-    ui.animateRound = 0;
-    ui.auto = false; // auto-play is per match: each fight starts paused
-  },
-  'next-round': () => {
-    ui.animateRound = playRound(match).round;
-    afterRound();
-  },
-  towel: () => {
-    throwTowel(match);
-    afterRound();
-  },
   'auto-play': () => { ui.auto = !ui.auto; },
   'toggle-math': () => {
     ui.animateRound = 0; // switching views shouldn't replay the dice
@@ -239,9 +210,27 @@ const actions = {
     prefs.showMath = ui.showMath;
     savePrefs();
   },
+  'bug-open': () => { bug = { error: null, where: null }; bugStatus = ''; showHelp = false; },
+  'bug-close': () => { bug = null; bugStatus = ''; },
+  'bug-copy': () => copyReport(),
+  'bug-download': () => downloadReport(),
+  'bug-reload': () => location.reload(),
+};
+
+// Game actions: the page's extras around each one (confirmations, animation, tabs).
+const before = {
+  release: () => confirm('Release this fighter for good?'),
+  forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favor than losing the fight.'),
+  advance: () => { summaries = []; return true; },
+  'advance-tournament': () => { summaries = []; return true; },
+};
+const after = {
+  fight: () => {
+    ui.animateRound = 0;
+    ui.auto = false; // auto-play is per match: each fight starts paused
+  },
+  'next-round': () => { ui.animateRound = match?.round ?? 0; },
   'leave-fight': () => {
-    afterRound(); // settles the match if it somehow isn't yet
-    match = null;
     ui.auto = false;
     tab = 'ludus';
     window.scrollTo(0, 0);
@@ -251,18 +240,36 @@ const actions = {
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-action]');
   if (!el || el.disabled) return;
-  const handler = actions[el.dataset.action];
-  if (!handler) return;
-  try {
-    handler(el.dataset);
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-  if (el.dataset.action === 'new-run' || el.dataset.action === 'replay-seed') return;
-  save();
-  render();
-  scheduleAuto();
+  const name = el.dataset.action;
+  if (!actions[name] && !isGameAction(name)) return;
+  const data = { ...el.dataset };
+  delete data.action;
+  guard('action', () => {
+    try {
+      if (isGameAction(name)) {
+        if (before[name] && !before[name]()) return;
+        lastAction = [name, data];
+        act(name, data);
+        after[name]?.();
+      } else {
+        actions[name](data);
+      }
+    } catch (err) {
+      if (err.name !== 'Refused') throw err; // a real bug: the report box takes over
+      alert(err.message);
+    }
+  });
+  if (name === 'new-run' || name === 'replay-seed' || name === 'bug-reload') return;
+  guard('render', () => {
+    save();
+    render();
+    scheduleAuto();
+  });
+});
+
+// The bug report box keeps what the tester types across re-renders.
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'bug-notes') bugNotes = e.target.value;
 });
 
 document.addEventListener('toggle', (e) => {
@@ -296,4 +303,63 @@ document.addEventListener('keydown', (e) => {
 });
 
 
-boot();
+// ---------- Bug reports ----------
+
+const bugEl = document.createElement('div');
+bugEl.id = 'bug';
+document.body.appendChild(bugEl);
+
+function reportText() {
+  const report = buildReport(run, match, bug?.error ?? null, {
+    version: VERSION, time: new Date().toISOString(), url: location.href, userAgent: navigator.userAgent,
+    notes: bugNotes, lastAction, where: bug?.where ?? null,
+  });
+  return JSON.stringify(report, null, 1);
+}
+
+function copyReport() {
+  const text = reportText();
+  const done = () => { bugStatus = 'Copied. Paste it into a message to the developer.'; renderBug(); };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => downloadReport());
+  else downloadReport();
+}
+
+function downloadReport() {
+  const blob = new Blob([reportText()], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `bloodsport-bug-${run?.seed ?? 'x'}-week${run?.week ?? 0}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  bugStatus = 'Downloaded. Send the file to the developer.';
+  renderBug();
+}
+
+// Drawn on its own, so it still works when the main page fails to render.
+function renderBug() {
+  bugEl.innerHTML = bug ? bugModal({ crashed: Boolean(bug.error), message: bug.error?.message ?? '', notes: bugNotes, status: bugStatus, version: VERSION }) : '';
+}
+
+function crash(err, where) {
+  console.error(err);
+  clearTimeout(autoTimer);
+  if (bug?.error) return; // keep the first error: later ones are usually knock-on effects
+  bug = { error: err, where };
+  bugStatus = '';
+  try { renderBug(); } catch (e) { console.error(e); }
+}
+
+// Run page code; anything thrown opens the bug report box.
+function guard(where, fn) {
+  try {
+    fn();
+    renderBug();
+  } catch (err) {
+    crash(err, where);
+  }
+}
+
+window.addEventListener('error', (e) => crash(e.error ?? new Error(e.message), 'window'));
+window.addEventListener('unhandledrejection', (e) => crash(e.reason instanceof Error ? e.reason : new Error(String(e.reason)), 'window'));
+
+guard('boot', boot);

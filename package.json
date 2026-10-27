@@ -8,6 +8,8 @@
     "career": "node scripts/career-sim.js",
     "serve": "python3 -m http.server 8000",
     "check": "node scripts/career-sim.js 300 --check",
-    "sweep": "node scripts/sweep.js"
-  }
+    "sweep": "node scripts/sweep.js",
+    "replay": "node scripts/replay.js"
+  },
+  "version": "2.1.0"
 }
