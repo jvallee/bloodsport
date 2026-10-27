@@ -23,6 +23,13 @@ export function weeksUntilTournament(week) {
   return n;
 }
 
+// Weeks until the tribute is collected (the first week of winter).
+export const weeksUntilWinter = (week) => {
+  const w = week % WEEKS_PER_YEAR;
+  const start = WEEKS_PER_YEAR - CALENDAR.winterWeeks;
+  return w <= start ? start - w : WEEKS_PER_YEAR - w + start;
+};
+
 export const formatDate = (week) => {
   const d = dateOf(week);
   return d.winter ? `Winter, week ${d.weekOfMonth} · Year ${d.year}` : `${d.month}, week ${d.weekOfMonth} · Year ${d.year}`;

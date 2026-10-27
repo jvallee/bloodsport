@@ -78,3 +78,14 @@ test('the Codex shows locked entries as ??? and opened ones with rules', () => {
   c.seen.push('kind:orc');
   assert.match(codexTab(c, ENTRIES, SECTIONS, ['kind:orc'], progress(c), isUnlocked, hasLore), /Orc <span class="new">new/);
 });
+
+test('the week panel warns about tribute in the last month, in red when you are short', () => {
+  const run = createRun(4);
+  run.week = 37;
+  run.gold = 3;
+  const html = ludusTab(run, fakeOdds);
+  assert.match(html, /tribute of <b>20 Gold<\/b> is due in <b>3<\/b> weeks/);
+  assert.match(html, /class="tribute short"/);
+  run.week = 10;
+  assert.doesNotMatch(ludusTab(run, fakeOdds), /class="tribute/);
+});

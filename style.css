@@ -292,3 +292,39 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .entry .new { font-family: var(--body); font-size: 10px; text-transform: uppercase; background: var(--gold); color: #1a1208; border-radius: 99px; padding: 1px 6px; margin-left: 4px; }
 .entry .lore { color: #d8c8a8; font-style: italic; border-top: 1px dashed var(--line); padding-top: 4px; margin-top: 6px; }
 .entry .lore.locked { color: var(--muted); font-style: normal; }
+
+/* v2-B/C: Favor, growth, Morale, gear, arenas, shops */
+.favor { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: help; }
+.favor b { color: var(--text); font-size: 16px; font-variant-numeric: tabular-nums; }
+.favorbar { width: 70px; height: 7px; border-radius: 9px; background: #0f0b0a; border: 1px solid var(--line); overflow: hidden; display: inline-block; }
+.favorbar span { display: block; height: 100%; background: linear-gradient(90deg, #8a6a2a, var(--gold)); }
+.favor.low { color: #f1b3ad; }
+.favor.low .favorbar span { background: var(--blood); }
+.favor.low b { color: var(--blood); animation: pulse 1.2s ease-in-out infinite; }
+.lvl-chip { font-family: var(--body); font-size: 11px; vertical-align: middle; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--gold); color: var(--gold); cursor: help; }
+.chip.perk { color: #f0e2b8; border-color: #6b5a2a; }
+.chip.gear { color: #c9d6e6; border-color: #3e4a5a; }
+.morale { cursor: help; }
+.morale small { text-transform: capitalize; }
+.morale.inspired { color: var(--good); font-weight: 600; }
+.morale.restless { color: #f0cc8c; }
+.morale.mutinous { color: #f1b3ad; font-weight: 700; }
+.renown { color: var(--gold); cursor: help; }
+.perk-choice { margin-top: 10px; padding: 10px; border: 1px solid var(--gold); border-radius: 8px; background: #2b2416; }
+.perk-list { display: grid; gap: 6px; }
+.perk-opt { text-align: left; display: grid; gap: 2px; background: #0f0b0a; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.perk-opt:hover { border-color: var(--gold); }
+.perk-opt small { color: var(--muted); }
+.row.tight { gap: 6px; margin: 4px 0; }
+.gear-slot { margin: 6px 0; font-size: 13px; }
+.gear-slot small { color: var(--muted); }
+.arena-block { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+.arena-block > summary { cursor: pointer; color: var(--gold); }
+.arena-block h3 { font-size: 15px; color: var(--gold); }
+.arena-block.top { border-top: none; margin-top: 0; padding-top: 0; }
+.stack { display: grid; gap: 16px; align-content: start; }
+.shop-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.shop-row small { color: var(--muted); }
+
+.tribute { margin: 8px 0; padding: 8px 10px; border-radius: 8px; border: 1px solid #6b5a2a; background: #2b2416; font-size: 13px; }
+.tribute.short { border-color: var(--blood); background: #2a1614; color: #f1b3ad; }

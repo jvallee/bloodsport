@@ -1,7 +1,7 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
 import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP } from '../data.js';
-import { formatDate, weeksUntilTournament, isWinter } from '../calendar.js';
+import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
@@ -115,11 +115,17 @@ function weekPanel(run) {
       ? '<div class="when">Your top arena\'s bout is settled. Send fighters to other open arenas, or end the week.</div>'
       : `<div class="when">${isWinter(run.week) ? '❄ Winter Dead Season: no tournaments. Heal, train and build. ' : ''}Next tournament in <b>${until}</b> week${until === 1 ? '' : 's'}.</div>`;
   const blocked = advanceBlocker(run);
+  const toTribute = weeksUntilWinter(run.week);
+  const due = tributeDue(run);
+  const tribute = toTribute > 0 && toTribute <= 4
+    ? `<div class="tribute${run.gold < due ? ' short' : ''}">⚖ The Emperor's tribute of <b>${due} Gold</b> is due in <b>${toTribute}</b> week${toTribute === 1 ? '' : 's'}. You have ${run.gold}.${run.gold < due ? ` Short by ${due - run.gold}: unpaid tribute costs 25 Favor.` : ''}</div>`
+    : '';
   const recent = run.log.slice(-9).reverse().map((l) => `<li class="${l.tone}">${esc(l.text)}</li>`).join('');
   return `
     <section class="panel week">
       <h2>${formatDate(run.week)}</h2>
       ${status}
+      ${tribute}
       <div class="row">
         ${button('End week', 'advance', {}, blocked, 'btn primary')}
         ${button('Skip to tournament', 'advance-tournament', {}, blocked, 'btn')}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dateOf, isWinter, isTournamentWeek, isMonthStart, weeksUntilTournament, formatDate, WEEKS_PER_YEAR } from '../src/calendar.js';
+import { dateOf, isWinter, isTournamentWeek, isMonthStart, weeksUntilTournament, weeksUntilWinter, formatDate, WEEKS_PER_YEAR } from '../src/calendar.js';
 
 test('a year is 10 months of 4 weeks plus a 4-week winter', () => {
   assert.equal(WEEKS_PER_YEAR, 44);
@@ -26,4 +26,11 @@ test('month starts include winter week 1 and formatDate reads naturally', () => 
   assert.ok(isMonthStart(0) && isMonthStart(4) && isMonthStart(40) && !isMonthStart(5));
   assert.equal(formatDate(5), 'Aprilis, week 2 · Year 1');
   assert.equal(formatDate(41), 'Winter, week 2 · Year 1');
+});
+
+test('weeksUntilWinter counts down to the tribute, then to next year\'s', () => {
+  assert.equal(weeksUntilWinter(0), 40);
+  assert.equal(weeksUntilWinter(36), 4);
+  assert.equal(weeksUntilWinter(40), 0);
+  assert.equal(weeksUntilWinter(41), 43);
 });
