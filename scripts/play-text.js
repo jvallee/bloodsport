@@ -396,7 +396,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     },
     use: ([item]) => {
       need([item].filter(Boolean), 1, 'use <item>');
-      if (!match) throw new Error('Items are used during a match, between rounds.');
+      if (!match) throw new Error('Items are used during a match, before Round 1 or between rounds.');
       useItem(run, match, item);
       return `${match.a.f.name} uses ${CONSUMABLES[item].name}: ${CONSUMABLES[item].desc}`;
     },

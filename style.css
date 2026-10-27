@@ -48,6 +48,8 @@ h2 small, h3 small { font-family: var(--body); font-size: 12px; color: var(--mut
 .btn.primary { background: var(--gold); color: #1a1208; border-color: var(--gold); font-weight: 600; }
 .btn.danger { background: var(--blood); border-color: var(--blood); color: #fff; font-weight: 600; }
 .btn.ghost { background: none; color: var(--muted); }
+.btn.equip { background: var(--good-dim); border-color: var(--good); color: #cfe8cb; }
+.btn.unequip { background: none; border-color: var(--blood); color: #f1b3ad; }
 .btn.small { padding: 4px 9px; font-size: 13px; }
 .btn.big { padding: 10px 18px; font-size: 15px; }
 .link { background: none; border: none; color: var(--gold); padding: 0; text-decoration: underline; font-size: inherit; }
@@ -405,3 +407,5 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .bug-status { color: var(--gold); }
 .log.full { max-height: 320px; overflow-y: auto; }
 #bug .modal { z-index: 1000; }
+.btn-why { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; vertical-align: top; }
+.btn-why .why-not { margin-top: 0; }

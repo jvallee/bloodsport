@@ -165,7 +165,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Fights show real numbers:** each fight card shows the Power and Speed that side brings to the coming round, with everything applied (gear, Titles, items, injuries, Scouted, Challenger, arena rules). Odds labels say "Match:" because they're for the whole best-of-3, not one round.
 - **Training never fails silently:** training can't be chosen when it can't happen (trainer cap reached, Restless, Stress 50+, or Gold short for every trainee's fee), and the button says why. If it can't happen anyway when the week ends, it counts as a Rest week (−40 Stress); a fighter who becomes unable to train switches to Rest at the end of the week. Either way the card shows "Switched to Rest: …".
 - **Calming decor:** each Bird or Fire Brazier in a fighter's quarters gives −5 Stress a week (Trophy Racks are Morale only).
-- **Fight items** (Apothecary, in the Market): War Paint (+1 Power next round, 10 Gold), Adrenaline Draught (+3 Speed next round, +15 Stress after, 8), Blessed Bandage (−10% to be injured next round, not armor, 10), Crowd Bribe (no Favor or Renown lost for capitulating this fight; a Boss loss still counts, 12). Used between rounds after Round 1, one per fight.
+- **Fight items** (Apothecary, in the Market): War Paint (+1 Power next round, 10 Gold), Adrenaline Draught (+3 Speed next round, +15 Stress after, 8), Blessed Bandage (−10% to be injured next round, not armor, 10), Crowd Bribe (no Favor or Renown lost for capitulating this fight; a Boss loss still counts, 12). Used before Round 1 or between rounds, one per fight (changed after playtest 3; it was after Round 1 only).
 - **"Throw in the towel" is now "capitulate"** in all player-facing text.
 - **Reloading mid-match** counts as capitulating, but keeps any injuries (or death) from rounds already played.
 - **Revolt:** if the roster's average Morale stays below 20 for 4 weeks in a row, the career is lost.
@@ -219,6 +219,8 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Selling gear:** spare storeroom gear sells for half its price (rounded down).
 - **Tribute:** can be paid early from the week panel. Unpaid tribute takes all your Gold and 25 Favor; it only ends the career if Favor reaches 0.
 - **Auto-play** is per match: every fight starts paused.
+- **The Dirt Pits never turn a house away:** if your Prestige is below a Dirt Pits buy-in, you pay what you have (even 0). A win pays its Prestige in full, so a career can't get stuck with no affordable fight. Other arenas still need the full buy-in.
+- **Fight items** can also be used before Round 1 (they boost Round 1).
 
 ### Saves
 - Save format version 3. Version-2 careers are upgraded on load: Favor = 50 − 15 per Strike, the old circuit becomes the top arena, and earlier arenas count as conquered. The Codex is stored separately and is never touched by career saves.

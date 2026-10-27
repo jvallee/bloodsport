@@ -38,3 +38,16 @@ test('no hint once the career is over', () => {
   run.status = 'lost';
   assert.equal(nextHint(run), null);
 });
+
+test('when the top arena is unaffordable, the hint says so and points at the Dirt Pits', () => {
+  const run = createRun(1);
+  recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  run.topTier = 2;
+  run.arenas[2] = { ...structuredClone(run.arenas[1]), tier: 2 };
+  run.bouts = { 1: 'open', 2: 'open' };
+  run.prestige = 1;
+  const h = nextHint(run);
+  assert.equal(h.tone, 'bad');
+  assert.match(h.text, /Not enough Prestige for The Bronze Arena: the buy-in is 2 and you have 1\. Skip it, and win Prestige back in The Dirt Pits/);
+});

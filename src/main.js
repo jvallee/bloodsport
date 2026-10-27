@@ -246,6 +246,7 @@ document.addEventListener('click', (e) => {
   delete data.action;
   guard('action', () => {
     try {
+      if (name !== 'next-round') ui.animateRound = 0; // only a new round plays its animation (not items, toggles...)
       if (isGameAction(name)) {
         if (before[name] && !before[name]()) return;
         lastAction = [name, data];

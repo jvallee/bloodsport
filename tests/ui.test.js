@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
-import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute } from '../src/run.js';
+import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, advanceToTournament, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute } from '../src/run.js';
 import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal } from '../src/ui/views.js';
 import { TRIBUTE } from '../src/data.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
@@ -163,4 +163,27 @@ test('the week panel offers the full house log once it outgrows the recent list'
   const run = createRun(2);
   for (let i = 0; i < 12; i++) run.log.push({ week: 0, text: `entry ${i}`, tone: 'info' });
   assert.match(ludusTab(run, fakeOdds), /Full house log \(13 entries\)/);
+});
+
+test('a blocked Send button says why on the page, not only on hover', () => {
+  const run = createRun(1);
+  recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  run.topTier = 2;
+  run.arenas[2] = { ...structuredClone(run.arenas[1]), tier: 2 };
+  run.bouts = { 1: 'open', 2: 'open' };
+  run.prestige = 0;
+  const html = ludusTab(run, fakeOdds);
+  assert.match(html, /<small class="why-not">Needs 2 Prestige for the buy-in \(you have 0\)\.<\/small>/);
+  assert.match(html, /Buy-in 0 Prestige <i>\(normally 1: the Dirt Pits take whatever Prestige you have\)/);
+});
+
+test('fight items can be used before Round 1', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  const m = startMatch(run, f.id);
+  const html = fightView(m, { animateRound: 0, showMath: false, auto: false }, boutFor(run, 1), '', { warPaint: 1 });
+  assert.match(html, /data-action="use-item" data-item="warPaint"/);
+  assert.match(html, /Begin Round 1/);
 });

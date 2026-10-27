@@ -80,10 +80,13 @@ export function boutFor(run, tier = run.topTier) {
   }
   const c = CIRCUITS[tier - 1];
   const s = arena.stage;
+  // The Dirt Pits never turn a house away: one that can't afford the buy-in pays what Prestige it has (even 0),
+  // so a career can always win its way back.
+  const pauper = tier === 1 && run.prestige < c.buyIn[s];
   return {
     tier, top, below,
     name: `${c.name} · ${STAGES[s]}`, stage: s, boss: s === 2,
-    buyIn: c.buyIn[s], winGold: c.winGold[s],
+    buyIn: pauper ? Math.max(0, run.prestige) : c.buyIn[s], fullBuyIn: c.buyIn[s], pauper, winGold: c.winGold[s],
     winPrestige: Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below),
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
     lossGold: c.lossGold, oppPower: c.oppPower[s], oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
@@ -717,7 +720,7 @@ export function fightBlocker(run, id, tier = run.topTier) {
   if (foughtThisWeek(run).includes(id)) return `${f.name} already fought this week.`;
   if (f.pendingPerks.length) return `${f.name} levelled up: choose a perk first.`;
   if (f.morale < MORALE.mutinous) return `${f.name} is mutinous and refuses to fight.`;
-  if (run.prestige < boutFor(run, tier).buyIn) return `Needs ${boutFor(run, tier).buyIn} Prestige for the buy-in.`;
+  if (run.prestige < boutFor(run, tier).buyIn) return `Needs ${boutFor(run, tier).buyIn} Prestige for the buy-in (you have ${run.prestige}).`;
   return null;
 }
 
@@ -728,7 +731,7 @@ export function startMatch(run, id, tier = run.topTier) {
   const fighter = findFighter(run, id);
   run.prestige -= bout.buyIn;
   run.inMatch = true;
-  run.matchInfo = { fighterId: id, tier };
+  run.matchInfo = { fighterId: id, tier, buyIn: bout.buyIn }; // what was paid (the Dirt Pits may take less)
   return createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, ...matchOptions(run, fighter, tier) });
 }
 
@@ -755,7 +758,6 @@ export function buyItem(run, key) {
 
 export function useItemBlocker(run, match, key) {
   if (!run.inMatch || !match || match.over) return 'Items are used during a match.';
-  if (match.round < 1) return 'Items are used between rounds, after Round 1.';
   if (match.itemUsed) return 'Only one item per fight.';
   if (!CONSUMABLES[key]) return 'Unknown item.';
   if (!run.inventory.items[key]) return `No ${CONSUMABLES[key].name} in the storeroom.`;
@@ -826,7 +828,7 @@ export function finishMatch(run, match) {
   if (!run.inMatch) throw new Error('No match in progress.');
   if (!match.over) throw new Error('The match is not over.');
   const { tier } = run.matchInfo;
-  const bout = boutFor(run, tier);
+  const bout = { ...boutFor(run, tier), buyIn: run.matchInfo.buyIn ?? boutFor(run, tier).buyIn };
   const arena = run.arenas[tier];
   const fighter = findFighter(run, match.a.f.id);
   const opp = arena.opponent;

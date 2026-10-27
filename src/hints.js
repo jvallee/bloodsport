@@ -1,7 +1,7 @@
 // "What should I do next?": the single most useful prompt for the current state. Pure.
 
 import { STRESS, MORALE } from './data.js';
-import { arenaName, unlockedTiers, fightBlocker, jobBlocker, tributeDue, tributePaid, marketPrice } from './run.js';
+import { arenaName, unlockedTiers, fightBlocker, jobBlocker, tributeDue, tributePaid, marketPrice, boutFor } from './run.js';
 import { weeksUntilWinter } from './calendar.js';
 
 export function nextHint(run) {
@@ -13,7 +13,18 @@ export function nextHint(run) {
   }
   const levelled = run.roster.find((f) => f.pendingPerks.length);
   if (levelled) return { text: `${levelled.name} levelled up: pick a perk on their card.`, tone: 'event' };
-  if (run.boutPending) return { text: `Tournament week: send a fighter to ${arenaName(run.topTier)} (or skip it). Odds are on the right.`, tone: 'event' };
+  if (run.boutPending) {
+    // Nobody can afford the top arena: say so, and point at the way out.
+    const bout = boutFor(run, run.topTier);
+    if (run.prestige < bout.buyIn) {
+      const pits = run.topTier > 1 && run.bouts?.[1] === 'open' && run.roster.some((f) => !fightBlocker(run, f.id, 1));
+      return {
+        text: `Not enough Prestige for ${arenaName(run.topTier)}: the buy-in is ${bout.buyIn} and you have ${run.prestige}. ${bout.boss ? 'Forfeit the Boss' : 'Skip it'}${pits ? ', and win Prestige back in The Dirt Pits (they take whatever Prestige you have)' : ''}.`,
+        tone: 'bad',
+      };
+    }
+    return { text: `Tournament week: send a fighter to ${arenaName(run.topTier)} (or skip it). Odds are on the right.`, tone: 'event' };
+  }
   if (run.bouts) {
     const open = unlockedTiers(run).filter((t) => run.bouts[t] === 'open' && run.roster.some((f) => !fightBlocker(run, f.id, t)));
     if (open.length) return { text: `Optional: send a free fighter to ${open.map(arenaName).join(' or ')} for extra Gold and XP, or end the week.` };

@@ -969,14 +969,15 @@ test('War Paint gives +1 Power next round; only one item per fight, only between
   assert.match(useItemBlocker(run, m, 'warPaint'), /one item per fight/);
 });
 
-test('items cannot be used before Round 1 or without one in the storeroom', () => {
+test('items can be used before Round 1 (boosting Round 1), but not without one in the storeroom', () => {
   const { run, f } = atBout();
   const m = startMatch(run, f.id);
-  run.inventory.items.warPaint = 1;
-  assert.match(useItemBlocker(run, m, 'warPaint'), /between rounds/);
-  playRound(m);
-  if (m.over) return;
   assert.match(useItemBlocker(run, m, 'blessedBandage'), /No Blessed Bandage/);
+  run.inventory.items.warPaint = 1;
+  assert.equal(useItemBlocker(run, m, 'warPaint'), null);
+  useItem(run, m, 'warPaint');
+  assert.ok(computePower(m.a, m.b, 1).mods.some((x) => x.source === 'War Paint'));
+  assert.equal(computePower(m.a, m.b, 2).mods.some((x) => x.source === 'War Paint'), false);
 });
 
 test('Adrenaline Draught: +3 Speed next round, +15 Stress after the fight', () => {
@@ -1139,4 +1140,40 @@ test('old saves gain the new decor slots', () => {
   const back = deserialize(serialize(run));
   assert.equal(back.inventory.decor.shrine, 0);
   assert.equal(back.roster[0].decor.warBanner, 0);
+});
+
+// ---------- Prestige soft-lock (playtest 3 report) ----------
+
+test('a house too poor for the buy-in can still fight in the Dirt Pits, paying what it has', () => {
+  const { run, f } = atBout();
+  run.prestige = 0;
+  const bout = boutFor(run, 1);
+  assert.equal(bout.buyIn, 0);
+  assert.equal(bout.pauper, true);
+  assert.equal(fightBlocker(run, f.id, 1), null);
+  const s = playBout(run, f.id, { tier: 1 });
+  assert.equal(s.prestige, bout.winPrestige, 'a win pays its Prestige in full');
+  assert.equal(run.prestige, bout.winPrestige);
+});
+
+test('the pauper buy-in only covers what you can pay, and refunds exactly what was paid', () => {
+  const { run, f } = atBout();
+  run.prestige = 1;
+  run.arenas[1].stage = 2; // the Dirt Pits Boss costs 2
+  assert.equal(boutFor(run, 1).buyIn, 1);
+  const s = playBout(run, f.id, { tier: 1, winner: 'B' });
+  assert.deepEqual([s.prestige, run.prestige], [-1, 0]);
+});
+
+test('higher arenas still need the full buy-in, with the reason spelled out', () => {
+  const { run, f } = atBout();
+  run.arenas[1].stage = 0;
+  run.prestige = 5;
+  assert.equal(boutFor(run, 1).pauper, false);
+  run.topTier = 2;
+  run.arenas[2] = structuredClone(run.arenas[1]);
+  run.arenas[2].tier = 2;
+  run.bouts = { 1: 'open', 2: 'open' };
+  run.prestige = 1;
+  assert.equal(fightBlocker(run, f.id, 2), `Needs ${CIRCUITS[1].buyIn[0]} Prestige for the buy-in (you have 1).`);
 });
