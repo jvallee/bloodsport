@@ -446,18 +446,18 @@ test('First Strike gives the first striker +10% win chance for the round', () =>
 
 // ---- v2: evasion, perks, gear, morale ----
 
-test('Evasion: each point of Speed above the opponent is −3% to be injured, up to −15%', () => {
+test('Evasion: each point of Speed above the opponent is −4% to be injured, up to −20%', () => {
   const [A, B] = pair({ speed: 5 }, { speed: 3 });
-  assert.deepEqual(sources(computePhase2(A, B, 1).self), ['Evasion:-6000']);
+  assert.deepEqual(sources(computePhase2(A, B, 1).self), ['Evasion:-8000']);
   assert.equal(computePhase2(B, A, 1).self.length, 0, 'the slower fighter gets nothing');
   const [C, D] = pair({ speed: 20 }, { speed: 3 });
-  assert.deepEqual(sources(computePhase2(C, D, 1).self), ['Evasion:-15000']);
+  assert.deepEqual(sources(computePhase2(C, D, 1).self), ['Evasion:-20000']);
 });
 
 test('Evasion is not armor: Gun and Flail do not ignore it', () => {
   const m = matchOf({ cls: 'fighter', weapon: 'flail' }, { speed: 5 }, [e5(99999)]);
   const check = injuryCheck(m, m.a, m.b, roundRecord({ winner: 'A' }), 'x');
-  assert.deepEqual(sources(check.mods), ['Evasion:-6000']);
+  assert.deepEqual(sources(check.mods), ['Evasion:-8000']);
 });
 
 test('combat perks apply in the right rounds and conditions', () => {

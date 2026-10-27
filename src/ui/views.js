@@ -14,11 +14,11 @@ import { describeOdds } from '../odds.js';
 import { gearText } from '../codex.js';
 import { esc, button, fighterCard, ICON, BUILDING_ICON } from './components.js';
 
-const JOB_LABELS = { rest: 'Rest', trainPower: '+1 Power', trainSpeed: '+2 Speed', medbay: 'Medbay' };
+const JOB_LABELS = { rest: 'Rest', trainPower: '+1 Power', trainSpeed: '+3 Speed', medbay: 'Medbay' };
 const JOB_HELP = {
   rest: `Rest: −${-STRESS.rest} Stress.`,
   trainPower: `Train Power: +1 Power this week, +${STRESS.train} Stress.`,
-  trainSpeed: `Train Speed: +2 Speed this week, +${STRESS.train} Stress. Speed decides who strikes first and makes you harder to wound.`,
+  trainSpeed: `Train Speed: +3 Speed this week, +${STRESS.train} Stress. Speed decides who strikes first and makes you harder to wound.`,
   medbay: 'Medbay: heals injuries over weeks.',
 };
 

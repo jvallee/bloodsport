@@ -111,17 +111,17 @@ export const ECONOMY = {
 export const FAVOR = {
   start: 50, max: 100, warning: 25,
   bossWin: 15, upsetWin: 5, spectacleWin: 5,
-  bossLoss: -20, forfeit: -25, topTowel: -5, crushingWin: -2, unpaidTribute: -25,
+  bossLoss: -30, forfeit: -35, topTowel: -5, crushingWin: -2, unpaidTribute: -25,
 };
 
 // Tribute is due at the start of each winter: perYear × the year number. Warning a month ahead.
-export const TRIBUTE = { perYear: 15 };
+export const TRIBUTE = { perYear: 20 };
 
 // House revolt: average Morale below this for `weeks` weeks in a row ends the career.
 export const REVOLT = { morale: 20, weeks: 4 };
 
-// Speed trains twice as fast as Power: +1 Power is worth about +2 Speed, and Speed's value levels off.
-export const TRAIN_GAIN = { power: 1, speed: 2 };
+// Speed trains three times as fast as Power: Speed's edge levels off, so it needs to be cheap to be worth a week (tuned with the balanced-fighter gate).
+export const TRAIN_GAIN = { power: 1, speed: 3 };
 
 export const STRESS = { train: 20, fight: 15, rest: -40, medbay: -10, overtrained: 50, max: 100 };
 
@@ -135,13 +135,13 @@ export const STAGES = ['Tournament 1', 'Tournament 2', 'Boss Tournament'];
 
 // One circuit per tier: Tournament 1 → Tournament 2 → Boss. Arrays are per stage.
 export const CIRCUITS = [
-  { tier: 1, name: 'The Dirt Pits', oppPower: [5, 6, 7], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
-  { tier: 2, name: 'The Bronze Arena', oppPower: [8, 9, 10], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
-  { tier: 3, name: 'The Silver Coliseum', oppPower: [11, 12, 13], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
-  { tier: 4, name: 'The Imperial Coliseum', oppPower: [15, 16, 17], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
+  { tier: 1, name: 'The Dirt Pits', oppPower: [6, 7, 8], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
+  { tier: 2, name: 'The Bronze Arena', oppPower: [9, 10, 11], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
+  { tier: 3, name: 'The Silver Coliseum', oppPower: [13, 14, 15], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
+  { tier: 4, name: 'The Imperial Coliseum', oppPower: [17, 18, 19], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
 ];
 
-export const GRAND = { name: 'The Grand Tournament', oppPower: 20, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
+export const GRAND = { name: 'The Grand Tournament', oppPower: 22, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
 
 // House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
 export const PRESTIGE_LEVELS = [
@@ -175,8 +175,8 @@ export const STARTING_BUILDINGS = ['quarters', 'trainer', 'medbay'];
 
 // ---- v2: growth, morale, gear ----
 
-// Speed as evasion: each point of Speed above the opponent's lowers your chance to be injured.
-export const EVASION = { perPoint: 3000, max: 15000 };
+// Speed as evasion: each point of Speed above the opponent's lowers your chance to be injured (4%, up to 20%).
+export const EVASION = { perPoint: 4000, max: 20000 };
 
 // XP to reach levels 2..6. Each level-up offers a choice of 3 perks.
 export const XP = { win: 3, loss: 1, bossMultiplier: 2, upsetBonus: 2, levels: [3, 8, 15, 25, 40] };
@@ -184,7 +184,7 @@ export const XP = { win: 3, loss: 1, bossMultiplier: 2, upsetBonus: 2, levels: [
 // `req(f)` gates combo perks; `stat` perks change the fighter once, the rest are checked in the engine or run.
 export const PERKS = {
   mighty: { name: 'Mighty', desc: '+1 Power.', stat: { power: 1 }, repeatable: true },
-  swift: { name: 'Swift', desc: '+2 Speed.', stat: { speed: 2 }, repeatable: true },
+  swift: { name: 'Swift', desc: '+3 Speed.', stat: { speed: 3 }, repeatable: true },
   thickSkin: { name: 'Thick Skin', desc: '−5% chance to be injured.' },
   killer: { name: 'Killer Instinct', desc: '+5% chance to injure.' },
   fastStart: { name: 'Fast Starter', desc: '+5% win chance in Round 1.' },

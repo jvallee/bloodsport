@@ -1,7 +1,7 @@
 // The Codex: an unlockable glossary that persists across careers. Pure.
 // Rules entries unlock the first time you see something; lore unlocks when you defeat it.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR } from './data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE } from './data.js';
 import { oracleLevel } from './ludus.js';
 import { boutFor, unlockedTiers } from './run.js';
 
@@ -38,15 +38,15 @@ const LORE = {
 
 const BASICS = [
   ['power', 'Power', 'Decides who wins each round. What matters is the difference (Delta): +1 gives 55%, +3 gives 70%, +5 gives 95% per round. Being out-powered also makes injuries worse.'],
-  ['speed', 'Speed', 'Decides who strikes first each round (Speed + a d6 roll). The first striker gets +10% to win the round and rolls to injure before the other can hit back. Speed trains at +2 a week.'],
+  ['speed', 'Speed', 'Decides who strikes first each round (Speed + a d6 roll). The first striker gets +10% to win the round and rolls to injure before the other can hit back. Speed trains at +3 a week, and every point faster than your opponent is −4% to be injured (up to −20%).'],
   ['rounds', 'Rounds and matches', 'A match is best of 3 rounds. Each round: strike order, then Power, then trait bonuses, then a roll for the round winner, then each fighter tries to injure the other.'],
   ['deathGate', 'The Death Gate', 'A fighter with fewer than 2 injuries can never die. At 2 or more (Poisoned counts as 2), losing a round and being hit can be fatal. Throw in the towel between rounds to guarantee survival.'],
   ['towel', 'Throwing in the towel', 'Between rounds you can forfeit the match. You lose the buy-in and the match, but your fighter is guaranteed to survive.'],
   ['stress', 'Stress', `Training (+${STRESS.train}) and fighting (+${STRESS.fight}) raise it; rest (${STRESS.rest}) lowers it. At ${STRESS.overtrained}+ a fighter is overtrained: no training, and −1 Power with one ability lost in the arena.`],
-  ['armor', 'Armor', 'Alloyed Skin and Ego Armour lower your chance to be injured. Gun (rounds 1 and 3) and Flail ignore armor.'],
+  ['armor', 'Armor', 'Alloyed Skin and Ego Armour lower your chance to be injured. Gun (rounds 1 and 3) and Flail ignore armor, but not Speed evasion.'],
   ['prestige', 'Prestige and House level', "Your house's reputation. Staked as tournament buy-ins and won back with interest. Reaching 10 / 25 / 50 / 90 raises your House level for good, unlocking room plots and buildings."],
   ['favor', 'Imperial Favor', 'The Emperor\'s opinion of your house (0–100). Boss wins, upsets and wins at the Death Gate raise it. Losing or forfeiting a Boss in your top arena, throwing in the towel there, crushing weak opponents in lower arenas, and unpaid tribute lower it. At 0 you are executed.'],
-  ['tribute', 'Tribute', 'Each winter the Emperor collects tribute: 15 Gold × the year. If you can\'t pay, he takes what you have and your Favor drops.'],
+  ['tribute', 'Tribute', `Each winter the Emperor collects tribute: ${TRIBUTE.perYear} Gold × the year. If you can't pay, he takes what you have and your Favor drops.`],
   ['arenas', 'Arenas and divisions', 'Every arena you have reached holds a bout each tournament week, and you may send one fighter to each. Your highest arena is your top arena: only its Bosses move you up and only it affects Favor. Lower arenas pay less Prestige, and crushing a much weaker opponent there angers the crowd.'],
   ['growth', 'Levels and perks', 'Fighters earn XP from every match (more for wins, Bosses and upsets). Each level lets you choose 1 of 3 perks: stat boosts, combat edges, or combo perks that need both Power and Speed.'],
   ['renown', 'Renown', 'Fame. Wins (especially Bosses and upsets) raise it; throwing in the towel lowers it. Every 5 Renown adds +1 Gold to a fighter\'s winnings, but famous fighters expect better rooms.'],

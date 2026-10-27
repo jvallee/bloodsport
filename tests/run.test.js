@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR } from '../src/data.js';
+import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR, TRIBUTE } from '../src/data.js';
 import { autoPlay } from '../src/fight.js';
 import { build, rosterCap, plotsFree } from '../src/ludus.js';
 import {
@@ -116,12 +116,12 @@ test('training gives +1 Power per week, costs Gold and adds Stress', () => {
   assert.deepEqual([f.power, f.trained, f.stress, run.gold], [power + 1, 1, STRESS.train, gold - 1]);
 });
 
-test('Speed trains twice as fast: +2 Speed for one training point', () => {
+test('Speed trains three times as fast: +3 Speed for one training point', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
   setJob(run, f.id, 'trainSpeed');
   advanceWeek(run);
-  assert.deepEqual([f.speed, f.trained], [5, 1]);
+  assert.deepEqual([f.speed, f.trained], [6, 1]);
 });
 
 test('training stops at the trainer cap and the fighter switches to rest', () => {
@@ -359,7 +359,7 @@ test('tribute is paid at the start of winter; unpaid tribute costs Favor', () =>
   run.week = 39;
   run.gold = 100;
   advanceWeek(run);
-  assert.equal(run.gold, 100 - 15);
+  assert.equal(run.gold, 100 - TRIBUTE.perYear);
   const poor = createRun(2);
   recruit(poor, poor.market[0].id);
   poor.week = 39;
@@ -389,6 +389,7 @@ test('a fighter with Stress 50+ enters overtrained', () => {
 test('a win pays Gold, Prestige, XP and Renown, raises Morale, and moves to Tournament 2', () => {
   const { run, f } = atBout();
   const [gold, prestige, morale] = [run.gold, run.prestige, f.morale];
+  f.power = run.arenas[1].opponent.power; // an even match, so no upset bonuses
   const s = playBout(run, f.id);
   assert.deepEqual([s.gold, s.prestige, s.xp, s.renown], [CIRCUITS[0].winGold[0], CIRCUITS[0].winPrestige[0], XP.win, 2]);
   assert.deepEqual([run.gold, run.prestige, run.arenas[1].stage, run.boutPending], [gold + CIRCUITS[0].winGold[0], prestige + CIRCUITS[0].winPrestige[0], 1, false]);
@@ -705,6 +706,7 @@ test('a returning rival is the arena\'s Boss Power +1, never compounding', () =>
   run.arenas[1].opponent.power = CIRCUITS[0].oppPower[2];
   for (let i = 0; i < 3; i++) {
     pickPerks(run);
+    run.favor = 100; // three Boss losses in a row would (rightly) get you executed
     run.arenas[1].stage = 2;
     run.arenas[1].opponent = run.arenas[1].rival ?? run.arenas[1].opponent;
     run.bouts = { 1: 'open' };

@@ -35,7 +35,7 @@ export const STEPS = [
   { id: 'recruit', when: (r) => !r.roster.length, title: 'Recruit your first gladiators',
     body: 'Open the <b>Market</b> and recruit two fighters. Look at <b>Power</b> (the sword: wins rounds) and <b>Speed</b> (the arrow: strikes first). Every fighter has a Kind trait and a Class ability; hover over them to see what they do.' },
   { id: 'jobs', when: (r) => r.roster.length > 0 && r.week === 0, title: 'Give everyone a weekly job',
-    body: `Each fighter does one job per week: <b>+1 Power</b> or <b>+2 Speed</b> (costs Gold and adds ${STRESS.train} Stress), <b>Rest</b> (removes Stress) or <b>Medbay</b> (heals injuries). One Trainer Room trains one fighter at a time. Then press <b>End week</b>.` },
+    body: `Each fighter does one job per week: <b>+1 Power</b> or <b>+3 Speed</b> (costs Gold and adds ${STRESS.train} Stress), <b>Rest</b> (removes Stress) or <b>Medbay</b> (heals injuries). One Trainer Room trains one fighter at a time. Then press <b>End week</b>.` },
   { id: 'stress', when: (r) => r.roster.some((f) => f.stress >= STRESS.train * 2), title: 'Watch the Stress bar',
     body: `Training stacks Stress. At <b>${STRESS.overtrained}+</b> a fighter is overtrained: they can't train, and in the arena they fight at −1 Power with one ability lost. <b>Train, train, rest</b> keeps them sharp.` },
   { id: 'bout', when: (r) => r.boutPending, title: 'Fight day',
