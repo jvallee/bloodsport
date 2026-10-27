@@ -266,3 +266,20 @@ test('event choices show their stakes under each button', () => {
   run.gold = 10;
   assert.match(eventCard(run), new RegExp(`−2 Gold; ${f.name}: \\+15 Morale for 4 weeks, −10 Stress`));
 });
+
+test('gear is equipped from a dropdown that says what each item does', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  run.inventory.gear = ['gladius', 'leatherVest'];
+  const html = ludusTab(run, fakeOdds);
+  assert.match(html, new RegExp(`<select class="gear-select equip" data-change="equip" data-id="${f.id}"`));
+  assert.match(html, /<option value="0">Gladius: \+1 Power\.<\/option>/);
+  assert.match(html, /<option value="1">Leather Vest: −5% chance to be injured \(armor\)\.<\/option>/);
+});
+
+test('a fighter card counts their wins, with the wins in each arena on hover', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  f.arenaWins = { 1: 3, 2: 2 };
+  assert.match(ludusTab(run, fakeOdds), /title="Wins by arena: The Dirt Pits: 3 · The Bronze Arena: 2">🏅 5 wins<\/span>/);
+});

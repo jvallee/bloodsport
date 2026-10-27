@@ -10,7 +10,7 @@ import {
   startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker, choosePerk, perkBlocker,
   currentBout, boutFor, marketPrice, serialize, deserialize, moraleTarget, moraleState, xpFor, GRAND_TIER, SAVE_VERSION,
   matchOptions, bossLossFavor, buildRoom, recordMatchProgress, buyItem, buyItemBlocker, useItem, useItemBlocker,
-  payTribute, payTributeBlocker, tributeDue, sellGear, sellGearBlocker,
+  payTribute, payTributeBlocker, tributeDue, sellGear, sellGearBlocker, upcomingBouts,
 } from '../src/run.js';
 import { computePower, computeSpeed, computePhase2, playRound, throwTowel } from '../src/fight.js';
 
@@ -246,14 +246,14 @@ test('Morale drifts toward comfort minus expectations', () => {
   assert.equal(f.morale, 80, 'drifts 10 per week');
 });
 
-test('Morale states: Inspired 80+, Restless below 40, Mutinous below 20', () => {
+test('Morale states: Inspired 80+, Discontented below 40, Mutinous below 20', () => {
   assert.equal(moraleState({ morale: 85 }).id, 'inspired');
   assert.equal(moraleState({ morale: 50 }).id, 'content');
   assert.equal(moraleState({ morale: 30 }).id, 'restless');
   assert.equal(moraleState({ morale: 10 }).id, 'mutinous');
 });
 
-test('a Restless fighter will not train', () => {
+test('a Discontented fighter will not train', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
   setJob(run, f.id, 'trainPower');
@@ -877,11 +877,11 @@ test('a known fighter (5+ Renown) crushing a weak opponent is still jeered', () 
 
 // ---------- Training never fails silently (playtest #2) ----------
 
-test('training is not selectable when it cannot happen: Restless, overtrained, or not enough Gold', () => {
+test('training is not selectable when it cannot happen: Discontented, overtrained, or not enough Gold', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
   f.morale = 30;
-  assert.match(jobBlocker(run, f.id, 'trainPower'), /Restless \(Morale 30\)/);
+  assert.match(jobBlocker(run, f.id, 'trainPower'), /Discontented \(Morale 30\)/);
   f.morale = 60;
   f.stress = 55;
   assert.match(jobBlocker(run, f.id, 'trainSpeed'), /Stress 55: must rest first/);
@@ -1188,4 +1188,17 @@ test('every new fighter has a humor; fighters from older saves get a stable one'
   const b = deserialize(serialize(run));
   assert.ok(a.roster[0].humor && a.arenas[1].opponent.humor);
   assert.equal(a.roster[0].humor, b.roster[0].humor);
+});
+
+test('the schedule lists the coming top-arena tournaments up to the Boss, with weeks to go and festivals', () => {
+  const run = createRun(1);
+  recruit(run, run.market[0].id);
+  const s = upcomingBouts(run);
+  assert.deepEqual(s.map((b) => [b.stage, b.weeks]), [['Tournament 1', 3], ['Tournament 2', 7], ['Boss Tournament', 11]]);
+  assert.equal(s[2].festival, 'Floralia');
+  assert.equal(s[2].boss, true);
+  advanceToTournament(run);
+  assert.equal(upcomingBouts(run)[0].weeks, 0, 'this week');
+  skipBout(run);
+  assert.deepEqual(upcomingBouts(run).map((b) => b.stage), ['Tournament 2', 'Boss Tournament']);
 });

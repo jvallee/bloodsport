@@ -14,12 +14,12 @@ import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, 
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, recruitBlocker, fightBlocker, GRAND_TIER,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, recruitBlocker, fightBlocker, GRAND_TIER,
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo } from '../src/ludus.js';
-import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival } from '../src/calendar.js';
+import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
@@ -182,6 +182,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       `=== ${formatDate(run.week)} ===`,
       `Gold ${run.gold} · Prestige ${run.prestige} (House level ${run.prestigeLevel}${next ? `, level ${next.level} at ${next.at}` : ''}) · Imperial Favor ${run.favor}/${FAVOR.max}${run.favor <= FAVOR.warning ? ' (DANGER)' : ''}`,
       tribute,
+      `Coming up in ${arenaName(run.topTier)}: ${upcomingBouts(run).map((b) => `${b.stage} ${b.weeks ? `in ${plural(b.weeks, 'week')}` : 'THIS WEEK'} (${dateOf(b.week).month}${b.festival ? `, ${b.festival}` : ''})`).join(' → ')}`,
       festival,
       when,
     ].join('\n');

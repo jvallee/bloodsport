@@ -340,6 +340,27 @@ document.addEventListener('click', (e) => {
   });
 });
 
+// Dropdowns (gear): choosing an option runs the action, like a button would.
+document.addEventListener('change', (e) => {
+  const el = e.target.closest?.('select[data-change]');
+  if (!el || !el.value) return;
+  const name = el.dataset.change;
+  const data = { id: el.dataset.id, index: el.value };
+  guard('action', () => {
+    try {
+      lastAction = [name, data];
+      act(name, data);
+    } catch (err) {
+      if (err.name !== 'Refused') throw err;
+      alert(err.message);
+    }
+  });
+  guard('render', () => {
+    save();
+    render();
+  });
+});
+
 // The bug report box keeps what the tester types across re-renders.
 document.addEventListener('input', (e) => {
   if (e.target.id === 'bug-notes') bugNotes = e.target.value;

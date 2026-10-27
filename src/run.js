@@ -108,6 +108,24 @@ export function boutFor(run, tier = run.topTier) {
   };
 }
 export const currentBout = (run) => boutFor(run, run.topTier);
+
+// The coming tournaments in your top arena, up to its Boss: [{ week, weeks, stage, boss, festival }].
+// Assumes each month's bout is settled (a win, loss or skip moves the circuit on).
+export function upcomingBouts(run) {
+  const tier = run.topTier;
+  const out = [];
+  let week = run.week;
+  if (!(run.bouts && run.boutPending)) week += run.bouts ? 1 : 0; // this week's bout is settled: start from next week
+  let stage = tier === GRAND_TIER ? 2 : run.arenas[tier].stage;
+  while (out.length < 4) {
+    week += weeksUntilTournament(week);
+    out.push({ week, weeks: week - run.week, stage: tier === GRAND_TIER ? 'Grand Tournament' : STAGES[stage], boss: stage === 2, festival: festivalOn(week)?.name ?? null });
+    if (stage === 2) break;
+    stage += 1;
+    week += 1;
+  }
+  return out;
+}
 export const opponentFor = (run, tier = run.topTier) => run.arenas[tier].opponent;
 
 // Opponents get faster as you climb (+1 Speed per tier, +1 more for Bosses), so Speed stays worth training.
@@ -414,7 +432,7 @@ const isTraining = (job) => job === 'trainPower' || job === 'trainSpeed';
 // Why a fighter can't train this week (or null). Gold covers every trainee's fee, this one included.
 export function trainBlocker(run, f, { checkGold = true } = {}) {
   if (f.trained >= trainCap(run)) return `Trainer cap reached (${trainCap(run)} points). Upgrade a Trainer Room.`;
-  if (f.morale < MORALE.restless) return `Restless (Morale ${f.morale}): won't train. Raise their comfort.`;
+  if (f.morale < MORALE.restless) return `Discontented (Morale ${f.morale}): won't train. Raise their comfort.`;
   if (f.stress >= STRESS.overtrained) return `Stress ${f.stress}: must rest first.`;
   if (checkGold) {
     const trainees = run.roster.filter((x) => x.id !== f.id && isTraining(x.job)).length + 1;
@@ -476,7 +494,7 @@ export function moraleTarget(run, f) {
 export function moraleState(f) {
   if (f.morale >= MORALE.inspired) return { id: 'inspired', label: 'Inspired', desc: '+5% win chance in every round.' };
   if (f.morale < MORALE.mutinous) return { id: 'mutinous', label: 'Mutinous', desc: 'Refuses to fight. Give them decor, a better room, or wins.' };
-  if (f.morale < MORALE.restless) return { id: 'restless', label: 'Restless', desc: "Won't train. Give them decor or a better room." };
+  if (f.morale < MORALE.restless) return { id: 'restless', label: 'Discontented', desc: "Won't train. Give them decor or a better room." };
   return { id: 'content', label: 'Content', desc: 'No effect.' };
 }
 

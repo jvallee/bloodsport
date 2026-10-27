@@ -163,7 +163,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Gentle start, tough finish:** the Dirt Pits Boss fights without an arena rule, and Tier 1 opponents are 6 / 6 / 7.
 - **Challengers:** from the Silver Coliseum on, top-arena opponents gain +1 Power per 30 Renown of the fighter they face (max +2). Famous stars draw tougher opponents. Shown on the odds and in the fight.
 - **Fights show real numbers:** each fight card shows the Power and Speed that side brings to the coming round, with everything applied (gear, Titles, items, injuries, Scouted, Challenger, arena rules). Odds labels say "Match:" because they're for the whole best-of-3, not one round.
-- **Training never fails silently:** training can't be chosen when it can't happen (trainer cap reached, Restless, Stress 50+, or Gold short for every trainee's fee), and the button says why. If it can't happen anyway when the week ends, it counts as a Rest week (−40 Stress); a fighter who becomes unable to train switches to Rest at the end of the week. Either way the card shows "Switched to Rest: …".
+- **Training never fails silently:** training can't be chosen when it can't happen (trainer cap reached, Discontented, Stress 50+, or Gold short for every trainee's fee), and the button says why. If it can't happen anyway when the week ends, it counts as a Rest week (−40 Stress); a fighter who becomes unable to train switches to Rest at the end of the week. Either way the card shows "Switched to Rest: …".
 - **Calming decor:** each Bird or Fire Brazier in a fighter's quarters gives −5 Stress a week (Trophy Racks are Morale only).
 - **Fight items** (Apothecary, in the Market): War Paint (+1 Power next round, 10 Gold), Adrenaline Draught (+3 Speed next round, +15 Stress after, 8), Blessed Bandage (−10% to be injured next round, not armor, 10), Crowd Bribe (no Favor or Renown lost for capitulating this fight; a Boss loss still counts, 12). Used before Round 1 or between rounds, one per fight (changed after playtest 3; it was after Round 1 only).
 - **"Throw in the towel" is now "capitulate"** in all player-facing text.
@@ -183,7 +183,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 | Morale | State | Effect |
 | :---: | :--- | :--- |
 | 80+ | Inspired | +5% win chance |
-| 20–39 | Restless | Won't train |
+| 20–39 | Discontented (was "Restless") | Won't train |
 | Below 20 | Mutinous | Refuses to fight |
 
 ### Speed
