@@ -2,11 +2,11 @@
 
 import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
-import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival } from '../calendar.js';
+import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -59,6 +59,13 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
       <button class="btn small" data-action="new-run">New career</button>
     </header>
     <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
+}
+
+// The coming bouts in your top arena, up to its Boss.
+function scheduleStrip(run) {
+  if (run.status !== 'active') return '';
+  const items = upcomingBouts(run).map((b) => `<li class="${b.boss ? 'boss' : ''}${b.weeks === 0 ? ' now' : ''}"><b>${esc(b.stage)}</b><small>${b.weeks === 0 ? 'this week' : `in ${b.weeks} wk${b.weeks === 1 ? '' : 's'}`} · ${esc(dateOf(b.week).month)}${b.festival ? ` · 🏛 ${esc(b.festival)}` : ''}</small></li>`).join('');
+  return `<div class="schedule"><div class="label">Coming up in ${esc(arenaName(run.topTier))}</div><ol>${items}</ol></div>`;
 }
 
 // The coming Gods' Day: what it favours, so you can plan for it.
@@ -217,6 +224,7 @@ function weekPanel(run) {
     <section class="panel week">
       <h2>${formatDate(run.week)}</h2>
       ${status}
+      ${scheduleStrip(run)}
       ${festivalNote(run)}
       ${tribute}
       <div class="row">
@@ -270,13 +278,14 @@ function roomPanel(run, f) {
   const { target, comfort, expects } = moraleTarget(run, f);
   const gear = ['weapon', 'armor'].map((slot) => {
     const cur = f.gear[slot];
-    const options = run.inventory.gear.map((k, i) => {
-      if (GEAR[k].slot !== slot) return '';
-      const why = equipBlocker(run, f.id, i);
-      return `<button class="btn small equip" data-action="equip" data-id="${f.id}" data-index="${i}" title="${esc(why ?? `${GEAR[k].name}: ${gearText(GEAR[k])}`)}" ${why ? 'disabled' : ''}>Equip ${esc(GEAR[k].name)} <small>(${esc(gearText(GEAR[k]))})</small></button>`;
-    }).join('');
+    // A dropdown of the storeroom's gear for this slot, each with what it does.
+    const options = run.inventory.gear.map((k, i) => (GEAR[k].slot === slot && !equipBlocker(run, f.id, i)
+      ? `<option value="${i}">${esc(GEAR[k].name)}: ${esc(gearText(GEAR[k]))}</option>` : '')).join('');
+    const picker = options
+      ? `<select class="gear-select equip" data-change="equip" data-id="${f.id}" aria-label="Equip a ${slot === 'weapon' ? 'weapon' : 'piece of armor'}"><option value="">${cur ? 'Swap for…' : 'Equip from the storeroom…'}</option>${options}</select>`
+      : '';
     return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armor'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot), 'btn small unequip')}` : '<small>empty</small>'}
-      ${options ? `<div class="row tight">${options}</div>` : ''}</div>`;
+      ${picker ? `<div class="row tight">${picker}</div>` : ''}</div>`;
   }).join('');
   return `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown})${f.mood ? `, mood ${f.mood.n > 0 ? '+' : ''}${f.mood.n} for ${f.mood.weeks} more week${f.mood.weeks === 1 ? '' : 's'}` : ''}.</div>
     <div class="decor-list">${decor}</div>
@@ -443,9 +452,10 @@ export function marketTab(run) {
   const storedDecor = Object.entries(run.inventory.decor).filter(([, n]) => n).map(([k, n]) => `<span class="chip decor">${esc(DECOR[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">No spare decor.</small>';
   return `
     <div class="grid market">
-      <section class="panel"><h2>Market <small>${circuitInfo(run).name}</small></h2>
+      <div class="stack"><section class="panel"><h2>Market <small>${circuitInfo(run).name}</small></h2>
         <p class="sub">${price} Gold each. New fighters arrive at the start of every month, stronger as you climb the tiers. Roster: ${run.roster.length}/${rosterCap(run)}.</p>
         <div class="cards two">${cards || '<div class="empty">Sold out until next month.</div>'}</div></section>
+        <section class="panel"><h2>The Liaison</h2>${liaison}</section></div>
       <div class="stack">
         <section class="panel"><h2>The Storeroom</h2>
           <p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room, decor &amp; gear" panel. A fallen fighter's things come back here.</p>
@@ -455,8 +465,7 @@ export function marketTab(run) {
         <section class="panel"><h2>Apothecary</h2><p class="sub">Single-use items for a fight. Use one before Round 1 or between rounds, at most one per fight.</p>${Object.entries(CONSUMABLES).map(([k, c]) => `<div class="shop-row"><div><b>${esc(c.name)}</b> · ${c.price} Gold <small>(${run.inventory.items?.[k] ?? 0} in storeroom)</small><br><small>${esc(c.desc)}</small></div>
           ${button('Buy', 'buy-item', { item: k }, buyItemBlocker(run, k), 'btn small primary')}</div>`).join('')}</section>
         <section class="panel"><h2>Decor merchant</h2><p class="sub">Each fighter's quarters fit up to ${maxLevel(run, 'quarters')} of each item (your best Fighter Quarters level).</p>${decorShop}</section>
-        <section class="panel"><h2>The Armourer</h2>${armourer}</section>
-        <section class="panel"><h2>The Liaison</h2>${liaison}</section>
+        <section class="panel"><h2>The Armourer</h2>${maxLevel(run, 'armourer') ? '<p class="sub">Buy gear here. Sell your spare gear back from the Storeroom above, for half its price.</p>' : ''}${armourer}</section>
       </div>
     </div>`;
 }

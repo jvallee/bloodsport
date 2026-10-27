@@ -219,7 +219,7 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .side-label.a { color: var(--a); }
 .side-label.b { color: var(--b); }
 .center { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
-.gauge { position: relative; height: 14px; border-radius: 99px; background: linear-gradient(90deg, var(--b), #3a2f27 50%, var(--a)); margin: 6px 0 4px; }
+.gauge { position: relative; height: 14px; border-radius: 99px; background: linear-gradient(90deg, var(--a), #3a2f27 50%, var(--b)); margin: 6px 0 4px; }
 .gauge .needle { position: absolute; top: -5px; width: 4px; height: 24px; background: #fff; border-radius: 2px; transform: translateX(-50%); transition: left 0.6s ease; box-shadow: 0 0 8px #fff; }
 .gauge-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
 .odds { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin: 10px 0; font-size: 14px; }
@@ -473,3 +473,13 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 
 .event-choice { display: flex; flex-direction: column; gap: 3px; max-width: 260px; }
 .event-choice small { color: var(--muted); }
+
+.gear-select { background: var(--good-dim); color: #cfe8cb; border: 1px solid var(--good); border-radius: 8px; padding: 4px 8px; font: inherit; font-size: 13px; max-width: 100%; }
+
+/* Upcoming schedule */
+.schedule ol { list-style: none; display: flex; gap: 6px; padding: 0; margin: 4px 0 8px; flex-wrap: wrap; }
+.schedule li { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-size: 13px; }
+.schedule li small { color: var(--muted); font-size: 11px; }
+.schedule li.boss { border-color: var(--blood); }
+.schedule li.boss b { color: #f1b3ad; }
+.schedule li.now { border-color: var(--gold); }

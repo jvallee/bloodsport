@@ -182,8 +182,8 @@ export function fightView(m, ui, bout, tutorial = '', items = {}) {
       <div class="arena${shook}">
         <div><div class="side-label a">Your gladiator</div>${fighterCard(m.a.f, { combatant: m.a, compact: true })}${statLine(stats, 'A')}</div>
         <div class="center">
-          <div class="gauge-labels"><span>They're stronger</span><span>Power Delta ${last ? signed(delta) : '0'}</span><span>You're stronger</span></div>
-          <div class="gauge"><div class="needle" style="left:${((delta + 10) / 20) * 100}%"></div></div>
+          <div class="gauge-labels"><span>You're stronger</span><span>Power Delta ${last ? signed(delta) : '0'}</span><span>They're stronger</span></div>
+          <div class="gauge" title="Leans towards the stronger side: yours on the left, theirs on the right"><div class="needle" style="left:${((10 - delta) / 20) * 100}%"></div></div>
           ${last ? initiativeRoll(m, last, animate) : ''}
           ${last ? tacticLine(m, last) : ''}
           ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span><span class="${hold(DICE_TIME + 1.2)}">Round ${last.round} → <b>${esc((last.winner === 'A' ? m.a : m.b).f.name)}</b></span></div>` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
