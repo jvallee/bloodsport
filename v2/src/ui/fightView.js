@@ -119,19 +119,19 @@ function controls(m, ui, bout, items = {}) {
       ${whyTable(m)}
       <button class="btn primary big" data-action="leave-fight">Return to the Ludus</button>`;
   }
-  if (m.round === 0) {
-    return `<div class="row"><button class="btn primary big" data-action="next-round">Begin Round 1</button>
-      <button class="btn big" data-action="auto-play">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
-  }
-  const danger = mortalDanger(m.a);
-  const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injuries and can die if they lose the next round.</div>` : '';
-  const paused = ui.auto && danger ? '<div class="sub">Auto-play paused: your call.</div>' : '';
   const owned = Object.entries(items).filter(([, n]) => n > 0);
   const itemRow = m.itemUsed
     ? `<div class="sub">Used this fight: ${esc(CONSUMABLES[m.itemUsed].name)}.</div>`
     : owned.length
       ? `<div class="items-row"><span class="sub">Use an item (one per fight):</span>${owned.map(([k, n]) => `<button class="btn small" data-action="use-item" data-item="${k}" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</button>`).join('')}</div>`
       : '';
+  if (m.round === 0) {
+    return `${itemRow}<div class="row"><button class="btn primary big" data-action="next-round">Begin Round 1</button>
+      <button class="btn big" data-action="auto-play">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
+  }
+  const danger = mortalDanger(m.a);
+  const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injuries and can die if they lose the next round.</div>` : '';
+  const paused = ui.auto && danger ? '<div class="sub">Auto-play paused: your call.</div>' : '';
   return `${alert}${paused}
     <div>Score ${m.a.roundsWon}–${m.b.roundsWon}. First to two wins. Your call, Lanista.</div>
     ${itemRow}

@@ -14,7 +14,7 @@ import {
 import { describeOdds } from '../odds.js';
 import { fighterWarnings, arenaStakes } from '../explain.js';
 import { gearText } from '../codex.js';
-import { esc, button, fighterCard, ICON, BUILDING_ICON } from './components.js';
+import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON } from './components.js';
 
 const JOB_LABELS = { rest: 'Rest', trainPower: '+1 Power', trainSpeed: '+3 Speed', medbay: 'Medbay' };
 const JOB_HELP = {
@@ -51,6 +51,7 @@ export function topbar(run, tab, codexNew = 0) {
       <div class="track" title="Arena tiers">${tiers}</div>
       <div class="spacer"></div>
       <button class="btn small" data-action="help">How to play</button>
+      <button class="btn small" data-action="bug-open" title="Something wrong or confusing? Send the developer a report they can replay.">Report a bug</button>
       <button class="btn small" data-action="new-run">New career</button>
     </header>
     <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
@@ -159,9 +160,11 @@ function weekPanel(run) {
       </div>
       ${blocked && !run.boutPending ? `<div class="why-not">${esc(blocked)}</div>` : ''}
       <p class="sub">Each fighter does their job once per week. Jobs stay set until you change them.
-        ${tributePaid(run) ? 'This year\'s tribute is paid.' : `Tribute of <b>${tributeDue(run)} Gold</b> is due in ${toTribute} week${toTribute === 1 ? '' : 's'}. ${button('Pay now', 'pay-tribute', {}, payTributeBlocker(run), 'btn small')}`}</p>
+        ${tributePaid(run) ? 'This year\'s tribute is paid.' : `Tribute of <b>${tributeDue(run)} Gold</b> is due in ${toTribute} week${toTribute === 1 ? '' : 's'}. ${buttonWhy('Pay now', 'pay-tribute', {}, payTributeBlocker(run), 'btn small')}`}</p>
       <h3 class="mini">House log</h3>
       <ul class="log">${recent}</ul>
+      ${run.log.length > 9 ? `<details class="more" data-key="full-log"><summary>Full house log (${run.log.length} entries)</summary>
+        <ul class="log full">${[...run.log].reverse().map((l) => `<li class="${l.tone}"><small>${esc(formatDate(l.week))}</small> ${esc(l.text)}</li>`).join('')}</ul></details>` : ''}
     </section>`;
 }
 
@@ -186,9 +189,9 @@ function roomPanel(run, f) {
     const options = run.inventory.gear.map((k, i) => {
       if (GEAR[k].slot !== slot) return '';
       const why = equipBlocker(run, f.id, i);
-      return `<button class="btn small" data-action="equip" data-id="${f.id}" data-index="${i}" title="${esc(why ?? `${GEAR[k].name}: ${gearText(GEAR[k])}`)}" ${why ? 'disabled' : ''}>Equip ${esc(GEAR[k].name)} <small>(${esc(gearText(GEAR[k]))})</small></button>`;
+      return `<button class="btn small equip" data-action="equip" data-id="${f.id}" data-index="${i}" title="${esc(why ?? `${GEAR[k].name}: ${gearText(GEAR[k])}`)}" ${why ? 'disabled' : ''}>Equip ${esc(GEAR[k].name)} <small>(${esc(gearText(GEAR[k]))})</small></button>`;
     }).join('');
-    return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armor'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot))}` : '<small>empty</small>'}
+    return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armor'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot), 'btn small unequip')}` : '<small>empty</small>'}
       ${options ? `<div class="row tight">${options}</div>` : ''}</div>`;
   }).join('');
   return `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown}).</div>
@@ -234,7 +237,7 @@ function oddsRow(run, f, tier, oddsFor) {
     <div class="o ${tone}" title="Chance to win the whole match (best of 3), not one round">Match: ${odds.win}${pct(odds.winPct)}</div>
     <div class="o" title="Chance of picking up at least one injury">Injury: ${odds.injury}${pct(odds.injuryPct)}</div>
     <div class="o ${odds.death === 'None' || odds.death === 'Low' ? '' : 'bad'}" title="Chance of dying if you never capitulate">Death: ${odds.death}${pct(odds.deathPct)}</div>
-    ${run.bouts?.[tier] === 'open' ? button(`Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id, tier }, fightBlocker(run, f.id, tier), 'btn primary small') : ''}
+    ${run.bouts?.[tier] === 'open' ? buttonWhy(`Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id, tier }, fightBlocker(run, f.id, tier), 'btn primary small') : ''}
   </div>`;
 }
 
@@ -254,7 +257,8 @@ function arenaBlock(run, tier, oddsFor) {
   const choice = bout.top && run.boutPending
     ? `<div class="row">${bout.boss ? button(`Forfeit (${bossLossFavor(tier) + FAVOR.forfeitExtra} Favor)`, 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
     : '';
-  const body = `<p class="sub"><b>${esc(bout.name)}</b> · Buy-in ${bout.buyIn} Prestige · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
+  const buyIn = bout.pauper ? `Buy-in ${bout.buyIn} Prestige <i>(normally ${bout.fullBuyIn}: the Dirt Pits take whatever Prestige you have)</i>` : `Buy-in ${bout.buyIn} Prestige`;
+  const body = `<p class="sub"><b>${esc(bout.name)}</b> · ${buyIn} · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
       ${stakes ? `<p class="sub">${stakes}</p>` : ''}${rival}${debuffNote}
       ${fighterCard(arena.opponent, { compact: true, stress: false, tag: 'Opponent' })}
       ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
@@ -359,7 +363,7 @@ export function marketTab(run) {
           <div class="label">Gear <small>(sells for half price)</small></div><div>${stored}</div>
           <div class="label">Decor</div><div class="chips">${storedDecor}</div>
           <div class="label">Fight items</div><div class="chips">${Object.entries(run.inventory.items ?? {}).filter(([, n]) => n).map(([k, n]) => `<span class="chip" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">None. The Apothecary sells them.</small>'}</div></section>
-        <section class="panel"><h2>Apothecary</h2><p class="sub">Single-use items for a fight. Use one between rounds (after Round 1), at most one per fight.</p>${Object.entries(CONSUMABLES).map(([k, c]) => `<div class="shop-row"><div><b>${esc(c.name)}</b> · ${c.price} Gold <small>(${run.inventory.items?.[k] ?? 0} in storeroom)</small><br><small>${esc(c.desc)}</small></div>
+        <section class="panel"><h2>Apothecary</h2><p class="sub">Single-use items for a fight. Use one before Round 1 or between rounds, at most one per fight.</p>${Object.entries(CONSUMABLES).map(([k, c]) => `<div class="shop-row"><div><b>${esc(c.name)}</b> · ${c.price} Gold <small>(${run.inventory.items?.[k] ?? 0} in storeroom)</small><br><small>${esc(c.desc)}</small></div>
           ${button('Buy', 'buy-item', { item: k }, buyItemBlocker(run, k), 'btn small primary')}</div>`).join('')}</section>
         <section class="panel"><h2>Decor merchant</h2><p class="sub">Each fighter's quarters fit up to ${maxLevel(run, 'quarters')} of each item (your best Fighter Quarters level).</p>${decorShop}</section>
         <section class="panel"><h2>The Armourer</h2>${armourer}</section>
@@ -417,4 +421,24 @@ export function nextBar(hint) {
   if (!hint) return '';
   const go = hint.action === 'tab' ? `<button class="btn small primary" data-action="tab" data-tab="${hint.tab}">${esc(hint.label)}</button>` : '';
   return `<div class="nextbar ${hint.tone ?? ''}" role="status"><span>➜ <b>Next:</b> ${esc(hint.text)}</span>${go}<span class="keys" title="Keyboard shortcuts">Space · T · 1–4 · ?</span></div>`;
+}
+
+// The bug report box: shown when the game hits an error, or when the player asks for it.
+export function bugModal({ crashed, message, notes, status, version }) {
+  return `<div class="modal bug" role="dialog" aria-label="${crashed ? 'Something went wrong' : 'Report a bug'}"><div class="modal-body">
+    ${crashed ? '' : '<button class="close" data-action="bug-close" aria-label="Close">×</button>'}
+    <h2>${crashed ? '⚠ Something went wrong' : 'Report a bug'}</h2>
+    ${crashed
+    ? `<p>The game hit an error it didn't expect. Sorry! Your progress up to your last action is saved.</p><pre class="bug-error">${esc(message)}</pre>`
+    : '<p>Something broken, wrong or confusing? Send a report: the developer can replay your career exactly, step by step.</p>'}
+    <label class="label" for="bug-notes">What happened? (optional)</label>
+    <textarea id="bug-notes" rows="3" placeholder="e.g. I clicked Fight and my fighter's injuries disappeared">${esc(notes)}</textarea>
+    <div class="row">
+      <button class="btn primary" data-action="bug-copy">Copy bug report</button>
+      <button class="btn" data-action="bug-download">Download it</button>
+      ${crashed ? '<button class="btn" data-action="bug-reload">Reload the game</button>' : ''}
+    </div>
+    ${status ? `<p class="bug-status">${esc(status)}</p>` : ''}
+    <p class="sub">The report holds your career's seed, your choices, your save${crashed ? ' and the error' : ''}. Nothing is sent automatically. Game version ${esc(version)}.</p>
+  </div></div>`;
 }

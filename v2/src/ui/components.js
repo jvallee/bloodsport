@@ -26,6 +26,11 @@ export function button(label, action, data = {}, blocker = null, cls = 'btn smal
   return `<button class="${cls}" data-action="${action}" ${attrs} ${blocker ? `disabled title="${esc(blocker)}"` : ''}>${label}</button>`;
 }
 
+// A button that, when blocked, says why on the page (not only on hover: touchscreens can't hover).
+export function buttonWhy(label, action, data = {}, blocker = null, cls = 'btn small') {
+  return `<span class="btn-why">${button(label, action, data, blocker, cls)}${blocker ? `<small class="why-not">${esc(blocker)}</small>` : ''}</span>`;
+}
+
 export function deathGate(f) {
   const n = effectiveInjuries(f);
   const gate = deathGateAt(f);

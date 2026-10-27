@@ -1,6 +1,7 @@
 // The Ludus estate: room plots, buildings and what they provide. Pure.
 
 import { BUILDINGS, PRESTIGE_LEVELS } from './data.js';
+import { Refused } from './errors.js';
 
 export const levelInfo = (level) => PRESTIGE_LEVELS[level - 1];
 export const plotCount = (run) => levelInfo(run.prestigeLevel).plots;
@@ -41,7 +42,7 @@ export function buildBlocker(run, type) {
 
 export function build(run, type) {
   const reason = buildBlocker(run, type);
-  if (reason) throw new Error(reason);
+  if (reason) throw new Refused(reason);
   run.gold -= BUILDINGS[type].cost[0];
   const b = { id: `b${run.nextId++}`, type, level: 1 };
   run.buildings.push(b);
@@ -62,7 +63,7 @@ export function upgradeBlocker(run, id) {
 
 export function upgrade(run, id) {
   const reason = upgradeBlocker(run, id);
-  if (reason) throw new Error(reason);
+  if (reason) throw new Refused(reason);
   const b = run.buildings.find((x) => x.id === id);
   run.gold -= BUILDINGS[b.type].cost[b.level];
   b.level += 1;
