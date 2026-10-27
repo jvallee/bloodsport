@@ -443,3 +443,52 @@ test('First Strike gives the first striker +10% win chance for the round', () =>
   assert.deepEqual(sources(r.win.modsA), ['First Strike:10000']);
   assert.equal(r.win.chance, 60000);
 });
+
+// ---- v2: evasion, perks, gear, morale ----
+
+test('Evasion: each point of Speed above the opponent is −3% to be injured, up to −15%', () => {
+  const [A, B] = pair({ speed: 5 }, { speed: 3 });
+  assert.deepEqual(sources(computePhase2(A, B, 1).self), ['Evasion:-6000']);
+  assert.equal(computePhase2(B, A, 1).self.length, 0, 'the slower fighter gets nothing');
+  const [C, D] = pair({ speed: 20 }, { speed: 3 });
+  assert.deepEqual(sources(computePhase2(C, D, 1).self), ['Evasion:-15000']);
+});
+
+test('Evasion is not armor: Gun and Flail do not ignore it', () => {
+  const m = matchOf({ cls: 'fighter', weapon: 'flail' }, { speed: 5 }, [e5(99999)]);
+  const check = injuryCheck(m, m.a, m.b, roundRecord({ winner: 'A' }), 'x');
+  assert.deepEqual(sources(check.mods), ['Evasion:-6000']);
+});
+
+test('combat perks apply in the right rounds and conditions', () => {
+  const [A, B] = pair({ perks: ['thickSkin', 'killer', 'fastStart', 'closer', 'duelist'] }, {});
+  const r1 = computePhase2(A, B, 1);
+  assert.deepEqual(sources(r1.win), ['Fast Starter:5000', 'Duelist:5000']);
+  assert.deepEqual(sources(r1.enemy), ['Killer Instinct:5000', 'Duelist:5000']);
+  assert.deepEqual(sources(r1.self), ['Thick Skin:-5000']);
+  assert.deepEqual(sources(computePhase2(A, B, 3).win), ['Closer:5000', 'Duelist:5000']);
+  const [S, T] = pair({ perks: ['survivor'], injuries: injuries('poisoned') }, {});
+  assert.deepEqual(sources(computePhase2(S, T, 1).self), ['Survivor:-10000']);
+});
+
+test('Tactician makes First Strike worth +15%', () => {
+  const m = createMatch({ a: blank({ speed: 20, kindTrait: 'footwork', perks: ['tactician'] }), b: blank({ speed: 20 }), rng: createRng(1) });
+  const r = playRound(m);
+  assert.equal(r.initiative.first, 'A');
+  assert.deepEqual(sources(r.win.modsA), ['First Strike:15000']);
+});
+
+test('gear adds Power, Speed, injure chance and armor', () => {
+  const [A, B] = pair({ gear: { weapon: 'trident', armor: 'bronzeCuirass' } }, {});
+  assert.deepEqual(sources(computePower(A, B, 1).mods), ['Trident:1']);
+  assert.deepEqual(sources(computeSpeed(A, 1).mods), ['Bronze Cuirass:-1']);
+  const p = computePhase2(A, B, 1);
+  assert.deepEqual(sources(p.enemy), ['Trident:5000']);
+  assert.deepEqual(p.self, [{ source: 'Bronze Cuirass', value: -10000, armor: true }]);
+});
+
+test('an Inspired fighter (Morale 80+) gets +5% win chance', () => {
+  const [A, B] = pair({ morale: 85 }, { morale: 79 });
+  assert.deepEqual(sources(computePhase2(A, B, 1).win), ['Inspired:5000']);
+  assert.equal(computePhase2(B, A, 1).win.length, 0);
+});

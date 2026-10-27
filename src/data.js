@@ -83,9 +83,11 @@ export const WEAPONS = {
 };
 
 // Decor only helps specific builds (for now). `helps` says whether a fighter gets anything from it.
+// Every decor item adds comfort (Morale). Birds and Fire Braziers also help specific builds in combat.
 export const DECOR = {
-  bird: { name: 'Bird', feeds: 'Ornitharius', effect: 'Ornitharius fighters get +5% injure chance per Bird once they are injured (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
-  fireBrazier: { name: 'Fire Brazier', feeds: 'Firebug', effect: 'Elves with Firebug get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
+  bird: { name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale. Ornitharius fighters also get +5% injure chance per Bird once injured (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
+  fireBrazier: { name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
+  trophy: { name: 'Trophy Rack', feeds: 'Morale', effect: 'Comfort for Morale: a famous fighter likes to see their victories on the wall.', helps: () => false },
 };
 
 // ---- Career placeholders (docs/fight-rules.md, "Career rules"); tune with scripts/simulate.js ----
@@ -154,6 +156,52 @@ export const DEPARTMENTS = {
 };
 
 export const STARTING_BUILDINGS = ['quarters', 'trainer', 'medbay'];
+
+// ---- v2: growth, morale, gear ----
+
+// Speed as evasion: each point of Speed above the opponent's lowers your chance to be injured.
+export const EVASION = { perPoint: 3000, max: 15000 };
+
+// XP to reach levels 2..6. Each level-up offers a choice of 3 perks.
+export const XP = { win: 3, loss: 1, bossMultiplier: 2, upsetBonus: 2, levels: [3, 8, 15, 25, 40] };
+
+// `req(f)` gates combo perks; `stat` perks change the fighter once, the rest are checked in the engine or run.
+export const PERKS = {
+  mighty: { name: 'Mighty', desc: '+1 Power.', stat: { power: 1 }, repeatable: true },
+  swift: { name: 'Swift', desc: '+2 Speed.', stat: { speed: 2 }, repeatable: true },
+  thickSkin: { name: 'Thick Skin', desc: '−5% chance to be injured.' },
+  killer: { name: 'Killer Instinct', desc: '+5% chance to injure.' },
+  fastStart: { name: 'Fast Starter', desc: '+5% win chance in Round 1.' },
+  closer: { name: 'Closer', desc: '+5% win chance in Round 3.' },
+  ironConstitution: { name: 'Iron Constitution', desc: 'Training adds 10 less Stress.' },
+  crowdPleaser: { name: 'Crowd Pleaser', desc: '+1 extra Renown for every win.' },
+  survivor: { name: 'Survivor', desc: '−10% chance to be injured while at 2+ injuries.', req: (f) => f.level >= 3, reqText: 'Level 3+' },
+  duelist: { name: 'Duelist', desc: '+5% win chance and +5% chance to injure.', req: (f) => f.power >= 9 && f.speed >= 7, reqText: 'Power 9+ and Speed 7+' },
+  tactician: { name: 'Tactician', desc: 'Striking first is worth +15% instead of +10%.', req: (f) => f.speed >= 9 && f.power >= 8, reqText: 'Speed 9+ and Power 8+' },
+  juggernaut: { name: 'Juggernaut', desc: '+1 Power.', stat: { power: 1 }, req: (f) => f.power >= 12, reqText: 'Power 12+' },
+};
+
+// Renown (fame) and Morale. Comfort raises Morale; expectations grow with Renown.
+export const RENOWN = { win: 2, bossWin: 3, upset: 1, towel: -1, goldPer: 5 }; // +1 Gold per 5 Renown on wins
+export const MORALE = {
+  start: 60, drift: 10, base: 40, perQuartersLevel: 10, perDecor: 5, perEntertainmentLevel: 10, expectationPerRenown: 2, maxExpectation: 60,
+  win: 10, loss: -5, towel: -5, allyDeath: -10, crowdJeers: -10,
+  inspired: 80, restless: 40, mutinous: 20, inspiredWin: 5000,
+};
+
+// Gear: one weapon and one armor slot per fighter. `guard` lowers the chance to be injured (counts as armor).
+export const GEAR = {
+  gladius: { name: 'Gladius', slot: 'weapon', tier: 1, price: 6, power: 1 },
+  spikedGauntlet: { name: 'Spiked Gauntlet', slot: 'weapon', tier: 1, price: 6, injure: 5000 },
+  hunterBow: { name: "Hunter's Bow", slot: 'weapon', tier: 1, price: 6, speed: 2 },
+  warMaul: { name: 'War Maul', slot: 'weapon', tier: 2, price: 14, power: 2, speed: -1 },
+  trident: { name: 'Trident', slot: 'weapon', tier: 2, price: 14, power: 1, injure: 5000 },
+  serratedSpatha: { name: 'Serrated Spatha', slot: 'weapon', tier: 2, price: 16, power: 1, speed: 2 },
+  leatherVest: { name: 'Leather Vest', slot: 'armor', tier: 1, price: 6, guard: 5000 },
+  lightGreaves: { name: 'Light Greaves', slot: 'armor', tier: 1, price: 6, speed: 2 },
+  bronzeCuirass: { name: 'Bronze Cuirass', slot: 'armor', tier: 2, price: 14, guard: 10000, speed: -1 },
+  scaleMail: { name: 'Scale Mail', slot: 'armor', tier: 2, price: 16, guard: 8000, power: 1 },
+};
 
 export const BOSS_DEBUFFS = {
   firstInjuryDouble: { name: 'First Blood Counts Double', desc: 'The first injury your fighter takes counts as two, opening the Death Gate at once.' },

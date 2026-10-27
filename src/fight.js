@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_ROLL } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_ROLL, EVASION, GEAR, MORALE } from './data.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -12,6 +12,8 @@ export const FIRST_STRIKE = 10000;
 export const effectiveInjuries = (f) => f.injuries.reduce((s, i) => s + i.weight, 0);
 export const hasInjury = (f, tag) => f.injuries.some((i) => i.tag === tag);
 const countInjury = (f, tag) => f.injuries.filter((i) => i.tag === tag).length;
+export const hasPerk = (f, perk) => Boolean(f.perks?.includes(perk));
+export const gearOf = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => GEAR[k]);
 
 // `arena` is the Boss debuff affecting this fighter (see BOSS_DEBUFFS in data.js).
 export function makeCombatant(fighter, side, arena = null) {
@@ -51,6 +53,7 @@ export function computeSpeed(c, round) {
   if (c.proneRound === round) mods.push({ source: 'Prone', value: -2 });
   if (c.riposteRound === round) mods.push({ source: 'Riposte', value: 3 });
   if (c.arena === 'rainyMud') mods.push({ source: 'Rainy Mud', value: -2 });
+  for (const g of gearOf(c.f)) if (g.speed) mods.push({ source: g.name, value: g.speed });
   return { base: c.f.speed, mods, total: c.f.speed + sum(mods) };
 }
 
@@ -87,6 +90,7 @@ export function computePower(c, opp, round) {
   if (blinded) mods.push({ source: 'Blinded', value: -2 * blinded });
   if (c.side === 'B' && c.arena === 'crowdFavorite') mods.push({ source: 'Crowd Favorite', value: 1 });
   if (c.overtrained) mods.push({ source: 'Overtrained', value: -1 });
+  for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
 
@@ -124,6 +128,26 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (fleshWounds) enemy.push({ source: 'Flesh Wound', value: -10000 * fleshWounds });
   if (hasInjury(f, 'senseless')) self.push({ source: 'Senseless', value: 10000 * eff });
   if (c.arena === 'bloodMoon') self.push({ source: 'Blood Moon', value: 10000 });
+  // Gear.
+  for (const g of gearOf(f)) {
+    if (g.injure) enemy.push({ source: g.name, value: g.injure });
+    if (g.guard) self.push({ source: g.name, value: -g.guard, armor: true });
+  }
+  // Perks.
+  if (hasPerk(f, 'thickSkin')) self.push({ source: 'Thick Skin', value: -5000 });
+  if (hasPerk(f, 'killer')) enemy.push({ source: 'Killer Instinct', value: 5000 });
+  if (hasPerk(f, 'fastStart') && round === 1) win.push({ source: 'Fast Starter', value: 5000 });
+  if (hasPerk(f, 'closer') && round === 3) win.push({ source: 'Closer', value: 5000 });
+  if (hasPerk(f, 'survivor') && eff >= 2) self.push({ source: 'Survivor', value: -10000 });
+  if (hasPerk(f, 'duelist')) {
+    win.push({ source: 'Duelist', value: 5000 });
+    enemy.push({ source: 'Duelist', value: 5000 });
+  }
+  // Morale: an inspired fighter fights better.
+  if (f.morale >= MORALE.inspired) win.push({ source: 'Inspired', value: MORALE.inspiredWin });
+  // Speed as evasion: faster fighters are harder to wound.
+  const faster = computeSpeed(c, round).total - computeSpeed(opp, round).total;
+  if (faster > 0) self.push({ source: 'Evasion', value: -Math.min(EVASION.max, EVASION.perPoint * faster) });
   const armorWorks = c.arena !== 'noArmor';
   const flail = weaponActive(c, 'flail', round);
   return { win, enemy, self: armorWorks ? self : self.filter((m) => !m.armor), piercing: gunActive || flail, ignoresParry: flail };
@@ -272,8 +296,9 @@ export function playRound(m) {
     if (classActive(c, 'sagittarius', round) && !hasInjury(c.f, 'blinded')) r.volley[c.side] = next(rng) < 0.5 ? 'win' : 'injury';
   }
   const p2 = { A: computePhase2(A, B, round, r.volley), B: computePhase2(B, A, round, r.volley) };
-  // First Strike: striking first is worth +10% to win the round, which is what makes Speed matter.
-  p2[r.initiative.first].win.push({ source: 'First Strike', value: FIRST_STRIKE });
+  // First Strike: striking first is worth +10% to win the round (+15% with the Tactician perk).
+  const firstStriker = sideOf(m, r.initiative.first).f;
+  p2[r.initiative.first].win.push({ source: 'First Strike', value: FIRST_STRIKE + (hasPerk(firstStriker, 'tactician') ? 5000 : 0) });
   r.win = { base: r.row.win, modsA: p2.A.win, modsB: p2.B.win };
   r.win.chance = clamp(r.row.win + sum(p2.A.win) - sum(p2.B.win), 1, 99999);
 
