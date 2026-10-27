@@ -1,0 +1,4 @@
+# Full design doc stays local (contains third-party screenshots)
+Bloodsport — Game Design Document & UE5 Proposal.md
+.DS_Store
+node_modules/
