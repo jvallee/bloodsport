@@ -32,3 +32,9 @@ test('the Oracle level controls how precise the numbers are', () => {
 test('win labels cover the range', () => {
   assert.deepEqual([0.9, 0.6, 0.5, 0.3, 0.1].map(winLabel), ['Strong favorite', 'Favored', 'Even fight', 'Underdog', 'Long shot']);
 });
+
+test('a small but real risk never shows as ~0%', () => {
+  assert.equal(describeOdds({ win: 0.5, injury: 0.3, death: 0.03 }, 1).deathPct, '<10%');
+  assert.equal(describeOdds({ win: 0.5, injury: 0.3, death: 0 }, 1).deathPct, '~0%');
+  assert.equal(describeOdds({ win: 0.5, injury: 0.3, death: 0.003 }, 2).deathPct, '<1%');
+});

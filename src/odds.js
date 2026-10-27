@@ -35,7 +35,11 @@ export function riskLabel(p, { high, some }) {
 
 // The Oracle sharpens the numbers: words only → nearest 10% → exact.
 export function describeOdds(odds, oracle = 0) {
-  const fmt = (p) => (oracle >= 2 ? `${Math.round(p * 100)}%` : oracle === 1 ? `~${Math.round(p * 10) * 10}%` : null);
+  const fmt = (p) => {
+    if (oracle >= 2) return p > 0 && p < 0.005 ? '<1%' : `${Math.round(p * 100)}%`;
+    if (oracle === 1) return p > 0 && p < 0.05 ? '<10%' : `~${Math.round(p * 10) * 10}%`;
+    return null;
+  };
   return {
     win: winLabel(odds.win),
     winPct: fmt(odds.win),
