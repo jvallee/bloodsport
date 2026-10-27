@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deltaRow, clampDelta, injuryForScore, INJURIES, KINDS, TRAITS, TOURNAMENTS } from '../src/data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURIES, KINDS, TRAITS, CIRCUITS, PRESTIGE_LEVELS, BUILDINGS, HEAL_WEEKS, BOSS_DEBUFFS } from '../src/data.js';
 
 test('Delta 0 is a coin flip with 10% / 25% injury chances', () => {
   assert.deepEqual(deltaRow(0), { delta: 0, win: 50000, winnerInjury: 10000, loserInjury: 25000 });
@@ -51,9 +51,30 @@ test('every kind trait is defined and Orc starts at Power 6', () => {
   assert.equal(KINDS.human.basePower, 5);
 });
 
-test('tournament placeholders match fight-rules.md', () => {
-  assert.deepEqual(TOURNAMENTS.map((t) => t.buyIn), [1, 2, 3]);
-  assert.deepEqual(TOURNAMENTS.map((t) => t.winGold), [3, 5, 8]);
-  assert.deepEqual(TOURNAMENTS.map((t) => t.oppPower), [5, 7, 9]);
-  assert.deepEqual(TOURNAMENTS.map((t) => t.bossDebuff), [false, false, true]);
+test('circuits escalate: opponent Power rises within and across tiers', () => {
+  for (const c of CIRCUITS) {
+    assert.ok(c.oppPower[0] <= c.oppPower[1] && c.oppPower[1] < c.oppPower[2], `tier ${c.tier}`);
+    assert.equal(c.buyIn.length, 3);
+    assert.ok(c.winPrestige[2] > c.buyIn[2], 'a Boss win nets Prestige');
+  }
+  for (let i = 1; i < CIRCUITS.length; i++) assert.ok(CIRCUITS[i].oppPower[0] >= CIRCUITS[i - 1].oppPower[2]);
+});
+
+test('Prestige levels follow the Fibonacci plots and doubling fighter caps', () => {
+  assert.deepEqual(PRESTIGE_LEVELS.map((p) => p.plots), [3, 5, 8, 13, 21]);
+  assert.deepEqual(PRESTIGE_LEVELS.map((p) => p.maxFighters), [3, 6, 12, 24, 48]);
+});
+
+test('building tables are consistent', () => {
+  for (const [type, b] of Object.entries(BUILDINGS)) {
+    assert.equal(b.cost.length, b.req.length, type);
+    assert.equal(b.cost.length, b.per.length, type);
+    for (let i = 1; i < b.req.length; i++) assert.ok(b.req[i] >= b.req[i - 1], type);
+  }
+  assert.deepEqual(BUILDINGS.trainer.per, [3, 5, 8, 13, 21]);
+});
+
+test('every non-fatal injury has a healing time, and there are 6 Boss debuffs', () => {
+  for (const i of INJURIES.filter((x) => x.tag !== 'death')) assert.ok(HEAL_WEEKS[i.tag] >= 1, i.tag);
+  assert.equal(Object.keys(BOSS_DEBUFFS).length, 6);
 });

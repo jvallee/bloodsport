@@ -84,25 +84,67 @@ export const DECOR = {
   fireBrazier: { name: 'Fire Brazier', feeds: 'Firebug' },
 };
 
+// ---- Career placeholders (docs/fight-rules.md, "Career rules"); tune with scripts/simulate.js ----
+
 export const ECONOMY = {
-  startGold: 10,
+  startGold: 12,
   startPrestige: 5,
-  fighterCost: 3,
-  trainCost: 1,
-  trainCap: 3,
-  decorCost: 1,
-  decorCap: 3,
-  healCost: 2,
-  maxRoster: 3,
   marketSize: 4,
   startSpeed: 3,
+  decorCost: 1,
+  surgeonCost: 5, // Emergency Surgeon: heal one injury instantly
+  skipGold: 2, // reward for skipping Tournament 1 or 2
+  skipStressRelief: 20,
+  maxStrikes: 3,
 };
 
-export const TOURNAMENTS = [
-  { name: 'Tournament 1 · Minor Circuit', buyIn: 1, winGold: 3, lossGold: 1, oppPower: 5, oppDecor: 1, bossDebuff: false },
-  { name: 'Tournament 2 · Major Circuit', buyIn: 2, winGold: 5, lossGold: 1, oppPower: 7, oppDecor: 2, bossDebuff: false },
-  { name: 'Boss Tournament', buyIn: 3, winGold: 8, lossGold: 1, oppPower: 9, oppDecor: 3, bossDebuff: true },
+export const STRESS = { train: 20, fight: 15, rest: -30, medbay: -10, overtrained: 50, max: 100 };
+
+// Weeks an injury takes to heal in the Medbay (Medbay Lv 3 heals 2 weeks per week).
+export const HEAL_WEEKS = { distracted: 1, fleshWound: 1, concussed: 2, poisoned: 2, maimed: 3, senseless: 2, blinded: 3 };
+
+export const MONTHS = ['Martius', 'Aprilis', 'Maius', 'Iunius', 'Quintilis', 'Sextilis', 'September', 'October', 'November', 'December'];
+export const CALENDAR = { weeksPerMonth: 4, winterWeeks: 4 };
+
+export const STAGES = ['Tournament 1', 'Tournament 2', 'Boss Tournament'];
+
+// One circuit per tier: Tournament 1 → Tournament 2 → Boss. Arrays are per stage.
+export const CIRCUITS = [
+  { tier: 1, name: 'The Dirt Pits', oppPower: [5, 6, 8], buyIn: [1, 1, 2], winGold: [4, 5, 8], winPrestige: [2, 3, 5], lossGold: 1, oppDecor: 1, marketPower: 0, price: 3 },
+  { tier: 2, name: 'The Bronze Arena', oppPower: [8, 9, 11], buyIn: [2, 2, 4], winGold: [6, 8, 12], winPrestige: [4, 6, 10], lossGold: 2, oppDecor: 2, marketPower: 2, price: 5 },
+  { tier: 3, name: 'The Silver Coliseum', oppPower: [11, 12, 14], buyIn: [3, 3, 6], winGold: [8, 11, 16], winPrestige: [6, 9, 15], lossGold: 3, oppDecor: 3, marketPower: 4, price: 7 },
+  { tier: 4, name: 'The Imperial Coliseum', oppPower: [14, 15, 17], buyIn: [4, 4, 8], winGold: [10, 14, 20], winPrestige: [8, 12, 20], lossGold: 4, oppDecor: 3, marketPower: 6, price: 9 },
 ];
+
+export const GRAND = { name: 'The Grand Tournament', oppPower: 19, buyIn: 10, winGold: 30, winPrestige: 30, lossGold: 5, oppDecor: 3 };
+
+// House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
+export const PRESTIGE_LEVELS = [
+  { level: 1, at: 0, plots: 3, maxFighters: 3 },
+  { level: 2, at: 10, plots: 5, maxFighters: 6 },
+  { level: 3, at: 25, plots: 8, maxFighters: 12 },
+  { level: 4, at: 50, plots: 13, maxFighters: 24 },
+  { level: 5, at: 90, plots: 21, maxFighters: 48 },
+];
+
+// cost[i] / req[i]: Gold and Prestige level to reach level i + 1 (cost[0] = build). `per` = effect per level.
+export const BUILDINGS = {
+  quarters: { name: 'Fighter Quarters', dept: 'housing', icon: 'bed', cost: [6, 6, 10], req: [1, 1, 3], per: [2, 3, 4], effect: (n) => `Houses ${n} fighters`, extra: (lv) => `Decor up to ${lv} of each item` },
+  entertainment: { name: 'Entertainment Room', dept: 'housing', icon: 'lyre', cost: [10, 12], req: [3, 4], per: [10, 20], effect: (n) => `All fighters −${n} Stress each week` },
+  trainer: { name: 'Trainer Room', dept: 'training', icon: 'dumbbell', cost: [8, 6, 10, 16, 26], req: [1, 2, 3, 4, 5], per: [3, 5, 8, 13, 21], effect: (n) => `Trains 1 fighter a week, up to ${n} total points`, extra: (lv) => `Costs ${lv} Gold per training week` },
+  medbay: { name: 'Medbay', dept: 'medical', icon: 'cross', cost: [8, 8, 14], req: [1, 3, 4], per: [1, 2, 3], effect: (n) => `Treats ${n} fighter${n > 1 ? 's' : ''} at a time`, extra: (lv) => (lv >= 3 ? 'Heals 2 weeks of injury per week' : 'Heals 1 week of injury per week') },
+  oracle: { name: 'Oracle', dept: 'scouting', icon: 'eye', cost: [8, 12], req: [2, 3], per: [1, 2], effect: (n) => (n >= 2 ? 'Exact odds and next Boss debuff' : 'Odds to the nearest 10%') },
+  liaison: { name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly 1-Gold condemned convict') },
+};
+
+export const DEPARTMENTS = {
+  housing: 'Housing & Morale',
+  training: 'Training',
+  medical: 'Medical',
+  scouting: 'Scouting & Politics',
+};
+
+export const STARTING_BUILDINGS = ['quarters', 'trainer', 'medbay'];
 
 export const BOSS_DEBUFFS = {
   firstInjuryDouble: { name: 'First Blood Counts Double', desc: 'The first injury your fighter takes counts as two, opening the Death Gate at once.' },
