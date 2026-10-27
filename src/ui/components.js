@@ -60,7 +60,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
     <article class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
       ${tag ? `<div class="card-tag">${tag}</div>` : ''}
       <div class="card-head">
-        <div class="who"><h3>${esc(f.name)} ${levelLine}</h3><div class="kind">${KINDS[f.kind].name} · ${clsName}</div></div>
+        <div class="who"><h3><span class="nm">${esc(f.name)}</span>${levelLine}</h3><div class="kind">${KINDS[f.kind].name} · ${clsName}</div></div>
         <div class="badges">
           <div class="badge power" title="Power decides who wins rounds. ${f.power}${gearPow(f) ? ` + ${gearPow(f)} from gear` : ''}. Each point of difference shifts the odds a lot.">${ICON.power}<b>${f.power + gearPow(f)}</b></div>
           <div class="badge speed" title="Speed decides who strikes first (Speed + d6) and makes them harder to wound. ${f.speed}${gearSpd(f) ? ` ${gearSpd(f) > 0 ? '+' : '−'} ${Math.abs(gearSpd(f))} from gear` : ''}.">${ICON.speed}<b>${f.speed + gearSpd(f)}</b></div>

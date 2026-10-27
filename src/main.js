@@ -220,6 +220,7 @@ const actions = {
     match = startMatch(run, d.id, tier);
     match.bout = bout;
     ui.animateRound = 0;
+    ui.auto = false; // auto-play is per match: each fight starts paused
   },
   'next-round': () => {
     ui.animateRound = playRound(match).round;
@@ -239,6 +240,7 @@ const actions = {
   'leave-fight': () => {
     afterRound(); // settles the match if it somehow isn't yet
     match = null;
+    ui.auto = false;
     tab = 'ludus';
     window.scrollTo(0, 0);
   },

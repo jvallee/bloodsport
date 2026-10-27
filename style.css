@@ -111,7 +111,9 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .card.danger { border-color: var(--blood); box-shadow: 0 0 0 1px var(--blood), 0 0 18px rgba(192, 54, 44, 0.35); }
 .card-tag { position: absolute; top: -10px; left: 12px; font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); padding: 1px 8px; border-radius: 99px; color: var(--muted); }
 .card-head { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
-.card-head h3 { font-size: 17px; }
+.card-head h3 { font-size: 17px; display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.card-head h3 .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.card-head .who { min-width: 0; }
 .card-head .kind { color: var(--muted); font-size: 13px; }
 .badges { display: flex; gap: 6px; }
 .badge { display: flex; align-items: center; gap: 4px; border-radius: 8px; padding: 3px 8px; background: #0f0b0a; border: 1px solid var(--line); cursor: help; }
@@ -301,7 +303,7 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .favor.low { color: #f1b3ad; }
 .favor.low .favorbar span { background: var(--blood); }
 .favor.low b { color: var(--blood); animation: pulse 1.2s ease-in-out infinite; }
-.lvl-chip { font-family: var(--body); font-size: 11px; vertical-align: middle; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--gold); color: var(--gold); cursor: help; }
+.lvl-chip { white-space: nowrap; flex-shrink: 0; font-family: var(--body); font-size: 11px; vertical-align: middle; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--gold); color: var(--gold); cursor: help; }
 .chip.perk { color: #f0e2b8; border-color: #6b5a2a; }
 .chip.gear { color: #c9d6e6; border-color: #3e4a5a; }
 .morale { cursor: help; }
