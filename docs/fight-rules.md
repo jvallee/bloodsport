@@ -201,8 +201,8 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - Opponents get one combat perk per tier above 1 (+1 for Bosses), a weapon from Tier 2, armor from Tier 3, and tier-2 gear in Tier 4.
 - **Opponent Power** (T1 / T2 / Boss by tier):
   - Tier 1: 6 / 6 / 7 (the first Boss also has no arena rule)
-  - Tier 2: 9 / 10 / 11
-  - Tier 3: 13 / 14 / 15
+  - Tier 2: 12 / 13 / 14 (v3: +3 after playtest #3 found the middle too easy)
+  - Tier 3: 16 / 17 / 18 (v3: +3)
   - Tier 4: 21 / 22 / 23 (v3: +2 for a harder finish)
   - Grand Tournament: 26 (v3: +2)
 - The Armourer and Liaison stock up the moment they are built.
@@ -232,11 +232,11 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - **Feint:** +10% win chance, only if you strike first that round (so it rewards Speed).
   - **Counters:** Press beats Feint, Feint beats Guard, Guard beats Press. The side whose tactic counters the other's gets **+10% win chance** that round.
 - **Four Humors:** every fighter has one (fighters from older saves get one from their name, so it never changes).
-  - **Choleric:** +1 Power in Round 1, −1 Power in Round 3. Picks Press 60%, Feint 20%, Guard 20%.
-  - **Sanguine:** +3 Speed in Round 1. Picks Feint 55%, Press 25%, Guard 20%.
-  - **Melancholic:** −5% chance to be injured every round; +1 Power in Round 3. Picks Guard 55%, Press 25%, Feint 20%.
-  - **Phlegmatic:** +5% win chance in Rounds 2 and 3. Guards first (50%); from Round 2 counters the tactic you used last round 70% of the time (unless you held Steady).
-- **Suggested tactic** (the ★, and what auto-play and the careful bot use): Guard at the Death Gate; otherwise the counter to the opponent's favourite (against a Phlegmatic, the counter to their counter of your last tactic).
+  - **Choleric:** +1 Power in Round 1, −1 Power in Round 3. Picks Press 70%, Feint 15%, Guard 15%.
+  - **Sanguine:** +3 Speed in Round 1. Picks Feint 70%, Press 15%, Guard 15%.
+  - **Melancholic:** −5% chance to be injured every round; +1 Power in Round 3. Picks Guard 70%, Press 15%, Feint 15%.
+  - **Phlegmatic:** +5% win chance in Rounds 2 and 3. Guards first (70%); from Round 2 counters the tactic you used last round 70% of the time (unless you held Steady).
+- **Suggested tactic** (the ★, and what auto-play and the careful bot use): Guard at the Death Gate. Otherwise the tactic with the best expected value: ±10% for each likely counter, the tactic's own effects (wound chances at half weight), Feint's bonus times the chance to strike first, and any festival bonus. Against an opponent with no humor, the festival's favoured tactic or Steady. (Playtest #3: humor tells held only about half the time, so each humor's favourite went up from 50–60% to 70%.)
 - **Gates:** reading the opponent beats always-Steady by 3–15 points a match (measured: +7) and beats always-Press (measured: +4). Press was +5% win at first; always-Press came within 2 points of reading, so it was cut to +3%. Feint was +3 Speed at first; that erased trained Speed's value (a balanced build was best vs 0 of 4 Bosses), so it became the first-strike bonus.
 
 ### Phase B: a world that moves
@@ -258,7 +258,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - **Afeared:** −1 Power, −10% chance to injure, −10% chance to be injured against that style.
   - **Enraged:** +1 Power, +15% chance to injure, +15% chance to be injured against that style.
   - **Battle-Hardened** (first Bloodied Victory): −5% chance to be injured.
-- **Cyborg surgery** (Medbay Lv 2+): replace a Maimed limb (Cyborg Arm: +1 Power) or a Blinded eye (Cyborg Eye: +1 Power, can't be Blinded again; that wound lands as a Flesh Wound). Costs 15 Gold + 5 per tier above 1, and −2 Renown.
+- **Cyborg surgery** (Medbay Lv 2+): replace a Maimed limb (Cyborg Arm: +1 Power) or a Blinded eye (Cyborg Eye: +1 Power, can't be Blinded again; that wound lands as a Flesh Wound). Costs 10 Gold + 4 per tier above 1, and −1 Renown (cut after playtest #3: it was never worth it).
 - **Chronicle:** each fighter keeps up to 12 story lines (joined, first win, first kill, titles, marks, scars, augments, death). A death adds a eulogy to the report.
 - **Retirement:** a fighter at level 4+ or with a Title can retire: +5 Prestige, +10 Morale to the roster, and they join the Hall of Champions (kept across careers).
 

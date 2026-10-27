@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER_WIN, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS } from './data.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -63,16 +63,41 @@ export function opponentTactic(m, round) {
   return 'steady';
 }
 
-// The tactic auto-play (and the careful bot) picks for your fighter: Guard at the Death Gate,
-// otherwise counter what the opponent is most likely to do.
+// What the opponent is likely to do this round, as { tactic: probability }.
+export function opponentOdds(m) {
+  const h = humorOf(m.b);
+  if (!h) return { steady: 1 };
+  const round = m.round + 1;
+  const leans = Object.fromEntries(Object.entries(h.leans).map(([k, w]) => [k, w / 100]));
+  if (h.adapts && round > 1 && m.a.lastStance && m.a.lastStance !== 'steady') {
+    const p = h.adapts / 100;
+    const out = Object.fromEntries(Object.entries(leans).map(([k, w]) => [k, w * (1 - p)]));
+    out[beats(m.a.lastStance)] = (out[beats(m.a.lastStance)] ?? 0) + p;
+    return out;
+  }
+  return leans;
+}
+
+// The tactic auto-play (and the careful bot) picks: Guard at the Death Gate; otherwise the best expected value
+// against the opponent's habits (counters ±10%, the tactic's own effects with wounds at half weight, festival bonuses).
 export function suggestTactic(m) {
   if (mortalDanger(m.a)) return 'guard';
-  const h = humorOf(m.b);
-  if (!h) return 'steady';
   const round = m.round + 1;
-  if (h.adapts && round > 1 && m.a.lastStance && m.a.lastStance !== 'steady') return beats(beats(m.a.lastStance));
-  const favourite = Object.entries(h.leans).sort((x, y) => y[1] - x[1])[0][0];
-  return beats(favourite);
+  const fest = m.a.festival?.tactic ?? {};
+  if (!humorOf(m.b)) return Object.keys(fest)[0] ?? 'steady'; // nothing to read: take the festival's favour, if any
+  const odds = opponentOdds(m);
+  const faster = computeSpeed(m.a, round).total - computeSpeed(m.b, round).total;
+  const pFirst = faster > 2 ? 0.8 : faster < -2 ? 0.2 : 0.5;
+  const value = (k) => {
+    const t = TACTICS[k];
+    let v = (t.win ?? 0) + 0.5 * (t.injure ?? 0) - 0.5 * (t.self ?? 0) + pFirst * (t.firstStrike ?? 0) + (fest[k] ?? 0);
+    for (const [o, p] of Object.entries(odds)) {
+      if (COUNTERS[k] === o) v += p * COUNTER.win;
+      if (COUNTERS[o] === k) v -= p * COUNTER.win;
+    }
+    return v;
+  };
+  return Object.keys(TACTICS).reduce((best, k) => (value(k) > value(best) ? k : best), 'steady');
 }
 
 // Scars that apply against this opponent's style, and Battle-Hardened (always).
@@ -193,6 +218,7 @@ export function computePhase2(c, opp, round, volley = {}) {
   }
   // Perks.
   if (hasPerk(f, 'thickSkin')) self.push({ source: 'Thick Skin', value: -5000 });
+  if (hasPerk(f, 'juggernaut')) self.push({ source: 'Juggernaut', value: -5000 });
   if (hasPerk(f, 'killer')) enemy.push({ source: 'Killer Instinct', value: 5000 });
   if (hasPerk(f, 'fastStart') && round === 1) win.push({ source: 'Fast Starter', value: 5000 });
   if (hasPerk(f, 'closer') && round === 3) win.push({ source: 'Closer', value: 5000 });
@@ -208,7 +234,7 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (t?.win) win.push({ source: t.name, value: t.win });
   if (t?.injure) enemy.push({ source: t.name, value: t.injure });
   if (t?.self) self.push({ source: t.name, value: t.self });
-  if (c.stance && COUNTERS[c.stance] === opp.stance) win.push({ source: `Counter (${t.name} beats ${TACTICS[opp.stance].name})`, value: COUNTER_WIN });
+  if (c.stance && COUNTERS[c.stance] === opp.stance) win.push({ source: `Counter (${t.name} beats ${TACTICS[opp.stance].name})`, value: COUNTER.win });
   if (c.vengeance) win.push({ source: 'Vengeance', value: 5000 });
   for (const sc of activeScars(c, opp)) {
     if (sc.enemy) enemy.push({ source: sc.label, value: sc.enemy });

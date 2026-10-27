@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
-import { EVENT_BY_ID, choiceLabel } from '../src/events.js';
+import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
@@ -43,7 +43,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   job <id> <rest|trainPower|trainSpeed|medbay>
   perk <id> <perk>              choose a level-up perk
   surgeon <id> <injury#>        Emergency Surgeon: heal one injury now (injury# from 0)
-  buy-decor <bird|fireBrazier|trophy>
+  buy-decor <${Object.keys(DECOR).join('|')}>
   buy-item <warPaint|adrenaline|blessedBandage|crowdBribe>   single-use fight items
   use <item>                    during a fight, between rounds: use one item (one per fight)
   place <id> <item> | remove <id> <item>      put decor in a fighter's room, or take it back
@@ -109,6 +109,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (gear.length) bits.push(`Gear: ${gear.join('; ')}`);
     const decor = Object.entries(f.decor).filter(([, n]) => n).map(([k, n]) => `${DECOR[k].name} ×${n}${DECOR[k].helps(f) ? '' : ' (comfort only)'}`);
     if (decor.length) bits.push(`Decor: ${decor.join(', ')}`);
+    if (f.augments?.length) bits.push(`Augments: ${f.augments.map((k) => `${AUGMENTS[k].name} (${AUGMENTS[k].desc})`).join(', ')}`);
     return bits;
   }
 
@@ -137,7 +138,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   }
 
   function opponentBlock(f) {
-    const bits = [`Power ${f.power}`, `Speed ${f.speed}`, `Renown ${f.renown}`, ...extras(f)];
+    const bits = [`Power ${f.power}`, `Speed ${f.speed}`, `Renown ${f.renown}`, ...(f.humor ? [`${HUMORS[f.humor].name}: ${HUMORS[f.humor].tell}`] : []), ...extras(f)];
     const house = houseOf(run, f);
     return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ' (FEUD: +1 Power against you)' : ''}${house.vengeance ? ' (your VENGEANCE: +5% win chance)' : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
   }
@@ -196,7 +197,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (run.event) {
       const e = EVENT_BY_ID[run.event.id];
       const names = eventNames(run);
-      out.push(`\n*** EVENT: ${e.title} ***\n${e.text(names)}\n${e.choices.map((c, i) => `  choose ${i}: ${choiceLabel(c, names)}${eventChoiceBlocker(run, i) ? ` (can't: ${eventChoiceBlocker(run, i)})` : ''}`).join('\n')}`);
+      out.push(`\n*** EVENT: ${e.title} ***\n${e.text(names)}\n${e.choices.map((c, i) => `  choose ${i}: ${choiceLabel(c, names)} → ${stakesText(c.effects)}${eventChoiceBlocker(run, i) ? ` (can't: ${eventChoiceBlocker(run, i)})` : ''}`).join('\n')}`);
     }
     out.push(`\n-- Your gladiators ${run.roster.length}/${rosterCap(run)} · training costs ${trainCost(run)} Gold a week --`);
     out.push(run.roster.length ? run.roster.map(fighterBlock).join('\n') : '(none: `market` to see who is for sale)');
@@ -415,8 +416,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     },
     retire: ([id]) => {
       need([id].filter(Boolean), 1, 'retire <id>');
-      const legend = retire(run, id);
-      return `${legend.name} retires to the Hall of Champions. ${run.log.at(-1).text}`;
+      retire(run, id);
+      return run.log.at(-1).text;
     },
     surgeon: ([id, i = '0']) => {
       need([id].filter(Boolean), 1, 'surgeon <id> <injury#>');
@@ -530,7 +531,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       idle();
       const weeks = advanceToTournament(run);
       if (!weeks) throw new Error(advanceBlocker(run) ?? 'Already at a tournament.');
-      return `${plural(weeks, 'week')} pass.\n\n${look()}`;
+      return `${plural(weeks, 'week')} ${weeks === 1 ? 'passes' : 'pass'}.\n\n${look()}`;
     },
   };
 

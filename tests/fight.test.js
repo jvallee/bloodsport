@@ -587,7 +587,7 @@ test('opponents pick tactics by their humor; a humorless fighter stays Steady', 
     const m = createMatch({ a: blank(), b: blank({ humor: 'choleric' }), rng: createRng(seed) });
     counts[opponentTactic(m, 1)]++;
   }
-  assert.ok(counts.press > 200 && counts.press < 280, JSON.stringify(counts));
+  assert.ok(counts.press > 250 && counts.press < 310, JSON.stringify(counts)); // Choleric: 70% Press
   const plain = createMatch({ a: blank(), b: blank(), rng: createRng(1) });
   assert.equal(opponentTactic(plain, 1), 'steady');
 });
@@ -599,7 +599,7 @@ test('a Phlegmatic opponent mostly counters the tactic you used last round', () 
     m.a.lastStance = 'press';
     if (opponentTactic(m, 2) === 'guard') countered++;
   }
-  assert.ok(countered > 235 && countered < 275, `${countered}/300`); // 70% counter + 30% × 50% Guard lean = 85%
+  assert.ok(countered > 255 && countered < 290, `${countered}/300`); // 70% counter + 30% × 70% Guard lean = 91%
 });
 
 test('playRound uses the chosen tactic, records both, and clears them for the next round', () => {

@@ -98,3 +98,6 @@ How we got here:
 - Tuning: Imperial Coliseum and Grand opponents +2 Power in all, and Press's self-risk cut from +10% to +7.5%. Careful play is back to 32%, with a harder finish.
 - Reckless deaths rose to about 3.1 a career, against the old limit of 3. Feuds, Enraged scars, and a reckless bot that always Presses make reckless play deadlier on purpose, and no lever moved it under 3 without breaking another gate. So the limit is now 3.5, pending the user's OK.
 - Events alone move the careful win rate by −2.7 points (limit ±5).
+
+## After LLM playtest #3
+See `docs/playtest-3-changes.md`. The snapshot above is superseded by: careful 28%, reckless deaths 2.89 (that gate is back at 1–3), first Boss 66%, Grand +25 points harder, tactics +8 over always-Steady and +6 over always-Press.

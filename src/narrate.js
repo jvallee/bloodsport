@@ -73,7 +73,12 @@ export function narrateRound(m, r) {
     add('injury', text);
   }
 
-  for (const e of r.endEffects) add('effect', `${name(e.side)}: ${e.text} (${e.source}).`);
+  // Effects one fighter inflicts on the other read "X is disarmed by Y's Fists"; self effects read "X: overclocked".
+  const INFLICTED = ['Club', 'Fists', 'Thorn Lash'];
+  for (const e of r.endEffects) {
+    const by = name(e.side === 'A' ? 'B' : 'A');
+    add('effect', INFLICTED.includes(e.source) ? `${name(e.side)} is ${e.text} by ${by}'s ${e.source}.` : `${name(e.side)}: ${e.text} (${e.source}).`);
+  }
   return lines;
 }
 

@@ -2,7 +2,7 @@
 
 import { ECONOMY, FAVOR, MORALE, STRESS } from './data.js';
 import { computePower, computeSpeed } from './fight.js';
-import { boutFor, matchOptions, effectivePower, isChampionOf, bossLossFavor, GRAND_TIER, houseOf } from './run.js';
+import { boutFor, matchOptions, fightPowers, isChampionOf, bossLossFavor, GRAND_TIER, houseOf } from './run.js';
 
 // Warnings about sending this fighter to this arena. Each has text and a tone ('warn' | 'bad' | 'info').
 export function fighterWarnings(run, f, tier) {
@@ -12,7 +12,8 @@ export function fighterWarnings(run, f, tier) {
   if (f.stress >= STRESS.overtrained) out.push({ tone: 'bad', text: `Overtrained (Stress ${f.stress}): −1 Power and one ability lost` });
   if (f.injuries.length) out.push({ tone: 'warn', text: `${f.injuries.length} injur${f.injuries.length === 1 ? 'y' : 'ies'}` });
   if (!bout.top && tier !== GRAND_TIER) {
-    const gap = effectivePower(f) - effectivePower(opp);
+    const { mine, theirs } = fightPowers(run, f, tier);
+    const gap = mine - theirs;
     if (isChampionOf(f, tier)) out.push({ tone: 'bad', text: `Champion here: a win earns no Prestige or Renown, and costs ${-FAVOR.championReturn} Favor and ${-MORALE.crowdJeers} Morale` });
     else if (f.renown >= ECONOMY.knownRenown && gap >= ECONOMY.crushingGap) out.push({ tone: 'bad', text: `Crushing mismatch (+${gap} Power, ${f.renown} Renown): a win costs ${-FAVOR.crushingWin} Favor and ${-MORALE.crowdJeers} Morale` });
     else if (f.renown < ECONOMY.knownRenown) out.push({ tone: 'info', text: 'Rookie: the crowd won\'t jeer them here' });

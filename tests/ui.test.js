@@ -258,3 +258,11 @@ test('the new-career dialog offers unlocked patrons, and decrees only after a wi
   assert.match(legacyPanel(legacy), /★ First Blood/);
   assert.match(legacyPanel(legacy), /☆ Master of the Games/);
 });
+
+test('event choices show their stakes under each button', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  run.event = { id: 'injuredDog', f: f.id };
+  run.gold = 10;
+  assert.match(eventCard(run), new RegExp(`−2 Gold; ${f.name}: \\+15 Morale for 4 weeks, −10 Stress`));
+});

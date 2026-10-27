@@ -7,6 +7,10 @@
 // The first choice is the cautious one (the careful bot takes it). A choice with `cost` needs that much Gold.
 
 export const EVENT_CHANCE = { season: 0.3, winter: 0.2 };
+// Event Morale is a mood that shifts where Morale is heading for this many weeks (a one-off bump would drift away in a week).
+export const MOOD_WEEKS = 4;
+// An event can't come back until this many others have passed.
+export const EVENT_MEMORY = 5;
 
 export const EVENTS = [
   {
@@ -118,3 +122,28 @@ export const EVENT_BY_ID = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
 
 // A choice's label with the fighter names filled in.
 export const choiceLabel = (choice, names) => choice.label.replace('${f}', names.f ?? '').replace('${g}', names.g ?? '');
+
+// A choice's stakes in plain words, e.g. "−2 Gold; them: +15 Morale for 4 weeks, −10 Stress".
+const WHO = { f: 'them', g: 'the other', both: 'both', all: 'everyone' };
+const sign = (n) => (n > 0 ? `+${n}` : `−${-n}`);
+const INJURY_NAMES = { fleshWound: 'Flesh Wound', distracted: 'Distracted' };
+export function stakesText(eff, sep = '; ') {
+  const house = [];
+  if (eff.gold) house.push(`${sign(eff.gold)} Gold`);
+  if (eff.favor) house.push(`${sign(eff.favor)} Favor`);
+  if (eff.item) house.push(`+1 ${eff.item === 'warPaint' ? 'War Paint' : eff.item}`);
+  const people = {};
+  const add = (to, text) => { (people[to] ??= []).push(text); };
+  if (eff.morale) add(eff.morale.to, `${sign(eff.morale.n)} Morale for ${MOOD_WEEKS} weeks`);
+  if (eff.stress) add(eff.stress.to, `${sign(eff.stress.n)} Stress`);
+  if (eff.renown) add(eff.renown.to, `${sign(eff.renown.n)} Renown`);
+  if (eff.xp) add(eff.xp.to, `${sign(eff.xp.n)} XP`);
+  if (eff.injury) add(eff.injury.to, INJURY_NAMES[eff.injury.tag] ?? eff.injury.tag);
+  const parts = [house.join(', '), ...Object.entries(people).map(([to, list]) => `${WHO[to]}: ${list.join(', ')}`)].filter(Boolean);
+  if (eff.chance) {
+    const win = stakesText(eff.chance.win, ', ');
+    const lose = stakesText(eff.chance.lose, ', ');
+    parts.push(`${Math.round(eff.chance.p * 100)}%: ${win === 'Nothing happens' ? 'nothing' : win}; otherwise: ${lose === 'Nothing happens' ? 'nothing' : lose}`);
+  }
+  return parts.length ? parts.join(sep) : 'Nothing happens';
+}

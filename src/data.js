@@ -69,15 +69,15 @@ export const TACTICS = {
   feint: { name: 'Feint', icon: '↯', desc: '+10% win chance if you strike first this round (faster fighters strike first more often).', firstStrike: 10000 },
 };
 export const COUNTERS = { press: 'feint', feint: 'guard', guard: 'press' }; // key beats value
-export const COUNTER_WIN = 10000;
+export const COUNTER = { win: 10000 }; // win chance for the side whose tactic counters the other's
 
 // Four Humors: every fighter's temperament. Small round-by-round effects, and the tactics they lean towards
 // (what an opponent picks; `adapts` counters the tactic you used last round).
 export const HUMORS = {
-  choleric: { name: 'Choleric', tell: 'loves to Press', desc: 'Hot-blooded: +1 Power in Round 1, −1 Power in Round 3. Loves to Press.', power: { 1: 1, 3: -1 }, leans: { press: 60, feint: 20, guard: 20 } },
-  sanguine: { name: 'Sanguine', tell: 'loves to Feint', desc: 'Quick tempo: +3 Speed in Round 1. Loves to Feint.', speed: { 1: 3 }, leans: { feint: 55, press: 25, guard: 20 } },
-  melancholic: { name: 'Melancholic', tell: 'prefers to Guard', desc: 'Stoic: −5% chance to be injured; +1 Power in Round 3. Prefers to Guard.', self: -5000, power: { 3: 1 }, leans: { guard: 55, press: 25, feint: 20 } },
-  phlegmatic: { name: 'Phlegmatic', tell: 'Guards first, then counters your last tactic', desc: 'Studies the opponent: +5% win chance in Rounds 2 and 3. Guards first, then counters the tactic you used last round.', win: { 2: 5000, 3: 5000 }, leans: { guard: 50, press: 25, feint: 25 }, adapts: 70 },
+  choleric: { name: 'Choleric', tell: 'loves to Press', desc: 'Hot-blooded: +1 Power in Round 1, −1 Power in Round 3. Loves to Press.', power: { 1: 1, 3: -1 }, leans: { press: 70, feint: 15, guard: 15 } },
+  sanguine: { name: 'Sanguine', tell: 'loves to Feint', desc: 'Quick tempo: +3 Speed in Round 1. Loves to Feint.', speed: { 1: 3 }, leans: { feint: 70, press: 15, guard: 15 } },
+  melancholic: { name: 'Melancholic', tell: 'prefers to Guard', desc: 'Stoic: −5% chance to be injured; +1 Power in Round 3. Prefers to Guard.', self: -5000, power: { 3: 1 }, leans: { guard: 70, press: 15, feint: 15 } },
+  phlegmatic: { name: 'Phlegmatic', tell: 'usually Guards first, then counters your last tactic', desc: 'Studies the opponent: +5% win chance in Rounds 2 and 3. Guards first, then counters the tactic you used last round.', win: { 2: 5000, 3: 5000 }, leans: { guard: 70, press: 15, feint: 15 }, adapts: 70 },
 };
 
 // Rival houses (roadmap v3, phase B3). Every opponent fights for one. Glory ranks the houses: a win is worth
@@ -131,7 +131,7 @@ export const AUGMENTS = {
   arm: { name: 'Cyborg Arm', from: 'maimed', desc: '+1 Power. Replaces a Maimed limb.', power: 1 },
   eye: { name: 'Cyborg Eye', from: 'blinded', desc: '+1 Power, and can never be Blinded again. Replaces a Blinded eye.', power: 1 },
 };
-export const SURGERY = { cost: 15, perTier: 5, renown: -2, medbay: 2 };
+export const SURGERY = { cost: 10, perTier: 4, renown: -1, medbay: 2 }; // playtest #3: was 15 + 5/tier and −2 Renown, never worth it
 
 // Retiring a veteran (level 4+ or a Title) to the Hall of Champions.
 export const RETIRE = { level: 4, prestige: 5, morale: 10 };
@@ -242,8 +242,8 @@ export const STAGES = ['Tournament 1', 'Tournament 2', 'Boss Tournament'];
 // One circuit per tier: Tournament 1 → Tournament 2 → Boss. Arrays are per stage.
 export const CIRCUITS = [
   { tier: 1, name: 'The Dirt Pits', oppPower: [6, 6, 7], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
-  { tier: 2, name: 'The Bronze Arena', oppPower: [9, 10, 11], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
-  { tier: 3, name: 'The Silver Coliseum', oppPower: [13, 14, 15], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
+  { tier: 2, name: 'The Bronze Arena', oppPower: [12, 13, 14], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
+  { tier: 3, name: 'The Silver Coliseum', oppPower: [16, 17, 18], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
   { tier: 4, name: 'The Imperial Coliseum', oppPower: [21, 22, 23], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
 ];
 
@@ -300,7 +300,7 @@ export const PERKS = {
   survivor: { name: 'Survivor', desc: 'Once injured: −10% chance to be injured; −20% at 2+ injuries.', req: (f) => f.level >= 3, reqText: 'Level 3+' },
   duelist: { name: 'Duelist', desc: '+5% win chance and +5% chance to injure.', req: (f) => f.power >= 9 && f.speed >= 7, reqText: 'Power 9+ and Speed 7+' },
   tactician: { name: 'Tactician', desc: 'Striking first is worth +15% instead of +10%.', req: (f) => f.speed >= 9 && f.power >= 8, reqText: 'Speed 9+ and Power 8+' },
-  juggernaut: { name: 'Juggernaut', desc: '+1 Power.', stat: { power: 1 }, req: (f) => f.power >= 12, reqText: 'Power 12+' },
+  juggernaut: { name: 'Juggernaut', desc: '+1 Power and −5% chance to be injured.', stat: { power: 1 }, req: (f) => f.power >= 12, reqText: 'Power 12+' },
 };
 
 // Bloodied Victory: winning with 2+ injuries (on top of FAVOR.spectacleWin).

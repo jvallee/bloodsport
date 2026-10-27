@@ -9,9 +9,9 @@ import {
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
   SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE,
 } from './data.js';
-import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly } from './fight.js';
+import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower } from './fight.js';
 import { Refused } from './errors.js';
-import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, choiceLabel } from './events.js';
+import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabel } from './events.js';
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
@@ -57,7 +57,7 @@ export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel
 const newId = (run, prefix) => `${prefix}${run.nextId++}`;
 const allOpponents = (run) => Object.values(run.arenas).map((a) => a.opponent).filter(Boolean);
 const takenNames = (run, extra = []) =>
-  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name);
+  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? []);
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const clampStress = (n) => clamp(n, 0, STRESS.max);
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
@@ -89,7 +89,9 @@ export function boutFor(run, tier = run.topTier) {
   const c = CIRCUITS[tier - 1];
   const s = arena.stage;
   // This tournament week's festival (or the coming one's, for previews).
-  const fest = festivalOn(run.week + weeksUntilTournament(run.week));
+  // A settled arena previews next month's bout, so it looks past this week.
+  const from = run.bouts?.[tier] === 'done' ? run.week + 1 : run.week;
+  const fest = festivalOn(from + weeksUntilTournament(from));
   // The Dirt Pits never turn a house away: one that can't afford the buy-in pays what Prestige it has (even 0),
   // so a career can always win its way back.
   const pauper = tier === 1 && run.prestige < c.buyIn[s];
@@ -136,7 +138,7 @@ function newOpponent(run, tier) {
   f.speed = opponentSpeed(run, bout);
   seasonOpponent(run, f, bout);
   // Every opponent fights for a rival house; the Grand Tournament's champion is the leading rival's.
-  f.house = tier === GRAND_TIER ? [...run.houses].sort((a, b) => b.glory - a.glory)[0].id : pick(run.rng.houses, run.houses).id;
+  f.house = houseForArena(run, tier).id;
   arena.opponent = f;
 }
 
@@ -154,6 +156,12 @@ function restartCircuit(run, tier) {
 
 // Everything about a fighter that changes a match: the arena rule, Stress, and how well the opponent has studied them.
 // Scouted: +1 opponent Power per consecutive month this fighter has fought in your top arena (max +3).
+// Round-1 Power for this fighter and the arena's opponent, with everything that applies before tactics.
+export function fightPowers(run, f, tier = run.topTier) {
+  const m = createMatch({ a: f, b: run.arenas[tier].opponent, rng: createRng(0), ...matchOptions(run, f, tier) });
+  return { mine: computePower(m.a, m.b, 1).total, theirs: computePower(m.b, m.a, 1).total };
+}
+
 export function matchOptions(run, f, tier = run.topTier) {
   return {
     debuff: boutFor(run, tier).debuff,
@@ -225,6 +233,15 @@ function makeHouses(rng) {
 }
 
 export const houseOf = (run, f) => run.houses?.find((h) => h.id === f?.house) ?? null;
+const houseTier = (h) => 1 + HOUSES.climb.filter((g) => h.glory >= g).length;
+const leadingHouse = (run) => [...run.houses].sort((a, b) => b.glory - a.glory)[0];
+
+// Who an arena's opponent fights for: a house that has climbed that far (the leader if none has, and for the Grand).
+export function houseForArena(run, tier) {
+  if (tier === GRAND_TIER) return leadingHouse(run);
+  const there = run.houses.filter((h) => h.tier >= tier);
+  return there.length ? pick(run.rng.houses, there) : leadingHouse(run);
+}
 
 // Every house by Glory, yours included.
 export function standings(run) {
@@ -237,7 +254,7 @@ function rivalsCompete(run) {
   const r = run.rng.houses;
   for (const h of run.houses) {
     if (next(r) < 0.5) h.glory += HOUSES.glory.win * h.tier;
-    h.tier = 1 + HOUSES.climb.filter((g) => h.glory >= g).length;
+    h.tier = houseTier(h);
     h.feud = Math.max(0, h.feud - 1);
     h.vengeance = Math.max(0, h.vengeance - 1);
   }
@@ -452,7 +469,8 @@ export const decorCount = (f) => Object.values(f.decor).reduce((s, n) => s + n, 
 export function moraleTarget(run, f) {
   const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + MORALE.perDecor * decorCount(f) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
   const expects = Math.min(MORALE.maxExpectation, MORALE.expectationPerRenown * f.renown);
-  return { target: clamp(MORALE.base + comfort - expects, 0, 100), comfort, expects };
+  const mood = f.mood?.n ?? 0; // an event's lasting effect (src/events.js)
+  return { target: clamp(MORALE.base + comfort - expects + mood, 0, 100), comfort, expects, mood };
 }
 
 export function moraleState(f) {
@@ -521,6 +539,7 @@ export function advanceWeek(run) {
     // Morale drifts toward what their room and fame warrant.
     const { target } = moraleTarget(run, f);
     f.morale = f.morale < target ? Math.min(target, f.morale + MORALE.drift) : Math.max(target, f.morale - MORALE.drift);
+    if (f.mood && --f.mood.weeks <= 0) delete f.mood;
     // Don't leave a job that will fail next week: switch now, visibly.
     if (isTraining(f.job)) {
       const next = trainBlocker(run, f, { checkGold: false });
@@ -545,7 +564,10 @@ export function advanceWeek(run) {
     refreshArmourer(run);
   }
   if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) if (!tributePaid(run)) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
-  if (run.week % WEEKS_PER_YEAR === WEEKS_PER_YEAR - 4) collectTribute(run);
+  if (run.week % WEEKS_PER_YEAR === WEEKS_PER_YEAR - 4) {
+    collectTribute(run);
+    for (const f of run.roster) f.topStreak = 0; // a winter apart: the scouts' notes go stale
+  }
   if (isTournamentWeek(run.week)) {
     run.bouts = Object.fromEntries(unlockedTiers(run).map((t) => [t, 'open']));
     run.boutPending = true;
@@ -586,11 +608,12 @@ function rollEvent(run) {
   const r = run.rng.events;
   const chance = dateOf(run.week).winter ? EVENT_CHANCE.winter : EVENT_CHANCE.season;
   if (!run.roster.length || next(r) >= chance) return;
-  const options = EVENTS.filter((e) => e.id !== run.lastEvent && (!e.when || e.when(run)) && (e.who !== 'pair' || run.roster.length >= 2));
+  const recent = run.recentEvents ?? [];
+  const options = EVENTS.filter((e) => !recent.includes(e.id) && (!e.when || e.when(run)) && (e.who !== 'pair' || run.roster.length >= 2));
   if (!options.length) return;
   const e = pick(r, options);
   run.event = { id: e.id, ...eventTargets(run, e.who) };
-  run.lastEvent = e.id;
+  run.recentEvents = [...recent, e.id].slice(-EVENT_MEMORY);
 }
 
 // Names for an event's text: { f, g }.
@@ -616,7 +639,7 @@ function applyEventEffects(run, eff, ev, out) {
     if (!eff[key]) continue;
     const fs = targets(eff[key].to);
     for (const f of fs) {
-      if (key === 'morale') bumpMorale(f, eff[key].n);
+      if (key === 'morale') f.mood = { n: (f.mood?.n ?? 0) + eff[key].n, weeks: MOOD_WEEKS };
       else if (key === 'stress') f.stress = clampStress(f.stress + eff[key].n);
       else f.renown = Math.max(0, f.renown + eff[key].n);
     }
@@ -632,7 +655,7 @@ function applyEventEffects(run, eff, ev, out) {
   }
   if (eff.chance) {
     const won = next(run.rng.events) < eff.chance.p;
-    out.push(won ? 'it went well' : 'it went badly');
+    out.push(won ? 'It went well' : 'It went badly');
     applyEventEffects(run, won ? eff.chance.win : eff.chance.lose, ev, out);
   }
 }
@@ -1063,10 +1086,13 @@ export function finishMatch(run, match) {
   fighter.stress = clampStress(fighter.stress + STRESS.fight + (match.stressAfter ?? 0));
 
   const won = match.result.winner === 'A';
-  const upset = effectivePower(opp) > effectivePower(fighter);
+  // Judged on the Power each side actually fought with in Round 1 (decor, augments, feuds, festivals...).
+  const r1 = match.rounds?.[0]?.power;
+  const gap = r1 ? r1.A.total - r1.B.total : effectivePower(fighter) - effectivePower(opp);
+  const upset = gap < 0;
   const champion = tier !== GRAND_TIER && !bout.top && isChampionOf(fighter, tier);
   // Rookies are never jeered: only a known name (5+ Renown) crushing a weak opponent, or a returning champion.
-  const crushing = won && !bout.top && !champion && fighter.renown >= ECONOMY.knownRenown && effectivePower(fighter) - effectivePower(opp) >= ECONOMY.crushingGap;
+  const crushing = won && !bout.top && !champion && fighter.renown >= ECONOMY.knownRenown && gap >= ECONOMY.crushingGap;
   const moraleBefore = fighter.morale;
   const levelBefore = fighter.level;
   if (bout.top) {
@@ -1159,11 +1185,13 @@ export function finishMatch(run, match) {
       house.glory = Math.max(0, house.glory - HOUSES.glory.beaten);
       if (match.result.reason === 'death') {
         house.feud = HOUSES.feudMonths;
+        run.graveyard = [...(run.graveyard ?? []), opp.name]; // the dead don't come back
         summary.feud = `${house.name} swears revenge: their fighters get +1 Power against you for ${HOUSES.feudMonths} months.`;
         log(run, summary.feud, 'warn');
       }
     } else {
       house.glory += (bout.boss ? HOUSES.glory.boss : HOUSES.glory.win) * Math.max(1, t);
+      house.tier = houseTier(house);
       if (!fighter.alive) {
         house.vengeance = HOUSES.feudMonths;
         summary.feud = `Your house wants vengeance on ${house.name}: +5% win chance against their fighters for ${HOUSES.feudMonths} months.`;
@@ -1251,6 +1279,7 @@ function advanceArena(run, tier, won, opp) {
       log(run, `${arenaName(tier)} conquered!`, 'event');
       const nextTier = tier + 1;
       run.topTier = nextTier;
+      for (const f of run.roster) f.topStreak = 0; // a new arena hasn't scouted anyone yet
       openArena(run, nextTier);
       log(run, nextTier === GRAND_TIER ? 'The Grand Tournament awaits.' : `${arenaName(nextTier)} opens its gates to you. Your old arenas still hold bouts every month.`, 'event');
     }

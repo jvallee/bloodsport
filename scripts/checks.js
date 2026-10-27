@@ -25,7 +25,7 @@ export function speedSplit({ n = 3000 } = {}) {
     for (let k = 0; k <= points; k++) {
       const f = createFighter(rng, { id: 'p', kind: 'human' });
       f.kindTrait = null; f.cls = null; f.weapon = null;
-      f.power = 5 + titles + (points - k) * TRAIN_GAIN.power;
+      f.power = 5 + (c.marketPower ?? 0) + titles + (points - k) * TRAIN_GAIN.power; // a fighter bought at this tier starts stronger
       f.speed = 3 + k * TRAIN_GAIN.speed;
       const o = estimateOdds(f, opp, { n, seed: 900 + k });
       splits.push({ speedPoints: k, share: k / points, ...o, value: o.win - 0.5 * o.injury - 5 * o.death });
@@ -79,7 +79,7 @@ export function runGates({ careers = 200, quick = false } = {}) {
     { name: 'Careful career win rate is 20–45%', value: rate(careful), pass: rate(careful) >= 0.2 && rate(careful) <= 0.45, fmt: 'pct' },
     { name: 'Careful wins at least as often as reckless', value: rate(careful) - rate(reckless), pass: rate(careful) >= rate(reckless), fmt: 'pctDiff' },
     { name: 'Careful loses clearly fewer fighters than reckless', value: deaths(careful) / Math.max(0.01, deaths(reckless)), pass: deaths(careful) <= 0.5 * deaths(reckless), fmt: 'ratio' },
-    { name: 'Reckless loses 1–3.5 fighters per career', value: deaths(reckless), pass: deaths(reckless) >= 1 && deaths(reckless) <= 3.5, fmt: 'num' },
+    { name: 'Reckless loses 1–3 fighters per career', value: deaths(reckless), pass: deaths(reckless) >= 1 && deaths(reckless) <= 3, fmt: 'num' },
     { name: 'Balanced fighter (25–60% Speed) is best vs at least 2 of 4 Bosses', value: split.balanced, pass: split.balanced >= 2, fmt: 'count' },
     { name: 'Gentle start: the first Boss is won at least 55% of the time', value: curve[1] ?? 0, pass: (curve[1] ?? 0) >= 0.55, fmt: 'pct' },
     { name: 'Tactics matter: reading the opponent beats always-Steady by 3–15 points a match', value: tactics.smart - tactics.steady, pass: tactics.smart - tactics.steady >= 0.03 && tactics.smart - tactics.steady <= 0.15, fmt: 'pctDiff' },

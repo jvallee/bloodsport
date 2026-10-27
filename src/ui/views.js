@@ -17,7 +17,7 @@ import { fighterWarnings, arenaStakes } from '../explain.js';
 import { gearText } from '../codex.js';
 import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON } from './components.js';
 import { portrait } from './portrait.js';
-import { EVENT_BY_ID, choiceLabel } from '../events.js';
+import { EVENT_BY_ID, choiceLabel, stakesText } from '../events.js';
 
 const JOB_LABELS = { rest: 'Rest', trainPower: '+1 Power', trainSpeed: '+3 Speed', medbay: 'Medbay' };
 const JOB_HELP = {
@@ -278,7 +278,7 @@ function roomPanel(run, f) {
     return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armor'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot), 'btn small unequip')}` : '<small>empty</small>'}
       ${options ? `<div class="row tight">${options}</div>` : ''}</div>`;
   }).join('');
-  return `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown}).</div>
+  return `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown})${f.mood ? `, mood ${f.mood.n > 0 ? '+' : ''}${f.mood.n} for ${f.mood.weeks} more week${f.mood.weeks === 1 ? '' : 's'}` : ''}.</div>
     <div class="decor-list">${decor}</div>
     <div class="label">Gear (from the storeroom)</div>${gear}`;
 }
@@ -299,7 +299,7 @@ function rosterPanel(run) {
       ${f.story?.length ? `<details class="more" data-key="story-${f.id}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
       <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, cyborg surgery, retire, release</summary>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
-        ${augments ? `<div class="label">Cyborg surgery: replace the wound for good (${augmentPrice(run)} Gold, −2 Renown)</div><div class="row">${augments}</div>` : ''}
+        ${augments ? `<div class="label">Cyborg surgery: replace the wound for good (${augmentPrice(run)} Gold, −1 Renown)</div><div class="row">${augments}</div>` : ''}
         <div class="row">${buttonWhy(`Retire to the Hall of Champions (+${RETIRE.prestige} Prestige, roster +${RETIRE.morale} Morale)`, 'retire', { id: f.id }, retireBlocker(run, f.id), 'btn small')}</div>
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>
@@ -540,7 +540,7 @@ export function eventCard(run) {
   const names = eventNames(run);
   const who = [run.event.f, run.event.g].map((id) => run.roster.find((f) => f.id === id)).filter(Boolean);
   const faces = who.map((f) => portrait(f, 56)).join('');
-  const choices = e.choices.map((c, i) => buttonWhy(esc(choiceLabel(c, names)), 'event-choice', { index: i }, eventChoiceBlocker(run, i), 'btn')).join('');
+  const choices = e.choices.map((c, i) => `<div class="event-choice">${buttonWhy(esc(choiceLabel(c, names)), 'event-choice', { index: i }, eventChoiceBlocker(run, i), 'btn')}<small>${esc(stakesText(c.effects).replace(/\bthem\b/g, names.f ?? 'them').replace(/\bthe other\b/g, names.g ?? 'the other'))}</small></div>`).join('');
   return `<section class="panel event-card"><div class="event-faces">${faces}</div><div class="event-body">
     <div class="label">This week</div><h2>${esc(e.title)}</h2><p>${esc(e.text(names))}</p>
     <div class="row event-choices">${choices}</div></div></section>`;

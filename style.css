@@ -470,3 +470,6 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .story li { padding: 2px 0; }
 .hall { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 10px; }
 .hall .legend { display: flex; gap: 8px; align-items: center; }
+
+.event-choice { display: flex; flex-direction: column; gap: 3px; max-width: 260px; }
+.event-choice small { color: var(--muted); }
