@@ -421,7 +421,9 @@ export function advanceWeek(run) {
     } else if (f.job === 'rest') {
       f.stress = clampStress(f.stress + STRESS.rest);
     }
-    f.stress = clampStress(f.stress - relief);
+    // The Entertainment Room, plus calming decor (Birds, Fire Braziers) in their quarters.
+    const calm = Object.entries(f.decor).reduce((n, [k, count]) => n + (DECOR[k].calm ?? 0) * count, 0);
+    f.stress = clampStress(f.stress - relief - calm);
     // Morale drifts toward what their room and fame warrant.
     const { target } = moraleTarget(run, f);
     f.morale = f.morale < target ? Math.min(target, f.morale + MORALE.drift) : Math.max(target, f.morale - MORALE.drift);

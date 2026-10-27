@@ -67,8 +67,10 @@ const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 const pct = (x) => `${Math.round(x * 100)}%`.padStart(4);
 
 console.log('powerUp per tier | bossLoss | careful win | careful deaths | reckless win | reckless deaths');
-const tiers = process.argv.includes('--fine') ? [[0, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 1], [0, 1, 1, 1]] : [[0, 0, 0, 0], [0, 1, 1, 2], [1, 1, 2, 2], [1, 2, 2, 3]];
-const losses = process.argv.includes('--fine') ? [FAVOR.bossLoss, FAVOR.bossLoss - 5] : [-20, -25];
+const tiers = process.argv.includes('--late') ? [[0, 0, 0, 0], [0, 0, 0, 1], [0, 0, 0, 2], [0, 0, 1, 1], [0, 0, 1, 2]] : process.argv.includes('--fine') ? [[0, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 1], [0, 1, 1, 1]] : [[0, 0, 0, 0], [0, 1, 1, 2], [1, 1, 2, 2], [1, 2, 2, 3]];
+// Favor lost per Boss loss is per tier (an array); variants shift every tier by the same amount.
+const shift = (d) => FAVOR.bossLoss.map((x) => x + d);
+const losses = process.argv.includes('--late') ? [shift(0), shift(5)] : [shift(0), shift(-5)];
 console.log(`Opponent Power added on top of the current table; ${N} careers per row`);
 for (const perTier of tiers) {
   for (const loss of losses) {
@@ -78,7 +80,7 @@ for (const perTier of tiers) {
     const careful = Array.from({ length: N }, (_, i) => playCareer(2000 + i, 'careful'));
     const reckless = Array.from({ length: N }, (_, i) => playCareer(2000 + i, 'reckless'));
     const r = (rs) => rs.filter((x) => x.won).length / rs.length;
-    console.log(`${JSON.stringify(perTier).padEnd(16)} | ${String(loss).padStart(8)} | ${pct(r(careful)).padStart(11)} | ${avg(careful.map((x) => x.deaths)).toFixed(2).padStart(14)} | ${pct(r(reckless)).padStart(12)} | ${avg(reckless.map((x) => x.deaths)).toFixed(2).padStart(15)}`);
+    console.log(`${JSON.stringify(perTier).padEnd(16)} | ${loss.join('/').padStart(14)} | ${pct(r(careful)).padStart(11)} | ${avg(careful.map((x) => x.deaths)).toFixed(2).padStart(14)} | ${pct(r(reckless)).padStart(12)} | ${avg(reckless.map((x) => x.deaths)).toFixed(2).padStart(15)}`);
   }
 }
 CIRCUITS.forEach((c, i) => { c.oppPower = base[i]; });

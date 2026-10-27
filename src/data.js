@@ -83,10 +83,10 @@ export const WEAPONS = {
 };
 
 // Decor only helps specific builds (for now). `helps` says whether a fighter gets anything from it.
-// Every decor item adds comfort (Morale). Birds and Fire Braziers also help specific builds in combat.
+// Every decor item adds comfort (Morale). Birds and Fire Braziers also calm (−Stress a week) and help specific builds in combat.
 export const DECOR = {
-  bird: { price: 1, name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale. Ornitharius fighters also get +5% injure chance per Bird once injured (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
-  fireBrazier: { price: 1, name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
+  bird: { price: 1, calm: 5, name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale and −5 Stress a week. Ornitharius fighters also get +5% injure chance per Bird once injured (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
+  fireBrazier: { price: 1, calm: 5, name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale and −5 Stress a week. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
   trophy: { price: 2, name: 'Trophy Rack', feeds: 'Morale', effect: 'Comfort for Morale: a famous fighter likes to see their victories on the wall.', helps: () => false },
 };
 
@@ -114,7 +114,7 @@ export const ECONOMY = {
 export const FAVOR = {
   start: 50, max: 100, warning: 25,
   bossWin: 15, upsetWin: 5, spectacleWin: 5,
-  bossLoss: [-15, -20, -25, -30], forfeitExtra: -5, topTowel: -5, crushingWin: -2, championReturn: -3, unpaidTribute: -25,
+  bossLoss: [-10, -15, -20, -25], forfeitExtra: -5, topTowel: -5, crushingWin: -2, championReturn: -3, unpaidTribute: -25,
 };
 
 // Tribute is due at the start of each winter: perYear × the year number. Warning a month ahead.
@@ -141,10 +141,10 @@ export const CIRCUITS = [
   { tier: 1, name: 'The Dirt Pits', oppPower: [6, 7, 8], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
   { tier: 2, name: 'The Bronze Arena', oppPower: [9, 10, 11], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
   { tier: 3, name: 'The Silver Coliseum', oppPower: [13, 14, 15], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
-  { tier: 4, name: 'The Imperial Coliseum', oppPower: [17, 18, 19], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
+  { tier: 4, name: 'The Imperial Coliseum', oppPower: [19, 20, 21], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
 ];
 
-export const GRAND = { name: 'The Grand Tournament', oppPower: 22, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
+export const GRAND = { name: 'The Grand Tournament', oppPower: 24, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
 
 // House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
 export const PRESTIGE_LEVELS = [

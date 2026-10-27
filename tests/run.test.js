@@ -767,12 +767,12 @@ test('Scouted: consecutive top-arena months raise the opponent\'s Power against 
   assert.equal(matchOptions(run, f, 1).scouted, 0, 'sitting out a top-arena month resets it');
 });
 
-test('Boss losses cost Favor by tier: 15 / 20 / 25 / 30', () => {
-  assert.deepEqual([1, 2, 3, 4, GRAND_TIER].map((t) => bossLossFavor(t)), [-15, -20, -25, -30, -30]);
+test('Boss losses cost Favor by tier, as in the table', () => {
+  assert.deepEqual([1, 2, 3, 4, GRAND_TIER].map((t) => bossLossFavor(t)), [...FAVOR.bossLoss, FAVOR.bossLoss.at(-1)]);
   const { run, f } = atBout();
   run.arenas[1].stage = 2;
   playBout(run, f.id, { winner: 'B' });
-  assert.equal(run.favor, FAVOR.start - 15);
+  assert.equal(run.favor, FAVOR.start + FAVOR.bossLoss[0]);
 });
 
 test('crushing and upsets count gear Power', () => {
@@ -921,4 +921,17 @@ test('choosing a new job clears the card notice', () => {
   f.notice = 'Switched to Rest: something';
   setJob(run, f.id, 'trainPower');
   assert.equal(f.notice, null);
+});
+
+test('Birds and Fire Braziers calm a fighter: -5 Stress each per week; Trophy Racks do not', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  f.stress = 40;
+  f.injuries = [{ tag: 'fleshWound', weight: 1, weeksLeft: 5 }];
+  setJob(run, f.id, 'medbay'); // the Medbay week is -10 Stress, isolating the decor effect
+  f.decor.bird = 1;
+  f.decor.fireBrazier = 1;
+  f.decor.trophy = 1;
+  advanceWeek(run);
+  assert.equal(f.stress, 40 - 10 - 10);
 });
