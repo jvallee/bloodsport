@@ -18,7 +18,7 @@ Last updated 2026-10-28. Read this file first, then `CLAUDE.md` (the project rul
 - **Goal:** make the game "very user friendly, fun, addictive and immersive". The user welcomes proactive fun ideas (end reports with a few).
 - **Commit often** with clear messages. Run `npm test` before every commit. **Never weaken, skip or delete a test.** When a deliberate rule change breaks a test, update the expected value and say so.
 - **Balance:** every balance or rules change must pass `npm run check` (9 gates). When a gate fails, sweep the values and pick from a table; don't guess.
-- **Docs:** record every number change in `docs/fight-rules.md`.
+- **Docs:** record every number change in `docs/fight-rules.md`, and every player-visible change in `CHANGELOG.md` under "Unreleased" (the user likes a summary of changes between versions).
 - **Versions:**
   - A new major version is frozen into `/vN/` with a tag.
   - The user sometimes asks for updates to go into the current version in place ("this can also be a part of v5"). Then refresh `/v5/` with **no new tag**, as was done for v3 (commit `8a7effa`) and v5 (commit `3f1c5f2`).
@@ -45,7 +45,8 @@ Last updated 2026-10-28. Read this file first, then `CLAUDE.md` (the project rul
 6. Bump nothing in `SAVE_VERSION`; old saves already have `level`.
 7. Check it in the browser (section 6, "Browser check"), commit in small steps, push, and confirm the live site.
 8. Ask the user whether to also refresh `/v5/` in place (section 6) rather than doing it unasked.
-9. Report back clearly: what changed, the gate numbers before and after, and a couple of fun ideas.
+9. Add the change to `CHANGELOG.md` under "Unreleased" (replace the placeholder line).
+10. Report back clearly: what changed, the gate numbers before and after, and a couple of fun ideas.
 
 ## 3. Current state (where I stopped)
 

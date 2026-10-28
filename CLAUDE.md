@@ -37,6 +37,7 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - **Test robustly.** Every rule in `docs/fight-rules.md` and every trait or injury gets a test. Test edge cases (Delta clamping at ±10, the 2-injury death gate, Poisoned counting as 2, the towel prompt) and add statistical tests (many seeded fights within tolerance of the Power Delta table).
 - **Never delete, skip or weaken a test to make it pass.** If a test fails, fix the code. If the test itself is wrong, explain why and get agreement before changing it.
 - **Fix bugs test-first.** Write a failing test that reproduces the bug, then fix it.
+- **Version notes:** add every player-visible change to `CHANGELOG.md` (newest first, in plain player-facing language) in the same commit. When freezing a version, move the "Unreleased" notes under the new version's heading.
 - Don't change balance numbers or rules without saying so. Record each new placeholder decision in `docs/fight-rules.md`.
 - Current plan: `docs/roadmap-v2.md`. Deferred features stay deferred unless asked.
 - `v1/` to `v5/` are frozen copies of tags `v1.0`, `v2.2`, `v3.0`, `v4.0` and `v5.0`. Don't edit them unless the user asks (v2 was refreshed on request in v2.2).
