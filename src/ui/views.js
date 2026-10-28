@@ -10,7 +10,7 @@ import {
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
-  plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel,
+  plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel, effectAt,
 } from '../ludus.js';
 import { describeOdds } from '../odds.js';
 import { fighterWarnings, arenaStakes } from '../explain.js';
@@ -485,17 +485,26 @@ export function estateTab(run) {
 
 // ---------- Market tab: fighters, decor, Armourer, storeroom ----------
 
+// A Market section that folds away; the fold state is remembered by data-key (playtest #7).
+const fold = (key, title, body, note = '') => `<details class="panel fold" data-key="market-${key}" open><summary><h2>${title}${note ? ` <small>${note}</small>` : ''}</h2></summary>${body}</details>`;
+
 export function marketTab(run) {
   const price = marketPrice(run);
-  const cards = run.market.map((f) => fighterCard(f, {
-    stress: false,
+  const recruitCard = (f, tag) => fighterCard(f, {
+    stress: false, tag,
     actions: `<div class="actions">${button(`Recruit · ${price} Gold`, 'recruit', { id: f.id }, recruitBlocker(run, f.id), 'btn primary small')}</div>`,
-  })).join('');
+  });
+  // Exotic Basa only ever come from the Stables, so they get their own section.
+  const cards = run.market.filter((f) => f.kind !== 'basa').map((f) => recruitCard(f)).join('');
+  const basa = run.market.filter((f) => f.kind === 'basa').map((f) => recruitCard(f, 'From the Stables')).join('');
+  const stables = maxLevel(run, 'stables')
+    ? basa ? `<p class="sub">Exotic Basa fighters, ${effectAt('stables', maxLevel(run, 'stables'))} a month. Basa hit hard from the start (natural Power ${KINDS.basa.basePower}), and a Lion Cage in their room gives +1 Power.</p><div class="cards two">${basa}</div>` : '<p class="sub">No Basa left this month. New ones arrive at the start of next month.</p>'
+    : `<p class="sub">Build the Stables${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for exotic Basa fighters each month.</p>`;
   const offer = run.liaisonOffer;
   const liaison = offer
     ? fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })
     : maxLevel(run, 'liaison') ? '<p class="sub">No prisoner on offer this month.</p>' : `<p class="sub">Build a Liaison${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for a cheap monthly prisoner.</p>`;
-  const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small><br><small>${esc(d.effect)}</small></div>
+  const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small> <span class="chip small good" title="Each decor item in a fighter's room adds ${MORALE.perDecor} comfort: their Morale drifts ${MORALE.perDecor} points higher.">+${MORALE.perDecor} comfort</span>${d.calm ? ` <span class="chip small" title="Lowers Stress each week">−${d.calm} Stress/wk</span>` : ''}<br><small>${esc(d.effect)}</small></div>
     ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`).join('');
   const armourer = maxLevel(run, 'armourer')
     ? run.armourerStock.length
@@ -510,21 +519,22 @@ export function marketTab(run) {
   const storedDecor = Object.entries(run.inventory.decor).filter(([, n]) => n).map(([k, n]) => `<span class="chip decor">${esc(DECOR[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">No spare decor.</small>';
   return `
     <div class="grid market">
-      <div class="stack"><section class="panel"><h2>Market <small>${circuitInfo(run).name}</small></h2>
-        <p class="sub">${price} Gold each. New fighters arrive at the start of every month, stronger as you climb the tiers. Roster: ${run.roster.length}/${rosterCap(run)}.</p>
-        <div class="cards two">${cards || '<div class="empty">Sold out until next month.</div>'}</div></section>
-        <section class="panel"><h2>The Liaison</h2>${liaison}</section></div>
       <div class="stack">
-        <section class="panel"><h2>The Storeroom</h2>
-          <p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room, decor &amp; gear" panel. A fallen fighter's things come back here.</p>
+        ${fold('fighters', 'Market', `<p class="sub">${price} Gold each. New fighters arrive at the start of every month, stronger as you climb the tiers. Roster: ${run.roster.length}/${rosterCap(run)}.</p>
+          <div class="cards two">${cards || '<div class="empty">Sold out until next month.</div>'}</div>`, circuitInfo(run).name)}
+        ${fold('stables', 'The Stables', stables)}
+        ${fold('liaison', 'The Liaison', liaison)}
+      </div>
+      <div class="stack">
+        ${fold('storeroom', 'The Storeroom', `<p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room, decor &amp; gear" panel. A fallen fighter's things come back here.</p>
           <div class="label">Gear <small>(sells for half price)</small></div><div>${stored}</div>
           <div class="row">${button('Unequip all fighters', 'unequip-all', {}, unequipAllBlocker(run), 'btn small')}<small class="sub">Returns every fighter's weapon and armor here, to hand out afresh.</small></div>
           <div class="label">Decor</div><div class="chips">${storedDecor}</div>
-          <div class="label">Fight items</div><div class="chips">${Object.entries(run.inventory.items ?? {}).filter(([, n]) => n).map(([k, n]) => `<span class="chip" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">None. The Apothecary sells them.</small>'}</div></section>
-        <section class="panel"><h2>Apothecary</h2><p class="sub">Single-use items for a fight. Use them before Round 1 or between rounds: one of each kind per fight.</p>${Object.entries(CONSUMABLES).map(([k, c]) => `<div class="shop-row"><div><b>${esc(c.name)}</b> · ${c.price} Gold <small>(${run.inventory.items?.[k] ?? 0} in storeroom)</small><br><small>${esc(c.desc)}</small></div>
-          ${button('Buy', 'buy-item', { item: k }, buyItemBlocker(run, k), 'btn small primary')}</div>`).join('')}</section>
-        <section class="panel"><h2>Decor merchant</h2><p class="sub">Each fighter's quarters fit up to ${maxLevel(run, 'quarters')} of each item (your best Fighter Quarters level).</p>${decorShop}</section>
-        <section class="panel"><h2>The Armourer</h2>${maxLevel(run, 'armourer') ? '<p class="sub">Buy gear here. Sell your spare gear back from the Storeroom above, for half its price.</p>' : ''}${armourer}</section>
+          <div class="label">Fight items</div><div class="chips">${Object.entries(run.inventory.items ?? {}).filter(([, n]) => n).map(([k, n]) => `<span class="chip" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">None. The Apothecary sells them.</small>'}</div>`)}
+        ${fold('apothecary', 'Apothecary', `<p class="sub">Single-use items for a fight. Use them before Round 1 or between rounds: one of each kind per fight.</p>${Object.entries(CONSUMABLES).map(([k, c]) => `<div class="shop-row"><div><b>${esc(c.name)}</b> · ${c.price} Gold <small>(${run.inventory.items?.[k] ?? 0} in storeroom)</small><br><small>${esc(c.desc)}</small></div>
+          ${button('Buy', 'buy-item', { item: k }, buyItemBlocker(run, k), 'btn small primary')}</div>`).join('')}`)}
+        ${fold('decor', 'Decor merchant', `<p class="sub">Every item adds +${MORALE.perDecor} comfort to the fighter whose room it's in: their Morale drifts that much higher. Each room fits up to ${maxLevel(run, 'quarters')} of each item (your best Fighter Quarters level).</p>${decorShop}`)}
+        ${fold('armourer', 'The Armourer', `${maxLevel(run, 'armourer') ? '<p class="sub">Buy gear here. Sell your spare gear back from the Storeroom above, for half its price.</p>' : ''}${armourer}`)}
       </div>
     </div>`;
 }

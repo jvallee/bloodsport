@@ -55,3 +55,25 @@ test('Unequip all returns every fighter\'s gear to the storeroom', async () => {
   assert.deepEqual([f.gear, g.gear], [{ weapon: null, armor: null }, { weapon: null, armor: null }]);
   assert.deepEqual([...run.inventory.gear].sort(), ['gladius', 'leatherVest', 'trident']);
 });
+
+test('the Market shows the Stables\' Basa in their own section, and upgrading the Stables brings the second Basa at once', async () => {
+  const { buildRoom, upgradeRoom } = await import('../src/run.js');
+  const { marketTab } = await import('../src/ui/views.js');
+  const run = createRun(3);
+  assert.match(marketTab(run), /Build the Stables/);
+  run.prestigeLevel = 3;
+  run.gold = 100;
+  const b = buildRoom(run, 'stables');
+  assert.match(marketTab(run), /From the Stables/);
+  assert.equal(run.market.filter((f) => f.kind === 'basa').length, 1);
+  upgradeRoom(run, b.id);
+  assert.equal(run.market.filter((f) => f.kind === 'basa').length, 2);
+});
+
+test('Market sections fold away, and the Decor merchant shows each item\'s comfort', async () => {
+  const { marketTab } = await import('../src/ui/views.js');
+  const { MORALE } = await import('../src/data.js');
+  const html = marketTab(createRun(1));
+  for (const key of ['fighters', 'stables', 'liaison', 'storeroom', 'apothecary', 'decor', 'armourer']) assert.match(html, new RegExp(`<details class="panel fold" data-key="market-${key}" open>`));
+  assert.match(html, new RegExp(`\\+${MORALE.perDecor} comfort`));
+});

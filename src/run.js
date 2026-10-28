@@ -15,7 +15,7 @@ import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabe
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
-  maxLevel, effectAt, build,
+  maxLevel, effectAt, build, upgrade,
 } from './ludus.js';
 
 export const SAVE_VERSION = 3;
@@ -334,6 +334,13 @@ export function buildRoom(run, type) {
   if (type === 'armourer') refreshArmourer(run);
   if (type === 'liaison') refreshLiaison(run);
   if (type === 'stables') addStablesOffers(run);
+  return b;
+}
+
+// Upgrade a room; a bigger Stables brings its extra Basa straight away too.
+export function upgradeRoom(run, id) {
+  const b = upgrade(run, id);
+  if (b.type === 'stables') addStablesOffers(run);
   return b;
 }
 

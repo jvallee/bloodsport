@@ -539,3 +539,11 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .btn.good { border-color: var(--good); color: var(--good); }
 
 .morale.sliding small { color: #e0a85a; font-weight: 600; }
+
+/* Market sections fold away (playtest #7). */
+details.fold > summary { cursor: pointer; list-style: none; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary h2 { display: inline; }
+details.fold > summary h2::before { content: '▾ '; color: var(--gold); }
+details.fold:not([open]) > summary h2::before { content: '▸ '; }
+.chip.small { font-size: 0.75em; padding: 1px 6px; }

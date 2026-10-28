@@ -3,11 +3,10 @@
 
 import { playRound, throwTowel, useSignature } from './fight.js';
 import {
-  boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom,
+  boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom,
   assignDecor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
   recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy,
 } from './run.js';
-import { upgrade } from './ludus.js';
 
 // A finished match is settled at once (the fight screen shows the full report). Returns the summary when it settles.
 export function settleMatch(state) {
@@ -41,7 +40,7 @@ export const GAME_ACTIONS = {
   perk: ({ run }, d) => { choosePerk(run, d.id, d.perk); },
   surgeon: ({ run }, d) => { surgeon(run, d.id, Number(d.index)); },
   build: ({ run }, d) => { buildRoom(run, d.type); },
-  upgrade: ({ run }, d) => { upgrade(run, d.id); },
+  upgrade: ({ run }, d) => { upgradeRoom(run, d.id); },
   advance: ({ run }) => { advanceWeek(run); },
   'advance-tournament': ({ run }) => { advanceToTournament(run); },
   skip: ({ run }) => { skipBout(run); },
