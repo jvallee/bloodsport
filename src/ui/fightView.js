@@ -228,9 +228,21 @@ function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {
     </div>`;
 }
 
+// The tournament bracket on the fight screen: won rounds struck through, this match (or the next one) marked.
+export function bracketStrip(bracket, over) {
+  if (!bracket) return '';
+  const items = bracket.rounds.map((r, i) => {
+    const state = i < bracket.round ? 'done' : i === bracket.round ? (over ? 'next' : 'now') : '';
+    const note = state === 'now' ? ' · this match' : state === 'next' ? ' · up next' : '';
+    return `<li class="${state}"><b>${esc(r.label)}${note}</b><small>${esc(r.name)} · Power ${r.power}</small></li>`;
+  }).join('');
+  return `<div class="bracket fight-bracket" aria-label="Tournament bracket"><ol>${items}</ol></div>`;
+}
+
 // `nextBlocker`: why the bracket's next match can't start yet (e.g. a perk to choose), or null.
 // `mercy`: the pending thumbs-up-or-down verdict (run.mercy), if any.
-export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = null, mercy = null) {
+// `bracket`: bracketView(run, tier) during a three-match tournament, or null.
+export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = null, mercy = null, bracket = null) {
   const last = m.rounds.at(-1);
   const delta = last ? last.delta : 0;
   const pills = last ? tagPills(last) : [];
@@ -253,6 +265,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
         <div><h2>${esc(bout.name)}</h2>${debuff ? `<div class="debuff" title="${esc(debuff.desc)}">☠ ${esc(debuff.name)}: ${esc(debuff.desc)}</div>` : ''}${m.festival ? `<div class="festival now">🏛 ${esc(FESTIVAL_BY_ID[m.festival].name)}: ${esc(FESTIVAL_BY_ID[m.festival].desc)}</div>` : ''}</div>
         <div class="score${hold(reveal)}" aria-label="Score"><span class="a">${m.a.roundsWon}</span> – <span class="b">${m.b.roundsWon}</span></div>
       </div>
+      ${bracketStrip(bracket, m.over)}
       <div class="arena${shook}"${shook ? ` style="animation-delay:${timing?.shake ?? 0}s"` : ''}>
         <div class="side${sideCls('A')}"${sideStyle}><div class="side-label a">Your gladiator</div>${fighterCard(m.a.f, { combatant: m.a, live: stats.A, ...fresh('A'), compact: true })}<div class="${hold(reveal)}">${statLine(stats, 'A')}</div></div>
         <div class="center">

@@ -547,3 +547,5 @@ details.fold > summary h2 { display: inline; }
 details.fold > summary h2::before { content: '▾ '; color: var(--gold); }
 details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .chip.small { font-size: 0.75em; padding: 1px 6px; }
+.fight-bracket ol { justify-content: center; margin: 6px 0; }
+.bracket li.next { border-color: var(--gold); background: rgba(217, 180, 90, 0.08); }

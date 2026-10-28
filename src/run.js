@@ -198,6 +198,13 @@ export function crushingGapFor(run, tier) {
 }
 export const bracketOf = (run, tier) => (hasBracket(tier) && run.bouts?.[tier] ? run.brackets?.[tier] ?? null : null);
 export const bracketRound = (run, tier) => BRACKET.rounds[bracketOf(run, tier)?.round ?? 0];
+// The bracket as the fight screen shows it: each round's opponent and which round you're on (playtest #7).
+export function bracketView(run, tier) {
+  const b = bracketOf(run, tier);
+  if (!b) return null;
+  const foes = [...b.foes, run.arenas[tier].opponent];
+  return { round: b.round, rounds: BRACKET.rounds.map((label, i) => ({ label, name: foes[i].name, power: effectivePower(foes[i]) })) };
+}
 
 // Who you fight next in this arena: a bracket's Quarter- or Semi-final opponent, else the arena's.
 // Read-only (safe to call while rendering): brackets are drawn when the tournament week begins.

@@ -77,3 +77,13 @@ test('Market sections fold away, and the Decor merchant shows each item\'s comfo
   for (const key of ['fighters', 'stables', 'liaison', 'storeroom', 'apothecary', 'decor', 'armourer']) assert.match(html, new RegExp(`<details class="panel fold" data-key="market-${key}" open>`));
   assert.match(html, new RegExp(`\\+${MORALE.perDecor} comfort`));
 });
+
+test('the fight screen shows the tournament bracket: this match, then who is up next', async () => {
+  const { bracketStrip } = await import('../src/ui/fightView.js');
+  const bracket = { round: 1, rounds: [{ label: 'Quarter-final', name: 'Aulus', power: 14 }, { label: 'Semi-final', name: 'Brutus', power: 15 }, { label: 'Final', name: 'Cato', power: 18 }] };
+  const during = bracketStrip(bracket, false);
+  assert.match(during, /<li class="done"><b>Quarter-final/);
+  assert.match(during, /Semi-final · this match<\/b><small>Brutus · Power 15/);
+  assert.match(bracketStrip({ ...bracket, round: 2 }, true), /Final · up next<\/b><small>Cato/);
+  assert.equal(bracketStrip(null, false), '');
+});
