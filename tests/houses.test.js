@@ -108,3 +108,27 @@ test('older saves get rival houses on load', () => {
   assert.equal(back.houses.length, HOUSES.rivals);
   assert.equal(back.glory, 0);
 });
+
+test('at the start of winter the houses are paid by their place in the standings, before tribute', () => {
+  const run = createRun(9);
+  recruit(run, run.market[0].id);
+  run.glory = 100; // first place
+  run.week = 39;
+  run.gold = 0;
+  run.boutPending = false;
+  run.bouts = null;
+  advanceWeek(run);
+  const purse = HOUSES.yearPurse[0] * 1;
+  assert.equal(run.gold, purse - 15, 'the purse arrives before the 15 Gold tribute');
+  assert.ok(run.log.some((l) => /year-end purse/i.test(l.text)));
+  const last = createRun(9);
+  recruit(last, last.market[0].id);
+  for (const h of last.houses) h.glory = 50;
+  last.glory = 0;
+  last.week = 39;
+  last.gold = 20;
+  last.boutPending = false;
+  last.bouts = null;
+  advanceWeek(last);
+  assert.equal(last.gold, 20 + HOUSES.yearPurse[3] - 15, 'last place gets nothing');
+});

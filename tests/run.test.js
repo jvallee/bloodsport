@@ -358,12 +358,14 @@ test('the Liaison offers a cheap injured convict once built', () => {
 test('tribute is paid at the start of winter; unpaid tribute costs Favor', () => {
   const run = createRun(1);
   recruit(run, run.market[0].id);
+  for (const h of run.houses) h.glory = 99; // last in the standings: no year-end purse muddling the tribute
   run.week = 39;
   run.gold = 100;
   advanceWeek(run);
   assert.equal(run.gold, 100 - TRIBUTE.perYear);
   const poor = createRun(2);
   recruit(poor, poor.market[0].id);
+  for (const h of poor.houses) h.glory = 99;
   poor.week = 39;
   poor.gold = 3;
   advanceWeek(poor);
@@ -1072,6 +1074,7 @@ test('a busy Trainer Room says who is using it and what to do', () => {
 test('tribute can be paid early, and is then not collected again that winter', () => {
   const run = createRun(1);
   recruit(run, run.market[0].id);
+  for (const h of run.houses) h.glory = 99; // no year-end purse in this test
   run.week = 10;
   run.gold = 3;
   assert.match(payTributeBlocker(run), /Needs 15 Gold/);

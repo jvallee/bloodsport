@@ -621,6 +621,7 @@ export function advanceWeek(run) {
   }
   if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) if (!tributePaid(run)) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
   if (run.week % WEEKS_PER_YEAR === WEEKS_PER_YEAR - 4) {
+    payYearPurse(run);
     collectTribute(run);
     for (const f of run.roster) f.topStreak = 0; // a winter apart: the scouts' notes go stale
   }
@@ -754,6 +755,16 @@ export function payTribute(run) {
   run.gold -= due;
   run.tributePaid = tributeYear(run);
   log(run, `You pay the Emperor's tribute early: ${due} Gold.`, 'event');
+}
+
+// The year-end purse: the Emperor rewards the houses by their place in the Glory standings.
+function payYearPurse(run) {
+  if (!run.houses) return;
+  const rank = standings(run).findIndex((h) => h.you);
+  const year = dateOf(run.week).year;
+  const purse = (HOUSES.yearPurse[rank] ?? 0) * year;
+  if (purse) run.gold += purse;
+  log(run, `The year-end purse: your house finished #${rank + 1} of ${run.houses.length + 1} in Glory${purse ? ` and is paid ${purse} Gold` : ', and is paid nothing'}.`, purse ? 'good' : 'warn');
 }
 
 function collectTribute(run) {

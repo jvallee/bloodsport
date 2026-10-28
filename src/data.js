@@ -97,6 +97,7 @@ export const HOUSES = {
   climb: [8, 20, 40],
   feudMonths: 3,
   vengeanceWin: 5000,
+  yearPurse: [30, 20, 10, 0], // Gold × the year, paid at the start of winter by standings rank (gives winter income and the race a prize)
 };
 
 // Legacy (src/legacy.js): patrons and decrees chosen when a career starts (run.setup).
