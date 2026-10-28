@@ -46,7 +46,7 @@ test('a Silver tournament is three matches: weaker opponents first, the listed o
   const prestige = run.prestige;
   const qf = opponentFor(run, 3);
   assert.notEqual(qf, final);
-  assert.equal(effectivePower(qf), boutFor(run, 3).oppPower + BRACKET.power[0]);
+  assert.equal(effectivePower(qf), effectivePower(final) + BRACKET.power[0]);
   const r1 = play(run, f.id, 3).s;
   assert.equal(r1.bracket, 'Quarter-final');
   assert.equal(r1.next, 'Semi-final');
@@ -54,7 +54,7 @@ test('a Silver tournament is three matches: weaker opponents first, the listed o
   assert.match(advanceBlocker(run), /Semi-final/);
   assert.equal(run.boutPending, true);
   const sf = opponentFor(run, 3);
-  assert.equal(effectivePower(sf), boutFor(run, 3).oppPower + BRACKET.power[1]);
+  assert.equal(effectivePower(sf), effectivePower(final) + BRACKET.power[1]);
   play(run, f.id, 3);
   assert.equal(opponentFor(run, 3), final);
   const last = play(run, f.id, 3).s;
@@ -128,7 +128,7 @@ test('bracket opponents never share a name, and are truly weaker than the Final 
     const b = run.brackets[3];
     const names = [...b.foes.map((f) => f.name), run.arenas[3].opponent.name];
     assert.equal(new Set(names).size, 3, `seed ${seed}: ${names}`);
-    const final = boutFor(run, 3).oppPower;
+    const final = effectivePower(run.arenas[3].opponent);
     assert.equal(effectivePower(b.foes[0]), final + BRACKET.power[0], `seed ${seed} QF`);
     assert.equal(effectivePower(b.foes[1]), final + BRACKET.power[1], `seed ${seed} SF`);
   }
@@ -146,7 +146,7 @@ test('losing an early match of a top-arena Boss bracket costs half the Boss-loss
   assert.ok(FAVOR);
 });
 
-test('early bracket wins pay a little Prestige (a way out of the buy-in spiral)', () => {
+test('early bracket wins pay the Prestige set in BRACKET.prestige (currently none: it made the game far too easy)', () => {
   const { run, f } = atSilver(9);
   const before = run.prestige;
   const s = play(run, f.id, 3).s;

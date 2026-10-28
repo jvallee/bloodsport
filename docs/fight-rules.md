@@ -279,7 +279,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - The buy-in is paid once. Each early win pays 2 Gold × tier, XP, +1 Renown and Glory. The prize comes with the Final.
   - Losing any match loses the tournament (Favor and rivals as for the Final). Withdrawing between matches counts as capitulating.
   - Injuries carry over, and the week can't end mid-bracket. Brackets are drawn when the tournament week begins.
-  - (Playtest #4) Early opponents are truly weaker: their total Power, gear included, is the Final's listed Power −4 and −3. Each early win also pays 1 Prestige × tier. Losing a Boss bracket before its Final costs half the Boss-loss Favor.
+  - (Playtest #4) Early opponents are truly weaker: their total Power, gear included, is the Final opponent's total Power −4 and −3. (A Prestige reward for early wins was tried and dropped: it took careful careers from 41% to 54%.) Losing a Boss bracket before its Final costs half the Boss-loss Favor.
   - The odds line names the next opponent and adds the whole-tournament odds (match odds multiplied; injuries that carry over aren't counted).
 - **Fight items:** one of each kind per fight; different items can be combined in the same round.
 - **Medbay:** you choose which injury it treats first.

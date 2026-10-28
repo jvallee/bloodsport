@@ -143,11 +143,12 @@ function bracketFor(run, tier) {
   if (!run.brackets[tier]) {
     const bout = boutFor(run, tier);
     const foes = [];
+    const finalPower = effectivePower(run.arenas[tier].opponent);
     for (const d of BRACKET.power.slice(0, 2)) {
       const f = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower + d, decorLevel: bout.oppDecor, takenNames: takenNames(run, foes), classes: run.setup?.classes });
       f.speed = opponentSpeed(run, { ...bout, boss: false });
       seasonOpponent(run, f, { ...bout, boss: false });
-      f.power -= effectivePower(f) - (bout.oppPower + d); // truly weaker: gear and augments included
+      f.power -= effectivePower(f) - (finalPower + d); // weaker than the Final opponent by d, gear and all
       f.house = houseForArena(run, tier).id;
       foes.push(f);
     }
