@@ -59,6 +59,13 @@ export const TRAITS = {
   underdog: { name: 'Underdog', desc: '+2 Power when the opponent has equal or more Power.' },
   unbreakable: { name: 'Unbreakable', desc: 'The Death Gate opens at 3 injuries instead of 2.' },
   bloodlust: { name: 'Bloodlust', desc: '+1 Power once the opponent is injured.' },
+  // v5 kinds
+  bloodDrinker: { name: 'Blood Drinker', desc: 'Wounding the opponent heals this fighter\'s newest light wound (Flesh Wound or Distracted) taken this match.' },
+  nightborn: { name: 'Nightborn', desc: '+1 Power in Round 3.' },
+  mesmerize: { name: 'Mesmerize', desc: '+5% win chance in Round 1.' },
+  thickHide: { name: 'Thick Hide', desc: 'Armor: −10% chance to be injured.' },
+  pounce: { name: 'Pounce', desc: '+3 Speed in Round 1.' },
+  rampage: { name: 'Rampage', desc: 'Each round won gives +1 Power for the rest of the match.' },
 };
 
 // Tactics: chosen before each round. Press beats Feint, Feint beats Guard, Guard beats Press (+10% win chance to the counter).
@@ -153,6 +160,9 @@ export const KINDS = {
   android: { name: 'Android', basePower: 5, traits: ['quantumAnalyzer', 'alloyedSkin', 'perpetualMotion'] },
   elf: { name: 'Elf', basePower: 5, traits: ['firebug', 'footwork', 'egoArmour', 'elvenEyes'] },
   orc: { name: 'Orc', basePower: 6, traits: ['bloodFaith', 'unbreakable', 'bloodlust'] },
+  vampire: { name: 'Vampire', basePower: 5, traits: ['bloodDrinker', 'nightborn', 'mesmerize'] },
+  // Exotic: only from the Stables.
+  basa: { name: 'Basa', basePower: 6, traits: ['thickHide', 'pounce', 'rampage'], exotic: true },
 };
 
 export const CLASSES = {
@@ -160,6 +170,9 @@ export const CLASSES = {
   sagittarius: { name: 'Sagittarius', ability: 'First Volley', desc: 'Each round (unless Blinded): coin flip for +10% win chance or +10% injure chance.' },
   ornitharius: { name: 'Ornitharius', ability: 'Birds of Prey', desc: 'Once injured: +5% injure chance per Bird in quarters.' },
   fighter: { name: 'Fighter', ability: 'Weaponsmaster', desc: 'Fights with a weapon specialty.' },
+  retiarius: { name: 'Retiarius', ability: 'Net and Trident', desc: 'Winning a round entangles the opponent: −3 Speed next round.' },
+  ashHungry: { name: 'Ash-Hungry', ability: 'Ash Stacks', desc: 'Each injury they inflict: +1 Power and +5% chance to injure for the rest of the match.' },
+  bloodBearer: { name: 'Blood-Bearer', ability: 'Off-Hand', desc: '+5% win chance; losing a round gives a free 15% off-hand strike at the winner.' },
   // Legacy classes: they appear in the market once a past career has unlocked them (src/legacy.js).
   thornBlade: { name: 'Thorn-Blade', ability: 'Thorn Lash', desc: 'Winning a round gives the opponent −2 Speed and −1 Power next round.', legacy: true },
   samnite: { name: 'Samnite', ability: 'Shield Wall', desc: '20% chance to parry an injury with the shield; Concussed never costs them the first strike.', legacy: true },
@@ -173,6 +186,8 @@ export const WEAPONS = {
   sword: { name: 'Sword', ability: 'Riposte', desc: '20% chance to parry an injury; a parry gives +3 Speed next round.' },
   flail: { name: 'Flail', ability: 'Shield-Breaker', desc: 'Injury checks ignore enemy parries and armor.' },
   gun: { name: 'Gun', ability: 'Armor-Piercing Volley', desc: 'Rounds 1 and 3 (unless Blinded): +15% injure chance, ignores armor.' },
+  axe: { name: 'Axe', ability: 'Cleave', desc: 'Wounds they inflict are worse: +15 on the injury roll.' },
+  dagger: { name: 'Dagger', ability: 'Backstab', desc: 'Striking first: +10% chance to injure that round.' },
 };
 
 // Decor only helps specific builds (for now). `helps` says whether a fighter gets anything from it.
@@ -182,6 +197,8 @@ export const DECOR = {
   fireBrazier: { price: 1, calm: 5, name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale and −5 Stress a week. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
   trophy: { price: 2, name: 'Trophy Rack', feeds: 'Morale', effect: 'Comfort for Morale: a famous fighter likes to see their victories on the wall.', helps: () => false },
   shrine: { price: 3, calm: 10, name: 'Shrine of Mars', feeds: 'Stress', effect: 'Comfort for Morale and −10 Stress a week: prayer steadies a fighter between bouts.', helps: () => false },
+  bathhouse: { price: 4, calm: 15, name: 'Bathhouse', feeds: 'Stress', effect: 'Comfort for Morale and −15 Stress a week: hot water heals more than the Medbay admits.', helps: () => false },
+  lionCage: { price: 5, name: 'Lion Cage', feeds: 'Basa', effect: 'Comfort for Morale. Basa fighters with a Lion Cage get +1 Power (they train with the beasts).', helps: (f) => f.kind === 'basa' },
   warBanner: { price: 4, renown: 1, name: 'War Banner', feeds: 'Renown', effect: 'Comfort for Morale, and +1 Renown for every win (per Banner): the crowd learns their colours.', helps: () => true },
 };
 
@@ -272,7 +289,8 @@ export const BUILDINGS = {
   trainer: { name: 'Trainer Room', dept: 'training', icon: 'dumbbell', cost: [8, 10, 16, 26, 40], req: [1, 2, 3, 4, 5], per: [3, 5, 8, 13, 21], effect: (n) => `Trains 1 fighter a week; each fighter can train up to ${n} points in total`, extra: (lv) => `Training costs ${lv} Gold per fighter-week (your best Trainer Room sets the cap and the fee)` },
   medbay: { name: 'Medbay', dept: 'medical', icon: 'cross', cost: [8, 8, 14], req: [1, 2, 4], per: [1, 2, 3], effect: (n) => `Treats ${n} fighter${n > 1 ? 's' : ''} at a time`, extra: (lv) => (lv >= 2 ? 'Heals 2 weeks of injury per week' : 'Heals 1 week of injury per week') },
   oracle: { unique: true, name: 'Oracle', dept: 'scouting', icon: 'eye', cost: [8, 12], req: [2, 3], per: [1, 2], effect: (n) => (n >= 2 ? 'Exact odds and next Boss debuff' : 'Odds to the nearest 10%') },
-  armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16], req: [2, 3], per: [3, 4], effect: (n) => `Sells ${n} pieces of gear each month, and buys your spare gear back at half price`, extra: (lv) => (lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
+  armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16, 24], req: [2, 3, 4], per: [3, 4, 5], effect: (n) => `Sells ${n} pieces of gear each month, and buys your spare gear back at half price`, extra: (lv) => (lv >= 3 ? 'Stocks Imperial (tier 3) gear' : lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
+  stables: { unique: true, name: 'Stables', dept: 'scouting', icon: 'paw', cost: [9, 14], req: [2, 3], per: [1, 2], effect: (n) => `${n} exotic Basa fighter${n === 1 ? '' : 's'} in the Market each month` },
   liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly 1-Gold condemned convict') },
 };
 
@@ -306,6 +324,9 @@ export const PERKS = {
   survivor: { name: 'Survivor', desc: 'Once injured: −10% chance to be injured; −20% at 2+ injuries.', req: (f) => f.level >= 3, reqText: 'Level 3+' },
   duelist: { name: 'Duelist', desc: '+5% win chance and +5% chance to injure.', req: (f) => f.power >= 9 && f.speed >= 7, reqText: 'Power 9+ and Speed 7+' },
   tactician: { name: 'Tactician', desc: 'Striking first is worth +15% instead of +10%.', req: (f) => f.speed >= 9 && f.power >= 8, reqText: 'Speed 9+ and Power 8+' },
+  bloodthirsty: { name: 'Bloodthirsty', desc: '+10% chance to injure an opponent who is already hurt.' },
+  counterpuncher: { name: 'Counterpuncher', desc: '+10% win chance in a round after losing one.' },
+  ironWill: { name: 'Iron Will', desc: 'The Death Gate opens one injury later.', req: (f) => f.level >= 4, reqText: 'Level 4+' },
   juggernaut: { name: 'Juggernaut', desc: '+1 Power and −5% chance to be injured.', stat: { power: 1 }, req: (f) => f.power >= 12, reqText: 'Power 12+' },
 };
 
@@ -326,6 +347,11 @@ export const CONSUMABLES = {
   warPaint: { name: 'War Paint', price: 10, desc: '+1 Power next round.', boost: { power: 1 } },
   adrenaline: { name: 'Adrenaline Draught', price: 8, desc: '+3 Speed next round; +15 Stress after the fight.', boost: { speed: 3 }, stressAfter: 15 },
   blessedBandage: { name: 'Blessed Bandage', price: 10, desc: '−10% chance to be injured next round.', boost: { guard: 10000 } },
+  ironTonic: { name: 'Iron Tonic', price: 9, desc: '+5% win chance next round.', boost: { win: 5000 } },
+  viperVenom: { name: 'Viper Venom', price: 11, desc: '+10% chance to injure next round.', boost: { injure: 10000 } },
+  berserkerMushroom: { name: 'Berserker Mushroom', price: 12, desc: '+2 Power next round, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
+  throwingNet: { name: 'Throwing Net', price: 7, desc: 'The opponent has −3 Speed next round.', foe: { speed: -3 } },
+  smellingSalts: { name: 'Smelling Salts', price: 8, desc: 'Clears a Distracted or Concussed wound for the rest of this fight (it still needs healing after).', salts: true },
   crowdBribe: { name: 'Crowd Bribe', price: 12, desc: 'If you capitulate this fight, the crowd forgives it: no Favor or Renown lost for capitulating (losing a Boss still counts).', bribe: true },
 };
 
@@ -340,6 +366,12 @@ export const GEAR = {
   lightGreaves: { name: 'Light Greaves', slot: 'armor', tier: 1, price: 6, speed: 2 },
   bronzeCuirass: { name: 'Bronze Cuirass', slot: 'armor', tier: 2, price: 14, guard: 10000, speed: -1 },
   scaleMail: { name: 'Scale Mail', slot: 'armor', tier: 2, price: 16, guard: 8000, power: 1 },
+  woodenBuckler: { name: 'Wooden Buckler', slot: 'armor', tier: 1, price: 7, guard: 4000, win: 2000 },
+  throwingAxes: { name: 'Throwing Axes', slot: 'weapon', tier: 2, price: 15, power: 1, speed: 1, injure: 3000 },
+  imperialGladius: { name: 'Imperial Gladius', slot: 'weapon', tier: 3, price: 28, power: 2, speed: 2 },
+  executionerAxe: { name: "Executioner's Axe", slot: 'weapon', tier: 3, price: 26, power: 2, injure: 10000, speed: -1 },
+  loricaSegmentata: { name: 'Lorica Segmentata', slot: 'armor', tier: 3, price: 28, guard: 12000, power: 1 },
+  lionPelt: { name: 'Lion Pelt', slot: 'armor', tier: 3, price: 24, guard: 5000, win: 5000 },
 };
 
 export const BOSS_DEBUFFS = {
@@ -349,7 +381,22 @@ export const BOSS_DEBUFFS = {
   ironRules: { name: 'Iron Rules', desc: 'Room decor gives no bonus to your fighter.' },
   bloodMoon: { name: 'Blood Moon', desc: 'Both fighters have +10% chance to be injured.' },
   crowdFavorite: { name: 'Crowd Favorite', desc: 'The champion fights with +1 Power.' },
+  lions: { name: 'Lions in the Arena', desc: 'Hungry lions roam the sand: the Death Gate opens one injury earlier for both fighters.' },
+  emperorsGaze: { name: "The Emperor's Gaze", desc: 'The Emperor is watching: no capitulating in this fight.' },
 };
+
+// Weapon and style matchups (v5): a fighter's style is their weapon if they're a Fighter, otherwise their class.
+// `vs` lists opposing styles (or 'armor': any armor gear). win/injure apply to the first fighter.
+export const MATCHUPS = [
+  { style: 'spear', vs: ['cestus', 'fists', 'dagger'], win: 5000, why: 'Reach keeps brawlers at bay' },
+  { style: 'club', vs: ['armor'], injure: 10000, why: 'Crushes armor' },
+  { style: 'axe', vs: ['samnite', 'armor'], injure: 5000, why: 'Splits shields and plate' },
+  { style: 'sword', vs: ['dagger', 'club'], win: 5000, why: 'Outfences short and clumsy weapons' },
+  { style: 'dagger', vs: ['retiarius', 'sagittarius'], win: 5000, why: 'Inside their guard' },
+  { style: 'retiarius', vs: ['sword', 'axe'], win: 5000, why: 'The net tangles a blade' },
+  { style: 'bow', vs: ['retiarius'], win: 5000, why: 'Shoots before the net flies' },
+  { style: 'flail', vs: ['samnite', 'sword'], injure: 5000, why: 'Swings around a guard' },
+];
 
 export const NAMES = [
   'Aurelia', 'Brutus', 'Cassia', 'Drusus', 'Flamma', 'Gaius', 'Hilarus', 'Ixa', 'Juno', 'Krell',

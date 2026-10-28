@@ -16,9 +16,11 @@ const SKIN = {
   elf: ['#f3e2c7', '#e7d3b0', '#d8c7a6', '#c9b8e0'],
   orc: ['#7d9a5a', '#6b8a4c', '#8a9a6a', '#5f7a52'],
   android: ['#a9b4bf', '#c2c8cf', '#8e99a4'],
+  vampire: ['#e8e4ec', '#d9d2e0', '#cfc9d8'],
+  basa: ['#9a6b3a', '#7d5530', '#b08050'],
 };
 const HAIR = ['#1f1612', '#3a2618', '#6b4426', '#a8742f', '#d8c08a', '#8b2b22', '#cfcfcf'];
-const BG = { human: '#3a2a20', elf: '#26332a', orc: '#2f2a1d', android: '#22283a' };
+const BG = { human: '#3a2a20', elf: '#26332a', orc: '#2f2a1d', android: '#22283a', vampire: '#2a1a2a', basa: '#2e2414' };
 
 // Brows and mouth by humor: Choleric scowls, Sanguine grins, Melancholic frowns, Phlegmatic is unreadable.
 const FACE = {
@@ -75,6 +77,8 @@ export function portrait(f, size = 48) {
     parts.push(`<path d="M32 34 L30 41 L33 41" stroke="rgba(0,0,0,0.25)" stroke-width="1.3" fill="none"/>`);
     parts.push(`<path d="${face.mouth}" stroke="#5a2a22" stroke-width="2" stroke-linecap="round" fill="none"/>`);
     if (kind === 'orc') parts.push('<path d="M25 47 L24 41 L27 46Z M39 47 L40 41 L37 46Z" fill="#f2ead2"/>');
+    if (kind === 'vampire') parts.push('<path d="M28 47 L29 51 L30 47Z M34 47 L35 51 L36 47Z" fill="#fff"/><circle cx="24" cy="32" r="1.7" fill="#c0362c"/><circle cx="40" cy="32" r="1.7" fill="#c0362c"/>');
+    if (kind === 'basa') parts.push('<path d="M14 22 L10 8 L22 16Z M50 22 L54 8 L42 16Z" fill="#5a3d20"/><path d="M26 40 L32 44 L38 40" stroke="#2a1d16" stroke-width="2" fill="none"/>');
   }
   parts.push(classGear(f));
   // Wounds: a red slash for each current injury (up to three).

@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS } from './data.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -10,11 +10,22 @@ export const other = (side) => (side === 'A' ? 'B' : 'A');
 export const FIRST_STRIKE = 10000;
 
 export const effectiveInjuries = (f) => f.injuries.reduce((s, i) => s + i.weight, 0);
-export const hasInjury = (f, tag) => f.injuries.some((i) => i.tag === tag);
-const countInjury = (f, tag) => f.injuries.filter((i) => i.tag === tag).length;
+// Smelling Salts suppress a wound's effects for the rest of a fight (it still counts toward the Death Gate).
+export const hasInjury = (f, tag) => f.injuries.some((i) => i.tag === tag && !i.suppressed);
+const countInjury = (f, tag) => f.injuries.filter((i) => i.tag === tag && !i.suppressed).length;
 export const hasPerk = (f, perk) => Boolean(f.perks?.includes(perk));
 // Injuries at which losing a round can kill (Unbreakable holds out one longer).
-export const deathGateAt = (f) => (f.kindTrait === 'unbreakable' ? 3 : 2);
+// Unbreakable and Iron Will each hold it off one injury longer; lions in the arena bring it one closer.
+export const deathGateAt = (f, arena = null) => 2 + (f.kindTrait === 'unbreakable' ? 1 : 0) + (f.perks?.includes('ironWill') ? 1 : 0) - (arena === 'lions' ? 1 : 0);
+// A fighter's style for matchups: their weapon if a Fighter, otherwise their class.
+export const styleId = (f) => (f.cls === 'fighter' ? f.weapon : f.cls);
+// The matchups that favour c against opp (data.js MATCHUPS).
+export function matchupsFor(c, opp) {
+  const mine = styleId(c.f);
+  const theirs = styleId(opp.f);
+  const armored = Boolean(opp.f.gear?.armor);
+  return MATCHUPS.filter((x) => x.style === mine && x.vs.some((v) => v === theirs || (v === 'armor' && armored)));
+}
 export const killMarks = (f) => KILL_MARKS.filter((k) => (f.kills ?? 0) >= k.at);
 const hasMark = (f, id) => (f.kills ?? 0) >= KILL_MARKS.find((k) => k.id === id).at;
 export const gearOf = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => GEAR[k]);
@@ -118,6 +129,8 @@ export function computeSpeed(c, round) {
   if (round === 1 && weaponActive(c, 'spear', round)) mods.push({ source: 'Spear', value: 3 });
   if (c.proneRound === round) mods.push({ source: 'Prone', value: -2 });
   if (c.thornRound === round) mods.push({ source: 'Thorn Lash', value: -2 });
+  if (c.netRound === round) mods.push({ source: 'Entangled', value: -3 });
+  if (round === 1 && kindActive(c, 'pounce', round)) mods.push({ source: 'Pounce', value: 3 });
   if (c.riposteRound === round) mods.push({ source: 'Riposte', value: 3 });
   if (c.arena === 'rainyMud') mods.push({ source: 'Rainy Mud', value: -2 });
   for (const b of c.boosts ?? []) if (b.round === round && b.speed) mods.push({ source: b.name, value: b.speed });
@@ -168,6 +181,10 @@ export function computePower(c, opp, round, raw = false) {
   for (const b of c.boosts ?? []) if (b.round === round && b.power) mods.push({ source: b.name, value: b.power });
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
   if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
+  if (kindActive(c, 'nightborn', round) && round === 3) mods.push({ source: 'Nightborn', value: 1 });
+  if (kindActive(c, 'rampage', round) && c.rampage) mods.push({ source: 'Rampage', value: c.rampage });
+  if (classActive(c, 'ashHungry', round) && c.ash) mods.push({ source: 'Ash Stacks', value: c.ash });
+  if (f.kind === 'basa' && decorOf(c, 'lionCage')) mods.push({ source: 'Lion Cage', value: 1 });
   if (humorOf(c)?.power?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).power[round] });
   if (c.festival?.ranged && !meleeOnly(c)) mods.push({ source: c.festival.name, value: c.festival.ranged });
   for (const sc of activeScars(c, opp)) if (sc.power) mods.push({ source: sc.label, value: sc.power });
@@ -194,6 +211,14 @@ export function computePhase2(c, opp, round, volley = {}) {
   }
   if (classActive(c, 'ornitharius', round) && eff >= 1 && decorOf(c, 'bird')) enemy.push({ source: 'Birds of Prey', value: 5000 * decorOf(c, 'bird') });
   if (kindActive(c, 'hateful', round)) enemy.push({ source: 'Hateful', value: 10000 });
+  if (kindActive(c, 'mesmerize', round) && round === 1) win.push({ source: 'Mesmerize', value: 5000 });
+  if (kindActive(c, 'thickHide', round)) self.push({ source: 'Thick Hide', value: -10000, armor: true });
+  if (classActive(c, 'ashHungry', round) && c.ash) enemy.push({ source: 'Ash Stacks', value: 5000 * c.ash });
+  if (classActive(c, 'bloodBearer', round)) win.push({ source: 'Off-Hand', value: 5000 });
+  for (const x of matchupsFor(c, opp)) {
+    if (x.win) win.push({ source: `${x.why}`, value: x.win });
+    if (x.injure) enemy.push({ source: `${x.why}`, value: x.injure });
+  }
   if (kindActive(c, 'perpetualMotion', round) && c.overclockedRound === round) {
     win.push({ source: 'Overclocked', value: 10000 });
     self.push({ source: 'Overheating', value: 5000 });
@@ -210,16 +235,25 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (fleshWounds) enemy.push({ source: 'Flesh Wound', value: -10000 * fleshWounds });
   if (hasInjury(f, 'senseless')) self.push({ source: 'Senseless', value: 10000 * eff });
   if (c.arena === 'bloodMoon') self.push({ source: 'Blood Moon', value: 10000 });
-  for (const b of c.boosts ?? []) if (b.round === round && b.guard) self.push({ source: b.name, value: -b.guard });
+  for (const b of c.boosts ?? []) {
+    if (b.round !== round) continue;
+    if (b.guard) self.push({ source: b.name, value: -b.guard });
+    if (b.win) win.push({ source: b.name, value: b.win });
+    if (b.injure) enemy.push({ source: b.name, value: b.injure });
+    if (b.self) self.push({ source: b.name, value: b.self });
+  }
   // Gear.
   for (const g of gearOf(f)) {
     if (g.injure) enemy.push({ source: g.name, value: g.injure });
     if (g.guard) self.push({ source: g.name, value: -g.guard, armor: true });
+    if (g.win) win.push({ source: g.name, value: g.win });
   }
   // Perks.
   if (hasPerk(f, 'thickSkin')) self.push({ source: 'Thick Skin', value: -5000 });
   if (hasPerk(f, 'juggernaut')) self.push({ source: 'Juggernaut', value: -5000 });
   if (hasPerk(f, 'killer')) enemy.push({ source: 'Killer Instinct', value: 5000 });
+  if (hasPerk(f, 'bloodthirsty') && effectiveInjuries(opp.f) >= 1) enemy.push({ source: 'Bloodthirsty', value: 10000 });
+  if (hasPerk(f, 'counterpuncher') && c.lostRound === round - 1) win.push({ source: 'Counterpuncher', value: 10000 });
   if (hasPerk(f, 'fastStart') && round === 1) win.push({ source: 'Fast Starter', value: 5000 });
   if (hasPerk(f, 'closer') && round === 3) win.push({ source: 'Closer', value: 5000 });
   if (hasPerk(f, 'survivor') && eff >= 1) self.push({ source: 'Survivor', value: eff >= 2 ? -20000 : -10000 });
@@ -277,7 +311,8 @@ function disableRandom(c, n, rng) {
 function inflictInjury(m, X, Y, r) {
   const prior = effectiveInjuries(Y.f);
   const advantage = Math.max(0, clampDelta(r.power[X.side].total - r.power[Y.side].total));
-  const sev = injurySeverity(d100(m.rng), prior, advantage, r.winner === Y.side, deathGateAt(Y.f));
+  const cleave = weaponActive(X, 'axe', r.round) ? 15 : 0; // Axe: wounds land harder
+  const sev = injurySeverity(d100(m.rng) + cleave, prior, advantage, r.winner === Y.side, deathGateAt(Y.f, Y.arena));
   const result = { ...sev, tag: sev.injury.tag, name: sev.injury.name, advantage, prior };
   delete result.injury;
   if (result.tag === 'death') {
@@ -297,7 +332,10 @@ function inflictInjury(m, X, Y, r) {
   Y.firstInjuryTaken = true;
   Y.f.injuries.push({ tag: result.tag, weight });
   result.weight = weight;
-  if (result.tag === 'distracted') result.disabled = disableRandom(Y, 1, m.rng);
+  if (result.tag === 'distracted') {
+    result.disabled = disableRandom(Y, 1, m.rng);
+    Y.distracted = [...(Y.distracted ?? []), ...result.disabled]; // Smelling Salts can restore these
+  }
   if (result.tag === 'maimed') result.disabled = disableRandom(Y, effectiveInjuries(Y.f), m.rng);
   return result;
 }
@@ -315,6 +353,7 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
       ...pX.enemy.map((mod) => ({ ...mod, side: X.side })),
       ...pY.self.filter((mod) => !(mod.armor && pX.piercing)).map((mod) => ({ ...mod, side: Y.side })),
     ];
+    if (weaponActive(X, 'dagger', round) && r.initiative.first === X.side) mods.push({ source: 'Backstab', value: 10000, side: X.side });
   }
   const chance = clamp(base + sum(mods), 0, 100000);
   const roll = rollE5(m.rng);
@@ -335,6 +374,14 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
       if (check.parry.success) return check;
     }
     check.injury = inflictInjury(m, X, Y, r);
+    if (check.injury.tag !== 'death') {
+      if (classActive(X, 'ashHungry', round)) X.ash = (X.ash ?? 0) + 1;
+      // Blood Drinker: drinking the opponent's blood closes this fighter's newest light wound from this fight.
+      if (kindActive(X, 'bloodDrinker', round)) {
+        const i = X.f.injuries.findLastIndex((inj) => inj.weeksLeft === undefined && ['fleshWound', 'distracted'].includes(inj.tag));
+        if (i >= 0) check.drained = X.f.injuries.splice(i, 1)[0].tag;
+      }
+    }
   } else if (!counter && roll - chance >= 50000 && kindActive(Y, 'elvenEyes', round)) {
     injuryCheck(m, Y, X, r, 'Elven Eyes counter', true);
   }
@@ -342,7 +389,7 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
 }
 
 // Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favorite boosts the opponent (B).
-const BOTH_SIDES = ['bloodMoon', 'crowdFavorite'];
+const BOTH_SIDES = ['bloodMoon', 'crowdFavorite', 'lions', 'emperorsGaze'];
 
 export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false }) {
   const m = {
@@ -381,6 +428,15 @@ export function applyRoundEnd(m, r) {
     L.proneRound = round + 1;
     effects.push({ source: 'Club', side: L.side, text: 'knocked Prone' });
   }
+  if (classActive(W, 'retiarius', round)) {
+    L.netRound = round + 1;
+    effects.push({ source: 'Net', side: L.side, text: 'entangled (−3 Speed next round)' });
+  }
+  if (kindActive(W, 'rampage', round)) {
+    W.rampage = (W.rampage ?? 0) + 1;
+    effects.push({ source: 'Rampage', side: W.side, text: `rampaging (+${W.rampage} Power)` });
+  }
+  L.lostRound = round; // Counterpuncher
   if (classActive(W, 'thornBlade', round)) {
     L.thornRound = round + 1;
     effects.push({ source: 'Thorn Lash', side: L.side, text: 'lashed (−2 Speed, −1 Power next round)' });
@@ -444,6 +500,9 @@ export function playRound(m, { stance = 'steady' } = {}) {
   // Roll 4B — first striker; Roll 4C — retaliation if both still stand.
   injuryCheck(m, first, second, r, 'First strike');
   if (first.f.alive && second.f.alive) injuryCheck(m, second, first, r, 'Retaliation');
+  // Blood-Bearer: losing the round, the off-hand blade strikes back (a flat 15% check).
+  const loser = sideOf(m, other(r.winner));
+  if (A.f.alive && B.f.alive && classActive(loser, 'bloodBearer', round)) injuryCheck(m, loser, sideOf(m, r.winner), r, 'Off-hand strike', true);
 
   sideOf(m, r.winner).roundsWon += 1;
   m.rounds.push(r);
@@ -468,8 +527,8 @@ export function playRound(m, { stance = 'steady' } = {}) {
   return r;
 }
 
-export const canThrowTowel = (m) => !m.over && m.round >= 1;
-export const mortalDanger = (c) => c.f.alive && effectiveInjuries(c.f) >= deathGateAt(c.f);
+export const canThrowTowel = (m) => !m.over && m.round >= 1 && m.debuff !== 'emperorsGaze';
+export const mortalDanger = (c) => c.f.alive && effectiveInjuries(c.f) >= deathGateAt(c.f, c.arena);
 
 export function throwTowel(m) {
   if (!canThrowTowel(m)) throw new Error('You can only capitulate between rounds.');

@@ -74,7 +74,7 @@ test('building tables are consistent', () => {
   assert.deepEqual(BUILDINGS.trainer.per, [3, 5, 8, 13, 21]);
 });
 
-test('every non-fatal injury has a healing time, and there are 6 Boss debuffs', () => {
+test('every non-fatal injury has a healing time, and there are 8 Boss debuffs (v5 added Lions and the Emperor\'s Gaze)', () => {
   for (const i of INJURIES.filter((x) => x.tag !== 'death')) assert.ok(HEAL_WEEKS[i.tag] >= 1, i.tag);
-  assert.equal(Object.keys(BOSS_DEBUFFS).length, 6);
+  assert.equal(Object.keys(BOSS_DEBUFFS).length, 8);
 });

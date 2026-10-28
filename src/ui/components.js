@@ -21,7 +21,7 @@ export const ICON = {
 };
 
 export const BUILDING_ICON = {
-  bed: '🛏', lyre: '🎭', dumbbell: '🏋', cross: '⚕', eye: '👁', chain: '⛓', anvil: '⚒',
+  bed: '🛏', lyre: '🎭', dumbbell: '🏋', cross: '⚕', eye: '👁', chain: '⛓', anvil: '⚒', paw: '🐾',
 };
 
 export function button(label, action, data = {}, blocker = null, cls = 'btn small') {
@@ -37,7 +37,7 @@ export function buttonWhy(label, action, data = {}, blocker = null, cls = 'btn s
 export function deathGate(f) {
   const n = effectiveInjuries(f);
   const gate = deathGateAt(f);
-  const title = n >= gate ? 'Death Gate open: losing a round can now be fatal.' : `Fighters can only die once they have ${gate} effective injuries${gate > 2 ? ' (Unbreakable)' : ''}.`;
+  const title = n >= gate ? 'Death Gate open: losing a round can now be fatal.' : `Fighters can only die once they have ${gate} effective injuries${gate > 2 ? ' (Unbreakable or Iron Will)' : ''}.`;
   const pips = Array.from({ length: gate }, (_, i) => `<i class="${n > i ? 'on' : ''}"></i>`).join('');
   return `<span class="gate" title="${title}">${pips}</span>`;
 }

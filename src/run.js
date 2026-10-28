@@ -20,7 +20,7 @@ import {
 
 export const SAVE_VERSION = 3;
 export const GRAND_TIER = CIRCUITS.length + 1;
-const KIND_IDS = Object.keys(KINDS);
+const KIND_IDS = Object.keys(KINDS).filter((k) => !KINDS[k].exotic); // exotic kinds (Basa) come from the Stables
 const CLASS_IDS = Object.keys(CLASSES).filter((c) => !CLASSES[c].legacy); // legacy classes join via run.setup.classes
 const WEAPON_IDS = Object.keys(WEAPONS);
 const DEBUFF_IDS = Object.keys(BOSS_DEBUFFS);
@@ -234,6 +234,16 @@ export function matchOptions(run, f, tier = run.topTier) {
 
 export const marketPrice = (run) => circuitInfo(run).price;
 
+// The Stables bring exotic Basa to market (each month, and straight away when built).
+function addStablesOffers(run) {
+  const lv = maxLevel(run, 'stables');
+  const n = lv ? effectAt('stables', lv) : 0;
+  const have = run.market.filter((f) => f.kind === 'basa').length;
+  for (let i = have; i < n; i++) {
+    run.market.push(createFighter(run.rng.market, { id: newId(run, 'f'), kind: 'basa', bonusPower: circuitInfo(run).marketPower, takenNames: takenNames(run), classes: run.setup?.classes }));
+  }
+}
+
 function refreshMarket(run) {
   const rng = run.rng.market;
   const bonus = circuitInfo(run).marketPower;
@@ -242,6 +252,7 @@ function refreshMarket(run) {
   for (let i = 0; i < ECONOMY.marketSize - 1; i++) market.push(make());
   market.splice(int(rng, 0, market.length), 0, make('orc'));
   run.market = market;
+  addStablesOffers(run);
 }
 
 // Liaison: Lv 1 offers a cheap weak convict with a Flesh Wound; Lv 2 a strong POW with a Concussion.
@@ -274,6 +285,7 @@ export function buildRoom(run, type) {
   const b = build(run, type);
   if (type === 'armourer') refreshArmourer(run);
   if (type === 'liaison') refreshLiaison(run);
+  if (type === 'stables') addStablesOffers(run);
   return b;
 }
 
@@ -1114,6 +1126,11 @@ export function useItem(run, match, key) {
   run.inventory.items[key] -= 1;
   match.itemsUsed = [...(match.itemsUsed ?? []), key];
   if (item.boost) match.a.boosts = [...(match.a.boosts ?? []), { ...item.boost, name: item.name, round: match.round + 1 }];
+  if (item.foe) match.b.boosts = [...(match.b.boosts ?? []), { ...item.foe, name: item.name, round: match.round + 1 }];
+  if (item.salts) {
+    for (const inj of match.a.f.injuries) if (['distracted', 'concussed'].includes(inj.tag)) inj.suppressed = true;
+    match.a.disabled = match.a.disabled.filter((slot) => !match.a.distracted?.includes(slot));
+  }
   if (item.bribe) match.bribe = true;
   if (item.stressAfter) match.stressAfter = item.stressAfter;
   log(run, `${match.a.f.name} uses ${item.name}.`, 'event');
@@ -1177,7 +1194,7 @@ export function finishMatch(run, match) {
   const bracket = bracketOf(run, tier);
   const opp = bracket && bracket.round < 2 ? bracket.foes[bracket.round] : arena.opponent;
   const newInjuries = match.a.f.injuries.filter((i) => i.weeksLeft === undefined).map((i) => INJURY_BY_TAG[i.tag].name);
-  fighter.injuries = match.a.f.injuries.map((i) => ({ ...i, weeksLeft: i.weeksLeft ?? HEAL_WEEKS[i.tag] }));
+  fighter.injuries = match.a.f.injuries.map(({ suppressed, ...i }) => ({ ...i, weeksLeft: i.weeksLeft ?? HEAL_WEEKS[i.tag] }));
   fighter.alive = match.a.f.alive;
   fighter.stress = clampStress(fighter.stress + STRESS.fight + (match.stressAfter ?? 0));
 

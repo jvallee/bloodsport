@@ -57,9 +57,10 @@ export function narrateRound(m, r) {
   for (const c of r.checks) {
     const att = name(c.attacker);
     const def = name(c.defender);
-    const prefix = c.counter ? `Elven Eyes! ${att} counters` : `${att} strikes at ${def}`;
+    const prefix = c.counter ? `${c.label === 'Off-hand strike' ? 'Off-hand!' : 'Elven Eyes!'} ${att} counters` : `${att} strikes at ${def}`;
     const pierce = c.pierced ? ' (armor pierced)' : '';
     add(c.hit ? 'hit' : 'miss', `${prefix}: needs ${roll100(c.chance)} or less to wound${pierce}, rolled ${roll100(c.roll)}. ${c.hit ? 'Hit!' : 'Miss.'}`);
+    if (c.drained) add('effect', `${att} drinks deep: their own ${c.drained === 'fleshWound' ? 'Flesh Wound' : 'Distraction'} closes (Blood Drinker).`);
     if (c.parry) add(c.parry.success ? 'parry' : 'hit', c.parry.success ? (c.parry.shield ? `${def} catches it on the shield!` : `${def} parries with the Sword! Riposte: +3 Speed next round.`) : `${def}'s parry fails.`);
     const inj = c.injury;
     if (!inj) continue;
@@ -75,7 +76,7 @@ export function narrateRound(m, r) {
   }
 
   // Effects one fighter inflicts on the other read "X is disarmed by Y's Fists"; self effects read "X: overclocked".
-  const INFLICTED = ['Club', 'Fists', 'Thorn Lash'];
+  const INFLICTED = ['Club', 'Fists', 'Thorn Lash', 'Net'];
   for (const e of r.endEffects) {
     const by = name(e.side === 'A' ? 'B' : 'A');
     add('effect', INFLICTED.includes(e.source) ? `${name(e.side)} is ${e.text} by ${by}'s ${e.source}.` : `${name(e.side)}: ${e.text} (${e.source}).`);
@@ -125,7 +126,7 @@ export function narrateStory(m, r) {
   for (const c of r.checks) {
     const att = name(c.attacker);
     const def = name(c.defender);
-    if (c.counter && c.hit) add('hit', `${att}'s elven eyes spot an opening: a swift counter!`);
+    if (c.counter && c.hit) add('hit', c.label === 'Off-hand strike' ? `${att}'s off-hand blade finds a gap!` : `${att}'s elven eyes spot an opening: a swift counter!`);
     if (c.parry?.success) add('parry', `${def} parries ${att}'s blow and ripostes!`);
     const inj = c.injury;
     if (!inj) continue;
