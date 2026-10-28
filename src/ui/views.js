@@ -1,6 +1,6 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE } from '../data.js';
+import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
@@ -303,6 +303,7 @@ function rosterPanel(run) {
     const actions = `${perkChooser(run, f)}<div class="actions">
       <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week</small></div>
       <div class="segs">${jobs}</div>
+      ${f.injuries.length > 1 ? `<div class="treat"><span class="label">Medbay treats first:</span> <select class="treat-select" data-change="treat-first" data-id="${f.id}" aria-label="Which injury the Medbay treats first">${f.injuries.map((inj, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${esc(INJURY_BY_TAG[inj.tag].name)} (${inj.weeksLeft} week${inj.weeksLeft === 1 ? '' : 's'})</option>`).join('')}</select></div>` : ''}
       ${f.job === 'rest' && jobBlocker(run, f.id, 'trainPower') && jobBlocker(run, f.id, 'trainSpeed') ? `<div class="why-not">Can't train this week: ${esc(jobBlocker(run, f.id, 'trainPower'))}</div>` : ''}
       <details class="more" data-key="room-${f.id}"><summary>Room, decor &amp; gear${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f)}</details>
       ${f.story?.length ? `<details class="more" data-key="story-${f.id}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}

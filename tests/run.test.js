@@ -10,7 +10,7 @@ import {
   startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker, choosePerk, perkBlocker,
   currentBout, boutFor, marketPrice, serialize, deserialize, moraleTarget, moraleState, xpFor, GRAND_TIER, SAVE_VERSION,
   matchOptions, bossLossFavor, buildRoom, recordMatchProgress, buyItem, buyItemBlocker, useItem, useItemBlocker,
-  payTribute, payTributeBlocker, tributeDue, sellGear, sellGearBlocker, upcomingBouts,
+  payTribute, payTributeBlocker, tributeDue, sellGear, sellGearBlocker, upcomingBouts, treatFirst, treatFirstBlocker,
 } from '../src/run.js';
 import { computePower, computeSpeed, computePhase2, playRound, throwTowel } from '../src/fight.js';
 
@@ -1206,4 +1206,16 @@ test('the schedule lists the coming top-arena tournaments up to the Boss, with w
   assert.equal(upcomingBouts(run)[0].weeks, 0, 'this week');
   skipBout(run);
   assert.deepEqual(upcomingBouts(run).map((b) => b.stage), ['Tournament 2', 'Boss Tournament']);
+});
+
+test('you can choose which injury the Medbay treats first', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  f.injuries = [{ tag: 'maimed', weight: 1, weeksLeft: 3 }, { tag: 'fleshWound', weight: 1, weeksLeft: 1 }];
+  assert.match(treatFirstBlocker(run, f.id, 5), /No such injury/);
+  treatFirst(run, f.id, 1);
+  assert.deepEqual(f.injuries.map((i) => i.tag), ['fleshWound', 'maimed']);
+  setJob(run, f.id, 'medbay');
+  advanceWeek(run);
+  assert.deepEqual(f.injuries.map((i) => i.tag), ['maimed'], 'the Flesh Wound healed first');
 });

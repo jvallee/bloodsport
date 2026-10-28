@@ -343,7 +343,7 @@ document.addEventListener('click', (e) => {
 // Dropdowns (gear): choosing an option runs the action, like a button would.
 document.addEventListener('change', (e) => {
   const el = e.target.closest?.('select[data-change]');
-  if (!el || !el.value) return;
+  if (!el || el.value === '') return;
   const name = el.dataset.change;
   const data = { id: el.dataset.id, index: el.value };
   guard('action', () => {

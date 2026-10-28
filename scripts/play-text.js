@@ -14,7 +14,7 @@ import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, 
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, recruitBlocker, fightBlocker, GRAND_TIER,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, recruitBlocker, fightBlocker, GRAND_TIER,
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
@@ -53,6 +53,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   pay-tribute                   pay this year's tribute early
   houses                        the rival houses' standings
   story <id> | retire <id>      a fighter's chronicle; retire a veteran (level 4+ or a Title) to the Hall of Champions
+  treat <id> <injury#>          choose which injury the Medbay heals first
   augment <id> <injury#>        cyborg surgery on a Maimed or Blinded wound (Medbay level 2+)
   choose <n>                    decide this week's event (the week can't end until you do)
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
@@ -411,6 +412,12 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       const f = run.roster.find((x) => x.id === id) ?? run.fallen.find((x) => x.id === id);
       if (!f) throw new Error('No such fighter.');
       return [`-- The story of ${f.name} --`, ...(f.story ?? []).map((e) => `  ${formatDate(e.week)}: ${e.text}`)].join('\n');
+    },
+    treat: ([id, i]) => {
+      need([id, i].filter(Boolean), 2, 'treat <id> <injury#>');
+      treatFirst(run, id, Number(i));
+      const f = run.roster.find((x) => x.id === id);
+      return `The Medbay will treat ${f.name}'s ${injuryName(f.injuries[0].tag)} first.`;
     },
     augment: ([id, i = '0']) => {
       need([id].filter(Boolean), 1, 'augment <id> <injury#>');

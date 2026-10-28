@@ -5,7 +5,7 @@ import { playRound, throwTowel } from './fight.js';
 import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom,
   assignDecor, removeDecor, buyGear, equip, unequip, startMatch, finishMatch, skipBout, forfeitBout,
-  recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire,
+  recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst,
 } from './run.js';
 import { upgrade } from './ludus.js';
 
@@ -47,6 +47,7 @@ export const GAME_ACTIONS = {
   'event-choice': ({ run }, d) => { chooseEvent(run, Number(d.index)); },
   augment: ({ run }, d) => { augment(run, d.id, Number(d.index)); },
   retire: ({ run }, d) => { retire(run, d.id); },
+  'treat-first': ({ run }, d) => { treatFirst(run, d.id, Number(d.index)); },
   fight: (state, d) => {
     const { run } = state;
     const tier = Number(d.tier) || run.topTier;

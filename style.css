@@ -483,3 +483,6 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .schedule li.boss { border-color: var(--blood); }
 .schedule li.boss b { color: #f1b3ad; }
 .schedule li.now { border-color: var(--gold); }
+
+.treat-select { background: #0f0b0a; color: inherit; border: 1px solid var(--blood-dim); border-radius: 8px; padding: 3px 6px; font: inherit; font-size: 13px; }
+.treat { margin: 6px 0; }

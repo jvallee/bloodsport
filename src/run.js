@@ -919,6 +919,23 @@ export function surgeon(run, id, index) {
   if (f.job === 'medbay' && !f.injuries.length) f.job = 'rest';
 }
 
+// The Medbay heals injuries in order: put the one you want healed first at the front.
+export function treatFirstBlocker(run, id, index) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (!f.injuries[index]) return 'No such injury.';
+  return null;
+}
+
+export function treatFirst(run, id, index) {
+  assertOk(treatFirstBlocker(run, id, index));
+  const f = findFighter(run, id);
+  const [inj] = f.injuries.splice(index, 1);
+  f.injuries.unshift(inj);
+}
+
 // Cyborg surgery: replace a Maimed limb or Blinded eye with an augment (Medbay Lv 2+).
 export const augmentPrice = (run) => SURGERY.cost + SURGERY.perTier * (Math.min(run.topTier, 4) - 1);
 const augmentFor = (tag) => Object.keys(AUGMENTS).find((k) => AUGMENTS[k].from === tag);
