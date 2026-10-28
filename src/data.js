@@ -139,7 +139,8 @@ export const RETIRE = { level: 4, prestige: 5, morale: 10 };
 
 // Brackets (playtester request): from the Silver Coliseum up, a tournament is three matches in a row for one fighter.
 // The Quarter- and Semi-final opponents are weaker than the listed (Final) opponent by `power`; each early win pays `purse` Gold × tier.
-export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 2 }; // swept: -3/-2 took careful careers to 22%, -4/-3 to 28%
+export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 2, prestige: 1, earlyBossLoss: 0.5 };
+// prestige: × tier for each early win (a way out of the buy-in spiral); earlyBossLoss: share of the Boss-loss Favor for losing before the Final. // swept: -3/-2 took careful careers to 22%, -4/-3 to 28%
 
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
 export const KILL_MARKS = [

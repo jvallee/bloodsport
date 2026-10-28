@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { createMatch, autoPlay } from '../src/fight.js';
+import { createMatch, autoPlay, playRound } from '../src/fight.js';
+import { blank } from './helpers.js';
 import { createFighter } from '../src/run.js';
 import { narrateRound, narrateStory, adviceFor, resultText, fmtPct, signed, modLabel } from '../src/narrate.js';
 
@@ -55,4 +56,17 @@ test('rolls read on a 1–100 scale', async () => {
   assert.equal(roll100(55000), '55');
   assert.equal(roll100(5920), '5.9');
   assert.equal(roll100(99999), '100');
+});
+
+test('a favourite who loses hears that the dice turned, not that it was an even fight', () => {
+  const m = { a: { f: { name: 'Vex' } }, b: { f: { name: 'Duma' } }, preMatch: [], result: { winner: 'B', reason: 'rounds' }, rounds: [{ delta: 3, checks: [] }, { delta: 3, checks: [] }] };
+  assert.match(adviceFor(m), /stronger/);
+  assert.doesNotMatch(adviceFor(m), /even fight/);
+});
+
+test('the math narration lists every win-chance bonus', () => {
+  const m = createMatch({ a: blank({ name: 'A' }), b: blank({ name: 'B', humor: 'choleric' }), rng: createRng(4) });
+  const r = playRound(m, { stance: 'guard' });
+  const text = narrateRound(m, r).map((l) => l.text).join(' ');
+  assert.match(text, /Win-chance bonuses:.*First Strike/);
 });

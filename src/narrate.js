@@ -50,7 +50,8 @@ export function narrateRound(m, r) {
   }
 
   add('power', `Power ${r.power.A.total} vs ${r.power.B.total}: Delta ${signed(r.delta)}.`);
-  add('chance', `${name('A')} wins this round ${fmtPct(r.win.chance)} of the time.`);
+  const bonuses = [...r.win.modsA.map((x) => `${x.source} ${signed(x.value / 1000)}% (${name('A')})`), ...r.win.modsB.map((x) => `${x.source} ${signed(x.value / 1000)}% (${name('B')})`)];
+  add('chance', `${name('A')} wins this round ${fmtPct(r.win.chance)} of the time: ${fmtPct(r.win.base)} from the Delta${bonuses.length ? `. Win-chance bonuses: ${bonuses.join(', ')}` : ''}.`);
   add('roll', `Round roll: ${name('A')} needs ${roll100(r.win.chance)} or less, rolled ${roll100(r.roll)}. ${name(r.winner)} takes Round ${r.round}.`);
 
   for (const c of r.checks) {
@@ -151,5 +152,7 @@ export function adviceFor(m) {
   if (worst <= -2) return `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.`;
   if (m.rounds.some((r) => r.checks.some((c) => c.pierced && c.defender === 'A'))) return `Their weapon pierced your armor. Against Gun or Flail fighters, armor won't save you; win the rounds instead.`;
   if (m.result.reason === 'towel') return 'You saved your fighter. Heal them in the Medbay before the next bout.';
+  const avg = m.rounds.reduce((n, r) => n + r.delta, 0) / Math.max(1, m.rounds.length);
+  if (avg >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
   return 'An even fight that went the other way. Small edges add up: training, decor and fighting rested.';
 }

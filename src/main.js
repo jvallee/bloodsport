@@ -70,8 +70,7 @@ const save = () => run && storage.set(SAVE_KEY, serialize(run));
 // ---------- Odds cache (simulating is cheap but not free) ----------
 
 const oddsCache = new Map();
-function oddsFor(f, tier = run.topTier) {
-  const opp = opponentFor(run, tier);
+function oddsFor(f, tier = run.topTier, opp = opponentFor(run, tier)) {
   const opts = matchOptions(run, f, tier);
   const key = JSON.stringify([f, opp, opts]);
   if (!oddsCache.has(key)) {

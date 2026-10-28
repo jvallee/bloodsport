@@ -279,6 +279,8 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - The buy-in is paid once. Each early win pays 2 Gold × tier, XP, +1 Renown and Glory. The prize comes with the Final.
   - Losing any match loses the tournament (Favor and rivals as for the Final). Withdrawing between matches counts as capitulating.
   - Injuries carry over, and the week can't end mid-bracket. Brackets are drawn when the tournament week begins.
+  - (Playtest #4) Early opponents are truly weaker: their total Power, gear included, is the Final's listed Power −4 and −3. Each early win also pays 1 Prestige × tier. Losing a Boss bracket before its Final costs half the Boss-loss Favor.
+  - The odds line names the next opponent and adds the whole-tournament odds (match odds multiplied; injuries that carry over aren't counted).
 - **Fight items:** one of each kind per fight; different items can be combined in the same round.
 - **Medbay:** you choose which injury it treats first.
 - **Year-end purse:** at the start of winter, before tribute, the Emperor pays the top two houses in the Glory standings 8 and 4 Gold × the year. It gives winter some income and makes the standings a race with a prize. (Swept: 30 / 20 / 10 took careful careers far too high.) With brackets, the purse and lower-arena Titles unchanged: careful 35%, reckless deaths 2.90, first Boss 67%, Grand +19 points harder; all gates pass.

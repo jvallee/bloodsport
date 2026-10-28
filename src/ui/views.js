@@ -6,7 +6,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFesti
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -361,11 +361,24 @@ function oddsRow(run, f, tier, oddsFor) {
   const tone = odds.win === 'Strong favorite' || odds.win === 'Favored' ? 'good' : odds.win === 'Even fight' ? '' : 'bad';
   return `<div class="odds-row">
     <div class="who"><b>${esc(f.name)}</b> ${warn.length ? `<span class="warn">${warn.join(' · ')}</span>` : ''}</div>
-    <div class="o ${tone}" title="Chance to win the whole match (best of 3), not one round">Match: ${odds.win}${pct(odds.winPct)}</div>
+    <div class="o ${tone}" title="Chance to win ${hasBracket(tier) ? `the next match (against ${esc(opponentFor(run, tier).name)})` : 'the whole match (best of 3)'}, not one round">${hasBracket(tier) ? `Next (${esc(opponentFor(run, tier).name)})` : 'Match'}: ${odds.win}${pct(odds.winPct)}</div>
+    ${hasBracket(tier) && run.bouts?.[tier] === 'open' ? bracketOdds(run, f, tier, oddsFor, pct) : ''}
     <div class="o" title="Chance of picking up at least one injury">Injury: ${odds.injury}${pct(odds.injuryPct)}</div>
     <div class="o ${odds.death === 'None' || odds.death === 'Low' ? '' : 'bad'}" title="Chance of dying if you never capitulate">Death: ${odds.death}${pct(odds.deathPct)}</div>
     ${run.bouts?.[tier] === 'open' ? buttonWhy(bracketOf(run, tier)?.fighterId === f.id && bracketOf(run, tier).round > 0 ? `Fight the ${bracketRound(run, tier)}` : `Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id, tier }, fightBlocker(run, f.id, tier), 'btn primary small') : ''}
   </div>`;
+}
+
+// Odds of winning every match left in a bracket: the product of each match's odds (injuries carried over aren't
+// counted, so it's optimistic).
+function bracketOdds(run, f, tier, oddsFor, pct) {
+  const b = bracketOf(run, tier);
+  if (!b) return '';
+  const left = [...b.foes.slice(b.round), run.arenas[tier].opponent];
+  if (left.length < 2) return '';
+  const p = left.reduce((acc, o) => acc * oddsFor(f, tier, o).win, 1);
+  const d = describeOdds({ win: p, injury: 0, death: 0 }, oracleLevel(run));
+  return `<div class="o ${p >= 0.55 ? 'good' : p < 0.45 ? 'bad' : ''}" title="Chance to win all ${left.length} remaining matches, multiplied (injuries that carry over aren't counted, so it's optimistic)">Whole tournament: ${d.win}${pct(d.winPct)}</div>`;
 }
 
 function arenaBlock(run, tier, oddsFor) {

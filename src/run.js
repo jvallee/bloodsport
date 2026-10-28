@@ -142,13 +142,15 @@ function bracketFor(run, tier) {
   run.brackets ??= {};
   if (!run.brackets[tier]) {
     const bout = boutFor(run, tier);
-    const foes = BRACKET.power.slice(0, 2).map((d) => {
-      const f = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower + d, decorLevel: bout.oppDecor, takenNames: takenNames(run, run.brackets[tier]?.foes ?? []), classes: run.setup?.classes });
+    const foes = [];
+    for (const d of BRACKET.power.slice(0, 2)) {
+      const f = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower + d, decorLevel: bout.oppDecor, takenNames: takenNames(run, foes), classes: run.setup?.classes });
       f.speed = opponentSpeed(run, { ...bout, boss: false });
       seasonOpponent(run, f, { ...bout, boss: false });
+      f.power -= effectivePower(f) - (bout.oppPower + d); // truly weaker: gear and augments included
       f.house = houseForArena(run, tier).id;
-      return f;
-    });
+      foes.push(f);
+    }
     run.brackets[tier] = { foes, round: 0, fighterId: null, buyIn: 0 };
   }
   return run.brackets[tier];
@@ -1267,7 +1269,9 @@ export function finishMatch(run, match) {
       summary.bloodFaith = true;
       summary.prestige += bout.buyIn;
     }
-    if (bout.top && bout.boss) changeFavor(run, bossLossFavor(tier, run), `lost ${bout.name}`);
+    // Losing a Boss bracket before its Final costs half (you never reached the Boss).
+    const early = bracket && bracket.round < 2;
+    if (bout.top && bout.boss) changeFavor(run, early ? Math.round(bossLossFavor(tier, run) * BRACKET.earlyBossLoss) : bossLossFavor(tier, run), early ? `lost the ${BRACKET.rounds[bracket.round]} of ${bout.name}` : `lost ${bout.name}`);
     else if (bout.top && match.result.reason === 'towel' && !bribed) changeFavor(run, FAVOR.topTowel, 'capitulated in your top arena');
   }
   // Rival houses: Glory changes hands; kills start feuds.
@@ -1366,11 +1370,12 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   const kill = match.result.reason === 'death';
   const summary = {
     week: run.week, tier, name: `${bout.name} · ${round}`, boss: false, top: bout.top, won: true, reason: match.result.reason,
-    fighter: fighter.name, fighterId: fighter.id, died: false, gold: BRACKET.purse * Math.min(tier, 4), prestige: 0, favor: 0,
+    fighter: fighter.name, fighterId: fighter.id, died: false, gold: BRACKET.purse * Math.min(tier, 4), prestige: BRACKET.prestige * Math.min(tier, 4), favor: 0,
     xp: XP.win, renown: 1, injuries: newInjuries, morale: 0, levels: 0, bracket: round, next, kill, house: houseOf(run, opp)?.name ?? null,
   };
   const levelBefore = fighter.level;
   run.gold += summary.gold;
+  run.prestige += summary.prestige;
   fighter.renown += summary.renown;
   gainXp(run, fighter, summary.xp);
   summary.levels = fighter.level - levelBefore;
