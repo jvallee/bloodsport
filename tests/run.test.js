@@ -307,7 +307,7 @@ test('the Armourer stocks gear monthly; equipping swaps the old item back to the
   advanceToTournament(run);
   run.boutPending = false;
   advanceWeek(run);
-  assert.equal(run.armourerStock.length, 3);
+  assert.equal(run.armourerStock.length, 5);
   assert.ok(run.armourerStock.every((k) => GEAR[k].tier === 1));
   run.inventory.gear.push('gladius', 'trident');
   equip(run, f.id, run.inventory.gear.indexOf('gladius'));
@@ -800,7 +800,7 @@ test('an Armourer has stock as soon as it is built', () => {
   run.gold = 100;
   run.prestigeLevel = 2;
   buildRoom(run, 'armourer');
-  assert.equal(run.armourerStock.length, 3);
+  assert.equal(run.armourerStock.length, 5);
 });
 
 test('reloading mid-match keeps the injuries taken in the rounds already played (no erasing a bad round)', () => {

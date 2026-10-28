@@ -73,11 +73,17 @@ export const sfx = {
   event: (at = 0) => { tone(392, { at, dur: 0.3, gain: 0.08 }); tone(587, { at: at + 0.15, dur: 0.4, gain: 0.08 }); },
 };
 
-// The sounds of one round, timed to its animation: dice, then each blow as its line appears, then the crowd.
-export function roundSounds(m, r, { diceTime = 1.4, lineGap = 0.45 } = {}) {
+// The sounds of one round, timed to its animation: dice, then the crowd, then each blow as its line appears.
+// `revealAt`: when the round's winner is announced. The cheer or groan lands with the banner, then the blows.
+export function roundSounds(m, r, { diceTime = 1.4, lineGap = 0.45, revealAt = null } = {}) {
   if (!enabled) return;
   sfx.dice(0);
-  let at = diceTime + 0.3 + lineGap; // after the tactic and initiative lines
+  const reveal = revealAt ?? diceTime + 0.3 + 2 * lineGap; // after the tactic and initiative lines
+  if (!r.death) {
+    if (r.winner === 'A') sfx.cheer(reveal);
+    else sfx.groan(reveal);
+  }
+  let at = reveal;
   for (const c of r.checks) {
     at += lineGap;
     if (c.parry?.success) sfx.parry(at);
@@ -85,7 +91,5 @@ export function roundSounds(m, r, { diceTime = 1.4, lineGap = 0.45 } = {}) {
     else sfx.miss(at);
   }
   if (r.death) sfx.death(at + 0.3);
-  else if (r.winner === 'A') sfx.cheer(at + 0.2);
-  else sfx.groan(at + 0.2);
-  if (m.over && m.result.winner === 'A' && !r.death) sfx.fanfare(at + 1.2);
+  if (m.over && m.result.winner === 'A' && !r.death) sfx.fanfare(at + 1);
 }

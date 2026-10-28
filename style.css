@@ -496,3 +496,28 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .bracket li small { color: var(--muted); font-size: 11px; }
 .bracket li.done { opacity: 0.55; text-decoration: line-through; }
 .bracket li.now { border-color: var(--gold); }
+
+/* Live Power in a fight: what changed since the card's standing Power. */
+.badge.power.live { border-color: var(--gold, #d9b45a); }
+.pdelta { font-size: 11px; font-weight: 700; margin-left: 1px; }
+.pdelta.up { color: #6fcf7a; }
+.pdelta.down { color: #e0645a; }
+
+/* The round's winner: a beat of suspense, then a clear banner and a glow on the winner's card. */
+.suspense { color: var(--muted); font-style: italic; opacity: 0; animation: fade-in 0.3s forwards, fade-out 0.3s forwards; animation-delay: var(--from, 0s), var(--reveal, 0s); }
+.round-banner { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 6px 0 10px; padding: 8px 12px; border-radius: 10px;
+  font-family: var(--display); font-size: 22px; text-align: center; border: 1px solid var(--line); }
+.round-banner small { font-family: inherit; font-size: 15px; color: var(--muted); }
+.round-banner.win { color: var(--good); background: var(--good-dim); border-color: var(--good); }
+.round-banner.loss { color: #f1b3ad; background: var(--blood-dim); border-color: var(--blood); }
+.round-banner.late { animation: pop 0.45s forwards; }
+.side.round-won .card { animation: won-glow 0.6s forwards; animation-delay: var(--reveal, 0s); }
+.side.round-lost .card { animation: lost-dim 0.6s forwards; animation-delay: var(--reveal, 0s); }
+@keyframes won-glow { to { box-shadow: 0 0 0 2px var(--gold), 0 0 22px rgba(217, 180, 90, 0.45); } }
+@keyframes lost-dim { to { opacity: 0.72; filter: saturate(0.6); } }
+@media (prefers-reduced-motion: reduce) {
+  .suspense { display: none; }
+  .round-banner.late { opacity: 1; animation: none; }
+  .side.round-won .card { animation: none; box-shadow: 0 0 0 2px var(--gold); }
+  .side.round-lost .card { animation: none; opacity: 0.72; }
+}

@@ -62,7 +62,7 @@ test('circuits escalate: opponent Power rises within and across tiers', () => {
 
 test('Prestige levels follow the Fibonacci plots and doubling fighter caps', () => {
   assert.deepEqual(PRESTIGE_LEVELS.map((p) => p.plots), [3, 5, 8, 13, 21]);
-  assert.deepEqual(PRESTIGE_LEVELS.map((p) => p.maxFighters), [3, 6, 12, 24, 48]);
+  assert.deepEqual(PRESTIGE_LEVELS.map((p) => p.maxFighters), [4, 6, 12, 24, 48]);
 });
 
 test('building tables are consistent', () => {

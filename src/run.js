@@ -68,8 +68,22 @@ const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, t
 const findFighter = (run, id) => run.roster.find((f) => f.id === id);
 export const effectiveSpeed = (f) => f.speed + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].speed ?? 0), 0);
 // Power as the card shows it: trained Power, gear, a Firebug's Fire Braziers and cyborg augments.
-export const effectivePower = (f) => f.power + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].power ?? 0), 0)
-  + (f.kindTrait === 'firebug' ? f.decor?.fireBrazier ?? 0 : 0) + (f.augments ?? []).reduce((s, k) => s + (AUGMENTS[k]?.power ?? 0), 0);
+export const effectivePower = (f) => powerParts(f).reduce((s, x) => s + x.value, 0);
+
+// Where that Power comes from, for the card's hover. Labels other than the first three match
+// computePower's sources, so the fight screen can tell standing Power from this round's changes.
+export function powerParts(f) {
+  const titles = (f.titles ?? []).filter((t) => t !== 'Master of the Games').length; // each Championship is +1
+  const trained = f.trainedPower ?? 0; // counted since the v5 update; older saves fold earlier training into "Natural"
+  const parts = [{ label: trained || !f.trained ? 'Natural' : 'Natural and training', value: f.power - trained - titles, base: true }];
+  if (trained) parts.push({ label: 'Training', value: trained, base: true });
+  if (titles) parts.push({ label: titles === 1 ? 'Title' : 'Titles', value: titles, base: true });
+  for (const k of [f.gear?.weapon, f.gear?.armor]) if (k && GEAR[k].power) parts.push({ label: GEAR[k].name, value: GEAR[k].power });
+  if (f.kindTrait === 'firebug' && f.decor?.fireBrazier) parts.push({ label: 'Firebug', value: f.decor.fireBrazier });
+  if (f.kind === 'basa' && f.decor?.lionCage) parts.push({ label: 'Lion Cage', value: 1 });
+  for (const k of f.augments ?? []) if (AUGMENTS[k]?.power) parts.push({ label: AUGMENTS[k].name, value: AUGMENTS[k].power });
+  return parts;
+}
 export const championTitle = (tier) => `Champion of ${arenaName(tier).replace(/^The /, 'the ')}`;
 export const isChampionOf = (f, tier) => (f.titles ?? []).includes(championTitle(tier));
 // Harsh Judges (a decree) makes every Boss loss cost 5 more.
@@ -159,6 +173,12 @@ function bracketFor(run, tier) {
     run.brackets[tier] = { foes, round: 0, fighterId: null, buyIn: 0 };
   }
   return run.brackets[tier];
+}
+// How much stronger a known fighter must be to be jeered here: tournament crowds forgive more.
+// Returns Infinity for a bracket's Quarter- or Semi-final (beating the field is the point).
+export function crushingGapFor(run, tier) {
+  if (!hasBracket(tier) || !run.bouts?.[tier]) return ECONOMY.crushingGap;
+  return (bracketOf(run, tier)?.round ?? 0) < 2 ? Infinity : ECONOMY.bracketCrushingGap;
 }
 export const bracketOf = (run, tier) => (hasBracket(tier) && run.bouts?.[tier] ? run.brackets?.[tier] ?? null : null);
 export const bracketRound = (run, tier) => BRACKET.rounds[bracketOf(run, tier)?.round ?? 0];
@@ -584,6 +604,7 @@ export function advanceWeek(run) {
       const stat = f.job === 'trainPower' ? 'power' : 'speed';
       f[stat] += TRAIN_GAIN[stat];
       f.trained += 1;
+      if (stat === 'power') f.trainedPower = (f.trainedPower ?? 0) + TRAIN_GAIN.power;
       run.gold -= cost;
       f.stress = clampStress(f.stress + STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0));
       log(run, `${f.name} trains: +${TRAIN_GAIN[stat]} ${stat === 'power' ? 'Power' : 'Speed'}.`, 'good');
@@ -1218,7 +1239,7 @@ export function finishMatch(run, match) {
   const upset = gap < 0;
   const champion = tier !== GRAND_TIER && !bout.top && isChampionOf(fighter, tier);
   // Rookies are never jeered: only a known name (5+ Renown) crushing a weak opponent, or a returning champion.
-  const crushing = won && !bout.top && !champion && fighter.renown >= ECONOMY.knownRenown && gap >= ECONOMY.crushingGap;
+  const crushing = won && !bout.top && !champion && fighter.renown >= ECONOMY.knownRenown && gap >= crushingGapFor(run, tier);
   const moraleBefore = fighter.morale;
   const levelBefore = fighter.level;
   if (bout.top) {

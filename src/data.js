@@ -216,6 +216,7 @@ export const ECONOMY = {
   skipStressRelief: 20,
   lowerArenaPrestige: 0.5, // Prestige from a win shrinks by half for each tier below your top arena
   crushingGap: 3, // a win with this much more Power than the opponent is a "crushing" win
+  bracketCrushingGap: 5, // in a tournament Final the crowd is more forgiving (Quarter- and Semi-finals are never jeered)
   lootChance: 0.35, // chance to claim a beaten opponent's gear (Bosses always drop theirs)
   titleWins: 3, // wins in an arena that make a fighter its Champion (beating its Boss does too)
   knownRenown: 5, // fighters below this Renown (rookies) are never jeered for mismatches
@@ -274,7 +275,7 @@ export const GRAND = { name: 'The Grand Tournament', oppPower: 26, buyIn: 10, wi
 
 // House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
 export const PRESTIGE_LEVELS = [
-  { level: 1, at: 0, plots: 3, maxFighters: 3 },
+  { level: 1, at: 0, plots: 3, maxFighters: 4 },
   { level: 2, at: 10, plots: 5, maxFighters: 6 },
   { level: 3, at: 25, plots: 8, maxFighters: 12 },
   { level: 4, at: 50, plots: 13, maxFighters: 24 },
@@ -284,12 +285,12 @@ export const PRESTIGE_LEVELS = [
 // cost[i] / req[i]: Gold and Prestige level to reach level i + 1 (cost[0] = build). `per` = effect per level.
 // `unique`: only one per estate, because only the best one counts.
 export const BUILDINGS = {
-  quarters: { name: 'Fighter Quarters', dept: 'housing', icon: 'bed', cost: [6, 6, 10], req: [1, 1, 3], per: [2, 3, 4], effect: (n) => `Houses ${n} fighters`, extra: (lv) => `Decor up to ${lv} of each item` },
+  quarters: { name: 'Fighter Quarters', dept: 'housing', icon: 'bed', cost: [6, 6, 10], req: [1, 1, 3], per: [2, 4, 5], effect: (n) => `Houses ${n} fighters`, extra: (lv) => `Decor up to ${lv} of each item` },
   entertainment: { unique: true, name: 'Entertainment Room', dept: 'housing', icon: 'lyre', cost: [8, 12], req: [2, 3], per: [15, 30], effect: (n) => `All fighters −${n} Stress each week` },
   trainer: { name: 'Trainer Room', dept: 'training', icon: 'dumbbell', cost: [8, 10, 16, 26, 40], req: [1, 2, 3, 4, 5], per: [3, 5, 8, 13, 21], effect: (n) => `Trains 1 fighter a week; each fighter can train up to ${n} points in total`, extra: (lv) => `Training costs ${lv} Gold per fighter-week (your best Trainer Room sets the cap and the fee)` },
   medbay: { name: 'Medbay', dept: 'medical', icon: 'cross', cost: [8, 8, 14], req: [1, 2, 4], per: [1, 2, 3], effect: (n) => `Treats ${n} fighter${n > 1 ? 's' : ''} at a time`, extra: (lv) => (lv >= 2 ? 'Heals 2 weeks of injury per week' : 'Heals 1 week of injury per week') },
   oracle: { unique: true, name: 'Oracle', dept: 'scouting', icon: 'eye', cost: [8, 12], req: [2, 3], per: [1, 2], effect: (n) => (n >= 2 ? 'Exact odds and next Boss debuff' : 'Odds to the nearest 10%') },
-  armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16, 24], req: [2, 3, 4], per: [3, 4, 5], effect: (n) => `Sells ${n} pieces of gear each month, and buys your spare gear back at half price`, extra: (lv) => (lv >= 3 ? 'Stocks Imperial (tier 3) gear' : lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
+  armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16, 24], req: [2, 3, 4], per: [5, 6, 8], effect: (n) => `Sells ${n} pieces of gear each month, and buys your spare gear back at half price`, extra: (lv) => (lv >= 3 ? 'Stocks Imperial (tier 3) gear' : lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
   stables: { unique: true, name: 'Stables', dept: 'scouting', icon: 'paw', cost: [9, 14], req: [2, 3], per: [1, 2], effect: (n) => `${n} exotic Basa fighter${n === 1 ? '' : 's'} in the Market each month` },
   liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly 1-Gold condemned convict') },
 };

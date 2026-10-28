@@ -118,14 +118,14 @@ All numbers live in `src/data.js` and were tuned with `npm run career` (see `doc
 ### Estate (start: Fighter Quarters, Trainer Room, Medbay; all 3 plots used)
 | Building | Build / upgrade Gold | Prestige level needed | Effect per level |
 | :--- | :--- | :--- | :--- |
-| Fighter Quarters | 6 / 6 / 10 | 1 / 1 / 3 | Houses 2 / 3 / 4 fighters; decor cap per item = best Quarters level |
+| Fighter Quarters | 6 / 6 / 10 | 1 / 1 / 3 | Houses 2 / 4 / 5 fighters (v5 update; was 2 / 3 / 4); decor cap per item = best Quarters level |
 | Trainer Room | 8 / 10 / 16 / 26 / 40 | 1 / 2 / 3 / 4 / 5 | Trainer cap 3 / 5 / 8 / 13 / 21 points; each room trains one fighter a week |
 | Medbay | 8 / 8 / 14 | 1 / 2 / 4 | 1 / 2 / 3 beds; Lv 2+ heals 2 weeks per week |
 | Oracle *(one only)* | 8 / 12 | 2 / 3 | Odds shown as words → ~10% → exact; Lv 2 reveals the Boss debuff early |
 | Liaison *(one only)* | 6 / 10 | 2 / 4 | Monthly convict (1 Gold, weaker, Flesh Wound) → POW (4 Gold, stronger, Concussed) |
 | Entertainment Room *(one only)* | 8 / 12 | 2 / 3 | All fighters −15 / −30 Stress a week |
 
-- Roster cap = total Quarters capacity, limited by the Prestige level's max fighters.
+- Roster cap = total Quarters capacity, limited by the Prestige level's max fighters (4 / 6 / 12 / 24 / 48; level 1 was 3 before the v5 update, so a level-2 Quarters' extra bed is usable at once).
 - *One only* buildings are capped because only the best one would count; a second would be a trap.
 
 ### Saves
@@ -158,7 +158,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Crushing wins and upsets** compare Power including gear (the number on the fighter card).
 - **Championships:** a fighter becomes Champion of an arena by beating its Boss *or* winning 3 matches there (+1 Power; one Title per arena, never for the Grand Tournament).
 - **Champions in lower arenas:** a Champion who fights back in a lower arena gets no Prestige and no Renown for a win, loses 10 Morale, and costs 3 Favor ("a champion picking on newcomers").
-- **Rookies:** fighters under 5 Renown are never jeered for mismatches; only known fighters (5+ Renown) crushing a weak opponent by 3+ Power are.
+- **Rookies:** fighters under 5 Renown are never jeered for mismatches; only known fighters (5+ Renown) crushing a weak opponent by 3+ Power are. **Tournaments (v5 update):** bracket Quarter- and Semi-finals are never jeered (the opponents are weaker by design), and a bracket Final only at 5+ Power (`ECONOMY.bracketCrushingGap`).
 - **Injuries go both ways every round:** whoever wins the round, both fighters roll to injure. The round loser is much easier to hurt (25% vs 10% at even Power).
 - **Gentle start, tough finish:** the Dirt Pits Boss fights without an arena rule, and Tier 1 opponents are 6 / 6 / 7.
 - **Challengers:** from the Silver Coliseum on, top-arena opponents gain +1 Power per 30 Renown of the fighter they face (max +2). Famous stars draw tougher opponents. Shown on the odds and in the fight.
@@ -193,7 +193,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 ### Storeroom and gear
 - **Decor** (Bird 1 Gold, Fire Brazier 1, Trophy Rack 2) is bought into the house storeroom and placed in a fighter's quarters (up to the best Quarters level per item). Every item adds Morale comfort; Birds and Braziers also feed Ornitharius and Firebug.
 - **Gear:** one weapon slot and one armor slot per fighter. Tier 1 gear costs 6 Gold, tier 2 costs 14–16 Gold, and items give +Power, +Speed, +injure chance or armor (see the Codex).
-- **Armourer** building (one per estate; 10 / 16 Gold; Prestige level 2 / 3): 3 / 4 items stocked each month, tier 2 gear from level 2.
+- **Armourer** building (one per estate; 10 / 16 Gold; Prestige level 2 / 3): 5 / 6 / 8 items stocked each month (v5 update; was 3 / 4 / 5), tier 2 gear from level 2.
 - **Loot:** your top arena's Boss always drops one of its gear items. Other wins drop gear 35% of the time if the opponent had any.
 - A fallen or released fighter's decor and gear return to the storeroom.
 
@@ -328,3 +328,12 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 
 ### Still deferred
 Four Humors, Cowardly/Afeared/Enraged traumas, Gods' Days and the Temple, blind auctions and rival houses, Oracle fog of war on opponent traits (opponent cards are always shown in full), cyborg surgery, save export/import.
+
+## v5 update (on request, no new tag)
+
+- **Armourer** stocks 5 / 6 / 8 pieces a month (was 3 / 4 / 5).
+- **Fighter Quarters** house 2 / 4 / 5 (was 2 / 3 / 4); Prestige level 1 allows 4 fighters (was 3).
+- **Power on the card** shows its sources on hover: Natural, Training (counted from this update; older saves fold it into Natural), Titles, gear, Firebug braziers, Lion Cage, augments. In a fight the badge shows this round's Power with ▲/▼ and lists what changed (Rampage, Nightborn, Blinded, Overtrained, items, Scouted...).
+- **Effective Power** now includes a Basa's Lion Cage (+1), which the fight already counted.
+- **Tournament crowds**: no jeers in a bracket's Quarter- or Semi-final; a bracket Final jeers only at 5+ Power.
+- **Fight screen**: the line naming a round's winner waits a beat ("Steel meets steel…"), then lands with a banner (who took the round and the score), the winner's card glows and the loser's dims; new wounds appear when the story reaches the blow; sounds and auto-play follow the same timing.

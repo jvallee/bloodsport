@@ -294,5 +294,5 @@ test('a Firebug\'s Fire Braziers show in the card\'s Power, one per brazier', ()
   f.power = 6;
   f.decor.fireBrazier = 2;
   const html = ludusTab(run, fakeOdds);
-  assert.match(html, /\+ 2 from Fire Braziers \(Firebug\)[^"]*">[\s\S]*?<b>8<\/b>/);
+  assert.match(html, /\+2 Firebug[^"]*">[\s\S]*?<b>8<\/b>/);
 });

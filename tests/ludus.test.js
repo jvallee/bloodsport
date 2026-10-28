@@ -43,12 +43,12 @@ test('upgrades follow the cost and Prestige requirements', () => {
   const run = richRun(1);
   const q = idOf(run, 'quarters');
   upgrade(run, q);
-  assert.equal(rosterCap(run), 3);
+  assert.equal(rosterCap(run), 4); // Quarters level 2 houses 4 
   assert.match(upgradeBlocker(run, q), /Prestige level 3/);
   run.prestigeLevel = 3;
   upgrade(run, q);
   assert.equal(upgradeBlocker(run, q), 'Fully upgraded.');
-  assert.deepEqual([rosterCap(run), decorCap(run)], [4, 3]);
+  assert.deepEqual([rosterCap(run), decorCap(run)], [5, 3]);
 });
 
 test('trainer levels raise the cap and the weekly cost', () => {
@@ -73,7 +73,7 @@ test('roster cap is limited by the Prestige level fighter cap', () => {
   build(run, 'quarters');
   assert.equal(rosterCap(run), 6);
   run.prestigeLevel = 1;
-  assert.equal(rosterCap(run), 3);
+  assert.equal(rosterCap(run), 4);
 });
 
 test('Entertainment Room relieves 15 Stress a week', () => {
