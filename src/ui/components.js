@@ -79,7 +79,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
       <div class="card-head">
         <div class="id-row">${portrait(f, compact ? 44 : 52)}<div class="who"><h3><span class="nm">${esc(f.name)}</span></h3><div class="kind">${levelLine} ${KINDS[f.kind].name} · ${clsName}</div></div></div>
         <div class="badges">
-          <div class="badge power" title="Power decides who wins rounds. ${f.power}${gearPow(f) ? ` + ${gearPow(f)} from gear` : ''}. Each point of difference shifts the odds a lot.">${ICON.power}<b>${f.power + gearPow(f)}</b></div>
+          <div class="badge power" title="Power decides who wins rounds. ${f.power}${gearPow(f) ? ` + ${gearPow(f)} from gear` : ''}${decorPow(f) ? ` + ${decorPow(f)} from Fire Braziers (Firebug)` : ''}${augPow(f) ? ` + ${augPow(f)} from augments` : ''}. Each point of difference shifts the odds a lot.">${ICON.power}<b>${f.power + gearPow(f) + decorPow(f) + augPow(f)}</b></div>
           <div class="badge speed" title="Speed decides who strikes first (Speed + d6) and makes them harder to wound. ${f.speed}${gearSpd(f) ? ` ${gearSpd(f) > 0 ? '+' : '−'} ${Math.abs(gearSpd(f))} from gear` : ''}.">${ICON.speed}<b>${f.speed + gearSpd(f)}</b></div>
         </div>
       </div>
@@ -117,6 +117,9 @@ function moraleChip(f) {
 }
 
 const gearPow = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].power ?? 0), 0);
+// Power that's always on: Firebug's braziers (+1 each) and cyborg augments.
+const decorPow = (f) => (f.kindTrait === 'firebug' ? f.decor?.fireBrazier ?? 0 : 0);
+const augPow = (f) => (f.augments ?? []).reduce((n, k) => n + (AUGMENTS[k]?.power ?? 0), 0);
 const gearSpd = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].speed ?? 0), 0);
 // Gear effects that the badges don't show: injure chance and armor.
 function gearBonus(f) {

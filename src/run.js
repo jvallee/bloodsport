@@ -62,9 +62,10 @@ const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const clampStress = (n) => clamp(n, 0, STRESS.max);
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
 const findFighter = (run, id) => run.roster.find((f) => f.id === id);
-// Power as the card shows it: trained Power plus gear.
 export const effectiveSpeed = (f) => f.speed + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].speed ?? 0), 0);
-export const effectivePower = (f) => f.power + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].power ?? 0), 0);
+// Power as the card shows it: trained Power, gear, a Firebug's Fire Braziers and cyborg augments.
+export const effectivePower = (f) => f.power + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].power ?? 0), 0)
+  + (f.kindTrait === 'firebug' ? f.decor?.fireBrazier ?? 0 : 0) + (f.augments ?? []).reduce((s, k) => s + (AUGMENTS[k]?.power ?? 0), 0);
 export const championTitle = (tier) => `Champion of ${arenaName(tier).replace(/^The /, 'the ')}`;
 export const isChampionOf = (f, tier) => (f.titles ?? []).includes(championTitle(tier));
 // Harsh Judges (a decree) makes every Boss loss cost 5 more.

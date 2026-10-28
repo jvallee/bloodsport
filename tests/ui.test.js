@@ -283,3 +283,13 @@ test('a fighter card counts their wins, with the wins in each arena on hover', (
   f.arenaWins = { 1: 3, 2: 2 };
   assert.match(ludusTab(run, fakeOdds), /title="Wins by arena: The Dirt Pits: 3 · The Bronze Arena: 2">🏅 5 wins<\/span>/);
 });
+
+test('a Firebug\'s Fire Braziers show in the card\'s Power, one per brazier', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  f.kindTrait = 'firebug';
+  f.power = 6;
+  f.decor.fireBrazier = 2;
+  const html = ludusTab(run, fakeOdds);
+  assert.match(html, /\+ 2 from Fire Braziers \(Firebug\)[^"]*">[\s\S]*?<b>8<\/b>/);
+});
