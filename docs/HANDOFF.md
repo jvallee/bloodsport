@@ -40,37 +40,37 @@ The v5 content release is live. On top of it, two batches of v5 updates were mad
 - **Tournament jeers:** no jeers in bracket Quarter- or Semi-finals; a bracket Final only jeers at +5 Power (`crushingGapFor`).
 - **Fight screen reveal:** the line naming the round winner waits a beat ("Steel meets steel…"), then lands with a banner. The winner's card glows, the loser's dims, and new wound chips appear when the story reaches the blow (`roundTiming` in `src/ui/fightView.js`). Sounds and auto-play follow the same timing.
 
-**Batch 2: committed but NOT pushed, and NOT yet copied into `/v5/`** (commits `10a71eb`, `4627df2`, plus the handoff commit)
-- **Signature moves** (`SIGNATURES`, `SIGNATURE = { level: 3, opponentLevel: 3 }` in `src/data.js`; `signatureOf` / `useSignature` / `signatureBlocker` in `src/fight.js`):
-  - Each class has one move, used once per fight for one round from level 3 (the ★ button before a round).
-  - Opponents of level 3+ use theirs when behind or in Round 3. An opponent's level is 1 + perks, so this means Bosses from the Bronze Arena and regulars from the Silver Coliseum.
-  - The story announces it with a `signature` line, and a chip on the fighter card shows the move.
-- **Thumbs up or down** (`MERCY` in `src/data.js`; `offerMercy` / `resolveMercy` / `mercyBlocker` in `src/run.js`; game action `mercy`):
-  - After a win over a wounded opponent who is still alive, `run.mercy` is set. `idleBlocker` then blocks every other action until the verdict.
-  - Spare: +2 Favor. Kill: +2 Renown, a kill, and the graveyard.
-  - The crowd wants blood against a feuding house or an opponent at the Death Gate, mercy otherwise. Following the crowd gives +1 Renown and +5 Morale.
-  - A kill the crowd demanded starts **no** feud (otherwise following the crowd was a trap). Killing against its wishes starts one.
-  - The choice shows in the fight screen, or as a card in the Ludus after a reload.
-- **Economy pass** (see the "v5 economy pass" section of `docs/fight-rules.md`):
-  - Item and gear prices were set by measured value per Gold, using `scripts/probes/`.
-  - Lower-arena purses are halved per tier below your top arena (`ECONOMY.lowerArenaGold = 0.5`).
-- **Bots, text and Codex:**
-  - Bots use their signature in Round 1. The careful bot follows the crowd; the reckless bot always kills.
-  - The text interface has `signature`, `spare` and `kill`, and shows the Power breakdown.
-  - The Codex has entries for both new features.
-- **Measured state:** 371 tests pass, and all 9 gates pass (careful 36%, careful deaths 0.44 per career, reckless deaths 3.23).
+**Batch 2 and the playtest #6 fixes: done, pushed, live, and copied into `/v5/`** (up to commit `6a00010`).
+- **Signature moves** (`SIGNATURES` and `SIGNATURE = { level: 3, bossLevel: 3, opponentLevel: 3 }` in `src/data.js`; `signatureOf`, `useSignature`, `signatureBlocker` and `opponentHasSignature` in `src/fight.js`):
+  - Your fighters use one move per fight, for one round, from level 3.
+  - Opponents use theirs when behind or in Round 3. In a Boss tournament that applies in every round; otherwise only in a tournament's Final (`earlyRound` comes from `matchOptions`).
+  - Opponent cards show the move when the opponent will use it.
+- **Thumbs up or down** (`MERCY` in `src/data.js`; `offerMercy`, `resolveMercy` and `mercyBlocker` in `src/run.js`; game action `mercy`):
+  - `run.mercy` blocks every other action until the verdict.
+  - Spare: +2 Favor, in your top arena only.
+  - Kill: +2 Renown and a kill.
+  - Following the crowd: +1 Renown and +5 Morale.
+  - Killing against a mercy chant: a feud, plus +2 Renown of infamy.
+  - Sparing against a call for blood: their house owes you a life (`house.owed`, −1 Power against you for 3 months, applied through a negative `grudge`).
+- **Economy:**
+  - Gear priced by measured value per Gold.
+  - Items at half their earlier price.
+  - Lower-arena purses halved per tier below your top arena, but a win always pays at least the loss + 2 Gold.
+  - Bracket early wins pay 3 × tier Gold.
+- **Playtest #6** (`docs/playtest-llm-6.md`, `docs/playtest-6-changes.md`): every bug fixed and most suggestions applied.
+  - Arena Power is now Bronze 11 / 12 / 14, Silver 17 / 18 / 19, Imperial 24 / 25 / 26, Grand 29.
+  - Underdog needs a 2-Power gap; Dreaded comes at 2 kills.
+  - The Morale chip shows its target and warns "Discontented soon".
+  - Skipping to the tournament no longer overtrains anyone.
+  - Breakdown holes fixed; 40 more names.
+- **Measured state:**
+  - 375 tests pass.
+  - All 9 gates pass: careful 43% (near the 45% ceiling), careful deaths 0.55 per career, reckless deaths 3.21.
 
-**In flight when I stopped: LLM playtest #6.** A subagent was playing seed 6006 through `scripts/play-text.js`. Its report goes to `docs/playtest-llm-6.md`.
-- If the file exists, read it and act on the findings.
-- If it doesn't (the agent died with the session), run a new one (section 6).
-- Playtests replay commands against the current code, so **don't edit `src/` while a playtest is running.**
-
-**Next steps, in order**
-1. Get the playtest #6 report. Fix its bugs test-first, apply the worthwhile suggestions, and write `docs/playtest-6-changes.md` (format: see `docs/playtest-5-changes.md`).
-2. Run `npm test` and `npm run check`, then commit.
-3. Copy `main` into `/v5/` (section 5), with no new tag.
-4. Push, wait about a minute, and verify both https://jvallee.github.io/bloodsport/ and `/v5/` (for example, `curl` a changed file, or load it in a browser and check the console).
-5. Report to the user: what changed, the balance numbers, the playtest highlights, the open decisions (section 8) and a few new fun ideas.
+**Next steps**
+1. Report to the user and ask about the open decisions (section 8).
+2. When new work arrives, follow sections 5 and 6: test-first fixes, gates, docs, commit, refresh `/v5/` only if asked, then push and verify.
+3. Careful win rate sits at 43%. If a new feature makes the player stronger, add matching difficulty (later arenas are the lever that works; see `docs/playtest-6-changes.md`, "Balance").
 
 ## 4. Architecture in one screen (details in `CLAUDE.md`)
 
