@@ -1024,7 +1024,7 @@ export function buyItem(run, key) {
 
 export function useItemBlocker(run, match, key) {
   if (!run.inMatch || !match || match.over) return 'Items are used during a match.';
-  if (match.itemUsed) return 'Only one item per fight.';
+  if (match.itemsUsed?.includes(key)) return `Already used a ${CONSUMABLES[key]?.name ?? 'that item'} this fight (one of each kind per fight).`;
   if (!CONSUMABLES[key]) return 'Unknown item.';
   if (!run.inventory.items[key]) return `No ${CONSUMABLES[key].name} in the storeroom.`;
   return null;
@@ -1035,8 +1035,8 @@ export function useItem(run, match, key) {
   assertOk(useItemBlocker(run, match, key));
   const item = CONSUMABLES[key];
   run.inventory.items[key] -= 1;
-  match.itemUsed = key;
-  if (item.boost) match.a.boost = { ...item.boost, name: item.name, round: match.round + 1 };
+  match.itemsUsed = [...(match.itemsUsed ?? []), key];
+  if (item.boost) match.a.boosts = [...(match.a.boosts ?? []), { ...item.boost, name: item.name, round: match.round + 1 }];
   if (item.bribe) match.bribe = true;
   if (item.stressAfter) match.stressAfter = item.stressAfter;
   log(run, `${match.a.f.name} uses ${item.name}.`, 'event');

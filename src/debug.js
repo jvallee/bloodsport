@@ -10,9 +10,9 @@ export const REPORT_FORMAT = 1;
 // A match is plain data apart from its shared RNG; keep what explains the fight.
 function matchDigest(match) {
   if (!match) return null;
-  const side = (c) => ({ f: c.f, disabled: c.disabled, roundsWon: c.roundsWon, boost: c.boost ?? null });
+  const side = (c) => ({ f: c.f, disabled: c.disabled, roundsWon: c.roundsWon, boosts: c.boosts ?? [] });
   return {
-    round: match.round, over: match.over, result: match.result, debuff: match.debuff, itemUsed: match.itemUsed ?? null,
+    round: match.round, over: match.over, result: match.result, debuff: match.debuff, itemsUsed: match.itemsUsed ?? [],
     a: side(match.a), b: side(match.b), preMatch: match.preMatch, rounds: match.rounds,
   };
 }

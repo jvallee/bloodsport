@@ -65,7 +65,7 @@ const BASICS = [
   ['growth', 'Levels and perks', 'Fighters earn XP from every match (more for wins, Bosses and upsets). Each level lets you choose 1 of 3 perks: stat boosts, combat edges, or combo perks that need both Power and Speed.'],
   ['renown', 'Renown', 'Fame. Wins (especially Bosses and upsets) raise it; capitulating lowers it. Every 5 Renown adds +1 Gold to a fighter\'s winnings, but famous fighters expect better rooms.'],
   ['morale', 'Morale', 'Drifts each week toward comfort (Quarters level, decor, Entertainment Room) minus expectations (Renown). 80+: Inspired, +5% win chance. Below 40: Discontented, won\'t train. Below 20: Mutinous, refuses to fight. A house that stays below 20 on average for 4 weeks revolts.'],
-  ['items', 'Fight items', 'Single-use items from the Apothecary (in the Market): War Paint, Adrenaline Draught, Blessed Bandage, Crowd Bribe. Use one before Round 1 or between rounds, at most one per fight. Boosts last the next round only.'],
+  ['items', 'Fight items', 'Single-use items from the Apothecary (in the Market): War Paint, Adrenaline Draught, Blessed Bandage, Crowd Bribe. Use them before Round 1 or between rounds: one of each kind per fight, but different items can be combined. Boosts last the next round only.'],
   ['gear', 'Gear and the storeroom', 'Each fighter has a weapon and an armor slot. Gear and decor belong to the house: buy them, hand them out, take them back. A fallen or released fighter\'s things return to the storeroom. Beaten opponents sometimes drop their gear (Bosses always do). Spare gear sells back for half its price.'],
   ['decor', 'Room decor', `Items for a fighter's quarters. Every item adds comfort (Morale). ${Object.values(DECOR).map((d) => `${d.name}: ${d.effect}`).join(' ')}`],
 ];

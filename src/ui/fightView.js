@@ -142,11 +142,12 @@ function controls(m, ui, bout, items = {}) {
       <button class="btn primary big" data-action="leave-fight">Return to the Ludus</button>`;
   }
   const owned = Object.entries(items).filter(([, n]) => n > 0);
-  const itemRow = m.itemUsed
-    ? `<div class="sub">Used this fight: ${esc(CONSUMABLES[m.itemUsed].name)}.</div>`
-    : owned.length
-      ? `<div class="items-row"><span class="sub">Use an item (one per fight):</span>${owned.map(([k, n]) => `<button class="btn small" data-action="use-item" data-item="${k}" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</button>`).join('')}</div>`
-      : '';
+  // One of each kind per fight: items already used drop out of the row.
+  const used = m.itemsUsed ?? [];
+  const usable = owned.filter(([k]) => !used.includes(k));
+  const itemRow = `${used.length ? `<div class="sub">Used this fight: ${used.map((k) => esc(CONSUMABLES[k].name)).join(', ')}.</div>` : ''}${usable.length
+    ? `<div class="items-row"><span class="sub">Use an item (one of each kind per fight):</span>${usable.map(([k, n]) => `<button class="btn small" data-action="use-item" data-item="${k}" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</button>`).join('')}</div>`
+    : ''}`;
   if (m.round === 0) {
     return `${itemRow}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
   }

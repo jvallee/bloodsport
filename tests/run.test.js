@@ -958,15 +958,20 @@ test('consumables are bought into the storeroom', () => {
   assert.match(buyItemBlocker(run, 'warPaint'), /Needs/);
 });
 
-test('War Paint gives +1 Power next round; only one item per fight, only between rounds', () => {
+test('War Paint gives +1 Power next round; one of each kind per fight, but different items stack', () => {
   const { run, m } = midMatch();
   if (m.over) return;
   run.inventory.items.warPaint = 2;
+  run.inventory.items.blessedBandage = 1;
   useItem(run, m, 'warPaint');
   assert.equal(run.inventory.items.warPaint, 1);
   assert.ok(computePower(m.a, m.b, m.round + 1).mods.some((x) => x.source === 'War Paint' && x.value === 1));
   assert.equal(computePower(m.a, m.b, m.round + 2).mods.some((x) => x.source === 'War Paint'), false, 'one round only');
-  assert.match(useItemBlocker(run, m, 'warPaint'), /one item per fight/);
+  assert.match(useItemBlocker(run, m, 'warPaint'), /one of each kind per fight/);
+  assert.equal(useItemBlocker(run, m, 'blessedBandage'), null, 'a different item is fine');
+  useItem(run, m, 'blessedBandage');
+  assert.ok(computePower(m.a, m.b, m.round + 1).mods.some((x) => x.source === 'War Paint'), 'both boosts apply');
+  assert.ok(computePhase2(m.a, m.b, m.round + 1).self.some((x) => x.source === 'Blessed Bandage'));
 });
 
 test('items can be used before Round 1 (boosting Round 1), but not without one in the storeroom', () => {

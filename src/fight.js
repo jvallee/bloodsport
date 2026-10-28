@@ -120,7 +120,7 @@ export function computeSpeed(c, round) {
   if (c.thornRound === round) mods.push({ source: 'Thorn Lash', value: -2 });
   if (c.riposteRound === round) mods.push({ source: 'Riposte', value: 3 });
   if (c.arena === 'rainyMud') mods.push({ source: 'Rainy Mud', value: -2 });
-  if (c.boost?.round === round && c.boost.speed) mods.push({ source: c.boost.name, value: c.boost.speed });
+  for (const b of c.boosts ?? []) if (b.round === round && b.speed) mods.push({ source: b.name, value: b.speed });
   for (const g of gearOf(c.f)) if (g.speed) mods.push({ source: g.name, value: g.speed });
   if (tacticOf(c)?.speed) mods.push({ source: tacticOf(c).name, value: tacticOf(c).speed });
   if (humorOf(c)?.speed?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).speed[round] });
@@ -165,7 +165,7 @@ export function computePower(c, opp, round, raw = false) {
   if (c.scouted) mods.push({ source: 'Scouted', value: c.scouted });
   if (c.challenger) mods.push({ source: 'Challenger', value: c.challenger });
   if (c.grudge) mods.push({ source: 'Feud', value: c.grudge });
-  if (c.boost?.round === round && c.boost.power) mods.push({ source: c.boost.name, value: c.boost.power });
+  for (const b of c.boosts ?? []) if (b.round === round && b.power) mods.push({ source: b.name, value: b.power });
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
   if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
   if (humorOf(c)?.power?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).power[round] });
@@ -210,7 +210,7 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (fleshWounds) enemy.push({ source: 'Flesh Wound', value: -10000 * fleshWounds });
   if (hasInjury(f, 'senseless')) self.push({ source: 'Senseless', value: 10000 * eff });
   if (c.arena === 'bloodMoon') self.push({ source: 'Blood Moon', value: 10000 });
-  if (c.boost?.round === round && c.boost.guard) self.push({ source: c.boost.name, value: -c.boost.guard });
+  for (const b of c.boosts ?? []) if (b.round === round && b.guard) self.push({ source: b.name, value: -b.guard });
   // Gear.
   for (const g of gearOf(f)) {
     if (g.injure) enemy.push({ source: g.name, value: g.injure });

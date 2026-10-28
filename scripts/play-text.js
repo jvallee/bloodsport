@@ -312,7 +312,9 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       const last = match.rounds.at(-1);
       lines.push(`  Tactics: ${Object.entries(TACTICS).map(([k, t]) => `${k} (${t.desc})`).join('; ')}. Press beats Feint, Feint beats Guard, Guard beats Press (+10% win chance).`);
       lines.push(`  ${match.b.f.name} is ${h ? `${h.name}: ${h.tell}` : 'without clear habits'}.${last ? ` Last round they chose ${last.stances.B}.` : ''} Suggested: ${suggestTactic(match)}.`);
-      lines.push(match.itemUsed ? `  Item used this fight: ${CONSUMABLES[match.itemUsed].name}.` : owned.length ? `  Items (one per fight, \`use <item>\`): ${owned.map(([k, n]) => `${k} ×${n} (${CONSUMABLES[k].desc})`).join('; ')}` : '  No fight items (the Apothecary in the `market` sells them).');
+      const usable = owned.filter(([k]) => !(match.itemsUsed ?? []).includes(k));
+      if (match.itemsUsed?.length) lines.push(`  Items used this fight: ${match.itemsUsed.map((k) => CONSUMABLES[k].name).join(', ')}.`);
+      lines.push(usable.length ? `  Items (one of each kind per fight, \`use <item>\`): ${usable.map(([k, n]) => `${k} ×${n} (${CONSUMABLES[k].desc})`).join('; ')}` : owned.length ? '  No other fight items to use.' : '  No fight items (the Apothecary in the `market` sells them).');
     }
     lines.push(match.round === 0 ? '  `next <tactic>` to begin Round 1 (`next` alone uses the suggestion).' : `  \`next <tactic>\` to fight Round ${match.round + 1}${canThrowTowel(match) ? `, or \`capitulate\` (lose the match and ${bout.buyIn} Prestige buy-in; your fighter survives)` : ''}.`);
     const tip = fightTutorial();
