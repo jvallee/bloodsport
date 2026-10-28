@@ -305,11 +305,12 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - Bow vs Retiarius: +5% win.
   - Flail vs Samnite, Sword: +5% to injure.
 - **Items:**
-  - Iron Tonic (+5% win next round, 9 Gold)
-  - Viper Venom (+10% to injure next round, 11)
-  - Berserker Mushroom (+2 Power and +10% to be injured next round, 12)
-  - Throwing Net (opponent −3 Speed next round, 7)
-  - Smelling Salts: Distracted and Concussed stop working for the rest of the fight, but still count toward the Death Gate and still need healing (8).
+  - Iron Tonic (+5% win next round, 6 Gold)
+  - Viper Venom (+10% to injure next round, 7)
+  - Berserker Mushroom (+2 Power and +10% to be injured next round, 8)
+  - Throwing Net (opponent −3 Speed next round, 5)
+  - Smelling Salts: Distracted and Concussed stop working for the rest of the fight, but still count toward the Death Gate and still need healing (6).
+  - Prices were cut after playtest #5, which found the items not worth their Gold at Bronze.
 - **Gear:**
   - Wooden Buckler (armor: −4% to be injured, +2% win)
   - Throwing Axes (tier 2: +1 Power, +1 Speed, +3% to injure)
@@ -318,7 +319,8 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Perks:** Bloodthirsty (+10% to injure a hurt opponent), Counterpuncher (+10% win after losing a round), Iron Will (Level 4+: the Death Gate opens one injury later).
 - **Boss arena rules:** Lions in the Arena (the Death Gate opens one injury earlier for both fighters); The Emperor's Gaze (no capitulating).
 - **Stables** (Prestige level 2 / 3, 9 / 14 Gold): 1 / 2 Basa fighters in the Market each month.
-- **Events:** old wound, poet, insult, wandering healer (heals the newest wound), onlookers, imperial envoy.
+- **Events:** old wound, poet, insult, wandering healer (heals the newest wound), onlookers, imperial envoy. Events now fire 25% of weeks (was 30%).
+- **Mortal Danger shows the death risk:** the chance of dying in the next round if you fight on, simulated on copies of the match.
 - **Deaths are more likely:** the injury roll adds +25 per existing effective injury (was +20). Measured with the v5 content: careful careers lose 0.28 fighters (was about 0.2), reckless ones 3.27 (was 2.97). The reckless-deaths gate is now 1–4 (was 1–3), at the user's request for more death.
 
 ### Saves

@@ -447,7 +447,8 @@ function emptyPlot(run) {
     return `<button class="build-opt" data-action="build" data-type="${type}" ${reason ? `disabled title="${esc(reason)}"` : ''}>
       <span>${BUILDING_ICON[def.icon]} <b>${esc(def.name)}</b> · ${def.cost[0]} Gold</span><small>${esc(def.effect(def.per[0]))}${reason ? ` · ${esc(reason)}` : ''}</small></button>`;
   }).join('');
-  return `<details class="room empty-plot"><summary>+ Empty plot: build here</summary><div class="build-list">${options}</div></details>`;
+  const last = plotCount(run) - run.buildings.length === 1;
+  return `<details class="room empty-plot"><summary>+ Empty plot: build here</summary>${last ? '<div class="why-not">⚠ This is your last free plot: buildings can\'t be torn down, so choose carefully. The next House level brings more.</div>' : ''}<div class="build-list">${options}</div></details>`;
 }
 
 export function estateTab(run) {

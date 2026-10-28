@@ -55,9 +55,13 @@ export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel
 }
 
 const newId = (run, prefix) => `${prefix}${run.nextId++}`;
-const allOpponents = (run) => Object.values(run.arenas).map((a) => a.opponent).filter(Boolean);
+// Everyone fighting for or against you: arena opponents, waiting rivals and this week's bracket opponents.
+const allOpponents = (run) => [
+  ...Object.values(run.arenas).flatMap((a) => [a.opponent, a.rival]),
+  ...Object.values(run.brackets ?? {}).flatMap((b) => b.foes),
+].filter(Boolean);
 const takenNames = (run, extra = []) =>
-  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? []);
+  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? []);
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const clampStress = (n) => clamp(n, 0, STRESS.max);
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
@@ -196,6 +200,7 @@ function newOpponent(run, tier) {
   // Every opponent fights for a rival house; the Grand Tournament's champion is the leading rival's.
   f.house = houseForArena(run, tier).id;
   arena.opponent = f;
+  run.recentNames = [...(run.recentNames ?? []), f.name].slice(-30); // no name comes back soon as someone else
 }
 
 function openArena(run, tier) {

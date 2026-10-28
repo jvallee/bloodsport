@@ -10,7 +10,7 @@ import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, G
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt } from '../src/fight.js';
+import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
@@ -44,8 +44,8 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   perk <id> <perk>              choose a level-up perk
   surgeon <id> <injury#>        Emergency Surgeon: heal one injury now (injury# from 0)
   buy-decor <${Object.keys(DECOR).join('|')}>
-  buy-item <warPaint|adrenaline|blessedBandage|crowdBribe>   single-use fight items
-  use <item>                    during a fight, between rounds: use one item (one per fight)
+  buy-item <${Object.keys(CONSUMABLES).join('|')}>   single-use fight items
+  use <item>                    during a fight, before Round 1 or between rounds: one of each kind per fight
   place <id> <item> | remove <id> <item>      put decor in a fighter's room, or take it back
   buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armor> | sell-gear <storeroom#> (half price)
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).join(', ')}
@@ -314,7 +314,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       lines.push(`  ${label}: ${c.f.name} · Round ${stats.round}: Power ${stats[side].power} · Speed ${stats[side].speed} (everything applied) · Injuries: ${injuriesText(c.f)}${off}`);
     }
     if (match.debuff) lines.push(`  Arena rule: ${BOSS_DEBUFFS[match.debuff].name}. ${BOSS_DEBUFFS[match.debuff].desc}`);
-    if (mortalDanger(match.a)) lines.push(`  MORTAL DANGER: ${match.a.f.name} has ${effectiveInjuries(match.a.f)} injuries and can die if they lose the next round.`);
+    if (mortalDanger(match.a)) lines.push(`  MORTAL DANGER: ${match.a.f.name} has ${effectiveInjuries(match.a.f)} injur${effectiveInjuries(match.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about ${Math.round(deathRisk(match) * 100)}% chance of death this round.`);
     const owned = Object.entries(run.inventory.items ?? {}).filter(([, n]) => n > 0);
     if (!match.over) {
       const h = match.b.f.humor ? HUMORS[match.b.f.humor] : null;
@@ -482,7 +482,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       need([id, i].filter(Boolean), 2, 'equip <id> <storeroom#>');
       const key = run.inventory.gear[Number(i)];
       equip(run, id, Number(i));
-      return `${run.roster.find((f) => f.id === id).name} equips the ${GEAR[key].name}.`;
+      const left = run.inventory.gear.map((k, n) => `#${n} ${GEAR[k].name}`).join(', ') || 'empty';
+      return `${run.roster.find((f) => f.id === id).name} equips the ${GEAR[key].name}. Storeroom now (numbers changed): ${left}.`;
     },
     'sell-gear': ([i]) => {
       need([i].filter(Boolean), 1, 'sell-gear <storeroom#>');

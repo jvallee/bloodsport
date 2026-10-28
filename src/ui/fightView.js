@@ -6,7 +6,7 @@ const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 
 // What this side actually brings to the coming round (everything applied), so the card never misleads.
 const statLine = (stats, side) => `<div class="round-stats" title="Power and Speed in Round ${stats.round}, with gear, Titles, items, injuries, Scouted, Challenger and arena rules applied">Round ${stats.round}: <b>Power ${stats[side].power}</b> · <b>Speed ${stats[side].speed}</b></div>`;
-import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic } from '../fight.js';
+import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, fighterCard } from './components.js';
 import { roundStats } from '../explain.js';
@@ -155,7 +155,7 @@ function controls(m, ui, bout, items = {}, nextBlocker = null) {
     return `${itemRow}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
   }
   const danger = mortalDanger(m.a);
-  const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injuries and can die if they lose the next round.</div>` : '';
+  const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.</div>` : '';
   const paused = ui.auto && danger ? '<div class="sub">Auto-play paused: your call.</div>' : '';
   return `${alert}${paused}
     <div>Score ${m.a.roundsWon}–${m.b.roundsWon}. First to two wins. Your call, Lanista.</div>

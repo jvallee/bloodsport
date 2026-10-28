@@ -1,7 +1,7 @@
 // 3-Round Power-Delta fight engine (design doc Tab 4 & 6, docs/fight-rules.md).
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
-import { next, rollE5, d100, d6, pick } from './rng.js';
+import { next, rollE5, d100, d6, pick, createRng } from './rng.js';
 import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS } from './data.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
@@ -521,13 +521,29 @@ export function playRound(m, { stance = 'steady' } = {}) {
     m.over = true;
     m.result = { winner: other(dead.side), reason: 'death' };
   } else if (A.roundsWon === 2 || B.roundsWon === 2) {
-    applyRoundEnd(m, r);
+    r.endEffects = []; // the match is decided: no "next round" effects
     m.over = true;
     m.result = { winner: A.roundsWon === 2 ? 'A' : 'B', reason: 'rounds' };
   } else {
     applyRoundEnd(m, r);
   }
   return r;
+}
+
+// The chance your fighter dies in the next round if you fight on: the round simulated on copies of the match
+// with its own dice (the real fight's dice are untouched).
+export function deathRisk(m, stance = 'steady', n = 400) {
+  if (m.over || !mortalDanger(m.a)) return 0;
+  const { rng, ...rest } = m;
+  const base = structuredClone(rest);
+  const dice = createRng(9000 + m.round);
+  let deaths = 0;
+  for (let i = 0; i < n; i++) {
+    const copy = { ...structuredClone(base), rng: dice };
+    playRound(copy, { stance });
+    if (!copy.a.f.alive) deaths++;
+  }
+  return deaths / n;
 }
 
 export const canThrowTowel = (m) => !m.over && m.round >= 1 && m.debuff !== 'emperorsGaze';

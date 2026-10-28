@@ -347,11 +347,11 @@ export const CONSUMABLES = {
   warPaint: { name: 'War Paint', price: 10, desc: '+1 Power next round.', boost: { power: 1 } },
   adrenaline: { name: 'Adrenaline Draught', price: 8, desc: '+3 Speed next round; +15 Stress after the fight.', boost: { speed: 3 }, stressAfter: 15 },
   blessedBandage: { name: 'Blessed Bandage', price: 10, desc: '−10% chance to be injured next round.', boost: { guard: 10000 } },
-  ironTonic: { name: 'Iron Tonic', price: 9, desc: '+5% win chance next round.', boost: { win: 5000 } },
-  viperVenom: { name: 'Viper Venom', price: 11, desc: '+10% chance to injure next round.', boost: { injure: 10000 } },
-  berserkerMushroom: { name: 'Berserker Mushroom', price: 12, desc: '+2 Power next round, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
-  throwingNet: { name: 'Throwing Net', price: 7, desc: 'The opponent has −3 Speed next round.', foe: { speed: -3 } },
-  smellingSalts: { name: 'Smelling Salts', price: 8, desc: 'Clears a Distracted or Concussed wound for the rest of this fight (it still needs healing after).', salts: true },
+  ironTonic: { name: 'Iron Tonic', price: 6, desc: '+5% win chance next round.', boost: { win: 5000 } },
+  viperVenom: { name: 'Viper Venom', price: 7, desc: '+10% chance to injure next round.', boost: { injure: 10000 } },
+  berserkerMushroom: { name: 'Berserker Mushroom', price: 8, desc: '+2 Power next round, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
+  throwingNet: { name: 'Throwing Net', price: 5, desc: 'The opponent has −3 Speed next round.', foe: { speed: -3 } },
+  smellingSalts: { name: 'Smelling Salts', price: 6, desc: 'Clears a Distracted or Concussed wound for the rest of this fight (it still needs healing after).', salts: true },
   crowdBribe: { name: 'Crowd Bribe', price: 12, desc: 'If you capitulate this fight, the crowd forgives it: no Favor or Renown lost for capitulating (losing a Boss still counts).', bribe: true },
 };
 

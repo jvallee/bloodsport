@@ -6,7 +6,7 @@
 //   morale/stress/renown/xp/injury apply to `to`: 'f', 'g', 'both' or 'all' (the whole roster).
 // The first choice is the cautious one (the careful bot takes it). A choice with `cost` needs that much Gold.
 
-export const EVENT_CHANCE = { season: 0.3, winter: 0.2 };
+export const EVENT_CHANCE = { season: 0.25, winter: 0.2 }; // v5: was 0.3 (playtest #5: too many)
 // Event Morale is a mood that shifts where Morale is heading for this many weeks (a one-off bump would drift away in a week).
 export const MOOD_WEEKS = 4;
 // An event can't come back until this many others have passed.

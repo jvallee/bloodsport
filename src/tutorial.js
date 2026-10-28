@@ -66,9 +66,9 @@ export const FIGHT_STEPS = [
   { id: 'fight-tactics', when: (m) => !m.over, title: 'Read your opponent',
     body: 'Before each round, pick a <b>tactic</b>. <b>Press</b> beats Feint, <b>Feint</b> beats Guard, <b>Guard</b> beats Press: guess right and you get +10% to win the round. Every fighter has a <b>humor</b> (temperament) that hints at what they\'ll do: a Choleric opponent loves to Press, so Guard against them. The ★ marks what auto-play would pick.' },
   { id: 'fight-towel', when: (m) => m.round >= 1 && !m.over, title: 'Your call between rounds',
-    body: 'Fight on, or <b>capitulate</b>: you lose the match and the buy-in, but your fighter is guaranteed to survive. It matters most when the <b>Death Gate</b> is open (two injuries).' },
+    body: 'Fight on, or <b>capitulate</b>: you lose the match and the buy-in, but your fighter is guaranteed to survive. It matters most when the <b>Death Gate</b> is open (usually two injuries).' },
   { id: 'fight-danger', when: (m) => !m.over && mortalDanger(m.a), title: 'Mortal danger',
-    body: 'Your fighter has two or more injuries. If they lose the next round and get hit, they can die permanently. Is this match worth it?' },
+    body: 'Your fighter\'s Death Gate is open (usually two injuries; lions in the arena open it sooner). If they lose the next round and get hit, they can die permanently. Is this match worth it?' },
   { id: 'fight-over', when: (m) => m.over, title: 'Why you won or lost',
     body: 'Open <b>"Show the round-by-round math"</b> to see every number: Power, the gap, each bonus, and the roll. Nothing is hidden.' },
 ];

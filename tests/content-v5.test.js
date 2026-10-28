@@ -46,10 +46,9 @@ test('Basa traits: Thick Hide is armor, Pounce +3 Speed in Round 1, Rampage grow
   const [P] = pair({ kind: 'basa', kindTrait: 'pounce' }, {});
   assert.ok(sources(computeSpeed(P, 1).mods).includes('Pounce:3'));
   const [R, Y, m] = pair({ kind: 'basa', kindTrait: 'rampage', power: 20 }, {});
-  playRound(m);
-  playRound(m);
-  assert.equal(R.rampage, 2);
-  assert.ok(sources(computePower(R, Y, 3).mods).includes('Rampage:2'));
+  playRound(m); // won (a match-deciding round leaves no effects, so check after the first)
+  assert.equal(R.rampage, 1);
+  assert.ok(sources(computePower(R, Y, 2).mods).includes('Rampage:1'));
 });
 
 test('Retiarius: winning a round entangles the opponent (−3 Speed next round)', () => {

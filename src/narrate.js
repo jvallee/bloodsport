@@ -1,6 +1,6 @@
 // Turns structured round records from fight.js into readable lines. Pure: no DOM.
 
-import { TRAITS, CLASSES, WEAPONS, TACTICS } from './data.js';
+import { TRAITS, CLASSES, WEAPONS, TACTICS, deltaRow } from './data.js';
 
 export function fmtPct(e5) {
   const p = e5 / 1000;
@@ -149,8 +149,13 @@ export function adviceFor(m) {
   const you = m.a.f.name;
   if (m.result.reason === 'death') return `${you} fought on with the Death Gate open. When the Death Gate is open, capitulating or healing first keeps fighters alive.`;
   if (m.preMatch.some((p) => p.source === 'Overtrained')) return `${you} entered overtrained (−1 Power, one ability lost). Rest the week before a fight to keep Stress under 50.`;
+  // Judge by the round chances actually faced (Speed, tactics and bonuses included), not the Power gap alone.
+  const chance = m.rounds.reduce((n, r) => n + (r.win?.chance ?? deltaRow(r.delta).win), 0) / Math.max(1, m.rounds.length);
   const worst = Math.min(...m.rounds.map((r) => r.delta));
-  if (worst <= -2) return `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.`;
+  const avgDelta = m.rounds.reduce((n, r) => n + r.delta, 0) / Math.max(1, m.rounds.length);
+  if (avgDelta >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
+  if (chance >= 60000) return `${you} was favoured in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.`;
+  if (worst <= -2 && chance < 45000) return `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.`;
   if (m.rounds.some((r) => r.checks.some((c) => c.pierced && c.defender === 'A'))) return `Their weapon pierced your armor. Against Gun or Flail fighters, armor won't save you; win the rounds instead.`;
   if (m.result.reason === 'towel') return 'You saved your fighter. Heal them in the Medbay before the next bout.';
   const avg = m.rounds.reduce((n, r) => n + r.delta, 0) / Math.max(1, m.rounds.length);
