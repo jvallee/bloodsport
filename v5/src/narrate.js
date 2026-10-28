@@ -40,6 +40,7 @@ export function narrateRound(m, r) {
   const add = (type, text) => lines.push({ type, text });
   const init = r.initiative;
   if (tacticText(m, r)) add('tactic', tacticText(m, r));
+  for (const x of r.signatures ?? []) add('signature', `★ ${name(x.side)} unleashes ${x.name}!`);
 
   if (init.reason === 'concussed') add('init', `${name(init.first === 'A' ? 'B' : 'A')} is Concussed, so ${name(init.first)} strikes first.`);
   else if (init.reason === 'footwork') add('init', `${name(init.first)}'s Footwork: faster, strikes first.`);
@@ -113,6 +114,7 @@ export function narrateStory(m, r) {
   const add = (type, text) => lines.push({ type, text });
   const init = r.initiative;
   if (tacticText(m, r)) add('tactic', tacticText(m, r));
+  for (const x of r.signatures ?? []) add('signature', `★ ${name(x.side)} unleashes ${x.name}!`);
   const second = name(init.first === 'A' ? 'B' : 'A');
   if (init.reason === 'concussed') add('init', `${second} is still dazed. ${name(init.first)} moves first.`);
   else if (init.reason === 'footwork') add('init', `${name(init.first)} darts in first on quick feet.`);

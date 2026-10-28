@@ -1,9 +1,9 @@
 // Shared UI pieces: escaping, buttons, icons, the fighter card. Returns HTML strings.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS } from '../data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS, SIGNATURES, SIGNATURE } from '../data.js';
 
 const HUMOR_ICON = { choleric: '🔥', sanguine: '💨', melancholic: '🪨', phlegmatic: '💧' };
-import { effectiveInjuries, mortalDanger, deathGateAt, killMarks } from '../fight.js';
+import { effectiveInjuries, mortalDanger, deathGateAt, killMarks, signatureOf, opponentHasSignature } from '../fight.js';
 import { classAbility } from '../narrate.js';
 import { portrait } from './portrait.js';
 import { powerParts } from '../run.js';
@@ -70,10 +70,19 @@ function powerBadge(f, live) {
   }
   return `<div class="badge power${delta ? ' live' : ''}" title="Power ${total}: decides who wins rounds (each point of difference shifts the odds a lot).&#10;${esc(lines.join('\n')).replace(/\n/g, '&#10;')}">${ICON.power}<b>${total}</b>${delta}</div>`;
 }
+// The signature move: ready from level 3 (used from the fight screen), shown dimmed before that.
+// `opponent` ({ boss }): an opponent's card shows the move only if they will use it.
+function signatureChip(f, opponent = null) {
+  const sig = SIGNATURES[f.cls];
+  if (!sig) return '';
+  if (opponent) return opponentHasSignature(f, opponent.boss, opponent.earlyRound) ? `<span class="chip signature" title="Their signature move: ${esc(sig.desc)} They use it once they fall behind, or in Round 3.">★ ${esc(sig.name)}</span>` : '';
+  const ready = Boolean(signatureOf(f));
+  return `<span class="chip signature${ready ? '' : ' locked'}" title="Signature move${ready ? '' : ` (unlocks at level ${SIGNATURE.level})`}: ${esc(sig.desc)} Once per fight.">★ ${esc(sig.name)}${ready ? '' : ` · Lv ${SIGNATURE.level}`}</span>`;
+}
 const signedNum = (n) => (n >= 0 ? `+${n}` : `−${-n}`);
 
 // In a fight, `fresh` wounds (the newest injuries) appear only at `freshAt` seconds, when the story reaches the blow.
-export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, actions = '', tag = '', compact = false, stress = true } = {}) {
+export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true } = {}) {
   const off = (slot) => (combatant?.disabled.includes(slot) ? ' off' : '');
   const trait = f.kindTrait ? TRAITS[f.kindTrait] : null;
   const clsName = f.cls ? CLASSES[f.cls].name + (f.weapon ? ` · ${WEAPONS[f.weapon].name}` : '') : '';
@@ -112,6 +121,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
       <div class="traits">
         ${trait ? `<span class="chip trait${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
         ${f.cls ? `<span class="chip ability${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
+        ${signatureChip(f, opponent)}
         ${f.humor ? `<span class="chip humor" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
         ${wins}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
       </div>
@@ -120,7 +130,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
       <div class="status-row">
         <span class="gate-wrap">Death Gate ${deathGate(f)}</span>
         ${stress && f.stress !== undefined ? stressBar(f) : ''}
-        ${stress && f.morale !== undefined ? moraleChip(f) : ''}
+        ${stress && f.morale !== undefined ? moraleChip(f, morale) : ''}
         ${f.renown ? `<span class="renown" title="Renown: fame from wins. +1 Gold per 5 on wins, but famous fighters expect better rooms.">★ ${f.renown}</span>` : ''}
       </div>
       ${injuries || decor ? `<div class="chips">${injuries}${decor}</div>` : ''}
@@ -137,9 +147,15 @@ function gearSummary(g) {
   return bits.join(', ');
 }
 
-function moraleChip(f) {
+// `info`: moraleTarget's { target, comfort, expects }, when known: where Morale is heading and why, with a warning
+// before a fighter turns Discontented (and stops training).
+function moraleChip(f, info = null) {
   const state = f.morale >= MORALE.inspired ? ['inspired', 'Inspired: +5% win chance'] : f.morale < MORALE.mutinous ? ['mutinous', 'Mutinous: refuses to fight'] : f.morale < MORALE.restless ? ['restless', "Discontented: won't train"] : ['content', 'Content'];
-  return `<span class="morale ${state[0]}" title="Morale ${f.morale}/100. ${state[1]}. Comfort (Quarters, decor, Entertainment Room) raises it; fame raises expectations.">☺ ${f.morale} <small>${state[1].split(':')[0]}</small></span>`;
+  const why = info
+    ? ` Heading to ${info.target}: base ${MORALE.base}, comfort +${info.comfort} (Quarters +${MORALE.perQuartersLevel} a level, each decor item +${MORALE.perDecor}, Entertainment Room +${MORALE.perEntertainmentLevel} a level), fame expects −${info.expects} (${MORALE.expectationPerRenown} per Renown).`
+    : ' Comfort (Quarters, decor, Entertainment Room) raises it; fame raises expectations.';
+  const sliding = info && f.morale >= MORALE.restless && info.target < MORALE.restless;
+  return `<span class="morale ${state[0]}${sliding ? ' sliding' : ''}" title="Morale ${f.morale}/100. ${state[1]}.${why}${sliding ? ' Sliding towards Discontented: more comfort needed.' : ''}">☺ ${f.morale}${info && info.target !== f.morale ? ` → ${info.target}` : ''} <small>${sliding ? '⚠ Discontented soon' : state[1].split(':')[0]}</small></span>`;
 }
 
 const gearSpd = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].speed ?? 0), 0);

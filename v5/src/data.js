@@ -56,7 +56,7 @@ export const TRAITS = {
   egoArmour: { name: 'Ego Armour', desc: 'While uninjured: +5% win chance and armor −10% chance to be injured.' },
   elvenEyes: { name: 'Elven Eyes', desc: 'When an injury check against this fighter misses by 50%+, makes a free 15% counter-injury check.' },
   bloodFaith: { name: 'Blood Faith', desc: 'If this fighter dies in a match, the Prestige buy-in is refunded.' },
-  underdog: { name: 'Underdog', desc: '+2 Power when the opponent has equal or more Power.' },
+  underdog: { name: 'Underdog', desc: '+2 Power when the opponent has 2 or more Power more.' },
   unbreakable: { name: 'Unbreakable', desc: 'The Death Gate opens at 3 injuries instead of 2.' },
   bloodlust: { name: 'Bloodlust', desc: '+1 Power once the opponent is injured.' },
   // v5 kinds
@@ -146,13 +146,19 @@ export const RETIRE = { level: 4, prestige: 5, morale: 10 };
 
 // Brackets (playtester request): from the Silver Coliseum up, a tournament is three matches in a row for one fighter.
 // The Quarter- and Semi-final opponents are weaker than the listed (Final) opponent by `power`; each early win pays `purse` Gold × tier.
-export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 2, prestige: 0, earlyBossLoss: 0.5 };
+// Early (Quarter- and Semi-final) wins pay `purse` × tier Gold and `prestige` flat Prestige. Prestige drives House level and
+// the Trainer cap, so it snowballs: +1 per early win added ~15 points of careful win rate, and refunding the buy-in on a
+// lost Final ~9. Playtest #6's "brackets pay nothing" is answered with Gold instead (purse 2 → 3).
+export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 3, prestige: 0, earlyBossLoss: 0.5 };
 // prestige: × tier for each early win (swept: 1 took careful careers from 41% to 54%, so it's off); earlyBossLoss: share of the Boss-loss Favor for losing before the Final. // swept: -3/-2 took careful careers to 22%, -4/-3 to 28%
 
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
+// Underdog (Human trait): +2 Power when the opponent has at least `gap` more (playtest #6: at 0 a cheap Human was the best fighter).
+export const UNDERDOG = { gap: 2 };
+
 export const KILL_MARKS = [
-  { id: 'dreaded', at: 3, name: 'Dreaded', desc: '+5% win chance: opponents fear a proven killer.' },
-  { id: 'reaper', at: 6, name: 'Reaper', desc: '+5% chance to injure.' },
+  { id: 'dreaded', at: 2, name: 'Dreaded', desc: '+5% win chance: opponents fear a proven killer.' },
+  { id: 'reaper', at: 5, name: 'Reaper', desc: '+5% chance to injure.' },
 ];
 
 export const KINDS = {
@@ -177,6 +183,33 @@ export const CLASSES = {
   thornBlade: { name: 'Thorn-Blade', ability: 'Thorn Lash', desc: 'Winning a round gives the opponent −2 Speed and −1 Power next round.', legacy: true },
   samnite: { name: 'Samnite', ability: 'Shield Wall', desc: '20% chance to parry an injury with the shield; Concussed never costs them the first strike.', legacy: true },
 };
+
+// Signature moves: from level 3, once per fight, a fighter can unleash their class's move for the next round.
+// Seasoned opponents (SIGNATURE.level) use theirs too: when they fall behind, or in Round 3. Values in ChanceE5 like the rest.
+// `level`: when your fighters unlock theirs. Opponents: `bossLevel` in a Boss tournament (every round, from the Bronze
+// Arena); `opponentLevel` otherwise, and then only in a tournament's Final, not its Quarter- or Semi-final (playtest #6:
+// every Silver regular firing one was too much; none at all made careers too easy).
+export const SIGNATURE = { level: 3, bossLevel: 3, opponentLevel: 3 };
+export const SIGNATURES = {
+  cestus: { name: 'Haymaker', desc: 'Next round: +2 Power, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
+  sagittarius: { name: 'Aimed Shot', desc: 'Next round: +10% win chance and +20% chance to injure.', boost: { win: 10000, injure: 20000 } },
+  ornitharius: { name: 'Hawk Strike', desc: 'Next round: +5% win chance, +10% chance to injure, and the opponent −3 Speed.', boost: { win: 5000, injure: 10000 }, foe: { speed: -3 } },
+  fighter: { name: "Champion's Blow", desc: 'Next round: +15% win chance.', boost: { win: 15000 } },
+  retiarius: { name: 'Cast the Net', desc: 'Next round: the opponent −5 Speed and −10% win chance.', foe: { speed: -5, win: -10000 } },
+  ashHungry: { name: 'Feed the Ash', desc: 'One Ash Stack now: +1 Power and +5% to injure for the rest of the match.', ash: 1 },
+  bloodBearer: { name: 'Twin Fangs', desc: 'Next round: +10% win chance and +10% chance to injure.', boost: { win: 10000, injure: 10000 } },
+  thornBlade: { name: 'Thorn Storm', desc: 'Next round: the opponent −2 Power and −2 Speed.', foe: { power: -2, speed: -2 } },
+  samnite: { name: 'Shield Bash', desc: 'Next round: −20% chance to be injured and +10% win chance.', boost: { self: -20000, win: 10000 } },
+};
+
+// Thumbs up or down: after a win over a wounded opponent, you decide their fate.
+// The crowd calls for blood against a feuding house or a beaten fighter at the Death Gate; otherwise for mercy.
+// Doing what the crowd wants earns +1 Renown and +5 Morale on top, and a kill the crowd demanded starts no feud
+// (the crowd's will is law); killing against its wishes does.
+// Going against the crowd is a real choice: sparing a fighter it wanted dead ends their house's feud and makes the house
+// owe you a life (−1 Power against you for HOUSES.feudMonths); killing one it wanted spared adds infamy (+Renown) and a feud.
+// Sparing gives Favor only in your top arena (only it affects Favor).
+export const MERCY = { minInjuries: 1, spareFavor: 2, killRenown: 2, infamyRenown: 2, crowdRenown: 1, crowdMorale: 5 };
 
 export const WEAPONS = {
   club: { name: 'Club', ability: 'Knock Prone', desc: 'Winning a round gives the opponent −2 Speed and −5% win chance next round.' },
@@ -215,6 +248,8 @@ export const ECONOMY = {
   skipGold: 2, // reward for skipping Tournament 1 or 2
   skipStressRelief: 20,
   lowerArenaPrestige: 0.5, // Prestige from a win shrinks by half for each tier below your top arena
+  lowerArenaGold: 0.5, // and so does the purse (v5 economy pass: late careers were drowning in Gold from the lower arenas)
+  lowerWinOverLoss: 2, // ...but a lower-arena win always pays at least the loss stipend + this
   crushingGap: 3, // a win with this much more Power than the opponent is a "crushing" win
   bracketCrushingGap: 5, // in a tournament Final the crowd is more forgiving (Quarter- and Semi-finals are never jeered)
   lootChance: 0.35, // chance to claim a beaten opponent's gear (Bosses always drop theirs)
@@ -266,12 +301,12 @@ export const STAGES = ['Tournament 1', 'Tournament 2', 'Boss Tournament'];
 // One circuit per tier: Tournament 1 → Tournament 2 → Boss. Arrays are per stage.
 export const CIRCUITS = [
   { tier: 1, name: 'The Dirt Pits', oppPower: [6, 6, 7], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
-  { tier: 2, name: 'The Bronze Arena', oppPower: [12, 13, 14], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
-  { tier: 3, name: 'The Silver Coliseum', oppPower: [16, 17, 18], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
-  { tier: 4, name: 'The Imperial Coliseum', oppPower: [21, 22, 23], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
+  { tier: 2, name: 'The Bronze Arena', oppPower: [11, 12, 14], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
+  { tier: 3, name: 'The Silver Coliseum', oppPower: [17, 18, 19], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
+  { tier: 4, name: 'The Imperial Coliseum', oppPower: [24, 25, 26], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
 ];
 
-export const GRAND = { name: 'The Grand Tournament', oppPower: 26, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
+export const GRAND = { name: 'The Grand Tournament', oppPower: 29, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
 
 // House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
 export const PRESTIGE_LEVELS = [
@@ -345,34 +380,34 @@ export const MORALE = {
 // Gear: one weapon and one armor slot per fighter. `guard` lowers the chance to be injured (counts as armor).
 // Consumables: single-use, one per fight, used between rounds. `boost` lasts the next round only.
 export const CONSUMABLES = {
-  warPaint: { name: 'War Paint', price: 10, desc: '+1 Power next round.', boost: { power: 1 } },
-  adrenaline: { name: 'Adrenaline Draught', price: 8, desc: '+3 Speed next round; +15 Stress after the fight.', boost: { speed: 3 }, stressAfter: 15 },
-  blessedBandage: { name: 'Blessed Bandage', price: 10, desc: '−10% chance to be injured next round.', boost: { guard: 10000 } },
-  ironTonic: { name: 'Iron Tonic', price: 6, desc: '+5% win chance next round.', boost: { win: 5000 } },
-  viperVenom: { name: 'Viper Venom', price: 7, desc: '+10% chance to injure next round.', boost: { injure: 10000 } },
-  berserkerMushroom: { name: 'Berserker Mushroom', price: 8, desc: '+2 Power next round, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
-  throwingNet: { name: 'Throwing Net', price: 5, desc: 'The opponent has −3 Speed next round.', foe: { speed: -3 } },
-  smellingSalts: { name: 'Smelling Salts', price: 6, desc: 'Clears a Distracted or Concussed wound for the rest of this fight (it still needs healing after).', salts: true },
-  crowdBribe: { name: 'Crowd Bribe', price: 12, desc: 'If you capitulate this fight, the crowd forgives it: no Favor or Renown lost for capitulating (losing a Boss still counts).', bribe: true },
+  warPaint: { name: 'War Paint', price: 4, desc: '+1 Power next round.', boost: { power: 1 } },
+  adrenaline: { name: 'Adrenaline Draught', price: 3, desc: '+3 Speed next round; +15 Stress after the fight.', boost: { speed: 3 }, stressAfter: 15 },
+  blessedBandage: { name: 'Blessed Bandage', price: 3, desc: '−10% chance to be injured next round.', boost: { guard: 10000 } },
+  ironTonic: { name: 'Iron Tonic', price: 3, desc: '+5% win chance next round.', boost: { win: 5000 } },
+  viperVenom: { name: 'Viper Venom', price: 3, desc: '+10% chance to injure next round.', boost: { injure: 10000 } },
+  berserkerMushroom: { name: 'Berserker Mushroom', price: 4, desc: '+2 Power next round, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
+  throwingNet: { name: 'Throwing Net', price: 4, desc: 'The opponent has −3 Speed next round.', foe: { speed: -3 } },
+  smellingSalts: { name: 'Smelling Salts', price: 3, desc: 'Clears a Distracted or Concussed wound for the rest of this fight (it still needs healing after).', salts: true },
+  crowdBribe: { name: 'Crowd Bribe', price: 6, desc: 'If you capitulate this fight, the crowd forgives it: no Favor or Renown lost for capitulating (losing a Boss still counts).', bribe: true },
 };
 
 export const GEAR = {
-  gladius: { name: 'Gladius', slot: 'weapon', tier: 1, price: 6, power: 1 },
-  spikedGauntlet: { name: 'Spiked Gauntlet', slot: 'weapon', tier: 1, price: 6, injure: 5000 },
-  hunterBow: { name: "Hunter's Bow", slot: 'weapon', tier: 1, price: 6, speed: 2 },
-  warMaul: { name: 'War Maul', slot: 'weapon', tier: 2, price: 14, power: 2, speed: -1 },
-  trident: { name: 'Trident', slot: 'weapon', tier: 2, price: 14, power: 1, injure: 5000 },
-  serratedSpatha: { name: 'Serrated Spatha', slot: 'weapon', tier: 2, price: 16, power: 1, speed: 2 },
-  leatherVest: { name: 'Leather Vest', slot: 'armor', tier: 1, price: 6, guard: 5000 },
-  lightGreaves: { name: 'Light Greaves', slot: 'armor', tier: 1, price: 6, speed: 2 },
-  bronzeCuirass: { name: 'Bronze Cuirass', slot: 'armor', tier: 2, price: 14, guard: 10000, speed: -1 },
+  gladius: { name: 'Gladius', slot: 'weapon', tier: 1, price: 7, power: 1 },
+  spikedGauntlet: { name: 'Spiked Gauntlet', slot: 'weapon', tier: 1, price: 5, injure: 10000, win: 2000 },
+  hunterBow: { name: "Hunter's Bow", slot: 'weapon', tier: 1, price: 12, speed: 2 },
+  warMaul: { name: 'War Maul', slot: 'weapon', tier: 2, price: 12, power: 2, speed: -1 },
+  trident: { name: 'Trident', slot: 'weapon', tier: 2, price: 11, power: 1, injure: 5000 },
+  serratedSpatha: { name: 'Serrated Spatha', slot: 'weapon', tier: 2, price: 22, power: 1, speed: 2 },
+  leatherVest: { name: 'Leather Vest', slot: 'armor', tier: 1, price: 5, guard: 5000 },
+  lightGreaves: { name: 'Light Greaves', slot: 'armor', tier: 1, price: 12, speed: 2 },
+  bronzeCuirass: { name: 'Bronze Cuirass', slot: 'armor', tier: 2, price: 9, guard: 10000 },
   scaleMail: { name: 'Scale Mail', slot: 'armor', tier: 2, price: 16, guard: 8000, power: 1 },
   woodenBuckler: { name: 'Wooden Buckler', slot: 'armor', tier: 1, price: 7, guard: 4000, win: 2000 },
-  throwingAxes: { name: 'Throwing Axes', slot: 'weapon', tier: 2, price: 15, power: 1, speed: 1, injure: 3000 },
-  imperialGladius: { name: 'Imperial Gladius', slot: 'weapon', tier: 3, price: 28, power: 2, speed: 2 },
-  executionerAxe: { name: "Executioner's Axe", slot: 'weapon', tier: 3, price: 26, power: 2, injure: 10000, speed: -1 },
-  loricaSegmentata: { name: 'Lorica Segmentata', slot: 'armor', tier: 3, price: 28, guard: 12000, power: 1 },
-  lionPelt: { name: 'Lion Pelt', slot: 'armor', tier: 3, price: 24, guard: 5000, win: 5000 },
+  throwingAxes: { name: 'Throwing Axes', slot: 'weapon', tier: 2, price: 17, power: 1, speed: 1, injure: 3000 },
+  imperialGladius: { name: 'Imperial Gladius', slot: 'weapon', tier: 3, price: 32, power: 2, speed: 2 },
+  executionerAxe: { name: "Executioner's Axe", slot: 'weapon', tier: 3, price: 24, power: 2, injure: 10000 },
+  loricaSegmentata: { name: 'Lorica Segmentata', slot: 'armor', tier: 3, price: 24, guard: 12000, power: 1 },
+  lionPelt: { name: 'Lion Pelt', slot: 'armor', tier: 3, price: 20, guard: 5000, win: 5000 },
 };
 
 export const BOSS_DEBUFFS = {
@@ -408,4 +443,8 @@ export const NAMES = [
   'Agron', 'Barca', 'Cato', 'Duma', 'Ennia', 'Felix', 'Glabra', 'Hostus', 'Ilithya', 'Kroth',
   'Lyra', 'Morg', 'Nerva', 'Orsk', 'Pavo', 'Riva', 'Seren', 'Torq', 'Unit Delta', 'Unit Sigma',
   'Vorath', 'Wyrr', 'Yssa', 'Zenna', 'Ashka', 'Brakk', 'Celeste', 'Dask', 'Elowen', 'Fenn',
+  'Atticus', 'Briseis', 'Castor', 'Dacia', 'Euryale', 'Fausta', 'Galla', 'Hadria', 'Ignatia', 'Jovan',
+  'Kastra', 'Lepida', 'Maximus', 'Nonia', 'Orbilia', 'Pollux', 'Quarta', 'Remus', 'Scaeva', 'Tullia',
+  'Urgulania', 'Valens', 'Gorrak', 'Hessa', 'Mordra', 'Skarn', 'Thessaly', 'Vael', 'Ysolde', 'Zarek',
+  'Unit Theta', 'Unit Omega', 'Sol-4', 'Ferrum', 'Calyx', 'Nyssa', 'Ruun', 'Ghast', 'Lirien', 'Corvax',
 ];

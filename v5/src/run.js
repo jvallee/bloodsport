@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower } from './fight.js';
 import { Refused } from './errors.js';
@@ -48,7 +48,7 @@ export function createFighter(rng, { id, kind, power, bonusPower = 0, decorLevel
     id, name, kind, kindTrait, cls, weapon, humor,
     power: (power ?? KINDS[kind].basePower) + bonusPower,
     speed: ECONOMY.startSpeed,
-    trained: 0, decor, injuries: [], alive: true,
+    trained: 0, trainedPower: 0, decor, injuries: [], alive: true,
     stress: 0, job: 'rest', titles: [],
     xp: 0, level: 1, perks: [], pendingPerks: [], renown: 0, morale: MORALE.start, gear: { weapon: null, armor: null }, topStreak: 0,
   };
@@ -61,7 +61,7 @@ const allOpponents = (run) => [
   ...Object.values(run.brackets ?? {}).flatMap((b) => b.foes),
 ].filter(Boolean);
 const takenNames = (run, extra = []) =>
-  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? []);
+  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? [], (run.retired ?? []).map((l) => l.name));
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const clampStress = (n) => clamp(n, 0, STRESS.max);
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
@@ -75,8 +75,11 @@ export const effectivePower = (f) => powerParts(f).reduce((s, x) => s + x.value,
 export function powerParts(f) {
   const titles = (f.titles ?? []).filter((t) => t !== 'Master of the Games').length; // each Championship is +1
   const trained = f.trainedPower ?? 0; // counted since the v5 update; older saves fold earlier training into "Natural"
-  const parts = [{ label: trained || !f.trained ? 'Natural' : 'Natural and training', value: f.power - trained - titles, base: true }];
+  const perks = f.perkPower ?? 0; // Mighty, Juggernaut
+  const known = f.trainedPower !== undefined || !f.trained; // older saves didn't count Power training separately
+  const parts = [{ label: known ? 'Natural' : 'Natural and training', value: f.power - trained - titles - perks, base: true }];
   if (trained) parts.push({ label: 'Training', value: trained, base: true });
+  if (perks) parts.push({ label: perks === 1 ? 'Perk' : 'Perks', value: perks, base: true });
   if (titles) parts.push({ label: titles === 1 ? 'Title' : 'Titles', value: titles, base: true });
   for (const k of [f.gear?.weapon, f.gear?.armor]) if (k && GEAR[k].power) parts.push({ label: GEAR[k].name, value: GEAR[k].power });
   if (f.kindTrait === 'firebug' && f.decor?.fireBrazier) parts.push({ label: 'Firebug', value: f.decor.fireBrazier });
@@ -118,7 +121,8 @@ export function boutFor(run, tier = run.topTier) {
     tier, top, below,
     name: `${c.name} · ${STAGES[s]}`, stage: s, boss: s === 2,
     buyIn: fest?.freeEntry ? 0 : pauper ? Math.max(0, run.prestige) : c.buyIn[s], fullBuyIn: c.buyIn[s], pauper: pauper && !fest?.freeEntry,
-    winGold: Math.round(c.winGold[s] * (fest?.gold ?? 1)),
+    // Lower arenas pay less, but a win always pays more than a loss (playtest #6: the Dirt Pits paid 2 either way).
+    winGold: Math.round(Math.max(Math.ceil(c.winGold[s] * ECONOMY.lowerArenaGold ** below), c.lossGold + ECONOMY.lowerWinOverLoss) * (fest?.gold ?? 1)),
     winPrestige: Math.round(Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below) * (fest?.prestige ?? 1)),
     festival: fest?.id ?? null,
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
@@ -220,7 +224,7 @@ function newOpponent(run, tier) {
   // Every opponent fights for a rival house; the Grand Tournament's champion is the leading rival's.
   f.house = houseForArena(run, tier).id;
   arena.opponent = f;
-  run.recentNames = [...(run.recentNames ?? []), f.name].slice(-30); // no name comes back soon as someone else
+  run.recentNames = [...(run.recentNames ?? []), f.name].slice(-60); // no name comes back soon as someone else
 }
 
 function openArena(run, tier) {
@@ -246,11 +250,14 @@ export function fightPowers(run, f, tier = run.topTier) {
 export function matchOptions(run, f, tier = run.topTier) {
   return {
     debuff: boutFor(run, tier).debuff,
+    boss: boutFor(run, tier).boss,
+    earlyRound: (bracketOf(run, tier)?.round ?? 2) < 2,
     festival: boutFor(run, tier).festival,
     overtrained: f.stress >= STRESS.overtrained,
     scouted: tier === run.topTier ? Math.min(ECONOMY.scoutedMax, f.topStreak ?? 0) : 0,
     challenger: tier === run.topTier && tier >= ECONOMY.challengerFromTier ? Math.min(ECONOMY.challengerMax, Math.floor((f.renown ?? 0) / ECONOMY.challengerRenown)) : 0,
-    grudge: run.arenas[tier] && houseOf(run, opponentFor(run, tier))?.feud > 0 ? 1 : 0,
+    // +1 for a house feuding with you; −1 for a house that owes you a life (you spared one of theirs against the crowd).
+    grudge: !run.arenas[tier] ? 0 : houseOf(run, opponentFor(run, tier))?.feud > 0 ? 1 : houseOf(run, opponentFor(run, tier))?.owed > 0 ? -1 : 0,
     vengeance: Boolean(run.arenas[tier]) && houseOf(run, opponentFor(run, tier))?.vengeance > 0,
   };
 }
@@ -350,6 +357,7 @@ function rivalsCompete(run) {
     h.tier = houseTier(h);
     h.feud = Math.max(0, h.feud - 1);
     h.vengeance = Math.max(0, h.vengeance - 1);
+    h.owed = Math.max(0, (h.owed ?? 0) - 1);
   }
 }
 
@@ -436,6 +444,7 @@ function chronicle(run, f, text) {
 function idleBlocker(run) {
   if (run.status !== 'active') return 'The run is over.';
   if (run.inMatch) return 'A match is in progress.';
+  if (run.mercy) return 'First decide the beaten opponent\'s fate: thumbs up or down.';
   return null;
 }
 
@@ -618,7 +627,7 @@ export function advanceWeek(run) {
         heal -= used;
         if (inj.weeksLeft <= 0) {
           f.injuries.shift();
-          log(run, `${f.name}'s ${inj.tag === 'fleshWound' ? 'Flesh Wound' : inj.tag} has healed.`, 'good');
+          log(run, `${f.name}'s ${INJURY_BY_TAG[inj.tag].name} has healed.`, 'good');
         }
       }
       f.stress = clampStress(f.stress + STRESS.medbay);
@@ -678,9 +687,15 @@ export function advanceWeek(run) {
 }
 
 // Advance until the next tournament week (stops early if the run ends or a decision is needed).
+// Skipping ahead never lets training overtrain a fighter: a trainee about to cross the line rests instead
+// (playtest #6: a three-week skip left fighters Overtrained on fight day).
 export function advanceToTournament(run) {
   let weeks = 0;
   while (!run.boutPending && run.status === 'active' && !advanceBlocker(run)) {
+    for (const f of run.roster) {
+      const gain = STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0);
+      if (isTraining(f.job) && f.stress + gain >= STRESS.overtrained) switchToRest(run, f, `another week of training would overtrain them (Stress ${f.stress}).`);
+    }
     advanceWeek(run);
     weeks++;
   }
@@ -873,6 +888,7 @@ export function choosePerk(run, id, perk) {
   f.pendingPerks.shift();
   f.perks.push(perk);
   for (const [stat, n] of Object.entries(PERKS[perk].stat ?? {})) f[stat] += n;
+  if (PERKS[perk].stat?.power) f.perkPower = (f.perkPower ?? 0) + PERKS[perk].stat.power;
   log(run, `${f.name} learns ${PERKS[perk].name}.`, 'good');
 }
 
@@ -1410,6 +1426,7 @@ export function finishMatch(run, match) {
   run.history.push(summary);
   log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
   advanceArena(run, tier, won, arena.opponent);
+  offerMercy(run, match, summary, fighter, opp, tier);
   return summary;
 }
 
@@ -1420,7 +1437,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   const kill = match.result.reason === 'death';
   const summary = {
     week: run.week, tier, name: `${bout.name} · ${round}`, boss: false, top: bout.top, won: true, reason: match.result.reason,
-    fighter: fighter.name, fighterId: fighter.id, died: false, gold: BRACKET.purse * Math.min(tier, 4), prestige: BRACKET.prestige * Math.min(tier, 4), favor: 0,
+    fighter: fighter.name, fighterId: fighter.id, died: false, gold: BRACKET.purse * Math.min(tier, 4), prestige: BRACKET.prestige, favor: 0,
     xp: XP.win, renown: 1, injuries: newInjuries, morale: 0, levels: 0, bracket: round, next, kill, house: houseOf(run, opp)?.name ?? null,
   };
   const levelBefore = fighter.level;
@@ -1443,7 +1460,89 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   run.matchInfo = null;
   run.history.push(summary);
   log(run, `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good');
+  offerMercy(run, match, summary, fighter, opp, tier);
   return summary;
+}
+
+// ---------- Thumbs up or down ----------
+
+// After a win over a wounded opponent who still lives, their fate is yours (resolveMercy).
+// The crowd calls for blood against a feuding house or a fighter left at the Death Gate, otherwise for mercy.
+function offerMercy(run, match, summary, fighter, opp, tier) {
+  if (!summary.won || !fighter.alive || summary.kill || run.status !== 'active') return;
+  const wounds = effectiveInjuries(match.b.f);
+  if (wounds < MERCY.minInjuries) return;
+  const house = houseOf(run, opp);
+  const blood = Boolean(house?.feud || house?.vengeance) || wounds >= 2;
+  run.mercy = { fighterId: fighter.id, opp: opp.name, house: house?.id ?? null, crowd: blood ? 'kill' : 'spare', tier, top: Boolean(summary.top), at: run.history.length - 1 };
+  summary.mercy = run.mercy.crowd;
+}
+
+export function mercyBlocker(run, choice) {
+  if (!run.mercy) return 'There is no beaten opponent waiting on your verdict.';
+  if (!['spare', 'kill'].includes(choice)) return 'Thumbs up (spare) or thumbs down (kill).';
+  return null;
+}
+
+// Spare: +Favor (the Emperor likes clemency). Kill: Renown, a kill toward the marks, and their house's feud.
+// Doing what the crowd wants adds Renown and Morale. Returns what changed.
+export function resolveMercy(run, choice) {
+  assertOk(mercyBlocker(run, choice));
+  const { fighterId, opp, house: houseId, crowd, at, top = true } = run.mercy;
+  run.mercy = null;
+  const fighter = findFighter(run, fighterId);
+  const house = run.houses?.find((h) => h.id === houseId) ?? null;
+  const out = { verdict: choice, crowd, favor: 0, renown: 0, morale: 0, kill: false, mark: null, feud: null, owed: null };
+  if (choice === 'spare') {
+    // Only your top arena affects Favor (the same rule as wins).
+    if (top) {
+      const before = run.favor;
+      changeFavor(run, MERCY.spareFavor, `spared ${opp}`);
+      out.favor = run.favor - before;
+    }
+    log(run, `Thumbs up: ${fighter.name} spares ${opp}.${out.favor ? ' The Emperor approves of clemency.' : ''}`, 'good');
+    // Against a call for blood, mercy is remembered: their house owes you a life.
+    if (crowd === 'kill' && house) {
+      house.feud = 0;
+      house.owed = HOUSES.feudMonths;
+      out.owed = `${house.name} owes you a life: their fighters get −1 Power against you for ${HOUSES.feudMonths} months.`;
+      log(run, out.owed, 'good');
+    }
+  } else {
+    out.renown = MERCY.killRenown + (crowd === 'spare' ? MERCY.infamyRenown : 0); // killing against a mercy chant: infamy
+    const marksBefore = killMarks(fighter).length;
+    fighter.kills = (fighter.kills ?? 0) + 1;
+    out.kill = true;
+    log(run, `Thumbs down: ${fighter.name} finishes ${opp}.`, 'warn');
+    if (fighter.kills === 1) chronicle(run, fighter, `First kill: ${opp}${house ? ` of ${house.name}` : ''}, ${crowd === 'kill' ? 'at the crowd\'s demand' : 'though the crowd begged mercy'}.`);
+    const marks = killMarks(fighter);
+    if (marks.length > marksBefore) {
+      out.mark = marks.at(-1).name;
+      chronicle(run, fighter, `Earned the mark ${out.mark}.`);
+      log(run, `${fighter.name} has ${fighter.kills} kills and earns the mark ${out.mark}: ${marks.at(-1).desc}`, 'event');
+    }
+    run.graveyard = [...(run.graveyard ?? []), opp]; // the dead don't come back
+    if (house && crowd !== 'kill') { // a kill the crowd demanded is the crowd's will: no feud
+      house.feud = HOUSES.feudMonths;
+      out.feud = `${house.name} swears revenge: their fighters get +1 Power against you for ${HOUSES.feudMonths} months.`;
+      log(run, out.feud, 'warn');
+    }
+  }
+  if (choice === crowd) {
+    out.renown += MERCY.crowdRenown;
+    out.morale = MERCY.crowdMorale;
+    bumpMorale(fighter, MERCY.crowdMorale);
+    log(run, `The crowd roars its approval for ${fighter.name}.`, 'good');
+  }
+  fighter.renown += out.renown;
+  const summary = run.history[at];
+  if (summary) {
+    Object.assign(summary, {
+      verdict: choice, owed: out.owed, kill: summary.kill || out.kill, mark: out.mark ?? summary.mark ?? null, feud: out.feud ?? summary.feud,
+      renown: (summary.renown ?? 0) + out.renown, favor: (summary.favor ?? 0) + out.favor, morale: (summary.morale ?? 0) + out.morale,
+    });
+  }
+  return out;
 }
 
 // Withdraw from a bracket between matches: it counts as capitulating (the fighter is safe, the tournament lost).
