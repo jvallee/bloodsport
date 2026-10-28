@@ -27,6 +27,7 @@ function playCareer(seed, { months = 4, reloadMidFight = false } = {}) {
     }
     while (state.match && !state.match.over) act('next-round');
     act('leave-fight');
+    if (state.run.mercy) act('mercy', { choice: m % 2 ? 'kill' : 'spare' }); // thumbs up or down
     if (advanceBlocker(state.run)) for (const x of state.run.roster) while (x.pendingPerks.length) act('perk', { id: x.id, perk: x.pendingPerks[0][0] });
   }
   return state;

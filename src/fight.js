@@ -2,7 +2,8 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick, createRng } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE_LEVEL } from './data.js';
+import { Refused } from './errors.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -459,11 +460,43 @@ export function applyRoundEnd(m, r) {
   r.endEffects = effects;
 }
 
+// ---------- Signature moves (level 3+, once per fight, for one round) ----------
+
+export const signatureOf = (f) => ((f.level ?? 1) >= SIGNATURE_LEVEL ? SIGNATURES[f.cls] ?? null : null);
+
+export function signatureBlocker(m) {
+  if (!m || m.over) return 'Signature moves are used during a match.';
+  const sig = signatureOf(m.a.f);
+  if (!sig) return SIGNATURES[m.a.f.cls] ? `Signature moves unlock at level ${SIGNATURE_LEVEL}.` : 'This fighter has no signature move.';
+  if (m.a.sigRound) return `${sig.name} has already been used this fight.`;
+  return null;
+}
+
+function applySignature(c, opp, round) {
+  const sig = signatureOf(c.f);
+  c.sigRound = round;
+  if (sig.boost) c.boosts = [...(c.boosts ?? []), { ...sig.boost, name: sig.name, round }];
+  if (sig.foe) opp.boosts = [...(opp.boosts ?? []), { ...sig.foe, name: sig.name, round }];
+  if (sig.ash) c.ash = (c.ash ?? 0) + sig.ash;
+}
+
+// Your fighter unleashes their signature move in the next round.
+export function useSignature(m) {
+  const why = signatureBlocker(m);
+  if (why) throw new Refused(why);
+  applySignature(m.a, m.b, m.round + 1);
+}
+
+// Opponents keep theirs for when it counts: once they fall behind, or in Round 3.
+const opponentUnleashes = (m, round) => signatureOf(m.b.f) && !m.b.sigRound && (m.b.roundsWon < m.a.roundsWon || round === 3);
+
 export function playRound(m, { stance = 'steady' } = {}) {
   if (m.over) throw new Error('The match is over.');
   const round = (m.round += 1);
   const { a: A, b: B, rng } = m;
   const r = { round, checks: [], endEffects: [] };
+  if (opponentUnleashes(m, round)) applySignature(B, A, round);
+  r.signatures = [A, B].filter((c) => c.sigRound === round).map((c) => ({ side: c.side, name: signatureOf(c.f).name }));
 
   // Step 0 — tactics: yours as chosen, the opponent's from its humor.
   A.stance = TACTICS[stance] ? stance : 'steady';

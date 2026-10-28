@@ -137,7 +137,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 
 ### Arenas and Favor
 - **Every arena you've reached holds a bout each tournament week.** You may send one fighter to each arena, and a fighter fights at most once a week. Your highest arena is your **top arena**: only its Bosses open new arenas, and only it must be resolved before the week can end.
-- **Lower arenas** pay Prestige ×½ per tier below your top. Beating a conquered arena's Boss again gives no new Title. A **crushing win** (your fighter has 3+ more Power than the opponent) in a lower arena earns no Renown, costs −10 Morale and −2 Favor.
+- **Lower arenas** pay Prestige ×½ and Gold ×½ (rounded up) per tier below your top (Gold since the v5 economy pass). Beating a conquered arena's Boss again gives no new Title. A **crushing win** (your fighter has 3+ more Power than the opponent) in a lower arena earns no Renown, costs −10 Morale and −2 Favor.
 - **Imperial Favor** (0–100, start 50) replaces Strikes:
 
 | Event | Favor |
@@ -337,3 +337,13 @@ Four Humors, Cowardly/Afeared/Enraged traumas, Gods' Days and the Temple, blind 
 - **Effective Power** now includes a Basa's Lion Cage (+1), which the fight already counted.
 - **Tournament crowds**: no jeers in a bracket's Quarter- or Semi-final; a bracket Final jeers only at 5+ Power.
 - **Fight screen**: the line naming a round's winner waits a beat ("Steel meets steel…"), then lands with a banner (who took the round and the score), the winner's card glows and the loser's dims; new wounds appear when the story reaches the blow; sounds and auto-play follow the same timing.
+- **Signature moves** (level 3+): once per fight, before any round, a fighter unleashes their class's move for that round (`SIGNATURES` in `src/data.js`): Haymaker (Cestus: +2 Power, +10% to be injured), Aimed Shot (Sagittarius: +10% win, +20% to injure), Hawk Strike (Ornitharius: opponent −3 Speed, +10% to injure), Champion's Blow (Fighter: +15% win), Cast the Net (Retiarius: opponent −5 Speed and −5% win), Feed the Ash (Ash-Hungry: one Ash Stack now), Twin Fangs (Blood-Bearer: +10% win, +10% to injure), Thorn Storm (Thorn-Blade: opponent −2 Power, −2 Speed), Shield Bash (Samnite: −20% to be injured, +10% win). Opponents of level 3+ use theirs once they fall behind, or in Round 3. Measured at even Power: each is worth about +4 to +8 points of match win chance.
+- **Thumbs up or down**: after a win over an opponent who is wounded but alive, the player decides. Spare: +2 Favor. Kill: +2 Renown, a kill (marks, graveyard) and the opponent's house feud. The crowd calls for blood against a feuding house (either way) or an opponent with 2+ effective injuries, otherwise for mercy; following it gives +1 Renown and +5 Morale. Nothing else can happen until the verdict is given (`run.mercy`). The careful bot follows the crowd; the reckless bot always kills.
+
+## v5 economy pass
+
+Measured with `npm run check`'s bots plus two probes: each item's and gear piece's match win-rate change at even Power (an avoided injury valued at 3 points per 0.1), divided by its price; and Gold held by careful bots by arena tier.
+
+- **Items** (Gold): War Paint 10 → 7, Adrenaline Draught 8 → 6, Blessed Bandage 10 → 6, Iron Tonic 6 → 5, Viper Venom 7 → 5, Throwing Net 5 → 7 (it did everything Adrenaline did, without the Stress, for less).
+- **Gear** (Gold): Gladius 6 → 7, Spiked Gauntlet 6 → 5 (now +10% to injure and +2% win; it did nothing for winning), Hunter's Bow and Light Greaves 6 → 12 (+2 Speed was worth twice anything else), Leather Vest 6 → 5, War Maul 14 → 12, Trident 14 → 11, Serrated Spatha 16 → 22, Bronze Cuirass 14 → 9 (no Speed penalty: it lost more fights than it saved), Throwing Axes 15 → 17, Imperial Gladius 28 → 32, Executioner's Axe 26 → 24 (no Speed penalty), Lorica Segmentata 28 → 24, Lion Pelt 24 → 20. Tier 1 now gives about 1–1.3 points per Gold, tier 2 about 0.7–1.1, tier 3 about 0.6–0.9 (better gear costs more per point, as it should).
+- **Lower-arena purses** are halved per tier below your top arena, like Prestige. Before, a late house sending a fighter to every arena piled up Gold it couldn't spend (a quarter of Imperial-arena weeks above 60 Gold, up to 559).

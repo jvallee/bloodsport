@@ -10,7 +10,7 @@ import {
   startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker, choosePerk, perkBlocker,
   currentBout, boutFor, marketPrice, serialize, deserialize, moraleTarget, moraleState, xpFor, GRAND_TIER, SAVE_VERSION,
   matchOptions, bossLossFavor, buildRoom, recordMatchProgress, buyItem, buyItemBlocker, useItem, useItemBlocker,
-  payTribute, payTributeBlocker, tributeDue, sellGear, sellGearBlocker, upcomingBouts, treatFirst, treatFirstBlocker,
+  payTribute, payTributeBlocker, tributeDue, sellGear, sellGearBlocker, upcomingBouts, treatFirst, treatFirstBlocker, resolveMercy,
 } from '../src/run.js';
 import { computePower, computeSpeed, computePhase2, playRound, throwTowel } from '../src/fight.js';
 
@@ -696,6 +696,7 @@ test('simple-bot careers always end, and the state stays valid every week', () =
           const m = startMatch(run, f.id);
           autoPlay(m);
           finishMatch(run, m);
+          if (run.mercy) resolveMercy(run, step % 2 ? 'kill' : 'spare');
         } else if (!skipBlocker(run)) skipBout(run);
         else forfeitBout(run);
       } else advanceWeek(run);

@@ -1,6 +1,6 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES } from '../data.js';
+import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
@@ -588,7 +588,21 @@ export function bugModal({ crashed, message, notes, status, version }) {
 }
 
 // This week's event: a card with its choices, shown on every tab until decided.
+// A verdict still waiting (e.g. the page was reloaded after the fight): thumbs up or down from the Ludus.
+function mercyCard(run) {
+  const m = run.mercy;
+  const f = run.roster.find((x) => x.id === m.fighterId);
+  const blood = m.crowd === 'kill';
+  return `<section class="panel event-card mercy-card"><div class="event-faces">${f ? portrait(f, 56) : ''}</div><div class="event-body">
+    <div class="label">The crowd waits</div><h2>${esc(m.opp)}'s fate</h2><p>${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}. ${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'}</p>
+    <div class="row event-choices">
+      <div class="event-choice"><button class="btn" data-action="mercy" data-choice="spare">👍 Spare them</button><small>+${MERCY.spareFavor} Favor${blood ? '' : `, +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale (the crowd agrees)`}</small></div>
+      <div class="event-choice"><button class="btn danger" data-action="mercy" data-choice="kill">👎 Finish them</button><small>+${MERCY.killRenown} Renown, a kill${m.house ? ', and their house swears a feud' : ''}${blood ? `; +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale (the crowd agrees)` : ''}</small></div>
+    </div></div></section>`;
+}
+
 export function eventCard(run) {
+  if (run.mercy) return mercyCard(run);
   if (!run.event) return '';
   const e = EVENT_BY_ID[run.event.id];
   const names = eventNames(run);

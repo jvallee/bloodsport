@@ -1,12 +1,12 @@
 // The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
 
-import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS, FESTIVAL_BY_ID } from '../data.js';
+import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE_LEVEL, MERCY } from '../data.js';
 
 const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 
 // What this side actually brings to the coming round (everything applied), so the card never misleads.
 const statLine = (stats, side) => `<div class="round-stats" title="Power and Speed in Round ${stats.round}, with gear, Titles, items, injuries, Scouted, Challenger and arena rules applied">Round ${stats.round}: <b>Power ${stats[side].power}</b> · <b>Speed ${stats[side].speed}</b></div>`;
-import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk } from '../fight.js';
+import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, fighterCard } from './components.js';
 import { roundStats } from '../explain.js';
@@ -116,9 +116,36 @@ function report(s) {
     s.champion ? row('The crowd', 'boos a champion back in the pits', 'bad') : s.crushing ? row('The crowd', 'jeers the mismatch', 'bad') : '',
     s.bloodFaith ? row('Blood Faith', 'buy-in refunded', 'good') : '',
     s.bribed ? row('Crowd Bribe', 'the crowd forgave the capitulation', 'good') : '',
+    s.verdict === 'spare' ? row('Verdict', '👍 Spared: the Emperor approves', 'good') : '',
+    s.verdict === 'kill' ? row('Verdict', `👎 Killed${s.mark ? ` · 💀 earned the mark ${esc(s.mark)}` : ''}`, 'bad') : '',
+    s.verdict && s.verdict === s.mercy ? row('The crowd', 'roars its approval', 'good') : '',
+    s.feud && s.verdict === 'kill' ? row('Feud', esc(s.feud), 'bad') : '',
     s.died ? row('Fallen', `${esc(s.fighter)}'s gear returns to the storeroom`, 'bad') : '',
   ].join('');
   return `<div class="report"><h3>After the fight</h3>${rows}</div>`;
+}
+
+// Thumbs up or down: the beaten opponent's fate, with what the crowd wants.
+function mercyPanel(m, mercy, late) {
+  const blood = mercy.crowd === 'kill';
+  const feud = m.house ? `; ${esc(m.house.name)} will swear a feud` : '';
+  return `<div class="mercy${late}">
+    <div class="mercy-title">${esc(mercy.opp)} lies beaten in the sand. All eyes turn to you, Lanista.</div>
+    <div class="mercy-crowd ${blood ? 'blood' : 'mercy'}">${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'}</div>
+    <div class="row">
+      <button class="btn big good" data-action="mercy" data-choice="spare" title="Spare them: +${MERCY.spareFavor} Imperial Favor.${blood ? '' : ` The crowd agrees: +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale.`}">👍 Spare them <small>+${MERCY.spareFavor} Favor</small></button>
+      <button class="btn big danger" data-action="mercy" data-choice="kill" title="Finish them: +${MERCY.killRenown} Renown and a kill toward the kill marks${feud}.${blood ? ` The crowd agrees: +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale.` : ''}">👎 Finish them <small>+${MERCY.killRenown} Renown, a kill${feud}</small></button>
+    </div>
+    <div class="sub">Give the crowd what it wants for +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale.</div>
+  </div>`;
+}
+
+// The signature move (level 3+): ready, used, or how to unlock it.
+function signatureRow(m) {
+  const sig = signatureOf(m.a.f);
+  if (!sig) return SIGNATURES[m.a.f.cls] ? `<div class="sub">★ Signature move <b>${esc(SIGNATURES[m.a.f.cls].name)}</b> unlocks at level ${SIGNATURE_LEVEL}.</div>` : '';
+  if (m.a.sigRound) return `<div class="sub">★ ${esc(sig.name)} ${m.a.sigRound > m.round ? 'will be unleashed this round' : 'has been used this fight'}.</div>`;
+  return `<div class="items-row"><button class="btn signature" data-action="signature" title="${esc(sig.desc)}">★ ${esc(sig.name)} <small>${esc(sig.desc)} Once per fight.</small></button></div>`;
 }
 
 function whyTable(m) {
@@ -155,7 +182,7 @@ function tacticPicker(m) {
     <div class="sub">${read} <span class="counters">🗡 Press beats ↯ Feint · ↯ Feint beats 🛡 Guard · 🛡 Guard beats 🗡 Press (+10% win chance)</span></div></div>`;
 }
 
-function controls(m, ui, bout, items = {}, nextBlocker = null) {
+function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {
   if (m.over) {
     const won = m.result.winner === 'A';
     const advice = adviceFor(m);
@@ -167,10 +194,10 @@ function controls(m, ui, bout, items = {}, nextBlocker = null) {
       <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${at + 1}s"` : ''}>${report(m.summary)}</div>
       ${advice ? `<div class="advice">💡 ${esc(advice)}</div>` : ''}
       ${whyTable(m)}
-      ${m.summary?.next ? `<div class="row"><button class="btn primary big" data-action="fight" data-id="${m.a.f.id}" data-tier="${bout.tier}" ${nextBlocker ? `disabled title="${esc(nextBlocker)}"` : ''}>On to the ${m.summary.next}</button>
+      ${mercy ? mercyPanel(m, mercy, late) : `${m.summary?.next ? `<div class="row"><button class="btn primary big" data-action="fight" data-id="${m.a.f.id}" data-tier="${bout.tier}" ${nextBlocker ? `disabled title="${esc(nextBlocker)}"` : ''}>On to the ${m.summary.next}</button>
         <button class="btn danger big" data-action="withdraw" data-tier="${bout.tier}" title="Leave the tournament now: it counts as capitulating, and your fighter is safe">Withdraw</button></div>
         ${nextBlocker ? `<div class="why-not">${esc(nextBlocker)} ${/perk/.test(nextBlocker) ? '(on their card, back in the Ludus)' : ''}</div>` : ''}` : ''}
-      <button class="btn ${m.summary?.next ? '' : 'primary '}big" data-action="leave-fight">${m.summary?.next ? 'Back to the Ludus (fight on later this week)' : 'Return to the Ludus'}</button>`;
+      <button class="btn ${m.summary?.next ? '' : 'primary '}big" data-action="leave-fight">${m.summary?.next ? 'Back to the Ludus (fight on later this week)' : 'Return to the Ludus'}</button>`}`;
   }
   const owned = Object.entries(items).filter(([, n]) => n > 0);
   // One of each kind per fight: items already used drop out of the row.
@@ -182,13 +209,14 @@ function controls(m, ui, bout, items = {}, nextBlocker = null) {
   if (m.round === 0) {
     // A fighter who walks in with the Death Gate open is warned before Round 1 too.
     const pre = mortalDanger(m.a) ? `<div class="alert">⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death. Capitulating is only possible between rounds.</div>` : '';
-    return `${pre}${itemRow}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
+    return `${pre}${signatureRow(m)}${itemRow}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
   }
   const danger = mortalDanger(m.a);
   const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.</div>` : '';
   const paused = ui.auto && danger ? '<div class="sub">Auto-play paused: your call.</div>' : '';
   return `${alert}${paused}
     <div>Score ${m.a.roundsWon}–${m.b.roundsWon}. First to two wins. Your call, Lanista.</div>
+    ${signatureRow(m)}
     ${itemRow}
     ${tacticPicker(m)}
     <div class="row">
@@ -198,7 +226,8 @@ function controls(m, ui, bout, items = {}, nextBlocker = null) {
 }
 
 // `nextBlocker`: why the bracket's next match can't start yet (e.g. a perk to choose), or null.
-export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = null) {
+// `mercy`: the pending thumbs-up-or-down verdict (run.mercy), if any.
+export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = null, mercy = null) {
   const last = m.rounds.at(-1);
   const delta = last ? last.delta : 0;
   const pills = last ? tagPills(last) : [];
@@ -236,6 +265,6 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
         <div class="side${sideCls('B')}"${sideStyle}><div class="side-label b">${m.house ? `Opponent · <span style="color:${esc(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div>${fighterCard(m.b.f, { combatant: m.b, live: stats.B, ...fresh('B'), compact: true, stress: false })}<div class="${hold(reveal)}">${statLine(stats, 'B')}</div></div>
       </div>
       ${tutorial}
-      <div class="controls${hold((timing?.end ?? 0) + 0.3)}">${controls(m, ui, bout, items, nextBlocker)}</div>
+      <div class="controls${hold((timing?.end ?? 0) + 0.3)}">${controls(m, ui, bout, items, nextBlocker, mercy)}</div>
     </div>`;
 }

@@ -486,7 +486,9 @@ test('Tactician makes First Strike worth +15%', () => {
 test('gear adds Power, Speed, injure chance and armor', () => {
   const [A, B] = pair({ gear: { weapon: 'trident', armor: 'bronzeCuirass' } }, {});
   assert.deepEqual(sources(computePower(A, B, 1).mods), ['Trident:1']);
-  assert.deepEqual(sources(computeSpeed(A, 1).mods), ['Bronze Cuirass:-1']);
+  assert.deepEqual(sources(computeSpeed(A, 1).mods), [], 'the Bronze Cuirass no longer slows (v5 economy pass)');
+  const [M] = pair({ gear: { weapon: 'warMaul', armor: null } }, {});
+  assert.deepEqual(sources(computeSpeed(M, 1).mods), ['War Maul:-1']);
   const p = computePhase2(A, B, 1);
   assert.deepEqual(sources(p.enemy), ['Trident:5000']);
   assert.deepEqual(p.self, [{ source: 'Bronze Cuirass', value: -10000, armor: true }]);

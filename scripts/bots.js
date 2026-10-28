@@ -5,13 +5,13 @@
 
 import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic, effectiveInjuries } from '../src/fight.js';
+import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic, effectiveInjuries, signatureBlocker, useSignature } from '../src/fight.js';
 import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom,
-  buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw,
+  buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, resolveMercy,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
 
@@ -136,6 +136,7 @@ function playMatch(run, f, tier, towel, items = false, tactic = 'smart') {
 function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart') {
   const bout = boutFor(run, tier);
   const m = startMatch(run, f.id, tier);
+  if (!signatureBlocker(m)) useSignature(m); // both bots open with their signature move
   while (!m.over) {
     playRound(m, { stance: tactic === 'smart' ? suggestTactic(m) : tactic });
     if (items && !m.over) {
@@ -146,7 +147,10 @@ function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart') {
     }
     if (towel && !m.over && canThrowTowel(m) && mortalDanger(m.a) && m.a.roundsWon <= m.b.roundsWon && !bout.boss) throwTowel(m);
   }
-  return finishMatch(run, m);
+  const summary = finishMatch(run, m);
+  // Thumbs up or down: the careful bot gives the crowd what it wants; the reckless one always kills.
+  if (run.mercy) resolveMercy(run, tactic === 'press' ? 'kill' : run.mercy.crowd);
+  return summary;
 }
 
 // Before a top-arena Boss, stock one War Paint (and a Bandage for an injured star) if Gold allows.
@@ -220,10 +224,12 @@ function recklessBouts(run) {
   playMatch(run, f, run.topTier, false, false, 'press');
 }
 
-export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxWeeks = 400, ...opts } = {}) {
+// `onWeek(run)`: optional, called at every step (for economy and other probes).
+export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxWeeks = 400, onWeek = null, ...opts } = {}) {
   const run = createRun(seed);
   let bouts = 0;
   while (run.status === 'active' && run.week < maxWeeks) {
+    onWeek?.(run);
     // Events: the careful bot takes the cautious (first) choice it can afford; the reckless one the boldest.
     if (run.event) {
       const n = EVENT_BY_ID[run.event.id].choices.length;

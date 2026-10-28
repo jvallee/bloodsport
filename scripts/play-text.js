@@ -6,15 +6,15 @@
 
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
-import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES } from '../src/data.js';
+import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE_LEVEL, MERCY } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk } from '../src/fight.js';
+import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk, signatureOf, useSignature } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts,
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
@@ -45,6 +45,8 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   surgeon <id> <injury#>        Emergency Surgeon: heal one injury now (injury# from 0)
   buy-decor <${Object.keys(DECOR).join('|')}>
   buy-item <${Object.keys(CONSUMABLES).join('|')}>   single-use fight items
+  signature                     during a fight (level 3+): unleash your fighter's signature move next round, once per fight
+  spare | kill                  thumbs up or down: decide a beaten, wounded opponent's fate after a win
   use <item>                    during a fight, before Round 1 or between rounds: one of each kind per fight
   place <id> <item> | remove <id> <item>      put decor in a fighter's room, or take it back
   buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armor> | sell-gear <storeroom#> (half price)
@@ -125,7 +127,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const nextXp = XP.levels[f.level - 1];
     const lines = [
       `[${f.id}] ${identity(f)} (XP ${f.xp}${nextXp ? `/${nextXp}` : ', max level'})`,
-      `     Power ${f.power} · Speed ${f.speed} · Stress ${f.stress}${f.stress >= STRESS.overtrained ? ' OVERTRAINED' : ''} · Morale ${f.morale} ${moraleState(f).label} (heading to ${target}) · Renown ${f.renown}`,
+      `     Power ${effectivePower(f)} (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')}) · Speed ${f.speed} · Stress ${f.stress}${f.stress >= STRESS.overtrained ? ' OVERTRAINED' : ''} · Morale ${f.morale} ${moraleState(f).label} (heading to ${target}) · Renown ${f.renown}`,
       `     Job: ${f.job} · trained ${f.trained}/${trainCap(run)} · Injuries: ${injuriesText(f)} · Death Gate ${Math.min(gate, deathGateAt(f))}/${deathGateAt(f)}${gate >= deathGateAt(f) ? ' OPEN' : ''}`,
       ...(f.humor ? [`     Humor: ${HUMORS[f.humor].name} (${HUMORS[f.humor].desc})`] : []),
       ...((f.scars?.length || f.augments?.length) ? [`     Scars: ${(f.scars ?? []).map((sc) => `${SCARS[sc.id].name}${sc.vs ? ` vs ${sc.vs}` : ''}`).join(', ') || 'none'} · Augments: ${(f.augments ?? []).map((k) => AUGMENTS[k].name).join(', ') || 'none'}`] : []),
@@ -197,9 +199,16 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     ].join('\n');
   }
 
+  function mercyText() {
+    const v = run.mercy;
+    return `*** THUMBS UP OR DOWN: ${v.opp} lies beaten. ${v.crowd === 'kill' ? 'The crowd roars for blood!' : 'The crowd chants for mercy.'} ***\n`
+      + `  \`spare\`: +${MERCY.spareFavor} Favor · \`kill\`: +${MERCY.killRenown} Renown and a kill${v.house ? ' (their house swears a feud)' : ''}. Doing what the crowd wants: +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale. Nothing else can happen until you decide.`;
+  }
+
   function look() {
     if (match) return fightStatus();
     const out = [header()];
+    if (run.mercy) out.push(`\n${mercyText()}`);
     if (run.status !== 'active') {
       const fought = run.history.filter((h) => !h.skipped && !h.forfeit);
       out.push(`\n*** CAREER OVER: ${run.endReason} ***\nSurvived ${plural(run.week, 'week')} · ${fought.filter((h) => h.won).length} wins, ${fought.filter((h) => !h.won).length} losses · top arena: ${arenaName(run.topTier)} · fallen: ${run.fallen.map((f) => f.name).join(', ') || 'none'}`);
@@ -323,6 +332,9 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       lines.push(`  ${match.b.f.name} is ${h ? `${h.name}: ${h.tell}` : 'without clear habits'}.${last ? ` Last round they chose ${last.stances.B}.` : ''} Suggested: ${suggestTactic(match)}.`);
       const usable = owned.filter(([k]) => !(match.itemsUsed ?? []).includes(k));
       if (match.itemsUsed?.length) lines.push(`  Items used this fight: ${match.itemsUsed.map((k) => CONSUMABLES[k].name).join(', ')}.`);
+      const sig = signatureOf(match.a.f);
+      if (sig) lines.push(match.a.sigRound ? `  Signature move ${sig.name}: ${match.a.sigRound > match.round ? 'ready for the next round' : 'used this fight'}.` : `  Signature move (\`signature\`, once per fight): ${sig.name}. ${sig.desc}`);
+      else if (SIGNATURES[match.a.f.cls]) lines.push(`  Signature move ${SIGNATURES[match.a.f.cls].name} unlocks at level ${SIGNATURE_LEVEL}.`);
       lines.push(usable.length ? `  Items (one of each kind per fight, \`use <item>\`): ${usable.map(([k, n]) => `${k} ×${n} (${CONSUMABLES[k].desc})`).join('; ')}` : owned.length ? '  No other fight items to use.' : '  No fight items (the Apothecary in the `market` sells them).');
     }
     lines.push(match.round === 0 ? '  `next <tactic>` to begin Round 1 (`next` alone uses the suggestion).' : `  \`next <tactic>\` to fight Round ${match.round + 1}${canThrowTowel(match) ? `, or \`capitulate\` (lose the match and ${bout.buyIn} Prestige buy-in; your fighter survives)` : ''}.`);
@@ -352,6 +364,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (s.levelUp) bits.push(`House level ${s.levelUp}!`);
     if (s.bloodFaith) bits.push('Blood Faith refunds the buy-in');
     out.push(`Result: ${bits.join(' · ')}${s.died ? ` · ${s.fighter} is dead.` : ''}`);
+    if (run.mercy) out.push(mercyText());
     return out.join('\n');
   }
 
@@ -521,6 +534,20 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       return ['You capitulate.', '', endFight(), '', look()].join('\n');
     },
     capitulate: (...args) => commands.towel(...args),
+    signature: () => {
+      if (!match) throw new Error('Signature moves are used during a match.');
+      useSignature(match);
+      const sig = signatureOf(match.a.f);
+      return `${match.a.f.name} readies ${sig.name} for Round ${match.round + 1}: ${sig.desc}`;
+    },
+    spare: () => {
+      const v = resolveMercy(run, 'spare');
+      return `Thumbs up. ${v.favor ? `+${v.favor} Favor. ` : ''}${v.crowd === 'spare' ? 'The crowd roars its approval. ' : ''}\n\n${look()}`;
+    },
+    kill: () => {
+      const v = resolveMercy(run, 'kill');
+      return `Thumbs down. +${v.renown} Renown${v.mark ? `, earns the mark ${v.mark}` : ''}.${v.feud ? ` ${v.feud}` : ''}${v.crowd === 'kill' ? ' The crowd roars its approval.' : ''}\n\n${look()}`;
+    },
     houses: () => [`-- The houses (Glory: a win is worth its arena tier, ×3 for a Boss; year-end purse ${HOUSES.yearPurse.map((g) => g * dateOf(run.week).year).join('/')} Gold by place) --`, ...standings(run).map((h, i) => `  ${i + 1}. ${h.name}${h.you ? ' (you)' : ''} · ${arenaName(Math.min(h.tier, 4))} · Glory ${h.glory}${h.feud ? ` · feud ${h.feud} months` : ''}${h.vengeance ? ` · vengeance ${h.vengeance} months` : ''}`)].join('\n'),
     withdraw: ([tier]) => {
       need([tier].filter(Boolean), 1, 'withdraw <tier>');

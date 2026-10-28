@@ -31,7 +31,7 @@ export function fighterWarnings(run, f, tier) {
 export function arenaStakes(run, tier) {
   const bout = boutFor(run, tier);
   if (!bout.top) {
-    return `Lower arena: no Favor for winning; Prestige is halved per tier below your top arena. Rookies (under ${ECONOMY.knownRenown} Renown) fight here freely. `
+    return `Lower arena: no Favor for winning; Prestige and the purse are halved per tier below your top arena. Rookies (under ${ECONOMY.knownRenown} Renown) fight here freely. `
       + `A known fighter winning with ${ECONOMY.crushingGap}+ more Power is jeered (${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale, no Renown)${hasBracket(tier) ? `; in a tournament only the Final is judged, at ${ECONOMY.bracketCrushingGap}+` : ''}; `
       + `a Champion of this arena gets no Prestige or Renown and costs ${FAVOR.championReturn} Favor. `
       + `Win ${ECONOMY.titleWins} times here (or beat the Boss) to become its Champion. Upsets and Bloodied Victories (wins with 2+ injuries) still earn Favor.`;

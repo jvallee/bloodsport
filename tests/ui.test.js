@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
-import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, advanceToTournament, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute } from '../src/run.js';
+import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, advanceToTournament, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute, resolveMercy } from '../src/run.js';
 import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal, eventCard, setupModal, legacyPanel, roomTabs } from '../src/ui/views.js';
 import { TRIBUTE } from '../src/data.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
@@ -50,8 +50,14 @@ test('every screen renders cleanly through whole careers', () => {
           autoPlay(m);
           assert.doesNotMatch(fightView(m, ui, bout), BAD);
           discoverMatch(codex, m);
-          assert.doesNotMatch(summaryBanner(finishMatch(run, m)), BAD);
+          m.summary = finishMatch(run, m);
+          assert.doesNotMatch(summaryBanner(m.summary), BAD);
           checkScreens(run);
+          if (run.mercy) {
+            assert.doesNotMatch(fightView(m, ui, bout, '', {}, null, run.mercy), BAD);
+            resolveMercy(run, run.mercy.crowd === 'kill' ? 'spare' : 'kill'); // against the crowd, then the report
+            assert.doesNotMatch(fightView(m, ui, bout), BAD);
+          }
         }
         if (run.status !== 'active') continue;
         for (const f of run.roster) while (f.pendingPerks.length) choosePerk(run, f.id, f.pendingPerks[0][0]);

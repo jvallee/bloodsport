@@ -136,7 +136,7 @@ function renderFight() {
   }
   fightEl.hidden = false;
   const nextBlocker = match.summary?.next ? fightBlocker(run, match.a.f.id, match.bout.tier) : null;
-  fightEl.innerHTML = fightView(match, ui, match.bout, tutorialCard(fightTutorial(), 'fight'), run.inventory.items, nextBlocker);
+  fightEl.innerHTML = fightView(match, ui, match.bout, tutorialCard(fightTutorial(), 'fight'), run.inventory.items, nextBlocker, run.mercy);
   const feed = document.getElementById('feed');
   if (feed) feed.scrollTop = feed.scrollHeight;
 }
@@ -304,6 +304,7 @@ const after = {
     if (match?.rounds.length) roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath) });
   },
   'event-choice': () => { sfx.event(); },
+  mercy: () => { sfx.cheer(0); },
   withdraw: () => {
     match = null; // the withdrawal is settled: leave the fight screen
     ui.auto = false;

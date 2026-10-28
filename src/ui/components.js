@@ -1,9 +1,9 @@
 // Shared UI pieces: escaping, buttons, icons, the fighter card. Returns HTML strings.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS } from '../data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS, SIGNATURES, SIGNATURE_LEVEL } from '../data.js';
 
 const HUMOR_ICON = { choleric: '🔥', sanguine: '💨', melancholic: '🪨', phlegmatic: '💧' };
-import { effectiveInjuries, mortalDanger, deathGateAt, killMarks } from '../fight.js';
+import { effectiveInjuries, mortalDanger, deathGateAt, killMarks, signatureOf } from '../fight.js';
 import { classAbility } from '../narrate.js';
 import { portrait } from './portrait.js';
 import { powerParts } from '../run.js';
@@ -70,6 +70,13 @@ function powerBadge(f, live) {
   }
   return `<div class="badge power${delta ? ' live' : ''}" title="Power ${total}: decides who wins rounds (each point of difference shifts the odds a lot).&#10;${esc(lines.join('\n')).replace(/\n/g, '&#10;')}">${ICON.power}<b>${total}</b>${delta}</div>`;
 }
+// The signature move: ready from level 3 (used from the fight screen), shown dimmed before that.
+function signatureChip(f) {
+  const sig = SIGNATURES[f.cls];
+  if (!sig) return '';
+  const ready = Boolean(signatureOf(f));
+  return `<span class="chip signature${ready ? '' : ' locked'}" title="Signature move${ready ? '' : ` (unlocks at level ${SIGNATURE_LEVEL})`}: ${esc(sig.desc)} Once per fight.">★ ${esc(sig.name)}${ready ? '' : ` · Lv ${SIGNATURE_LEVEL}`}</span>`;
+}
 const signedNum = (n) => (n >= 0 ? `+${n}` : `−${-n}`);
 
 // In a fight, `fresh` wounds (the newest injuries) appear only at `freshAt` seconds, when the story reaches the blow.
@@ -112,6 +119,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
       <div class="traits">
         ${trait ? `<span class="chip trait${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
         ${f.cls ? `<span class="chip ability${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
+        ${signatureChip(f)}
         ${f.humor ? `<span class="chip humor" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
         ${wins}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
       </div>

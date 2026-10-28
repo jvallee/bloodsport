@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower } from './fight.js';
 import { Refused } from './errors.js';
@@ -118,7 +118,7 @@ export function boutFor(run, tier = run.topTier) {
     tier, top, below,
     name: `${c.name} · ${STAGES[s]}`, stage: s, boss: s === 2,
     buyIn: fest?.freeEntry ? 0 : pauper ? Math.max(0, run.prestige) : c.buyIn[s], fullBuyIn: c.buyIn[s], pauper: pauper && !fest?.freeEntry,
-    winGold: Math.round(c.winGold[s] * (fest?.gold ?? 1)),
+    winGold: Math.round(Math.ceil(c.winGold[s] * ECONOMY.lowerArenaGold ** below) * (fest?.gold ?? 1)),
     winPrestige: Math.round(Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below) * (fest?.prestige ?? 1)),
     festival: fest?.id ?? null,
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
@@ -436,6 +436,7 @@ function chronicle(run, f, text) {
 function idleBlocker(run) {
   if (run.status !== 'active') return 'The run is over.';
   if (run.inMatch) return 'A match is in progress.';
+  if (run.mercy) return 'First decide the beaten opponent\'s fate: thumbs up or down.';
   return null;
 }
 
@@ -1410,6 +1411,7 @@ export function finishMatch(run, match) {
   run.history.push(summary);
   log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
   advanceArena(run, tier, won, arena.opponent);
+  offerMercy(run, match, summary, fighter, opp, tier);
   return summary;
 }
 
@@ -1443,7 +1445,79 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   run.matchInfo = null;
   run.history.push(summary);
   log(run, `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good');
+  offerMercy(run, match, summary, fighter, opp, tier);
   return summary;
+}
+
+// ---------- Thumbs up or down ----------
+
+// After a win over a wounded opponent who still lives, their fate is yours (resolveMercy).
+// The crowd calls for blood against a feuding house or a fighter left at the Death Gate, otherwise for mercy.
+function offerMercy(run, match, summary, fighter, opp, tier) {
+  if (!summary.won || !fighter.alive || summary.kill || run.status !== 'active') return;
+  const wounds = effectiveInjuries(match.b.f);
+  if (wounds < MERCY.minInjuries) return;
+  const house = houseOf(run, opp);
+  const blood = Boolean(house?.feud || house?.vengeance) || wounds >= 2;
+  run.mercy = { fighterId: fighter.id, opp: opp.name, house: house?.id ?? null, crowd: blood ? 'kill' : 'spare', tier, at: run.history.length - 1 };
+  summary.mercy = run.mercy.crowd;
+}
+
+export function mercyBlocker(run, choice) {
+  if (!run.mercy) return 'There is no beaten opponent waiting on your verdict.';
+  if (!['spare', 'kill'].includes(choice)) return 'Thumbs up (spare) or thumbs down (kill).';
+  return null;
+}
+
+// Spare: +Favor (the Emperor likes clemency). Kill: Renown, a kill toward the marks, and their house's feud.
+// Doing what the crowd wants adds Renown and Morale. Returns what changed.
+export function resolveMercy(run, choice) {
+  assertOk(mercyBlocker(run, choice));
+  const { fighterId, opp, house: houseId, crowd, at } = run.mercy;
+  run.mercy = null;
+  const fighter = findFighter(run, fighterId);
+  const house = run.houses?.find((h) => h.id === houseId) ?? null;
+  const out = { verdict: choice, crowd, favor: 0, renown: 0, morale: 0, kill: false, mark: null, feud: null };
+  if (choice === 'spare') {
+    const before = run.favor;
+    changeFavor(run, MERCY.spareFavor, `spared ${opp}`);
+    out.favor = run.favor - before;
+    log(run, `Thumbs up: ${fighter.name} spares ${opp}. The Emperor approves of clemency.`, 'good');
+  } else {
+    out.renown = MERCY.killRenown;
+    const marksBefore = killMarks(fighter).length;
+    fighter.kills = (fighter.kills ?? 0) + 1;
+    out.kill = true;
+    log(run, `Thumbs down: ${fighter.name} finishes ${opp}.`, 'warn');
+    if (fighter.kills === 1) chronicle(run, fighter, `First kill: ${opp}${house ? ` of ${house.name}` : ''}, at the crowd's verdict.`);
+    const marks = killMarks(fighter);
+    if (marks.length > marksBefore) {
+      out.mark = marks.at(-1).name;
+      chronicle(run, fighter, `Earned the mark ${out.mark}.`);
+      log(run, `${fighter.name} has ${fighter.kills} kills and earns the mark ${out.mark}: ${marks.at(-1).desc}`, 'event');
+    }
+    run.graveyard = [...(run.graveyard ?? []), opp]; // the dead don't come back
+    if (house) {
+      house.feud = HOUSES.feudMonths;
+      out.feud = `${house.name} swears revenge: their fighters get +1 Power against you for ${HOUSES.feudMonths} months.`;
+      log(run, out.feud, 'warn');
+    }
+  }
+  if (choice === crowd) {
+    out.renown += MERCY.crowdRenown;
+    out.morale = MERCY.crowdMorale;
+    bumpMorale(fighter, MERCY.crowdMorale);
+    log(run, `The crowd roars its approval for ${fighter.name}.`, 'good');
+  }
+  fighter.renown += out.renown;
+  const summary = run.history[at];
+  if (summary) {
+    Object.assign(summary, {
+      verdict: choice, kill: summary.kill || out.kill, mark: out.mark ?? summary.mark ?? null, feud: out.feud ?? summary.feud,
+      renown: (summary.renown ?? 0) + out.renown, favor: (summary.favor ?? 0) + out.favor, morale: (summary.morale ?? 0) + out.morale,
+    });
+  }
+  return out;
 }
 
 // Withdraw from a bracket between matches: it counts as capitulating (the fighter is safe, the tournament lost).

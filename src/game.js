@@ -1,11 +1,11 @@
 // Every player choice that changes the career, as one table shared by the web UI and scripts/replay.js.
 // Each action is recorded in run.actions before it runs, so a career replays exactly from its seed. Pure: no DOM.
 
-import { playRound, throwTowel } from './fight.js';
+import { playRound, throwTowel, useSignature } from './fight.js';
 import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom,
   assignDecor, removeDecor, buyGear, equip, unequip, startMatch, finishMatch, skipBout, forfeitBout,
-  recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw,
+  recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy,
 } from './run.js';
 import { upgrade } from './ludus.js';
 
@@ -29,6 +29,8 @@ export const GAME_ACTIONS = {
   'buy-decor': ({ run }, d) => { buyDecor(run, d.item); },
   'buy-item': ({ run }, d) => { buyItem(run, d.item); },
   'use-item': ({ run, match }, d) => { useItem(run, match, d.item); },
+  signature: ({ match }) => { useSignature(match); },
+  mercy: ({ run }, d) => { resolveMercy(run, d.choice); },
   'assign-decor': ({ run }, d) => { assignDecor(run, d.id, d.item); },
   'remove-decor': ({ run }, d) => { removeDecor(run, d.id, d.item); },
   'buy-gear': ({ run }, d) => { buyGear(run, Number(d.index)); },

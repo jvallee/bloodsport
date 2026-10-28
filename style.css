@@ -117,7 +117,10 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .card-tag { position: absolute; top: -10px; left: 12px; font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); padding: 1px 8px; border-radius: 99px; color: var(--muted); }
 .card-head { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
 .card-head h3 { font-size: 17px; display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-.card-head h3 .nm { overflow-wrap: anywhere; }
+.card-head h3 .nm { overflow-wrap: break-word; }
+.card.compact .card-head { flex-wrap: wrap; }
+.chip.signature { border-color: var(--gold); color: var(--gold); }
+.chip.signature.locked { opacity: 0.55; }
 .card-head .who { min-width: 0; }
 .card-head .kind { color: var(--muted); font-size: 13px; }
 .badges { display: flex; gap: 6px; }
@@ -521,3 +524,16 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
   .side.round-won .card { animation: none; box-shadow: 0 0 0 2px var(--gold); }
   .side.round-lost .card { animation: none; opacity: 0.72; }
 }
+
+/* Signature moves and the thumbs-up-or-down verdict. */
+.btn.signature { border-color: var(--gold); color: var(--gold); font-weight: 600; }
+.btn.signature small { display: block; color: var(--muted); font-weight: 400; }
+.line.signature { color: var(--gold); font-weight: 700; }
+.mercy { margin: 12px auto; padding: 12px; max-width: 560px; border: 1px solid var(--gold); border-radius: 12px; background: var(--panel-2); text-align: center; }
+.mercy-title { font-family: var(--display); font-size: 18px; margin-bottom: 6px; }
+.mercy-crowd { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+.mercy-crowd.blood { color: #f1b3ad; }
+.mercy-crowd.mercy { color: var(--good); }
+.mercy .row { justify-content: center; }
+.mercy .btn small { display: block; font-size: 11px; opacity: 0.85; }
+.btn.good { border-color: var(--good); color: var(--good); }
