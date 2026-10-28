@@ -1243,23 +1243,14 @@ export function finishMatch(run, match) {
       run.inventory.gear.push(summary.loot);
       log(run, `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good');
     }
-    // Championships: beat an arena's Boss, or win there 3 times. One Title per arena.
+    // Championships: beat an arena's Boss, or win there 3 times. One Title (+1 Power) per arena.
     if (tier !== GRAND_TIER) {
       fighter.arenaWins = { ...(fighter.arenaWins ?? {}), [tier]: (fighter.arenaWins?.[tier] ?? 0) + 1 };
       if (!isChampionOf(fighter, tier) && (bout.boss || fighter.arenaWins[tier] >= ECONOMY.titleWins)) {
         const title = championTitle(tier);
         fighter.titles.push(title);
+        fighter.power += 1;
         summary.title = title;
-        // Only a Title won in your top arena adds Power; a lower-arena Championship pays Renown and Gold.
-        summary.titlePower = bout.top;
-        if (bout.top) {
-          fighter.power += 1;
-          fighter.powerTitles = [...(fighter.powerTitles ?? fighter.titles.slice(0, -1)), title];
-        } else {
-          summary.renown += ECONOMY.lowerTitle.renown; // added to the fighter with the rest of the win's Renown
-          summary.gold += ECONOMY.lowerTitle.gold * tier;
-          fighter.powerTitles ??= fighter.titles.slice(0, -1); // older titles all gave Power
-        }
       }
     }
     if (tier === GRAND_TIER) {

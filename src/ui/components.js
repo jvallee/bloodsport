@@ -60,8 +60,7 @@ export function fighterCard(f, { combatant = null, actions = '', tag = '', compa
   }).join('');
   const decor = Object.entries(f.decor).filter(([, n]) => n > 0)
     .map(([k, n]) => `<span class="chip decor" title="${esc(DECOR[k].effect)}">${DECOR[k].name} ×${n}</span>`).join('');
-  // Titles won in your top arena gave +1 Power; lower-arena ones paid Renown and Gold (older saves: all gave Power).
-  const titles = (f.titles ?? []).map((t) => `<span class="chip title" title="${t === 'Master of the Games' ? 'Winner of the Grand Tournament' : !f.powerTitles || f.powerTitles.includes(t) ? '+1 Power (won in your top arena)' : 'Won in a lower arena: Renown and Gold, no Power'}">🏆 ${esc(t)}</span>`).join('');
+  const titles = (f.titles ?? []).map((t) => `<span class="chip title" title="+1 Power">🏆 ${esc(t)}</span>`).join('');
   const scars = (f.scars ?? []).map((sc) => `<span class="chip scar" title="${esc(SCARS[sc.id].desc)}">🩹 ${esc(SCARS[sc.id].name)}${sc.vs ? ` (${sc.vs})` : ''}</span>`).join('');
   const augs = (f.augments ?? []).map((k) => `<span class="chip augment" title="${esc(AUGMENTS[k].desc)}">⚙ ${esc(AUGMENTS[k].name)}</span>`).join('');
   const perks = (f.perks ?? []).map((p) => `<span class="chip perk" title="${esc(PERKS[p].desc)}">⭐ ${esc(PERKS[p].name)}</span>`).join('');

@@ -33,7 +33,7 @@ export function arenaStakes(run, tier) {
     return `Lower arena: no Favor for winning; Prestige is halved per tier below your top arena. Rookies (under ${ECONOMY.knownRenown} Renown) fight here freely. `
       + `A known fighter winning with ${ECONOMY.crushingGap}+ more Power is jeered (${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale, no Renown); `
       + `a Champion of this arena gets no Prestige or Renown and costs ${FAVOR.championReturn} Favor. `
-      + `Win ${ECONOMY.titleWins} times here (or beat the Boss) to become its Champion (Renown and Gold here, not Power: only top-arena Titles add Power). Upsets and Bloodied Victories (wins with 2+ injuries) still earn Favor.`;
+      + `Win ${ECONOMY.titleWins} times here (or beat the Boss) to become its Champion. Upsets and Bloodied Victories (wins with 2+ injuries) still earn Favor.`;
   }
   if (!bout.boss) return '';
   if (tier === GRAND_TIER) return `Win: the career. Lose: ${bossLossFavor(tier, run)} Favor and try again next month.`;

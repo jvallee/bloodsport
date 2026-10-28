@@ -105,7 +105,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
 
   function extras(f) {
     const bits = [];
-    if (f.titles.length) bits.push(`Titles: ${f.titles.map((t) => `${t}${t !== 'Master of the Games' && f.powerTitles && !f.powerTitles.includes(t) ? ' (lower arena: no Power)' : ''}`).join(', ')} (top-arena Titles +1 Power each)`);
+    if (f.titles.length) bits.push(`Titles: ${f.titles.join(', ')} (+1 Power each)`);
     if (f.perks.length) bits.push(`Perks: ${f.perks.map((p) => PERKS[p].name).join(', ')}`);
     const gear = ['weapon', 'armor'].filter((s) => f.gear[s]).map((s) => `${GEAR[f.gear[s]].name} (${gearText(GEAR[f.gear[s]])})`);
     if (gear.length) bits.push(`Gear: ${gear.join('; ')}`);
