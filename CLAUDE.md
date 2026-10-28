@@ -3,6 +3,7 @@
 Turn-based gladiator-house management roguelike, built as a static site and hosted on GitHub Pages (https://jvallee.github.io/bloodsport/).
 
 ## Sources of truth
+- `docs/HANDOFF.md`: current state, the user's working preferences, next steps and open decisions. Read it first when picking up the project.
 - `docs/fight-rules.md`: MVP rules and placeholder numbers. When code and this doc disagree, ask which one is right; don't silently change either.
 - The full design doc (`Bloodsport — Game Design Document & UE5 Proposal.md`) is local only and is not committed (see `.gitignore`). Read it section by section; the end of the file holds large base64 images.
 - Tabs 3, 10 and 11 of the design doc describe an Unreal Engine build. Use them for intent, not for architecture.
