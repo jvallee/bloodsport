@@ -281,6 +281,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - Injuries carry over, and the week can't end mid-bracket. Brackets are drawn when the tournament week begins.
 - **Fight items:** one of each kind per fight; different items can be combined in the same round.
 - **Medbay:** you choose which injury it treats first.
+- **Titles:** only a Title won in your top arena gives +1 Power. A Championship won in a lower arena (3 wins, or beating its Boss) gives +3 Renown and 5 Gold × tier instead. Playtest #3 found every fighter collecting 2–3 nearly free Power points.
 - **Firebug's Fire Braziers and cyborg augments** count in the card's Power, as they always did in fights.
 
 ### Saves

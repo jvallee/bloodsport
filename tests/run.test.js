@@ -10,7 +10,7 @@ import {
   startMatch, finishMatch, fightBlocker, skipBout, skipBlocker, forfeitBout, forfeitBlocker, choosePerk, perkBlocker,
   currentBout, boutFor, marketPrice, serialize, deserialize, moraleTarget, moraleState, xpFor, GRAND_TIER, SAVE_VERSION,
   matchOptions, bossLossFavor, buildRoom, recordMatchProgress, buyItem, buyItemBlocker, useItem, useItemBlocker,
-  payTribute, payTributeBlocker, tributeDue, sellGear, sellGearBlocker, upcomingBouts, treatFirst, treatFirstBlocker,
+  payTribute, payTributeBlocker, tributeDue, sellGear, sellGearBlocker, upcomingBouts, treatFirst, treatFirstBlocker, championTitle,
 } from '../src/run.js';
 import { computePower, computeSpeed, computePhase2, playRound, throwTowel } from '../src/fight.js';
 
@@ -832,7 +832,7 @@ const refight = (run, f, tier, opts = {}) => {
   return playBout(run, f.id, { tier, ...opts });
 };
 
-test('three wins in an arena make a fighter its Champion (+1 Power, once per arena)', () => {
+test('three wins in an arena make a fighter its Champion (once per arena; a lower arena pays Renown, not Power)', () => {
   const { run, b } = lowerArenaSetup();
   run.arenas[1].stage = 0;
   const power = b.power;
@@ -842,7 +842,8 @@ test('three wins in an arena make a fighter its Champion (+1 Power, once per are
   run.arenas[1].stage = 0;
   const s = refight(run, b, 1);
   assert.match(s.title, /Champion of the Dirt Pits/);
-  assert.equal(b.power, power + 1);
+  assert.equal(b.power, power, 'a lower-arena Title adds no Power');
+  assert.equal(s.titlePower, false);
   run.arenas[1].stage = 0;
   assert.equal(refight(run, b, 1).title, null, 'only one title per arena');
 });
@@ -1220,4 +1221,27 @@ test('you can choose which injury the Medbay treats first', () => {
   setJob(run, f.id, 'medbay');
   advanceWeek(run);
   assert.deepEqual(f.injuries.map((i) => i.tag), ['maimed'], 'the Flesh Wound healed first');
+});
+
+test('a Title gives +1 Power only in your top arena; a lower-arena Championship pays Renown and Gold instead', () => {
+  const { run, f } = atBout(8);
+  f.arenaWins = { 1: 2 };
+  const power = f.power;
+  const s = playBout(run, f.id);
+  assert.equal(s.title, championTitle(1));
+  assert.equal(f.power, power + 1, 'top arena: +1 Power');
+  assert.equal(s.titlePower, true);
+  // Now the Dirt Pits is a lower arena.
+  const other = recruit(run, run.market[0].id);
+  run.topTier = 2;
+  run.arenas[2] = { ...structuredClone(run.arenas[1]), tier: 2 };
+  nextBout(run);
+  other.arenaWins = { 1: 2 };
+  const [p2, gold] = [other.power, run.gold];
+  const s2 = playBout(run, other.id, { tier: 1 });
+  assert.equal(s2.title, championTitle(1));
+  assert.equal(other.power, p2, 'no Power for a lower-arena Title');
+  assert.equal(s2.titlePower, false);
+  assert.ok(s2.renown >= ECONOMY.lowerTitle.renown);
+  assert.ok(run.gold - gold >= ECONOMY.lowerTitle.gold);
 });

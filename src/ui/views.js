@@ -156,7 +156,7 @@ export function summaryBanner(s) {
   if (s.xp && !s.died) bits.push(`${plus(s.xp)} XP`);
   if (s.renown) bits.push(`${plus(s.renown)} Renown`);
   if (s.favor) bits.push(`${plus(s.favor)} Favor`);
-  if (s.title) bits.push(`🏆 ${s.fighter} earns the title "${s.title}"${s.title === 'Master of the Games' ? '' : ' (+1 Power)'}`);
+  if (s.title) bits.push(`🏆 ${s.fighter} earns the title "${s.title}"${s.title === 'Master of the Games' ? '' : s.titlePower === false ? ` (a lower arena: +${ECONOMY.lowerTitle.renown} Renown and Gold, no Power)` : ' (+1 Power)'}`);
   if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favor, Renown, XP and Morale)`);
   if (s.kill) bits.push(`💀 A kill${s.mark ? `: ${s.fighter} earns the mark "${s.mark}"` : ''}`);
   if (s.next) bits.push(`🏟 On to the ${s.next}`);

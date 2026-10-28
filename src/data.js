@@ -199,6 +199,7 @@ export const ECONOMY = {
   crushingGap: 3, // a win with this much more Power than the opponent is a "crushing" win
   lootChance: 0.35, // chance to claim a beaten opponent's gear (Bosses always drop theirs)
   titleWins: 3, // wins in an arena that make a fighter its Champion (beating its Boss does too)
+  lowerTitle: { renown: 3, gold: 5 }, // a Title won in a lower arena: no Power, but Renown and Gold × tier (playtest #3: free Power)
   knownRenown: 5, // fighters below this Renown (rookies) are never jeered for mismatches
   challengerRenown: 30, // top-arena opponents gain +1 Power per this much Renown of the fighter they face
   challengerMax: 2,
