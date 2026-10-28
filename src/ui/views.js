@@ -6,7 +6,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFesti
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -287,10 +287,20 @@ function roomPanel(run, f) {
     return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armor'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot), 'btn small unequip')}` : '<small>empty</small>'}
       ${picker ? `<div class="row tight">${picker}</div>` : ''}</div>`;
   }).join('');
-  return `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown})${f.mood ? `, mood ${f.mood.n > 0 ? '+' : ''}${f.mood.n} for ${f.mood.weeks} more week${f.mood.weeks === 1 ? '' : 's'}` : ''}.</div>
-    <div class="decor-list">${decor}</div>
-    <div class="label">Gear (from the storeroom)</div>${gear}`;
+  const room = `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown})${f.mood ? `, mood ${f.mood.n > 0 ? '+' : ''}${f.mood.n} for ${f.mood.weeks} more week${f.mood.weeks === 1 ? '' : 's'}` : ''}.</div>
+    <ul class="room-facts"><li>Quarters level ${maxLevel(run, 'quarters')}: +${MORALE.perQuartersLevel * maxLevel(run, 'quarters')} comfort; fits ${maxLevel(run, 'quarters')} of each decor item.</li>
+    <li>Decor in the room: ${decorCount(f)} item${decorCount(f) === 1 ? '' : 's'} (+${MORALE.perDecor * decorCount(f)} comfort).</li>
+    ${maxLevel(run, 'entertainment') ? `<li>Entertainment Room: +${MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment')} comfort.</li>` : ''}
+    <li>Fame: Renown ${f.renown} sets expectations at ${expects}.</li></ul>`;
+  // Three tabs: the room (Morale), its decor, and gear.
+  const tab = roomTabs[f.id] ?? 'decor';
+  const tabs = [['room', 'Room'], ['decor', 'Decor'], ['gear', 'Gear']].map(([k, label]) => `<button class="seg${tab === k ? ' on' : ''}" data-action="room-tab" data-id="${f.id}" data-tab="${k}" aria-pressed="${tab === k}">${label}</button>`).join('');
+  const body = tab === 'room' ? room : tab === 'gear' ? `<div class="label">Gear (from the storeroom)</div>${gear}` : `<div class="decor-list">${decor}</div>`;
+  return `<div class="segs room-tabs" role="tablist">${tabs}</div><div class="room-body">${body}</div>`;
 }
+
+// Which tab each fighter's room panel shows (page state only; set by src/main.js).
+export const roomTabs = {};
 
 function rosterPanel(run) {
   const cards = run.roster.map((f) => {

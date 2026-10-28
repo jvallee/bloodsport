@@ -486,3 +486,6 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 
 .treat-select { background: #0f0b0a; color: inherit; border: 1px solid var(--blood-dim); border-radius: 8px; padding: 3px 6px; font: inherit; font-size: 13px; }
 .treat { margin: 6px 0; }
+
+.room-tabs { margin: 6px 0 8px; grid-template-columns: repeat(3, 1fr); }
+.room-facts { margin: 4px 0; padding-left: 18px; font-size: 13px; color: var(--muted); }

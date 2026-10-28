@@ -7,7 +7,7 @@ import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
@@ -237,6 +237,7 @@ const actions = {
   },
   'notice-page': (d) => { noticePage = Number(d.page); },
   'auto-play': () => { ui.auto = !ui.auto; },
+  'room-tab': (d) => { roomTabs[d.id] = d.tab; },
   'export-save': () => {
     const blob = new Blob([exportSave({ run, codex, legacy, version: VERSION })], { type: 'application/json' });
     const a = document.createElement('a');
