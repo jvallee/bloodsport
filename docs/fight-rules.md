@@ -368,3 +368,14 @@ Measured with `npm run check`'s bots plus two probes: each item's and gear piece
   - Opponent cards show their signature move when they'll use it.
   - The text interface shows gear in Power and Speed, a per-round Power breakdown in fights, and whole-tournament odds; it prints the lower-arena rules once per screen.
 - **Names:** 40 more in the pool; retired fighters' names are never reused; the last 60 opponents' names aren't either.
+
+## Playtest #7 changes (designer's notes, no new tag)
+
+- **Championships cascade:** becoming Champion of an arena also crowns the fighter in every arena below it, +1 Power for each Title they didn't hold (`TITLES = { cascade: true, cascadePower: 1 }`, `crownChampion` in `src/run.js`).
+- **Arena Power to pay for it:** Silver 18 / 18 / 19 (was 17 / 18 / 19), Imperial 25 / 26 / 27 (was 24 / 25 / 26), Grand 30 (was 29).
+  - Careful career win rates, 300 careers each: no cascade 43%; cascade 54% (fails the gate); cascade titles without Power 44%.
+  - With the cascade: +1 from Silver up 45% (on the edge); +2 from Silver up 30%; +1 from Bronze up 26%.
+  - Raising the Silver Boss to 20 tipped the best Silver build to 1 Speed week, failing the balanced-build gate (1/4). 18 / 19 / 19 broke the rule that a Boss is stronger than Tournament 2, so the Boss stays at 19.
+- **Prisoners of war:** still arrive at their arena's Power + 1, but everything above a Market fighter's natural Power (kind base + the arena's `marketPower`) counts as training already done (`trained` and `trainedPower`), so they can't train a full cap on top.
+- **Veteran training cap (+1 week per level): tried and reverted.** Careful wins: 85% at +1 per level, 64% at +1 every 2 levels, 64% from level 4. Kept in history (`e26085f`).
+- **Gates after these changes:** all 9 pass. Careful 41%, careful deaths 0.54, reckless deaths 3.21, balanced build best vs 2 of 4 Bosses, first Boss 71%, tactics +8, always-Press −7, Grand +25 points harder than the first Boss.

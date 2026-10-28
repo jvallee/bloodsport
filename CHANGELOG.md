@@ -3,7 +3,17 @@
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
 ## Unreleased (live game, after the v5 refreshes)
-- (Next: veterans earn a higher training cap, +1 training week per level.)
+
+**From the designer's playtest (#7)**
+- **Prisoners of war** still arrive at their arena's Power, but anything above a Market fighter's natural Power counts as training they've already done. They can no longer train a full Trainer cap on top and end up far stronger than everyone else.
+- **Championships cascade:** becoming Champion of an arena also crowns the fighter in every arena below it, +1 Power for each Title they didn't hold. A Silver champion no longer has to go back to the Dirt Pits for the bonus.
+- **Tougher later arenas** to balance the extra Title Power: the first Silver tournament, the whole Imperial Coliseum and the Grand Tournament are each +1 Power.
+- **Tournament bracket on the fight screen:** shows each round's opponent and Power, the current match, and who's up next.
+- **Auto-play** starts promptly when you switch it on after playing a round yourself, and stays on into the next match of a tournament.
+- **Market:** every section folds away. The Stables have their own section, so the Basa are easy to find, and upgrading the Stables brings the second Basa straight away. Decor shows its comfort (+5 Morale target) and Stress relief.
+- **Unequip all gear:** a button in the Storeroom and on the roster returns every fighter's gear at once, so it can be handed out afresh.
+- **Tribute:** after paying early, the top bar reads "Tribute paid" and the week panel says the tribute is already paid for this year.
+- **Prestige hover** in the top bar: your House level, what the next level unlocks and how far away it is, and how Prestige is won and lost.
 
 ## v5 updates (2026-10-28, refreshed into /v5/ with no new tag)
 

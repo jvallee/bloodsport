@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower } from './fight.js';
 import { Refused } from './errors.js';
@@ -93,10 +93,10 @@ export const isChampionOf = (f, tier) => (f.titles ?? []).includes(championTitle
 // so a Silver champion never has to go back down to the Dirt Pits for the bonus (playtest #7). Returns the new Titles.
 export function crownChampion(f, tier) {
   const won = [];
-  for (let t = tier; t >= 1; t--) {
+  for (let t = tier; t >= (TITLES.cascade ? 1 : tier); t--) {
     if (isChampionOf(f, t)) continue;
     f.titles.push(championTitle(t));
-    f.power += 1;
+    f.power += t === tier ? 1 : TITLES.cascadePower;
     won.push(championTitle(t));
   }
   return won;

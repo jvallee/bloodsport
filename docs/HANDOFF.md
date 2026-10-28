@@ -30,23 +30,20 @@ Last updated 2026-10-28. Read this file first, then `CLAUDE.md` (the project rul
   - The user wanted death to be **more** likely.
 - **Address the user as they/them.** Their email is only for git authorship.
 
-## Next task: veterans earn a higher training cap (requested by the user)
+## Tried and rejected: a higher training cap for veterans
 
-**The problem.** The Trainer cap (`trainCap` in `src/ludus.js`; `TRAINER.per = [3, 5, 8, 13, 21]` weeks in `src/data.js`) is house-wide and counts training *weeks* (`f.trained`, checked in `src/run.js` near line 518). Every fighter shares the same ceiling. Market fighters always arrive at level 1, but with bonus natural Power by arena (`marketPower` +0 / +2 / +4 / +6 in `CIRCUITS`). So once both are capped, a fresh Imperial recruit out-powers a Dirt Pits starter who has fought for years. Veterans feel like they fall behind.
+The user asked for each level to add +1 week to that fighter's own Trainer cap. It was built (`e26085f`) and reverted (`f80b949`) because it broke the careful-win gate (limit 45%). Careful career win rates, 300 careers each:
 
-**The user's chosen fix.** Each level a fighter gains raises *that fighter's* personal cap by +1 training week: `cap(f) = trainCap(run) + (f.level − 1)`. Levels come from XP (`XP.levels = [3, 8, 15, 25, 40]`, so levels 1–6, up to +5 weeks).
+| Variant | Careful wins |
+|---|---|
+| No bonus (shipped) | 43% |
+| +1 week per level | 85% |
+| +1 week every 2 levels | 64% |
+| +1 per level, from level 4 | 64% |
+| +1 per level from level 4, Market Power bonus halved | 61% |
+| No bonus, Market Power bonus halved (0/1/2/3) | 37% |
 
-**What to do**
-1. Add a tunable (for example `VETERAN_CAP = { perLevel: 1 }` in `src/data.js`) and a single `trainCapFor(run, f)` helper. Use it everywhere the cap is checked or shown: the training blocker, the auto-switch to Rest, `src/tutorial.js` (the `trainerCap` step), the roster and fighter cards, `src/explain.js`, `src/codex.js`, and `scripts/play-text.js`.
-2. Make it visible. The card and the Power/Speed hover should show something like "Training 9 / 10 (Trainer 8 + 2 from level 3)". The level-up log line should mention the extra training week. Update the Codex entry for the Trainer Room.
-3. The Old Veteran patron (level 3) gets +2 immediately. That is intended.
-4. Tests first: write a test per rule (the cap grows with level, a level-1 fighter is unchanged, the blocker message uses the personal cap, the UI shows the breakdown). Don't weaken existing tests; if a deliberate change breaks one, update the expected value and say so.
-5. Balance: run `npm run check` in the background. All 9 gates must pass. If one fails, sweep `perLevel` (0, 1, and maybe 1 every 2 levels) and choose from the table. Record the numbers in `docs/fight-rules.md` under a new heading.
-6. Bump nothing in `SAVE_VERSION`; old saves already have `level`.
-7. Check it in the browser (section 6, "Browser check"), commit in small steps, push, and confirm the live site.
-8. Ask the user whether to also refresh `/v5/` in place (section 6) rather than doing it unasked.
-9. Add the change to `CHANGELOG.md` under "Unreleased" (replace the placeholder line).
-10. Report back clearly: what changed, the gate numbers before and after, and a couple of fun ideas.
+Every fighter is limited by the cap, so any extra cap adds Power across the whole roster. The user's real complaint (a late prisoner far too strong) was fixed at the source instead: see playtest #7 below. Halving the Market's Power bonus is an untried option for keeping veterans ahead of recruits.
 
 ## 3. Current state (where I stopped)
 
@@ -76,7 +73,7 @@ The v5 content release is live. On top of it, two batches of v5 updates were mad
   - Lower-arena purses halved per tier below your top arena, but a win always pays at least the loss + 2 Gold.
   - Bracket early wins pay 3 × tier Gold.
 - **Playtest #6** (`docs/playtest-llm-6.md`, `docs/playtest-6-changes.md`): every bug fixed and most suggestions applied.
-  - Arena Power is now Bronze 11 / 12 / 14, Silver 17 / 18 / 19, Imperial 24 / 25 / 26, Grand 29.
+  - Arena Power is now Bronze 11 / 12 / 14, Silver 18 / 18 / 19, Imperial 25 / 26 / 27, Grand 30 (raised in playtest #7 to pay for the Championship cascade).
   - Underdog needs a 2-Power gap; Dreaded comes at 2 kills.
   - The Morale chip shows its target and warns "Discontented soon".
   - Skipping to the tournament no longer overtrains anyone.
