@@ -2,7 +2,7 @@
 
 import { STRESS } from './data.js';
 import { currentBout } from './run.js';
-import { trainCapFor } from './ludus.js';
+import { trainCap as trainCapFor } from './ludus.js';
 import { mortalDanger } from './fight.js';
 
 export const INTRO = [
@@ -37,8 +37,8 @@ export const STEPS = [
     body: 'Open the <b>Market</b> and recruit two fighters. Look at <b>Power</b> (the sword: wins rounds) and <b>Speed</b> (the arrow: strikes first). Every fighter has a Kind trait and a Class ability; hover over them to see what they do.' },
   { id: 'jobs', when: (r) => r.roster.length > 0 && r.week === 0, title: 'Give everyone a weekly job',
     body: `Each fighter does one job per week: <b>+1 Power</b> or <b>+3 Speed</b> (costs Gold and adds ${STRESS.train} Stress), <b>Rest</b> (removes Stress) or <b>Medbay</b> (heals injuries). One Trainer Room trains one fighter at a time, and each fighter can train only up to the <b>Trainer cap</b> (3 points at first). Then press <b>End week</b>.` },
-  { id: 'trainerCap', when: (r) => r.roster.some((f) => f.trained >= trainCapFor(r, f)), title: 'The Trainer cap',
-    body: 'A fighter has learned everything this Trainer Room can teach. Upgrade the <b>Trainer Room</b> in the Estate to raise the cap (3 → 5 → 8 → 13 → 21 points per fighter). Each level also raises the weekly fee by 1 Gold per trainee, so plan your Gold. Veterans train longer: every level a fighter gains adds one more training week to <b>their own</b> cap.' },
+  { id: 'trainerCap', when: (r) => r.roster.some((f) => f.trained >= trainCapFor(r)), title: 'The Trainer cap',
+    body: 'A fighter has learned everything this Trainer Room can teach. Upgrade the <b>Trainer Room</b> in the Estate to raise the cap (3 → 5 → 8 → 13 → 21 points per fighter). Each level also raises the weekly fee by 1 Gold per trainee, so plan your Gold.' },
   { id: 'stress', when: (r) => r.roster.some((f) => f.stress >= STRESS.train * 2), title: 'Watch the Stress bar',
     body: `Training stacks Stress. At <b>${STRESS.overtrained}+</b> a fighter is overtrained: they can't train, and in the arena they fight at −1 Power with one ability lost. <b>Train, train, rest</b> keeps them sharp.` },
   { id: 'bout', when: (r) => r.boutPending, title: 'Fight day',

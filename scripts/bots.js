@@ -6,7 +6,7 @@
 import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic, effectiveInjuries, signatureBlocker, useSignature } from '../src/fight.js';
-import { rosterCap, trainCapFor, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
+import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
@@ -106,7 +106,7 @@ function carefulWeek(run, opts) {
     if (f.injuries.length && medbayFree > 0) {
       want = 'medbay';
       medbayFree--;
-    } else if (trainersFree > 0 && f.trained < trainCapFor(run, f) && f.stress + STRESS.train < STRESS.overtrained && f.morale >= MORALE.restless) {
+    } else if (trainersFree > 0 && f.trained < trainCap(run) && f.stress + STRESS.train < STRESS.overtrained && f.morale >= MORALE.restless) {
       // Keep a little faster than the top arena's opponents (evasion and First Strike); the rest goes to Power.
       want = opts.speed !== false && f.speed < topSpeed + 2 ? 'trainSpeed' : 'trainPower';
       trainersFree--;

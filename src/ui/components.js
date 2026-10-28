@@ -51,7 +51,7 @@ function stressBar(f) {
 
 // The Power badge: total, with a hover listing where it comes from. In a fight, `live` is
 // computePower's result for the coming round, and the badge shows what changed (traits, injuries, items...).
-function powerBadge(f, live, training = '') {
+function powerBadge(f, live) {
   const parts = powerParts(f);
   const standing = parts.reduce((n, x) => n + x.value, 0);
   const lines = parts.map((x, i) => (i === 0 ? `${x.label} ${x.value}` : `${signedNum(x.value)} ${x.label}`));
@@ -68,7 +68,6 @@ function powerBadge(f, live, training = '') {
     const d = total - standing;
     if (d) delta = `<span class="pdelta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}${Math.abs(d)}</span>`;
   }
-  if (training) lines.push(training);
   return `<div class="badge power${delta ? ' live' : ''}" title="Power ${total}: decides who wins rounds (each point of difference shifts the odds a lot).&#10;${esc(lines.join('\n')).replace(/\n/g, '&#10;')}">${ICON.power}<b>${total}</b>${delta}</div>`;
 }
 // The signature move: ready from level 3 (used from the fight screen), shown dimmed before that.
@@ -83,7 +82,7 @@ function signatureChip(f, opponent = null) {
 const signedNum = (n) => (n >= 0 ? `+${n}` : `−${-n}`);
 
 // In a fight, `fresh` wounds (the newest injuries) appear only at `freshAt` seconds, when the story reaches the blow.
-export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true, training = '' } = {}) {
+export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true } = {}) {
   const off = (slot) => (combatant?.disabled.includes(slot) ? ' off' : '');
   const trait = f.kindTrait ? TRAITS[f.kindTrait] : null;
   const clsName = f.cls ? CLASSES[f.cls].name + (f.weapon ? ` · ${WEAPONS[f.weapon].name}` : '') : '';
@@ -115,8 +114,8 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
       <div class="card-head">
         <div class="id-row">${portrait(f, compact ? 44 : 52)}<div class="who"><h3><span class="nm">${esc(f.name)}</span></h3><div class="kind">${levelLine} ${KINDS[f.kind].name} · ${clsName}</div></div></div>
         <div class="badges">
-          ${powerBadge(f, live, training)}
-          <div class="badge speed" title="Speed decides who strikes first (Speed + d6) and makes them harder to wound. ${f.speed}${gearSpd(f) ? ` ${gearSpd(f) > 0 ? '+' : '−'} ${Math.abs(gearSpd(f))} from gear` : ''}.${training ? `&#10;${esc(training)}` : ''}">${ICON.speed}<b>${f.speed + gearSpd(f)}</b></div>
+          ${powerBadge(f, live)}
+          <div class="badge speed" title="Speed decides who strikes first (Speed + d6) and makes them harder to wound. ${f.speed}${gearSpd(f) ? ` ${gearSpd(f) > 0 ? '+' : '−'} ${Math.abs(gearSpd(f))} from gear` : ''}.">${ICON.speed}<b>${f.speed + gearSpd(f)}</b></div>
         </div>
       </div>
       <div class="traits">

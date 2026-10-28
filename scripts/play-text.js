@@ -7,7 +7,7 @@
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
 import { STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
-import { fighterWarnings, arenaStakes, roundStats, trainingText } from '../src/explain.js';
+import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk, signatureOf, useSignature, opponentHasSignature } from '../src/fight.js';
@@ -18,7 +18,7 @@ import {
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
-import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCost, oracleLevel, maxLevel, levelInfo } from '../src/ludus.js';
+import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
@@ -127,7 +127,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const lines = [
       `[${f.id}] ${identity(f)} (XP ${f.xp}${nextXp ? `/${nextXp}` : ', max level'})`,
       `     Power ${effectivePower(f)} (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')}) · Speed ${effectiveSpeed(f)}${effectiveSpeed(f) !== f.speed ? ` (${f.speed} + ${effectiveSpeed(f) - f.speed} gear)` : ''} · Stress ${f.stress}${f.stress >= STRESS.overtrained ? ' OVERTRAINED' : ''} · Morale ${f.morale} ${moraleState(f).label} (heading to ${target}: comfort +${moraleTarget(run, f).comfort}, fame expects −${moraleTarget(run, f).expects}${f.morale >= MORALE.restless && target < MORALE.restless ? '; WILL TURN DISCONTENTED and stop training: more comfort needed' : ''}) · Renown ${f.renown}`,
-      `     Job: ${f.job} · ${trainingText(run, f)} · Injuries: ${injuriesText(f)} · Death Gate ${Math.min(gate, deathGateAt(f))}/${deathGateAt(f)}${gate >= deathGateAt(f) ? ' OPEN' : ''}`,
+      `     Job: ${f.job} · trained ${f.trained}/${trainCap(run)} · Injuries: ${injuriesText(f)} · Death Gate ${Math.min(gate, deathGateAt(f))}/${deathGateAt(f)}${gate >= deathGateAt(f) ? ' OPEN' : ''}`,
       ...(f.humor ? [`     Humor: ${HUMORS[f.humor].name} (${HUMORS[f.humor].desc})`] : []),
       ...((f.scars?.length || f.augments?.length) ? [`     Scars: ${(f.scars ?? []).map((sc) => `${SCARS[sc.id].name}${sc.vs ? ` vs ${sc.vs}` : ''}`).join(', ') || 'none'} · Augments: ${(f.augments ?? []).map((k) => AUGMENTS[k].name).join(', ') || 'none'}`] : []),
       `     ${abilities(f)}`,

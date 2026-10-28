@@ -14,7 +14,7 @@ import { Refused } from './errors.js';
 import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabel } from './events.js';
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament } from './calendar.js';
 import {
-  prestigeLevelFor, rosterCap, trainerRooms, trainCapFor, trainCapParts, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
+  prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
   maxLevel, effectAt, build,
 } from './ludus.js';
 
@@ -515,11 +515,7 @@ const isTraining = (job) => job === 'trainPower' || job === 'trainSpeed';
 
 // Why a fighter can't train this week (or null). Gold covers every trainee's fee, this one included.
 export function trainBlocker(run, f, { checkGold = true } = {}) {
-  const cap = trainCapFor(run, f);
-  if (f.trained >= cap) {
-    const parts = trainCapParts(run, f);
-    return `Trainer cap reached (${cap} weeks${parts ? `: ${parts}` : ''}). Upgrade a Trainer Room, or level up for another week.`;
-  }
+  if (f.trained >= trainCap(run)) return `Trainer cap reached (${trainCap(run)} points). Upgrade a Trainer Room.`;
   if (f.morale < MORALE.restless) return `Discontented (Morale ${f.morale}): won't train. Raise their comfort.`;
   if (f.stress >= STRESS.overtrained) return `Stress ${f.stress}: must rest first.`;
   if (checkGold) {
@@ -868,14 +864,12 @@ function perkOffer(run, f) {
   return offer;
 }
 
-export function gainXp(run, f, amount) {
+function gainXp(run, f, amount) {
   f.xp += amount;
   while (f.level <= XP.levels.length && f.xp >= XP.levels[f.level - 1]) {
-    const capBefore = trainCapFor(run, f);
     f.level += 1;
     f.pendingPerks.push(perkOffer(run, f));
-    const extra = trainCapFor(run, f) - capBefore;
-    log(run, `${f.name} reaches level ${f.level}! Choose a perk.${extra ? ` +${extra} training week${extra > 1 ? 's' : ''} (cap ${trainCapFor(run, f)}).` : ''}`, 'event');
+    log(run, `${f.name} reaches level ${f.level}! Choose a perk.`, 'event');
   }
 }
 

@@ -1,6 +1,6 @@
 // The Ludus estate: room plots, buildings and what they provide. Pure.
 
-import { BUILDINGS, PRESTIGE_LEVELS, VETERAN_CAP } from './data.js';
+import { BUILDINGS, PRESTIGE_LEVELS } from './data.js';
 import { Refused } from './errors.js';
 
 export const levelInfo = (level) => PRESTIGE_LEVELS[level - 1];
@@ -20,14 +20,6 @@ export const effectAt = (type, level) => (level ? BUILDINGS[type].per[level - 1]
 export const rosterCap = (run) => Math.min(ofType(run, 'quarters').reduce((s, b) => s + effectAt('quarters', b.level), 0), levelInfo(run.prestigeLevel).maxFighters);
 export const trainerRooms = (run) => ofType(run, 'trainer').length;
 export const trainCap = (run) => effectAt('trainer', maxLevel(run, 'trainer'));
-// A fighter's own cap: the house Trainer cap plus VETERAN_CAP.perLevel weeks per level above 1.
-export const veteranCapBonus = (f) => Math.floor(Math.max(0, (f.level ?? 1) - 1) * VETERAN_CAP.perLevel);
-export const trainCapFor = (run, f) => trainCap(run) + veteranCapBonus(f);
-// "Trainer 3 + 2 from level 3" for veterans, or null when the house cap is the whole story.
-export function trainCapParts(run, f) {
-  const bonus = veteranCapBonus(f);
-  return bonus ? `Trainer ${trainCap(run)} + ${bonus} from level ${f.level}` : null;
-}
 export const trainCost = (run) => Math.max(1, maxLevel(run, 'trainer'));
 export const medbaySlots = (run) => ofType(run, 'medbay').reduce((s, b) => s + effectAt('medbay', b.level), 0);
 export const healRate = (run) => (maxLevel(run, 'medbay') >= 2 ? 2 : 1);

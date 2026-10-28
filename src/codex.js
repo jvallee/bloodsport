@@ -97,7 +97,7 @@ function ruleText(cat, id) {
   if (cat === 'gear') return `${gearText(GEAR[id])} ${GEAR[id].slot === 'weapon' ? 'Weapon' : 'Armor'}, ${GEAR[id].price} Gold.`;
   if (cat === 'building') {
     const b = BUILDINGS[id];
-    return `${b.effect(b.per[0])} at level 1, up to: ${b.effect(b.per.at(-1))}. Build cost ${b.cost[0]} Gold.${b.unique ? ' One per estate.' : ''}${b.note?.() ? ` ${b.note()}` : ''}`;
+    return `${b.effect(b.per[0])} at level 1, up to: ${b.effect(b.per.at(-1))}. Build cost ${b.cost[0]} Gold.${b.unique ? ' One per estate.' : ''}`;
   }
   return '';
 }
