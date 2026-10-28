@@ -4,7 +4,7 @@
 import { playRound, throwTowel, useSignature } from './fight.js';
 import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom,
-  assignDecor, removeDecor, buyGear, equip, unequip, startMatch, finishMatch, skipBout, forfeitBout,
+  assignDecor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
   recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy,
 } from './run.js';
 import { upgrade } from './ludus.js';
@@ -37,6 +37,7 @@ export const GAME_ACTIONS = {
   'sell-gear': ({ run }, d) => { sellGear(run, Number(d.index)); },
   equip: ({ run }, d) => { equip(run, d.id, Number(d.index)); },
   unequip: ({ run }, d) => { unequip(run, d.id, d.slot); },
+  'unequip-all': ({ run }) => { unequipAll(run); },
   perk: ({ run }, d) => { choosePerk(run, d.id, d.perk); },
   surgeon: ({ run }, d) => { surgeon(run, d.id, Number(d.index)); },
   build: ({ run }, d) => { buildRoom(run, d.type); },

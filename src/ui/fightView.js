@@ -112,7 +112,7 @@ function report(s) {
     s.died ? '' : row('Morale', plus(s.morale), tone(s.morale)),
     s.injuries?.length ? row('New injuries', `${esc(s.injuries.join(', '))}: heal them in the Medbay`, 'bad') : '',
     s.loot ? row('Loot', `${esc(GEAR[s.loot].name)} → storeroom`, 'good') : '',
-    s.title ? row('Title', `🏆 ${esc(s.title)}${s.title === 'Master of the Games' ? '' : ' (+1 Power)'}`, 'good') : '',
+    s.title ? row(s.titlePower > 1 ? 'Titles' : 'Title', `🏆 ${esc(s.title)}${s.title === 'Master of the Games' ? '' : ` (+${s.titlePower ?? 1} Power)`}`, 'good') : '',
     s.champion ? row('The crowd', 'boos a champion back in the pits', 'bad') : s.crushing ? row('The crowd', 'jeers the mismatch', 'bad') : '',
     s.bloodFaith ? row('Blood Faith', 'buy-in refunded', 'good') : '',
     s.bribed ? row('Crowd Bribe', 'the crowd forgave the capitulation', 'good') : '',

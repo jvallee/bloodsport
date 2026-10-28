@@ -147,8 +147,9 @@ test('the top bar always counts down to tribute, and the week panel can pay it e
   assert.match(topbar(run), new RegExp(`class="stat due"[^>]*>⚖ <b>${TRIBUTE.perYear}</b> <small>in 30 wks</small>`));
   assert.match(ludusTab(run, fakeOdds), /data-action="pay-tribute"\s*>Pay now/);
   payTribute(run);
-  assert.match(topbar(run), /⚖ <b>Paid<\/b>/);
+  assert.match(topbar(run), /⚖ <b>Tribute paid<\/b>/);
   assert.doesNotMatch(ludusTab(run, fakeOdds), /data-action="pay-tribute"/);
+  assert.match(ludusTab(run, fakeOdds), /Tribute already paid for this year/);
 });
 
 test('the bug report box: a crash shows the error and a reload; a manual report can be closed', () => {

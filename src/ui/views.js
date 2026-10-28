@@ -6,7 +6,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFesti
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -29,6 +29,17 @@ const JOB_HELP = {
 
 // ---------- Top bar ----------
 
+// The Prestige hover: where you stand, what the next House level brings, and how Prestige moves.
+function prestigeTip(run) {
+  const lv = PRESTIGE_LEVELS[run.prestigeLevel - 1];
+  const next = PRESTIGE_LEVELS[run.prestigeLevel];
+  return [
+    `Prestige ${run.prestige}. House level ${run.prestigeLevel} (kept forever): ${lv.plots} room plots, up to ${lv.maxFighters} fighters.`,
+    next ? `Level ${next.level} at ${next.at} Prestige (${Math.max(0, next.at - run.prestige)} more): ${next.plots} plots, up to ${next.maxFighters} fighters, and new buildings.` : 'Your house is at the highest level.',
+    'Won by beating your top arena\'s fights (lower arenas pay less). Every bout stakes a buy-in: you get it back with a win and lose it with a loss or capitulation.',
+  ].join('\n');
+}
+
 export function topbar(run, tab, codexNew = 0, sound = true) {
   const next = PRESTIGE_LEVELS[run.prestigeLevel];
   const progress = next ? Math.min(100, (run.prestige / next.at) * 100) : 100;
@@ -46,7 +57,7 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
     <header class="topbar">
       <h1>BLOODSPORT</h1>
       <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
-      <div class="stat prestige" title="Prestige: staked as tournament buy-ins. Reaching thresholds raises your House level (kept forever).">${ICON.prestige}<b>${run.prestige}</b>
+      <div class="stat prestige" title="${esc(prestigeTip(run))}">${ICON.prestige}<b>${run.prestige}</b>
         <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${next.at}</small>` : ''}</span></div>
       <div class="favor${low ? ' low' : ''}" title="Imperial Favor: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
         <span>Favor</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
@@ -81,7 +92,7 @@ function festivalNote(run) {
 function tributeStat(run) {
   const due = tributeDue(run);
   const weeks = weeksUntilWinter(run.week);
-  if (tributePaid(run)) return `<div class="stat due paid" title="This year's tribute is paid.">⚖ <b>Paid</b></div>`;
+  if (tributePaid(run)) return `<div class="stat due paid" title="This year's tribute is already paid. The next one is due next winter.">⚖ <b>Tribute paid</b></div>`;
   const short = run.gold < due && weeks <= 4;
   return `<div class="stat due${short ? ' short' : ''}" title="The Emperor's tribute: ${due} Gold, collected at the start of winter. You can pay early from the week panel. If you can't pay, he takes all your Gold and ${-FAVOR.unpaidTribute} Favor (it only ends the career if Favor hits 0).">⚖ <b>${due}</b> <small>in ${weeks} wk${weeks === 1 ? '' : 's'}</small></div>`;
 }
@@ -156,7 +167,7 @@ export function summaryBanner(s) {
   if (s.xp && !s.died) bits.push(`${plus(s.xp)} XP`);
   if (s.renown) bits.push(`${plus(s.renown)} Renown`);
   if (s.favor) bits.push(`${plus(s.favor)} Favor`);
-  if (s.title) bits.push(`🏆 ${s.fighter} earns the title "${s.title}"${s.title === 'Master of the Games' ? '' : ' (+1 Power)'}`);
+  if (s.title) bits.push(`🏆 ${s.fighter} earns ${s.titlePower > 1 ? 'the titles' : 'the title'} "${s.title}"${s.title === 'Master of the Games' ? '' : ` (+${s.titlePower ?? 1} Power)`}`);
   if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favor, Renown, XP and Morale)`);
   if (s.kill) bits.push(`💀 A kill${s.mark ? `: ${s.fighter} earns the mark "${s.mark}"` : ''}`);
   if (s.next) bits.push(`🏟 On to the ${s.next}`);
@@ -234,7 +245,7 @@ function weekPanel(run) {
       </div>
       ${blocked && !run.boutPending ? `<div class="why-not">${esc(blocked)}</div>` : ''}
       <p class="sub">Each fighter does their job once per week. Jobs stay set until you change them.
-        ${tributePaid(run) ? 'This year\'s tribute is paid.' : `Tribute of <b>${tributeDue(run)} Gold</b> is due in ${toTribute} week${toTribute === 1 ? '' : 's'}. ${buttonWhy('Pay now', 'pay-tribute', {}, payTributeBlocker(run), 'btn small')}`}</p>
+        ${tributePaid(run) ? '<span class="good">✔ Tribute already paid for this year.</span> The next one is due next winter.' : `Tribute of <b>${tributeDue(run)} Gold</b> is due in ${toTribute} week${toTribute === 1 ? '' : 's'}. ${buttonWhy('Pay now', 'pay-tribute', {}, payTributeBlocker(run), 'btn small')}`}</p>
       ${standingsTable(run)}
       <h3 class="mini">House log</h3>
       <ul class="log">${recent}</ul>
@@ -349,6 +360,7 @@ function rosterPanel(run) {
   return `
     <section class="panel">
       <h2>Your gladiators <small>${run.roster.length}/${rosterCap(run)}</small></h2>
+      ${unequipAllBlocker(run) === null ? `<div class="row">${button('Unequip all gear', 'unequip-all', {}, null, 'btn small')}<small class="sub">Puts every fighter's gear back in the storeroom, ready to hand out afresh.</small></div>` : ''}
       <div class="cards">${cards || '<div class="empty">No gladiators yet. Recruit some in the <button class="link" data-action="tab" data-tab="market">Market</button>.</div>'}</div>
       ${run.fallen.length ? `<p class="sub fallen">⚰ Fallen: ${run.fallen.map((f) => esc(f.name)).join(', ')}</p>` : ''}
     </section>`;
@@ -506,6 +518,7 @@ export function marketTab(run) {
         <section class="panel"><h2>The Storeroom</h2>
           <p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room, decor &amp; gear" panel. A fallen fighter's things come back here.</p>
           <div class="label">Gear <small>(sells for half price)</small></div><div>${stored}</div>
+          <div class="row">${button('Unequip all fighters', 'unequip-all', {}, unequipAllBlocker(run), 'btn small')}<small class="sub">Returns every fighter's weapon and armor here, to hand out afresh.</small></div>
           <div class="label">Decor</div><div class="chips">${storedDecor}</div>
           <div class="label">Fight items</div><div class="chips">${Object.entries(run.inventory.items ?? {}).filter(([, n]) => n).map(([k, n]) => `<span class="chip" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">None. The Apothecary sells them.</small>'}</div></section>
         <section class="panel"><h2>Apothecary</h2><p class="sub">Single-use items for a fight. Use them before Round 1 or between rounds: one of each kind per fight.</p>${Object.entries(CONSUMABLES).map(([k, c]) => `<div class="shop-row"><div><b>${esc(c.name)}</b> · ${c.price} Gold <small>(${run.inventory.items?.[k] ?? 0} in storeroom)</small><br><small>${esc(c.desc)}</small></div>
