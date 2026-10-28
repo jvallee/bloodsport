@@ -281,7 +281,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
   - Injuries carry over, and the week can't end mid-bracket. Brackets are drawn when the tournament week begins.
 - **Fight items:** one of each kind per fight; different items can be combined in the same round.
 - **Medbay:** you choose which injury it treats first.
-- **Year-end purse:** at the start of winter, before tribute, the Emperor pays the top two houses in the Glory standings 8 and 4 Gold × the year. It gives winter some income and makes the standings a race with a prize.
+- **Year-end purse:** at the start of winter, before tribute, the Emperor pays the top two houses in the Glory standings 8 and 4 Gold × the year. It gives winter some income and makes the standings a race with a prize. (Swept: 30 / 20 / 10 took careful careers far too high.) With brackets, the purse and lower-arena Titles unchanged: careful 35%, reckless deaths 2.90, first Boss 67%, Grand +19 points harder; all gates pass.
 - **Firebug's Fire Braziers and cyborg augments** count in the card's Power, as they always did in fights.
 
 ### Saves
