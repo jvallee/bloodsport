@@ -116,6 +116,57 @@ export const EVENTS = [
       { label: 'Full strength', effects: { xp: { to: 'both', n: 3 }, chance: { p: 0.7, win: {}, lose: { injury: { to: 'g', tag: 'fleshWound' } } } } },
     ],
   },
+  {
+    id: 'oldWound', who: 'any', title: 'An old wound aches',
+    text: ({ f }) => `${f} limps out to training, favouring an old wound. They swear it's nothing.`,
+    choices: [
+      { label: 'Rest them this week', effects: { stress: { to: 'f', n: -20 } } },
+      { label: 'Push through it', effects: { xp: { to: 'f', n: 2 }, chance: { p: 0.7, win: {}, lose: { injury: { to: 'f', tag: 'fleshWound' } } } } },
+    ],
+  },
+  {
+    id: 'poet', who: 'famous', title: 'A poet at the gate',
+    text: ({ f }) => `A street poet wants to write verses about ${f}. For a few coins, the whole city will be singing them.`,
+    choices: [
+      { label: 'Send him away', effects: {} },
+      { label: 'Pay the poet (4 Gold)', cost: 4, effects: { gold: -4, renown: { to: 'f', n: 3 } } },
+    ],
+    when: (run) => run.roster.some((x) => x.renown >= 2),
+  },
+  {
+    id: 'insult', who: 'any', title: 'An insult in the forum',
+    text: ({ f }) => `A rival house's champion mocked ${f} in the forum, in front of half the city. ${f} wants satisfaction.`,
+    choices: [
+      { label: 'Forbid the duel', effects: { morale: { to: 'f', n: -8 } } },
+      { label: 'Let them settle it', effects: { chance: { p: 0.55, win: { renown: { to: 'f', n: 2 }, gold: 5 }, lose: { injury: { to: 'f', tag: 'concussed' } } } } },
+    ],
+  },
+  {
+    id: 'healer', who: 'any', title: 'A wandering healer',
+    text: ({ f }) => `A healer from the eastern provinces offers to treat ${f}'s wounds with herbs and hot iron.`,
+    choices: [
+      { label: 'No thank you', effects: {} },
+      { label: 'Pay the healer (5 Gold)', cost: 5, effects: { gold: -5, heal: { to: 'f' } } },
+    ],
+    when: (run) => run.roster.some((x) => x.injuries.length),
+    target: (run) => run.roster.filter((x) => x.injuries.length),
+  },
+  {
+    id: 'onlookers', who: 'any', title: 'Crowds at the training yard',
+    text: () => 'A crowd has gathered at the gate to watch your gladiators train. Some are offering coins for a look.',
+    choices: [
+      { label: 'Keep the gates shut', effects: {} },
+      { label: 'Open the gates', effects: { gold: 3, stress: { to: 'all', n: 5 }, morale: { to: 'all', n: 3 } } },
+    ],
+  },
+  {
+    id: 'envoy', who: 'any', title: 'An imperial envoy',
+    text: () => "An envoy of the Emperor arrives unannounced to inspect your house. He looks bored, and expensive.",
+    choices: [
+      { label: 'Show him your discipline', effects: { favor: 2, morale: { to: 'all', n: -5 } } },
+      { label: 'Offer him a gift (6 Gold)', cost: 6, effects: { gold: -6, favor: 4 } },
+    ],
+  },
 ];
 
 export const EVENT_BY_ID = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
@@ -126,7 +177,7 @@ export const choiceLabel = (choice, names) => choice.label.replace('${f}', names
 // A choice's stakes in plain words, e.g. "−2 Gold; them: +15 Morale for 4 weeks, −10 Stress".
 const WHO = { f: 'them', g: 'the other', both: 'both', all: 'everyone' };
 const sign = (n) => (n > 0 ? `+${n}` : `−${-n}`);
-const INJURY_NAMES = { fleshWound: 'Flesh Wound', distracted: 'Distracted' };
+const INJURY_NAMES = { fleshWound: 'Flesh Wound', distracted: 'Distracted', concussed: 'Concussed' };
 export function stakesText(eff, sep = '; ') {
   const house = [];
   if (eff.gold) house.push(`${sign(eff.gold)} Gold`);
@@ -139,6 +190,7 @@ export function stakesText(eff, sep = '; ') {
   if (eff.renown) add(eff.renown.to, `${sign(eff.renown.n)} Renown`);
   if (eff.xp) add(eff.xp.to, `${sign(eff.xp.n)} XP`);
   if (eff.injury) add(eff.injury.to, INJURY_NAMES[eff.injury.tag] ?? eff.injury.tag);
+  if (eff.heal) add(eff.heal.to, 'their newest wound healed');
   const parts = [house.join(', '), ...Object.entries(people).map(([to, list]) => `${WHO[to]}: ${list.join(', ')}`)].filter(Boolean);
   if (eff.chance) {
     const win = stakesText(eff.chance.win, ', ');

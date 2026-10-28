@@ -109,3 +109,15 @@ test('skip to tournament stops at an event', () => {
   }
   assert.fail('no event in 12 months');
 });
+
+test('the healer closes a fighter\'s newest wound; its stakes say so', async () => {
+  const { stakesText } = await import('../src/events.js');
+  const run = createRun(4);
+  const f = recruit(run, run.market[0].id);
+  f.injuries = [{ tag: 'maimed', weight: 1, weeksLeft: 3 }, { tag: 'fleshWound', weight: 1, weeksLeft: 1 }];
+  run.event = { id: 'healer', f: f.id };
+  run.gold = 10;
+  chooseEvent(run, 1);
+  assert.deepEqual(f.injuries.map((i) => i.tag), ['maimed']);
+  assert.match(stakesText(EVENT_BY_ID.healer.choices[1].effects), /newest wound healed/);
+});

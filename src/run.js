@@ -685,7 +685,7 @@ function rollEvent(run) {
   const options = EVENTS.filter((e) => !recent.includes(e.id) && (!e.when || e.when(run)) && (e.who !== 'pair' || run.roster.length >= 2));
   if (!options.length) return;
   const e = pick(r, options);
-  run.event = { id: e.id, ...eventTargets(run, e.who) };
+  run.event = { id: e.id, ...(e.target ? { f: pick(run.rng.events, e.target(run)).id } : eventTargets(run, e.who)) };
   run.recentEvents = [...recent, e.id].slice(-EVENT_MEMORY);
 }
 
@@ -724,6 +724,12 @@ function applyEventEffects(run, eff, ev, out) {
       const inj = INJURY_BY_TAG[eff.injury.tag];
       f.injuries.push({ tag: inj.tag, weight: inj.weight, weeksLeft: HEAL_WEEKS[inj.tag] });
       out.push(`${f.name} is ${inj.name}`);
+    }
+  }
+  if (eff.heal) {
+    for (const f of targets(eff.heal.to)) {
+      const inj = f.injuries.pop();
+      if (inj) out.push(`${f.name}'s ${INJURY_BY_TAG[inj.tag].name} is healed`);
     }
   }
   if (eff.chance) {
