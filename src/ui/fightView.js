@@ -129,7 +129,7 @@ function tacticPicker(m) {
     <div class="sub">${read} <span class="counters">🗡 Press beats ↯ Feint · ↯ Feint beats 🛡 Guard · 🛡 Guard beats 🗡 Press (+10% win chance)</span></div></div>`;
 }
 
-function controls(m, ui, bout, items = {}) {
+function controls(m, ui, bout, items = {}, nextBlocker = null) {
   if (m.over) {
     const won = m.result.winner === 'A';
     const advice = adviceFor(m);
@@ -139,8 +139,9 @@ function controls(m, ui, bout, items = {}) {
       <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${DICE_TIME + 2.1}s"` : ''}>${report(m.summary)}</div>
       ${advice ? `<div class="advice">💡 ${esc(advice)}</div>` : ''}
       ${whyTable(m)}
-      ${m.summary?.next ? `<div class="row"><button class="btn primary big" data-action="fight" data-id="${m.a.f.id}" data-tier="${bout.tier}">On to the ${m.summary.next}</button>
-        <button class="btn danger big" data-action="withdraw" data-tier="${bout.tier}" title="Leave the tournament now: it counts as capitulating, and your fighter is safe">Withdraw</button></div>` : ''}
+      ${m.summary?.next ? `<div class="row"><button class="btn primary big" data-action="fight" data-id="${m.a.f.id}" data-tier="${bout.tier}" ${nextBlocker ? `disabled title="${esc(nextBlocker)}"` : ''}>On to the ${m.summary.next}</button>
+        <button class="btn danger big" data-action="withdraw" data-tier="${bout.tier}" title="Leave the tournament now: it counts as capitulating, and your fighter is safe">Withdraw</button></div>
+        ${nextBlocker ? `<div class="why-not">${esc(nextBlocker)} ${/perk/.test(nextBlocker) ? '(on their card, back in the Ludus)' : ''}</div>` : ''}` : ''}
       <button class="btn ${m.summary?.next ? '' : 'primary '}big" data-action="leave-fight">${m.summary?.next ? 'Back to the Ludus (fight on later this week)' : 'Return to the Ludus'}</button>`;
   }
   const owned = Object.entries(items).filter(([, n]) => n > 0);
@@ -166,7 +167,8 @@ function controls(m, ui, bout, items = {}) {
     </div>`;
 }
 
-export function fightView(m, ui, bout, tutorial = '', items = {}) {
+// `nextBlocker`: why the bracket's next match can't start yet (e.g. a perk to choose), or null.
+export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = null) {
   const last = m.rounds.at(-1);
   const delta = last ? last.delta : 0;
   const pills = last ? tagPills(last) : [];
@@ -197,6 +199,6 @@ export function fightView(m, ui, bout, tutorial = '', items = {}) {
         <div><div class="side-label b">${m.house ? `Opponent · <span style="color:${esc(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div>${fighterCard(m.b.f, { combatant: m.b, compact: true, stress: false })}${statLine(stats, 'B')}</div>
       </div>
       ${tutorial}
-      <div class="controls${hold(DICE_TIME + 1.4)}">${controls(m, ui, bout, items)}</div>
+      <div class="controls${hold(DICE_TIME + 1.4)}">${controls(m, ui, bout, items, nextBlocker)}</div>
     </div>`;
 }

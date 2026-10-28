@@ -274,6 +274,15 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - Sound is synthesized (Web Audio), on by default with a mute toggle in the top bar.
 - Save files hold the career, the Codex and the Legacy.
 
+### Playtester requests (after v3.0)
+- **Three-match tournaments:** from the Silver Coliseum up, and in the Grand Tournament, a tournament is a bracket for one fighter: a Quarter-final (opponent −4 Power), a Semi-final (−3), then the Final against the arena's listed opponent.
+  - The buy-in is paid once. Each early win pays 2 Gold × tier, XP, +1 Renown and Glory. The prize comes with the Final.
+  - Losing any match loses the tournament (Favor and rivals as for the Final). Withdrawing between matches counts as capitulating.
+  - Injuries carry over, and the week can't end mid-bracket. Brackets are drawn when the tournament week begins.
+- **Fight items:** one of each kind per fight; different items can be combined in the same round.
+- **Medbay:** you choose which injury it treats first.
+- **Firebug's Fire Braziers and cyborg augments** count in the card's Power, as they always did in fights.
+
 ### Saves
 - Save format version 3. Version-2 careers are upgraded on load: Favor = 50 − 15 per Strike, the old circuit becomes the top arena, and earlier arenas count as conquered. The Codex is stored separately and is never touched by career saves.
 
