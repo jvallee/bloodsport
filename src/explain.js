@@ -2,12 +2,12 @@
 
 import { ECONOMY, FAVOR, MORALE, STRESS } from './data.js';
 import { computePower, computeSpeed } from './fight.js';
-import { boutFor, matchOptions, fightPowers, isChampionOf, bossLossFavor, GRAND_TIER, houseOf } from './run.js';
+import { boutFor, matchOptions, fightPowers, isChampionOf, bossLossFavor, GRAND_TIER, houseOf, opponentFor } from './run.js';
 
 // Warnings about sending this fighter to this arena. Each has text and a tone ('warn' | 'bad' | 'info').
 export function fighterWarnings(run, f, tier) {
   const bout = boutFor(run, tier);
-  const opp = run.arenas[tier].opponent;
+  const opp = opponentFor(run, tier);
   const out = [];
   if (f.stress >= STRESS.overtrained) out.push({ tone: 'bad', text: `Overtrained (Stress ${f.stress}): −1 Power and one ability lost` });
   if (f.injuries.length) out.push({ tone: 'warn', text: `${f.injuries.length} injur${f.injuries.length === 1 ? 'y' : 'ies'}` });

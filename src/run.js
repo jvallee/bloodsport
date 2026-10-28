@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower } from './fight.js';
 import { Refused } from './errors.js';
@@ -127,7 +127,41 @@ export function upcomingBouts(run) {
   }
   return out;
 }
-export const opponentFor = (run, tier = run.topTier) => run.arenas[tier].opponent;
+// ---------- Brackets: three matches per tournament from the Silver Coliseum up ----------
+
+export const hasBracket = (tier) => tier >= BRACKET.fromTier;
+
+// Draw every open arena's bracket for this tournament week.
+export function drawBrackets(run) {
+  for (const t of Object.keys(run.bouts ?? {})) bracketFor(run, Number(t));
+}
+
+// The bracket for an arena this tournament week: { foes: [quarter, semi], round, fighterId, buyIn }.
+function bracketFor(run, tier) {
+  if (!hasBracket(tier) || !run.bouts?.[tier]) return null;
+  run.brackets ??= {};
+  if (!run.brackets[tier]) {
+    const bout = boutFor(run, tier);
+    const foes = BRACKET.power.slice(0, 2).map((d) => {
+      const f = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower + d, decorLevel: bout.oppDecor, takenNames: takenNames(run, run.brackets[tier]?.foes ?? []), classes: run.setup?.classes });
+      f.speed = opponentSpeed(run, { ...bout, boss: false });
+      seasonOpponent(run, f, { ...bout, boss: false });
+      f.house = houseForArena(run, tier).id;
+      return f;
+    });
+    run.brackets[tier] = { foes, round: 0, fighterId: null, buyIn: 0 };
+  }
+  return run.brackets[tier];
+}
+export const bracketOf = (run, tier) => (hasBracket(tier) && run.bouts?.[tier] ? run.brackets?.[tier] ?? null : null);
+export const bracketRound = (run, tier) => BRACKET.rounds[bracketOf(run, tier)?.round ?? 0];
+
+// Who you fight next in this arena: a bracket's Quarter- or Semi-final opponent, else the arena's.
+// Read-only (safe to call while rendering): brackets are drawn when the tournament week begins.
+export function opponentFor(run, tier = run.topTier) {
+  const b = run.bouts?.[tier] === 'open' ? bracketOf(run, tier) : null;
+  return b && b.round < 2 ? b.foes[b.round] : run.arenas[tier].opponent;
+}
 
 // Opponents get faster as you climb (+1 Speed per tier, +1 more for Bosses), so Speed stays worth training.
 export const opponentSpeed = (run, bout = currentBout(run)) => 3 + Math.min(bout.tier, CIRCUITS.length) - 1 + (bout.boss ? 1 : 0);
@@ -177,7 +211,7 @@ function restartCircuit(run, tier) {
 // Scouted: +1 opponent Power per consecutive month this fighter has fought in your top arena (max +3).
 // Round-1 Power for this fighter and the arena's opponent, with everything that applies before tactics.
 export function fightPowers(run, f, tier = run.topTier) {
-  const m = createMatch({ a: f, b: run.arenas[tier].opponent, rng: createRng(0), ...matchOptions(run, f, tier) });
+  const m = createMatch({ a: f, b: opponentFor(run, tier), rng: createRng(0), ...matchOptions(run, f, tier) });
   return { mine: computePower(m.a, m.b, 1).total, theirs: computePower(m.b, m.a, 1).total };
 }
 
@@ -188,8 +222,8 @@ export function matchOptions(run, f, tier = run.topTier) {
     overtrained: f.stress >= STRESS.overtrained,
     scouted: tier === run.topTier ? Math.min(ECONOMY.scoutedMax, f.topStreak ?? 0) : 0,
     challenger: tier === run.topTier && tier >= ECONOMY.challengerFromTier ? Math.min(ECONOMY.challengerMax, Math.floor((f.renown ?? 0) / ECONOMY.challengerRenown)) : 0,
-    grudge: houseOf(run, run.arenas[tier]?.opponent)?.feud > 0 ? 1 : 0,
-    vengeance: houseOf(run, run.arenas[tier]?.opponent)?.vengeance > 0,
+    grudge: run.arenas[tier] && houseOf(run, opponentFor(run, tier))?.feud > 0 ? 1 : 0,
+    vengeance: Boolean(run.arenas[tier]) && houseOf(run, opponentFor(run, tier))?.vengeance > 0,
   };
 }
 
@@ -507,6 +541,8 @@ export function advanceBlocker(run) {
   const idle = idleBlocker(run);
   if (idle) return idle;
   if (run.event) return `Decide this week's event first: "${EVENT_BY_ID[run.event.id].title}".`;
+  const midBracket = Object.entries(run.brackets ?? {}).find(([t, b]) => b.fighterId && b.round > 0 && run.bouts?.[t] === 'open');
+  if (midBracket) return `${findFighter(run, midBracket[1].fighterId)?.name ?? 'Your fighter'} is through to the ${BRACKET.rounds[midBracket[1].round]} in ${arenaName(Number(midBracket[0]))}: fight on, or withdraw.`;
   if (run.boutPending) return `Tournament week: send a fighter to ${arenaName(run.topTier)}, or skip the bout first.`;
   if (run.roster.some((f) => f.pendingPerks.length)) return 'A fighter levelled up: choose their perk first.';
   return null;
@@ -575,6 +611,7 @@ export function advanceWeek(run) {
   // Scouting fades for anyone who sat out the top arena this tournament week.
   if (run.bouts) for (const f of run.roster) if (f.foughtTopWeek !== run.week) f.topStreak = 0;
   run.bouts = null;
+  run.brackets = {};
   run.week += 1;
   const d = dateOf(run.week);
   if (isMonthStart(run.week)) {
@@ -589,6 +626,7 @@ export function advanceWeek(run) {
   }
   if (isTournamentWeek(run.week)) {
     run.bouts = Object.fromEntries(unlockedTiers(run).map((t) => [t, 'open']));
+    drawBrackets(run); // now, so rendering never rolls dice
     run.boutPending = true;
     log(run, `Tournament week in ${unlockedTiers(run).length > 1 ? `${unlockedTiers(run).length} arenas` : arenaName(run.topTier)}.`, 'event');
   }
@@ -1001,10 +1039,13 @@ export function fightBlocker(run, id, tier = run.topTier) {
   if (run.bouts[tier] !== 'open') return run.bouts[tier] ? 'This arena is settled for the week.' : 'That arena is not open to you.';
   const f = findFighter(run, id);
   if (!f) return 'Choose a fighter from your roster.';
-  if (foughtThisWeek(run).includes(id)) return `${f.name} already fought this week.`;
+  const bracket = bracketOf(run, tier);
+  const midBracket = bracket?.fighterId && bracket.round > 0;
+  if (midBracket && bracket.fighterId !== id) return `${findFighter(run, bracket.fighterId)?.name ?? 'Another fighter'} is in the bracket here.`;
+  if (!midBracket && foughtThisWeek(run).includes(id)) return `${f.name} already fought this week.`;
   if (f.pendingPerks.length) return `${f.name} levelled up: choose a perk first.`;
   if (f.morale < MORALE.mutinous) return `${f.name} is mutinous and refuses to fight.`;
-  if (run.prestige < boutFor(run, tier).buyIn) return `Needs ${boutFor(run, tier).buyIn} Prestige for the buy-in (you have ${run.prestige}).`;
+  if (!midBracket && run.prestige < boutFor(run, tier).buyIn) return `Needs ${boutFor(run, tier).buyIn} Prestige for the buy-in (you have ${run.prestige}).`;
   return null;
 }
 
@@ -1013,9 +1054,13 @@ export function startMatch(run, id, tier = run.topTier) {
   assertOk(fightBlocker(run, id, tier));
   const bout = boutFor(run, tier);
   const fighter = findFighter(run, id);
-  run.prestige -= bout.buyIn;
+  const bracket = bracketFor(run, tier); // normally drawn at the start of the week; created here for older saves
+  // A bracket's buy-in is paid once, before the Quarter-final.
+  const buyIn = bracket?.round > 0 ? bracket.buyIn : bout.buyIn;
+  if (!(bracket?.round > 0)) run.prestige -= buyIn;
+  if (bracket) Object.assign(bracket, { fighterId: id, buyIn });
   run.inMatch = true;
-  run.matchInfo = { fighterId: id, tier, buyIn: bout.buyIn }; // what was paid (the Dirt Pits may take less)
+  run.matchInfo = { fighterId: id, tier, buyIn }; // what was paid (the Dirt Pits may take less)
   return createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, ...matchOptions(run, fighter, tier) });
 }
 
@@ -1115,13 +1160,16 @@ export function finishMatch(run, match) {
   const bout = { ...boutFor(run, tier), buyIn: run.matchInfo.buyIn ?? boutFor(run, tier).buyIn };
   const arena = run.arenas[tier];
   const fighter = findFighter(run, match.a.f.id);
-  const opp = arena.opponent;
+  const bracket = bracketOf(run, tier);
+  const opp = bracket && bracket.round < 2 ? bracket.foes[bracket.round] : arena.opponent;
   const newInjuries = match.a.f.injuries.filter((i) => i.weeksLeft === undefined).map((i) => INJURY_BY_TAG[i.tag].name);
   fighter.injuries = match.a.f.injuries.map((i) => ({ ...i, weeksLeft: i.weeksLeft ?? HEAL_WEEKS[i.tag] }));
   fighter.alive = match.a.f.alive;
   fighter.stress = clampStress(fighter.stress + STRESS.fight + (match.stressAfter ?? 0));
 
   const won = match.result.winner === 'A';
+  // A bracket's Quarter- or Semi-final won: a purse and XP, then on to the next match.
+  if (bracket && bracket.round < 2 && won && fighter.alive) return finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries);
   // Judged on the Power each side actually fought with in Round 1 (decor, augments, feuds, festivals...).
   const r1 = match.rounds?.[0]?.power;
   const gap = r1 ? r1.A.total - r1.B.total : effectivePower(fighter) - effectivePower(opp);
@@ -1283,6 +1331,10 @@ export function finishMatch(run, match) {
   if (fighter.job === 'medbay' && !fighter.injuries.length) fighter.job = 'rest';
   run.inMatch = false;
   run.matchInfo = null;
+  if (bracket) {
+    summary.bracket = BRACKET.rounds[bracket.round];
+    delete run.brackets[tier];
+  }
   settleBout(run, tier);
   const before = run.prestigeLevel;
   run.prestigeLevel = prestigeLevelFor(run.prestige, run.prestigeLevel);
@@ -1292,8 +1344,58 @@ export function finishMatch(run, match) {
   }
   run.history.push(summary);
   log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
-  advanceArena(run, tier, won, opp);
+  advanceArena(run, tier, won, arena.opponent);
   return summary;
+}
+
+function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries) {
+  const bout = boutFor(run, tier);
+  const round = BRACKET.rounds[bracket.round];
+  const next = BRACKET.rounds[bracket.round + 1];
+  const kill = match.result.reason === 'death';
+  const summary = {
+    week: run.week, tier, name: `${bout.name} · ${round}`, boss: false, top: bout.top, won: true, reason: match.result.reason,
+    fighter: fighter.name, fighterId: fighter.id, died: false, gold: BRACKET.purse * Math.min(tier, 4), prestige: 0, favor: 0,
+    xp: XP.win, renown: 1, injuries: newInjuries, morale: 0, levels: 0, bracket: round, next, kill, house: houseOf(run, opp)?.name ?? null,
+  };
+  const levelBefore = fighter.level;
+  run.gold += summary.gold;
+  fighter.renown += summary.renown;
+  gainXp(run, fighter, summary.xp);
+  summary.levels = fighter.level - levelBefore;
+  if (kill) {
+    fighter.kills = (fighter.kills ?? 0) + 1;
+    run.graveyard = [...(run.graveyard ?? []), opp.name];
+  }
+  const house = houseOf(run, opp);
+  if (house) {
+    run.glory += HOUSES.glory.win * Math.min(tier, 4);
+    house.glory = Math.max(0, house.glory - HOUSES.glory.beaten);
+  }
+  bracket.round += 1;
+  run.inMatch = false;
+  run.matchInfo = null;
+  run.history.push(summary);
+  log(run, `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good');
+  return summary;
+}
+
+// Withdraw from a bracket between matches: it counts as capitulating (the fighter is safe, the tournament lost).
+export function withdrawBlocker(run, tier) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const b = bracketOf(run, tier);
+  if (!b?.fighterId || b.round === 0) return 'Nothing to withdraw from.';
+  return null;
+}
+
+export function withdraw(run, tier) {
+  assertOk(withdrawBlocker(run, tier));
+  const b = bracketOf(run, tier);
+  const f = structuredClone(findFighter(run, b.fighterId));
+  run.inMatch = true;
+  run.matchInfo = { fighterId: f.id, tier, buyIn: b.buyIn };
+  return finishMatch(run, { over: true, round: 0, rounds: [], result: { winner: 'B', reason: 'towel' }, a: { f } });
 }
 
 function advanceArena(run, tier, won, opp) {

@@ -1,12 +1,12 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG } from '../data.js';
+import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -159,6 +159,7 @@ export function summaryBanner(s) {
   if (s.title) bits.push(`🏆 ${s.fighter} earns the title "${s.title}"${s.title === 'Master of the Games' ? '' : ' (+1 Power)'}`);
   if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favor, Renown, XP and Morale)`);
   if (s.kill) bits.push(`💀 A kill${s.mark ? `: ${s.fighter} earns the mark "${s.mark}"` : ''}`);
+  if (s.next) bits.push(`🏟 On to the ${s.next}`);
   if (s.feud) bits.push(`⚔ ${s.feud}`);
   if (s.scar) bits.push(`🩹 ${s.fighter} is scarred: ${s.scar}`);
   if (s.eulogy) bits.push(`⚰ ${s.eulogy}`);
@@ -241,6 +242,23 @@ function weekPanel(run) {
         <ul class="log full">${[...run.log].reverse().map((l) => `<li class="${l.tone}"><small>${esc(formatDate(l.week))}</small> ${esc(l.text)}</li>`).join('')}</ul></details>` : ''}
     </section>`;
 }
+
+// A three-match tournament: who waits in each round, and where your fighter is.
+function bracketLine(run, tier) {
+  if (!hasBracket(tier)) return '';
+  const b = bracketOf(run, tier);
+  const final = run.arenas[tier].opponent;
+  const foes = b ? [...b.foes, final] : [null, null, final];
+  const steps = BRACKET.rounds.map((r, i) => {
+    const f = foes[i];
+    const state = !b ? '' : i < b.round ? ' done' : i === b.round && b.fighterId ? ' now' : '';
+    return `<li class="${state.trim()}"><b>${r}</b><small>${f ? `${esc(f.name)} · Power ${effectivePower(f)}` : 'drawn on tournament week'}</small></li>`;
+  }).join('');
+  const who = b?.fighterId && b.round > 0 ? findName(run, b.fighterId) : null;
+  return `<div class="bracket"><div class="label">Three matches: win all three to take the tournament${who ? `. ${esc(who)} is through to the ${BRACKET.rounds[b.round]}` : ''}</div><ol>${steps}</ol>
+    ${who ? buttonWhy(`Withdraw ${esc(who)} (counts as capitulating)`, 'withdraw', { tier }, withdrawBlocker(run, tier), 'btn small danger') : ''}</div>`;
+}
+const findName = (run, id) => run.roster.find((f) => f.id === id)?.name ?? '';
 
 // "Opponent · House Varro", in the house's colour.
 export function houseTag(run, f) {
@@ -345,7 +363,7 @@ function oddsRow(run, f, tier, oddsFor) {
     <div class="o ${tone}" title="Chance to win the whole match (best of 3), not one round">Match: ${odds.win}${pct(odds.winPct)}</div>
     <div class="o" title="Chance of picking up at least one injury">Injury: ${odds.injury}${pct(odds.injuryPct)}</div>
     <div class="o ${odds.death === 'None' || odds.death === 'Low' ? '' : 'bad'}" title="Chance of dying if you never capitulate">Death: ${odds.death}${pct(odds.deathPct)}</div>
-    ${run.bouts?.[tier] === 'open' ? buttonWhy(`Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id, tier }, fightBlocker(run, f.id, tier), 'btn primary small') : ''}
+    ${run.bouts?.[tier] === 'open' ? buttonWhy(bracketOf(run, tier)?.fighterId === f.id && bracketOf(run, tier).round > 0 ? `Fight the ${bracketRound(run, tier)}` : `Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id, tier }, fightBlocker(run, f.id, tier), 'btn primary small') : ''}
   </div>`;
 }
 
@@ -369,7 +387,8 @@ function arenaBlock(run, tier, oddsFor) {
   const body = `<p class="sub"><b>${esc(bout.name)}</b> · ${buyIn} · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
       ${stakes ? `<p class="sub">${stakes}</p>` : ''}${rival}${debuffNote}
       ${bout.festival ? `<div class="festival now">🏛 <b>${esc(FESTIVAL_BY_ID[bout.festival].name)}</b>: ${esc(FESTIVAL_BY_ID[bout.festival].desc)}</div>` : ''}
-      ${fighterCard(arena.opponent, { compact: true, stress: false, tag: houseTag(run, arena.opponent) })}
+      ${bracketLine(run, tier)}
+      ${fighterCard(arena.opponent, { compact: true, stress: false, tag: hasBracket(tier) ? `Final · ${houseTag(run, arena.opponent)}` : houseTag(run, arena.opponent) })}
       ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
       ${choice}`;
   if (bout.top) return `<div class="arena-block top"><h3>${esc(arenaName(tier))} <small>your top arena</small></h3>${body}</div>`;

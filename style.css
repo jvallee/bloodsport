@@ -489,3 +489,10 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 
 .room-tabs { margin: 6px 0 8px; grid-template-columns: repeat(3, 1fr); }
 .room-facts { margin: 4px 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+
+/* Brackets */
+.bracket ol { list-style: none; display: flex; gap: 6px; padding: 0; margin: 4px 0 8px; flex-wrap: wrap; }
+.bracket li { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-size: 13px; }
+.bracket li small { color: var(--muted); font-size: 11px; }
+.bracket li.done { opacity: 0.55; text-decoration: line-through; }
+.bracket li.now { border-color: var(--gold); }

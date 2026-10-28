@@ -1,7 +1,7 @@
 // App state, saving, coach tips and event wiring. Game rules live in run.js / fight.js; markup in src/ui/.
 
 import { mortalDanger, canThrowTowel, suggestTactic } from './fight.js';
-import { createRun, matchOptions, serialize, deserialize } from './run.js';
+import { createRun, matchOptions, serialize, deserialize, opponentFor } from './run.js';
 import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
@@ -71,7 +71,7 @@ const save = () => run && storage.set(SAVE_KEY, serialize(run));
 
 const oddsCache = new Map();
 function oddsFor(f, tier = run.topTier) {
-  const opp = run.arenas[tier].opponent;
+  const opp = opponentFor(run, tier);
   const opts = matchOptions(run, f, tier);
   const key = JSON.stringify([f, opp, opts]);
   if (!oddsCache.has(key)) {
@@ -290,6 +290,7 @@ const before = {
   release: () => confirm('Release this fighter for good?'),
   retire: () => confirm('Retire this fighter to the Hall of Champions? They leave your roster for good.'),
   forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favor than losing the fight.'),
+  withdraw: () => confirm('Withdraw from the tournament? It counts as capitulating; your fighter is safe.'),
   advance: () => { summaries = []; achieved = []; return true; },
   'advance-tournament': () => { summaries = []; achieved = []; return true; },
 };
@@ -303,6 +304,11 @@ const after = {
     if (match?.rounds.length) roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME });
   },
   'event-choice': () => { sfx.event(); },
+  withdraw: () => {
+    match = null; // the withdrawal is settled: leave the fight screen
+    ui.auto = false;
+    tab = 'ludus';
+  },
   'leave-fight': () => {
     ui.auto = false;
     tab = 'ludus';

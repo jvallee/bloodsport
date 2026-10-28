@@ -5,13 +5,13 @@
 
 import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic } from '../src/fight.js';
+import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic, effectiveInjuries } from '../src/fight.js';
 import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom,
-  buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker,
+  buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
 
@@ -119,7 +119,21 @@ function carefulWeek(run, opts) {
 }
 
 // `tactic`: 'smart' reads the opponent's humor (as auto-play does); anything else is used every round.
+// Plays a tournament: one match, or a whole bracket (Silver and up). A careful bot withdraws a fighter at the
+// Death Gate between bracket matches (unless it's the top arena's Boss); the reckless one always fights on.
 function playMatch(run, f, tier, towel, items = false, tactic = 'smart') {
+  let summary = playOneMatch(run, f, tier, towel, items, tactic);
+  while (summary.next && run.status === 'active') {
+    pickPerks(run);
+    const bout = boutFor(run, tier);
+    const fighter = run.roster.find((x) => x.id === f.id);
+    if (towel && effectiveInjuries(fighter) >= 2 && !(bout.top && bout.boss)) return withdraw(run, tier);
+    summary = playOneMatch(run, fighter, tier, towel, items, tactic);
+  }
+  return summary;
+}
+
+function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart') {
   const bout = boutFor(run, tier);
   const m = startMatch(run, f.id, tier);
   while (!m.over) {

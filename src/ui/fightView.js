@@ -139,7 +139,9 @@ function controls(m, ui, bout, items = {}) {
       <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${DICE_TIME + 2.1}s"` : ''}>${report(m.summary)}</div>
       ${advice ? `<div class="advice">💡 ${esc(advice)}</div>` : ''}
       ${whyTable(m)}
-      <button class="btn primary big" data-action="leave-fight">Return to the Ludus</button>`;
+      ${m.summary?.next ? `<div class="row"><button class="btn primary big" data-action="fight" data-id="${m.a.f.id}" data-tier="${bout.tier}">On to the ${m.summary.next}</button>
+        <button class="btn danger big" data-action="withdraw" data-tier="${bout.tier}" title="Leave the tournament now: it counts as capitulating, and your fighter is safe">Withdraw</button></div>` : ''}
+      <button class="btn ${m.summary?.next ? '' : 'primary '}big" data-action="leave-fight">${m.summary?.next ? 'Back to the Ludus (fight on later this week)' : 'Return to the Ludus'}</button>`;
   }
   const owned = Object.entries(items).filter(([, n]) => n > 0);
   // One of each kind per fight: items already used drop out of the row.

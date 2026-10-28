@@ -594,12 +594,14 @@ test('after the Tier 4 Boss comes the Grand Tournament; winning it wins the care
   run.arenas[4].tier = 4;
   run.arenas[4].stage = 2;
   run.bouts = { 4: 'open' };
-  playBout(run, f.id);
+  // From the Silver Coliseum up a tournament is a 3-match bracket: play it through.
+  const playThrough = (tier) => { for (let i = 0; i < 3 && run.bouts?.[tier] === 'open'; i++) { pickPerks(run); playBout(run, f.id, { tier }); } };
+  playThrough(4);
   assert.equal(run.topTier, GRAND_TIER);
   nextBout(run);
   assert.equal(currentBout(run).name, GRAND.name);
   assert.equal(run.arenas[GRAND_TIER].opponent.power, GRAND.oppPower);
-  playBout(run, f.id, { tier: GRAND_TIER });
+  playThrough(GRAND_TIER);
   assert.equal(run.status, 'won');
 });
 

@@ -136,6 +136,10 @@ export const SURGERY = { cost: 10, perTier: 4, renown: -1, medbay: 2 }; // playt
 // Retiring a veteran (level 4+ or a Title) to the Hall of Champions.
 export const RETIRE = { level: 4, prestige: 5, morale: 10 };
 
+// Brackets (playtester request): from the Silver Coliseum up, a tournament is three matches in a row for one fighter.
+// The Quarter- and Semi-final opponents are weaker than the listed (Final) opponent by `power`; each early win pays `purse` Gold × tier.
+export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-3, -2, 0], purse: 2 };
+
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
 export const KILL_MARKS = [
   { id: 'dreaded', at: 3, name: 'Dreaded', desc: '+5% win chance: opponents fear a proven killer.' },

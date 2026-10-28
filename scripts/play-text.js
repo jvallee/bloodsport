@@ -6,7 +6,7 @@
 
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
-import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS } from '../src/data.js';
+import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
@@ -14,7 +14,7 @@ import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, 
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, recruitBlocker, fightBlocker, GRAND_TIER,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER,
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
@@ -55,6 +55,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   story <id> | retire <id>      a fighter's chronicle; retire a veteran (level 4+ or a Title) to the Hall of Champions
   treat <id> <injury#>          choose which injury the Medbay heals first
   augment <id> <injury#>        cyborg surgery on a Maimed or Blinded wound (Medbay level 2+)
+  withdraw <tier>               leave a three-match tournament between matches (counts as capitulating)
   choose <n>                    decide this week's event (the week can't end until you do)
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
   next [tactic] | capitulate    during a fight: play the next round with a tactic (steady, press, guard, feint; default: the suggestion), or capitulate ("towel" also works)
@@ -81,7 +82,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
 
   function oddsFor(f, tier) {
     const bout = boutFor(run, tier);
-    const opp = run.arenas[tier].opponent;
+    const opp = opponentFor(run, tier);
     const opts = matchOptions(run, f, tier);
     const key = JSON.stringify([f, opp, opts]);
     if (!oddsCache.has(key)) {
@@ -156,6 +157,13 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const ruleId = bout.boss ? bout.debuff : bout.top && oracleLevel(run) >= 2 && tier > 1 ? arena.debuff : null;
     if (ruleId) lines.push(`     ${bout.boss ? 'Boss arena rule' : 'The Oracle foresees the Boss arena rule'}: ${BOSS_DEBUFFS[ruleId].name}. ${BOSS_DEBUFFS[ruleId].desc}`);
     else if (bout.boss && tier === 1) lines.push('     This first Boss fights without an arena rule.');
+    if (hasBracket(tier)) {
+      const b = bracketOf(run, tier);
+      const foes = [...(b?.foes ?? [null, null]), arena.opponent];
+      lines.push(`     THREE MATCHES: ${BRACKET.rounds.map((r, i) => `${r}${foes[i] ? ` vs ${foes[i].name} (Power ${effectivePower(foes[i])})` : ''}${b && i < b.round ? ' [won]' : ''}`).join(' → ')}`);
+      if (b?.fighterId && b.round > 0 && state === 'open') lines.push(`     ${run.roster.find((x) => x.id === b.fighterId)?.name} is through to the ${BRACKET.rounds[b.round]}: \`fight ${b.fighterId} ${tier}\` to fight on, or \`withdraw ${tier}\` (counts as capitulating).`);
+      lines.push('     The Final:');
+    }
     lines.push(opponentBlock(arena.opponent));
     if (state === 'done' || quiet || run.status !== 'active') return lines.join('\n');
     for (const f of run.roster) {
@@ -332,6 +340,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     discoverMatch(codex, match);
     const s = finishMatch(run, match);
     match = null;
+    if (s.next) out.push(`${s.fighter} wins the ${s.bracket} and is through to the ${s.next}. \`fight ${s.fighterId} ${s.tier}\` to fight on, or \`withdraw ${s.tier}\`.`);
     const bits = [`${s.gold >= 0 ? '+' : ''}${s.gold} Gold`, `${s.prestige >= 0 ? '+' : ''}${s.prestige} Prestige`];
     if (s.favor) bits.push(`${s.favor > 0 ? '+' : ''}${s.favor} Favor`);
     if (!s.died) bits.push(`+${s.xp} XP`);
@@ -512,6 +521,12 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     },
     capitulate: (...args) => commands.towel(...args),
     houses: () => ['-- The houses (Glory: a win is worth its arena tier, ×3 for a Boss) --', ...standings(run).map((h, i) => `  ${i + 1}. ${h.name}${h.you ? ' (you)' : ''} · ${arenaName(Math.min(h.tier, 4))} · Glory ${h.glory}${h.feud ? ` · feud ${h.feud} months` : ''}${h.vengeance ? ` · vengeance ${h.vengeance} months` : ''}`)].join('\n'),
+    withdraw: ([tier]) => {
+      need([tier].filter(Boolean), 1, 'withdraw <tier>');
+      idle();
+      const s = withdraw(run, Number(tier));
+      return `${s.fighter} withdraws from ${s.name}. It counts as capitulating.\n\n${look()}`;
+    },
     choose: ([i]) => {
       need([i].filter(Boolean), 1, 'choose <number>');
       idle();

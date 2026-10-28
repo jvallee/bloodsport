@@ -5,7 +5,7 @@ import { playRound, throwTowel } from './fight.js';
 import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom,
   assignDecor, removeDecor, buyGear, equip, unequip, startMatch, finishMatch, skipBout, forfeitBout,
-  recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst,
+  recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw,
 } from './run.js';
 import { upgrade } from './ludus.js';
 
@@ -48,13 +48,14 @@ export const GAME_ACTIONS = {
   augment: ({ run }, d) => { augment(run, d.id, Number(d.index)); },
   retire: ({ run }, d) => { retire(run, d.id); },
   'treat-first': ({ run }, d) => { treatFirst(run, d.id, Number(d.index)); },
+  withdraw: ({ run }, d) => withdraw(run, Number(d.tier)),
   fight: (state, d) => {
     const { run } = state;
     const tier = Number(d.tier) || run.topTier;
     const bout = boutFor(run, tier); // snapshot before the match changes the arena
     state.match = startMatch(run, d.id, tier);
     state.match.bout = bout;
-    const house = houseOf(run, run.arenas[tier].opponent);
+    const house = houseOf(run, state.match.b.f);
     if (house) state.match.house = { name: house.name, color: house.color };
   },
   'next-round': (state, d) => {
