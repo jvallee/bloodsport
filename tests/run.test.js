@@ -1111,16 +1111,16 @@ test('a Bloodied Victory (winning with 2+ injuries) earns extra Favor, Renown, X
   assert.equal(s.morale, plain.morale + BLOODIED.morale);
 });
 
-test('killing an opponent adds to the fighter\'s tally; 3 kills earn the Dreaded mark', () => {
+test('killing an opponent adds to the fighter\'s tally; 2 kills earn the Dreaded mark', () => {
   const { run, f } = atBout(5);
-  f.kills = 2;
+  f.kills = 1;
   const s = playBout(run, f.id, { reason: 'death' });
-  assert.equal(f.kills, 3);
+  assert.equal(f.kills, 2);
   assert.equal(s.kill, true);
   assert.equal(s.mark, 'Dreaded');
   nextBout(run);
   const s2 = playBout(run, f.id);
-  assert.equal(f.kills, 3);
+  assert.equal(f.kills, 2);
   assert.equal(s2.mark, null);
 });
 

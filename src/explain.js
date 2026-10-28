@@ -20,8 +20,9 @@ export function fighterWarnings(run, f, tier) {
     else if (f.renown < ECONOMY.knownRenown) out.push({ tone: 'info', text: 'Rookie: the crowd won\'t jeer them here' });
   }
   const opts = matchOptions(run, f, tier);
-  if (opts.scouted) out.push({ tone: 'warn', text: `Scouted: opponent +${opts.scouted} Power (they fought here last month; a month out of the top arena resets it)` });
-  if (opts.grudge) out.push({ tone: 'bad', text: `Feud: ${houseOf(run, opp).name} wants revenge (opponent +${opts.grudge} Power)` });
+  if (opts.scouted) out.push({ tone: 'warn', text: `Scouted: opponent +${opts.scouted} Power (your fighter fought here last month, so they've been studied; a month out of the top arena resets it)` });
+  if (opts.grudge > 0) out.push({ tone: 'bad', text: `Feud: ${houseOf(run, opp).name} wants revenge (opponent +${opts.grudge} Power)` });
+  if (opts.grudge < 0) out.push({ tone: 'info', text: `${houseOf(run, opp).name} owes you a life (opponent ${opts.grudge} Power)` });
   if (opts.vengeance) out.push({ tone: 'info', text: `Vengeance on ${houseOf(run, opp).name}: +5% win chance` });
   if (opts.challenger) out.push({ tone: 'warn', text: `Challenger: opponent +${opts.challenger} Power (famous fighters draw tougher opponents)` });
   return out;

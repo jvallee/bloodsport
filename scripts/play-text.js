@@ -6,15 +6,15 @@
 
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
-import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
+import { STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk, signatureOf, useSignature } from '../src/fight.js';
+import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk, signatureOf, useSignature, opponentHasSignature } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
   matchOptions,
   bossLossFavor,
 } from '../src/run.js';
@@ -82,9 +82,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
 
   // ---------- Views ----------
 
-  function oddsFor(f, tier) {
+  function oddsFor(f, tier, opp = opponentFor(run, tier)) {
     const bout = boutFor(run, tier);
-    const opp = opponentFor(run, tier);
     const opts = matchOptions(run, f, tier);
     const key = JSON.stringify([f, opp, opts]);
     if (!oddsCache.has(key)) {
@@ -127,7 +126,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const nextXp = XP.levels[f.level - 1];
     const lines = [
       `[${f.id}] ${identity(f)} (XP ${f.xp}${nextXp ? `/${nextXp}` : ', max level'})`,
-      `     Power ${effectivePower(f)} (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')}) · Speed ${f.speed} · Stress ${f.stress}${f.stress >= STRESS.overtrained ? ' OVERTRAINED' : ''} · Morale ${f.morale} ${moraleState(f).label} (heading to ${target}) · Renown ${f.renown}`,
+      `     Power ${effectivePower(f)} (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')}) · Speed ${effectiveSpeed(f)}${effectiveSpeed(f) !== f.speed ? ` (${f.speed} + ${effectiveSpeed(f) - f.speed} gear)` : ''} · Stress ${f.stress}${f.stress >= STRESS.overtrained ? ' OVERTRAINED' : ''} · Morale ${f.morale} ${moraleState(f).label} (heading to ${target}: comfort +${moraleTarget(run, f).comfort}, fame expects −${moraleTarget(run, f).expects}${f.morale >= MORALE.restless && target < MORALE.restless ? '; WILL TURN DISCONTENTED and stop training: more comfort needed' : ''}) · Renown ${f.renown}`,
       `     Job: ${f.job} · trained ${f.trained}/${trainCap(run)} · Injuries: ${injuriesText(f)} · Death Gate ${Math.min(gate, deathGateAt(f))}/${deathGateAt(f)}${gate >= deathGateAt(f) ? ' OPEN' : ''}`,
       ...(f.humor ? [`     Humor: ${HUMORS[f.humor].name} (${HUMORS[f.humor].desc})`] : []),
       ...((f.scars?.length || f.augments?.length) ? [`     Scars: ${(f.scars ?? []).map((sc) => `${SCARS[sc.id].name}${sc.vs ? ` vs ${sc.vs}` : ''}`).join(', ') || 'none'} · Augments: ${(f.augments ?? []).map((k) => AUGMENTS[k].name).join(', ') || 'none'}`] : []),
@@ -141,10 +140,10 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     return lines.join('\n');
   }
 
-  function opponentBlock(f) {
-    const bits = [`Power ${f.power}`, `Speed ${f.speed}`, `Renown ${f.renown}`, ...(f.humor ? [`${HUMORS[f.humor].name}: ${HUMORS[f.humor].tell}`] : []), ...extras(f)];
+  function opponentBlock(f, boss = false) {
+    const bits = [`Power ${effectivePower(f)}${effectivePower(f) !== f.power ? ` (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')})` : ''}`, `Speed ${effectiveSpeed(f)}`, ...(opponentHasSignature(f, boss) ? [`Signature: ${SIGNATURES[f.cls].name} (${SIGNATURES[f.cls].desc} Used when behind, or in Round 3)`] : []), `Renown ${f.renown}`, ...(f.humor ? [`${HUMORS[f.humor].name}: ${HUMORS[f.humor].tell}`] : []), ...extras(f)];
     const house = houseOf(run, f);
-    return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ' (FEUD: +1 Power against you)' : ''}${house.vengeance ? ' (your VENGEANCE: +5% win chance)' : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
+    return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ' (FEUD: +1 Power against you)' : ''}${house.owed ? ' (OWES YOU A LIFE: −1 Power against you)' : ''}${house.vengeance ? ' (your VENGEANCE: +5% win chance)' : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
   }
 
   function arenaBlock(tier) {
@@ -155,7 +154,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const lines = [`${name} · tier ${tier}${bout.top ? ' (your top arena)' : ' (lower arena)'}`];
     lines.push(`     Buy-in ${bout.buyIn} Prestige · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold`);
     const stakes = arenaStakes(run, tier);
-    if (stakes) lines.push(`     ${stakes}`);
+    // The long lower-arena rules print once per screen; later lower arenas point back to them.
+    if (stakes) lines.push(!bout.top && tier !== GRAND_TIER && lowerShown++ ? '     Lower arena: same rules as above.' : `     ${stakes}`);
     const ruleId = bout.boss ? bout.debuff : bout.top && oracleLevel(run) >= 2 && tier > 1 ? arena.debuff : null;
     if (ruleId) lines.push(`     ${bout.boss ? 'Boss arena rule' : 'The Oracle foresees the Boss arena rule'}: ${BOSS_DEBUFFS[ruleId].name}. ${BOSS_DEBUFFS[ruleId].desc}`);
     else if (bout.boss && tier === 1) lines.push('     This first Boss fights without an arena rule.');
@@ -166,14 +166,18 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       if (b?.fighterId && b.round > 0 && state === 'open') lines.push(`     ${run.roster.find((x) => x.id === b.fighterId)?.name} is through to the ${BRACKET.rounds[b.round]}: \`fight ${b.fighterId} ${tier}\` to fight on, or \`withdraw ${tier}\` (counts as capitulating).`);
       lines.push('     The Final:');
     }
-    lines.push(opponentBlock(arena.opponent));
+    lines.push(opponentBlock(arena.opponent, bout.boss));
     if (state === 'done' || quiet || run.status !== 'active') return lines.join('\n');
     for (const f of run.roster) {
       const o = describeOdds(oddsFor(f, tier), oracleLevel(run));
       const pct = (p) => (p ? ` ${p}` : '');
       const warn = fighterWarnings(run, f, tier).map((w) => w.text);
       const blocker = state === 'open' ? fightBlocker(run, f.id, tier) : null;
-      lines.push(`     ${f.name} [${f.id}]: match ${o.win}${pct(o.winPct)} · Injury ${o.injury}${pct(o.injuryPct)} · Death ${o.death}${pct(o.deathPct)}${warn.length ? ` · ${warn.join(', ')}` : ''}${blocker ? ` · can't fight: ${blocker}` : ''}`);
+      // In a bracket, the match odds are for the next match only; the whole tournament is every match left, multiplied.
+      const b = hasBracket(tier) && state === 'open' ? bracketOf(run, tier) : null;
+      const left = b ? [...b.foes.slice(b.round), arena.opponent] : [];
+      const whole = left.length > 1 ? describeOdds({ win: left.reduce((p, x) => p * oddsFor(f, tier, x).win, 1), injury: 0, death: 0 }, oracleLevel(run)) : null;
+      lines.push(`     ${f.name} [${f.id}]: ${b ? `next match (${BRACKET.rounds[b.round]})` : 'match'} ${o.win}${pct(o.winPct)}${whole ? ` · whole tournament ${whole.win}${pct(whole.winPct)}` : ''} · Injury ${o.injury}${pct(o.injuryPct)} · Death ${o.death}${pct(o.deathPct)}${warn.length ? ` · ${warn.join(', ')}` : ''}${blocker ? ` · can't fight: ${blocker}` : ''}`);
     }
     if (bout.top && run.boutPending) lines.push(`     ${bout.boss ? `Bosses can't be skipped: fight or \`forfeit\` (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favor).` : `Or \`skip\` (+${ECONOMY.skipGold} Gold, the roster rests).`}`);
     return lines.join('\n');
@@ -201,12 +205,18 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
 
   function mercyText() {
     const v = run.mercy;
-    return `*** THUMBS UP OR DOWN: ${v.opp} lies beaten. ${v.crowd === 'kill' ? 'The crowd roars for blood!' : 'The crowd chants for mercy.'} ***\n`
-      + `  \`spare\`: +${MERCY.spareFavor} Favor · \`kill\`: +${MERCY.killRenown} Renown and a kill${v.house && v.crowd !== 'kill' ? ' (against the crowd: their house swears a feud)' : ''}. Doing what the crowd wants: +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale. Nothing else can happen until you decide.`;
+    const blood = v.crowd === 'kill';
+    const favor = v.top === false ? 'no Favor (lower arena)' : `+${MERCY.spareFavor} Favor`;
+    const spare = blood ? `${favor}; their house will owe you a life (−1 Power against you for ${HOUSES.feudMonths} months)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale`;
+    const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${v.house ? '; their house swears a feud (+1 Power against you)' : ''}`;
+    return `*** THUMBS UP OR DOWN: ${v.opp} lies beaten. ${blood ? 'The crowd roars for blood!' : 'The crowd chants for mercy.'} ***\n`
+      + `  \`spare\`: ${spare}\n  \`kill\`: ${kill}\n  Nothing else can happen until you decide.`;
   }
 
+  let lowerShown = 0;
   function look() {
     if (match) return fightStatus();
+    lowerShown = 0;
     const out = [header()];
     if (run.mercy) out.push(`\n${mercyText()}`);
     if (run.status !== 'active') {
@@ -320,7 +330,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const stats = roundStats(match);
     for (const [label, c, side] of [['You', match.a, 'A'], ['Them', match.b, 'B']]) {
       const off = c.disabled.length ? ` · lost for this match: ${c.disabled.map((s) => slotName(c.f, s)).join(', ')}` : '';
-      lines.push(`  ${label}: ${c.f.name} · Round ${stats.round}: Power ${stats[side].power} · Speed ${stats[side].speed} (everything applied) · Injuries: ${injuriesText(c.f)}${off}`);
+      const mods = stats[side].mods.filter((x) => x.value).map((x) => `${x.value > 0 ? '+' : ''}${x.value} ${x.source}`);
+      lines.push(`  ${label}: ${c.f.name} · Round ${stats.round}: Power ${stats[side].power} (${c.f.power} base${mods.length ? `, ${mods.join(', ')}` : ''}) · Speed ${stats[side].speed} · Injuries: ${injuriesText(c.f)}${off}`);
     }
     if (match.debuff) lines.push(`  Arena rule: ${BOSS_DEBUFFS[match.debuff].name}. ${BOSS_DEBUFFS[match.debuff].desc}`);
     if (mortalDanger(match.a)) lines.push(`  MORTAL DANGER: ${match.a.f.name} has ${effectiveInjuries(match.a.f)} injur${effectiveInjuries(match.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about ${Math.round(deathRisk(match) * 100)}% chance of death this round.`);
@@ -542,7 +553,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     },
     spare: () => {
       const v = resolveMercy(run, 'spare');
-      return `Thumbs up. ${v.favor ? `+${v.favor} Favor. ` : ''}${v.crowd === 'spare' ? 'The crowd roars its approval. ' : ''}\n\n${look()}`;
+      const gains = [v.favor && `+${v.favor} Favor`, v.renown && `+${v.renown} Renown`, v.morale && `+${v.morale} Morale`].filter(Boolean);
+      return `Thumbs up.${gains.length ? ` ${gains.join(', ')}.` : ''}${v.crowd === 'spare' ? ' The crowd roars its approval.' : ''}${v.owed ? ` ${v.owed}` : ''}\n\n${look()}`;
     },
     kill: () => {
       const v = resolveMercy(run, 'kill');

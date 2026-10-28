@@ -50,7 +50,7 @@ test('a Silver tournament is three matches: weaker opponents first, the listed o
   const r1 = play(run, f.id, 3).s;
   assert.equal(r1.bracket, 'Quarter-final');
   assert.equal(r1.next, 'Semi-final');
-  assert.equal(run.prestige, prestige - boutFor(run, 3).buyIn + BRACKET.prestige * 3, 'the buy-in is paid once; an early win pays a little Prestige');
+  assert.equal(run.prestige, prestige - boutFor(run, 3).buyIn + BRACKET.prestige, 'the buy-in is paid once; an early win pays a little Prestige');
   assert.match(advanceBlocker(run), /Semi-final/);
   assert.equal(run.boutPending, true);
   const sf = opponentFor(run, 3);
@@ -146,12 +146,16 @@ test('losing an early match of a top-arena Boss bracket costs half the Boss-loss
   assert.ok(FAVOR);
 });
 
-test('early bracket wins pay the Prestige set in BRACKET.prestige (currently none: it made the game far too easy)', () => {
+test('early bracket wins pay a Gold purse (3 × tier) and the flat Prestige set in BRACKET.prestige', () => {
   const { run, f } = atSilver(9);
   const before = run.prestige;
+  const gold = run.gold;
   const s = play(run, f.id, 3).s;
-  assert.equal(s.prestige, BRACKET.prestige * 3);
-  assert.equal(run.prestige, before - boutFor(run, 3).buyIn + BRACKET.prestige * 3);
+  assert.equal(s.gold, BRACKET.purse * 3);
+  assert.equal(BRACKET.purse, 3, 'raised from 2 so early wins pay as you go (playtest #6)');
+  assert.equal(run.gold, gold + s.gold);
+  assert.equal(s.prestige, BRACKET.prestige);
+  assert.equal(run.prestige, before - boutFor(run, 3).buyIn + BRACKET.prestige);
 });
 
 function drawBracketsAgain(run) {

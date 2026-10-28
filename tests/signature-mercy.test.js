@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
 import { SIGNATURES, SIGNATURE, MERCY, CLASSES, HOUSES } from '../src/data.js';
-import { createMatch, playRound, computePower, computePhase2, computeSpeed, signatureOf, signatureBlocker, useSignature } from '../src/fight.js';
+import { createMatch, playRound, computePower, computePhase2, computeSpeed, signatureOf, signatureBlocker, useSignature, opponentHasSignature } from '../src/fight.js';
 import { narrateStory, narrateRound } from '../src/narrate.js';
 import {
   createRun, recruit, advanceToTournament, startMatch, finishMatch, resolveMercy, mercyBlocker, advanceBlocker, serialize, deserialize, houseOf,
@@ -38,7 +38,7 @@ test('foe effects hit the opponent: Cast the Net slows them and cuts their win c
   const m = createMatch({ a: blank({ cls: 'retiarius', level: 3 }), b: blank(), rng: createRng(1) });
   useSignature(m);
   assert.ok(computeSpeed(m.b, 1).mods.some((x) => x.source === 'Cast the Net' && x.value === -5));
-  assert.ok(computePhase2(m.b, m.a, 1).win.some((x) => x.source === 'Cast the Net' && x.value === -5000));
+  assert.ok(computePhase2(m.b, m.a, 1).win.some((x) => x.source === 'Cast the Net' && x.value === -10000));
   const ash = createMatch({ a: blank({ cls: 'ashHungry', level: 3 }), b: blank(), rng: createRng(1) });
   useSignature(ash);
   assert.equal(ash.a.ash, 1);
@@ -121,7 +121,7 @@ test('kill: Renown, a kill, the graveyard, and their house swears a feud', () =>
   applyGameAction({ run, match: null }, 'mercy', { choice: 'kill' });
   assert.deepEqual(run.actions.at(-1), ['mercy', { choice: 'kill' }], 'recorded for replays');
   assert.equal(f.kills, 1);
-  assert.equal(f.renown, renown + MERCY.killRenown);
+  assert.equal(f.renown, renown + MERCY.killRenown + MERCY.infamyRenown, 'killing against a mercy chant adds infamy');
   assert.ok(run.graveyard.includes(name));
   if (house) assert.equal(house.feud, HOUSES.feudMonths, 'killing against the crowd starts a feud');
   assert.ok(houseOf);
@@ -142,8 +142,17 @@ test('a kill the crowd demanded starts no feud', () => {
   assert.fail('no seed had a house opponent');
 });
 
+test('regular opponents save signature moves for the Final; Boss tournaments use them every round', () => {
+  const f = blank({ cls: 'cestus', level: SIGNATURE.opponentLevel });
+  assert.equal(opponentHasSignature(f, false, true), false, 'not in a Quarter- or Semi-final');
+  assert.equal(opponentHasSignature(f, false, false), true);
+  assert.equal(opponentHasSignature(blank({ cls: 'cestus', level: SIGNATURE.bossLevel }), true, true), true);
+});
+
 test('opponents use signature moves only from their level threshold', () => {
   const m = createMatch({ a: blank({ power: 20 }), b: blank({ cls: 'cestus', level: SIGNATURE.opponentLevel - 1 }), rng: createRng(1) });
+  const boss = createMatch({ a: blank(), b: blank({ cls: 'cestus', level: SIGNATURE.bossLevel }), rng: createRng(1), boss: true });
+  assert.ok(boss.boss);
   playRound(m);
   if (!m.over) assert.equal(playRound(m).signatures.length, 0);
 });
@@ -160,4 +169,31 @@ test('the crowd calls for blood at the Death Gate, otherwise for mercy', () => {
   Object.assign(m, { over: true, result: { winner: 'A', reason: 'rounds' } });
   finishMatch(run2, m);
   assert.equal(run2.mercy.crowd, 'kill');
+});
+
+test('sparing against a call for blood ends their feud and makes their house owe you a life (−1 Power)', () => {
+  for (let seed = 1; seed <= 20; seed++) {
+    const { run } = wonWounded(seed);
+    const house = run.houses.find((h) => h.id === run.mercy.house);
+    if (!house) continue;
+    house.feud = 2;
+    run.mercy.crowd = 'kill';
+    const out = resolveMercy(run, 'spare');
+    assert.equal(house.feud, 0);
+    assert.equal(house.owed, HOUSES.feudMonths);
+    assert.match(out.owed, /owes you a life/);
+    const m = createMatch({ a: blank(), b: blank(), rng: createRng(1), grudge: -1 });
+    assert.ok(computePower(m.b, m.a, 1).mods.some((x) => x.source === 'Owes you a life' && x.value === -1));
+    return;
+  }
+  assert.fail('no seed had a house opponent');
+});
+
+test('sparing in a lower arena gives no Favor (only the top arena affects Favor)', () => {
+  const { run } = wonWounded(1);
+  run.mercy.top = false;
+  run.mercy.crowd = 'kill';
+  const favor = run.favor;
+  assert.equal(resolveMercy(run, 'spare').favor, 0);
+  assert.equal(run.favor, favor);
 });

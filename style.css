@@ -537,3 +537,5 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .mercy .row { justify-content: center; }
 .mercy .btn small { display: block; font-size: 11px; opacity: 0.85; }
 .btn.good { border-color: var(--good); color: var(--good); }
+
+.morale.sliding small { color: #e0a85a; font-weight: 600; }

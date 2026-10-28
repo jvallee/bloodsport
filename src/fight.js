@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick, createRng } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG } from './data.js';
 import { Refused } from './errors.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
@@ -181,7 +181,7 @@ export function computePower(c, opp, round, raw = false) {
   if (c.thornRound === round) mods.push({ source: 'Thorn Lash', value: -1 });
   if (c.scouted) mods.push({ source: 'Scouted', value: c.scouted });
   if (c.challenger) mods.push({ source: 'Challenger', value: c.challenger });
-  if (c.grudge) mods.push({ source: 'Feud', value: c.grudge });
+  if (c.grudge) mods.push({ source: c.grudge > 0 ? 'Feud' : 'Owes you a life', value: c.grudge });
   for (const b of c.boosts ?? []) if (b.round === round && b.power) mods.push({ source: b.name, value: b.power });
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
   if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
@@ -193,7 +193,7 @@ export function computePower(c, opp, round, raw = false) {
   if (c.festival?.ranged && !meleeOnly(c)) mods.push({ source: c.festival.name, value: c.festival.ranged });
   for (const sc of activeScars(c, opp)) if (sc.power) mods.push({ source: sc.label, value: sc.power });
   for (const a of f.augments ?? []) if (AUGMENTS[a]?.power) mods.push({ source: AUGMENTS[a].name, value: AUGMENTS[a].power });
-  if (!raw && kindActive(c, 'underdog', round) && computePower(opp, c, round, true).total >= f.power + sum(mods)) mods.push({ source: 'Underdog', value: 2 });
+  if (!raw && kindActive(c, 'underdog', round) && computePower(opp, c, round, true).total >= f.power + sum(mods) + UNDERDOG.gap) mods.push({ source: 'Underdog', value: 2 });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
 
@@ -395,11 +395,11 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
 // Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favorite boosts the opponent (B).
 const BOTH_SIDES = ['bloodMoon', 'crowdFavorite', 'lions', 'emperorsGaze'];
 
-export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false }) {
+export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false }) {
   const m = {
     a: makeCombatant(a, 'A', debuff),
     b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
-    rng, debuff, round: 0, rounds: [], over: false, result: null, preMatch: [],
+    rng, debuff, boss, earlyRound, round: 0, rounds: [], over: false, result: null, preMatch: [],
   };
   // A Gods' Day favours a style, for both fighters.
   if (festival) {
@@ -488,7 +488,9 @@ export function useSignature(m) {
 }
 
 // Seasoned opponents keep theirs for when it counts: once they fall behind, or in Round 3.
-const opponentUnleashes = (m, round) => (m.b.f.level ?? 1) >= SIGNATURE.opponentLevel && SIGNATURES[m.b.f.cls] && !m.b.sigRound && (m.b.roundsWon < m.a.roundsWon || round === 3);
+// Outside Boss tournaments, regulars save theirs for the Final (`earlyRound`: a bracket's Quarter- or Semi-final).
+export const opponentHasSignature = (f, boss = false, earlyRound = false) => Boolean(SIGNATURES[f.cls]) && (boss ? (f.level ?? 1) >= SIGNATURE.bossLevel : !earlyRound && (f.level ?? 1) >= SIGNATURE.opponentLevel);
+const opponentUnleashes = (m, round) => opponentHasSignature(m.b.f, m.boss, m.earlyRound) && !m.b.sigRound && (m.b.roundsWon < m.a.roundsWon || round === 3);
 
 export function playRound(m, { stance = 'steady' } = {}) {
   if (m.over) throw new Error('The match is over.');

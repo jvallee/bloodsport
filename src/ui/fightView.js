@@ -120,6 +120,7 @@ function report(s) {
     s.verdict === 'kill' ? row('Verdict', `👎 Killed${s.mark ? ` · 💀 earned the mark ${esc(s.mark)}` : ''}`, 'bad') : '',
     s.verdict && s.verdict === s.mercy ? row('The crowd', 'roars its approval', 'good') : '',
     s.feud && s.verdict === 'kill' ? row('Feud', esc(s.feud), 'bad') : '',
+    s.owed ? row('A life owed', esc(s.owed), 'good') : '',
     s.died ? row('Fallen', `${esc(s.fighter)}'s gear returns to the storeroom`, 'bad') : '',
   ].join('');
   return `<div class="report"><h3>After the fight</h3>${rows}</div>`;
@@ -128,15 +129,17 @@ function report(s) {
 // Thumbs up or down: the beaten opponent's fate, with what the crowd wants.
 function mercyPanel(m, mercy, late) {
   const blood = mercy.crowd === 'kill';
-  const feud = m.house && !blood ? `; ${esc(m.house.name)} will swear a feud` : ''; // a kill the crowd demanded starts no feud
+  const favor = mercy.top === false ? 'no Favor in a lower arena' : `+${MERCY.spareFavor} Favor`;
+  const house = m.house ? esc(m.house.name) : 'their house';
+  const spare = blood ? `${favor}; ${house} will owe you a life (−1 Power against you)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale (the crowd agrees)`;
+  const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill (the crowd agrees)` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${m.house ? `; ${house} will swear a feud` : ''}`;
   return `<div class="mercy${late}">
     <div class="mercy-title">${esc(mercy.opp)} lies beaten in the sand. All eyes turn to you, Lanista.</div>
     <div class="mercy-crowd ${blood ? 'blood' : 'mercy'}">${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'}</div>
     <div class="row">
-      <button class="btn big good" data-action="mercy" data-choice="spare" title="Spare them: +${MERCY.spareFavor} Imperial Favor.${blood ? '' : ` The crowd agrees: +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale.`}">👍 Spare them <small>+${MERCY.spareFavor} Favor</small></button>
-      <button class="btn big danger" data-action="mercy" data-choice="kill" title="Finish them: +${MERCY.killRenown} Renown and a kill toward the kill marks${feud}.${blood ? ` The crowd agrees: +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale.` : ''}">👎 Finish them <small>+${MERCY.killRenown} Renown, a kill${feud}</small></button>
+      <button class="btn big good" data-action="mercy" data-choice="spare" title="Spare them: ${spare}.">👍 Spare them <small>${spare}</small></button>
+      <button class="btn big danger" data-action="mercy" data-choice="kill" title="Finish them: ${kill}.">👎 Finish them <small>${kill}</small></button>
     </div>
-    <div class="sub">Give the crowd what it wants for +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale.</div>
   </div>`;
 }
 
@@ -262,7 +265,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
           <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the math'}</button></div>
           <div class="feed" id="feed">${feed(m, ui)}</div>
         </div>
-        <div class="side${sideCls('B')}"${sideStyle}><div class="side-label b">${m.house ? `Opponent · <span style="color:${esc(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div>${fighterCard(m.b.f, { combatant: m.b, live: stats.B, ...fresh('B'), compact: true, stress: false })}<div class="${hold(reveal)}">${statLine(stats, 'B')}</div></div>
+        <div class="side${sideCls('B')}"${sideStyle}><div class="side-label b">${m.house ? `Opponent · <span style="color:${esc(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div>${fighterCard(m.b.f, { combatant: m.b, live: stats.B, ...fresh('B'), opponent: { boss: m.boss, earlyRound: m.earlyRound }, compact: true, stress: false })}<div class="${hold(reveal)}">${statLine(stats, 'B')}</div></div>
       </div>
       ${tutorial}
       <div class="controls${hold((timing?.end ?? 0) + 0.3)}">${controls(m, ui, bout, items, nextBlocker, mercy)}</div>

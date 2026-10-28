@@ -6,7 +6,7 @@ import { createRng } from '../src/rng.js';
 import { BUILDINGS, ECONOMY, PRESTIGE_LEVELS } from '../src/data.js';
 import { createMatch, playRound } from '../src/fight.js';
 import {
-  createRun, recruit, advanceToTournament, advanceWeek, setJob, drawBrackets, crushingGapFor, effectivePower, powerParts, startMatch, finishMatch, choosePerk,
+  createRun, recruit, advanceToTournament, advanceWeek, setJob,  drawBrackets, crushingGapFor, effectivePower, powerParts, startMatch, finishMatch, choosePerk,
 } from '../src/run.js';
 import { fighterWarnings } from '../src/explain.js';
 import { fighterCard } from '../src/ui/components.js';
@@ -109,4 +109,16 @@ test('a wound from this round appears on the card only when the story reaches th
     return;
   }
   assert.fail('no seed wounded the opponent');
+});
+
+test('skipping to the tournament rests a trainee before they would be overtrained', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  run.gold = 100;
+  setJob(run, f.id, 'trainPower');
+  f.stress = 45;
+  advanceToTournament(run);
+  assert.ok(f.stress < 50, `Stress ${f.stress}`);
+  assert.equal(f.job, 'rest');
+  assert.match(f.notice, /overtrain/);
 });

@@ -61,7 +61,7 @@ const BASICS = [
   ['scars', 'Scars', `Surviving a severe wound (Concussed or worse) can leave a lasting scar against the style of fighter who caused it, melee or ranged. ${Object.values(SCARS).map((x) => `${x.name}: ${x.desc}`).join(' ')} Choleric fighters turn Enraged; Melancholic ones Afeared.`],
   ['cyborg', 'Cyborg surgery', `With a Medbay level 2+, a Maimed limb or a Blinded eye can be replaced for good. ${Object.values(AUGMENTS).map((x) => `${x.name}: ${x.desc}`).join(' ')} It costs Gold and 1 Renown: the crowd distrusts machines.`],
   ['retire', 'Retirement', 'A veteran (level 4+ or holding a Title) can retire to the Hall of Champions: the house gains Prestige and the roster takes heart. The Hall remembers them across careers.'],
-  ['signatures', 'Signature moves', `From level ${SIGNATURE.level}, every fighter can unleash their class's signature move once per fight, for one round (the ★ button on the fight screen, before any round). ${Object.entries(SIGNATURES).map(([k, s]) => `${CLASSES[k].name}: ${s.name} (${s.desc})`).join(' ')} Seasoned opponents have theirs too, and save it for when they fall behind, or for Round 3.`],
+  ['signatures', 'Signature moves', `From level ${SIGNATURE.level}, every fighter can unleash their class's signature move once per fight, for one round (the ★ button on the fight screen, before any round). ${Object.entries(SIGNATURES).map(([k, s]) => `${CLASSES[k].name}: ${s.name} (${s.desc})`).join(' ')} Seasoned opponents have theirs too (from level ${SIGNATURE.bossLevel}: in every round of a Boss tournament, otherwise only in a tournament's Final), and save it for when they fall behind, or for Round 3.`],
   ['mercy', 'Thumbs up or down', `After a win over an opponent who is wounded but alive, you decide their fate. Spare them: +${MERCY.spareFavor} Imperial Favor. Finish them: +${MERCY.killRenown} Renown and a kill toward the kill marks. The crowd calls for blood against a feuding house or a fighter left at the Death Gate, and for mercy otherwise; giving it what it wants adds +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale. A kill the crowd demanded is the crowd's will, so their house can't hold it against you; killing when the crowd wanted mercy makes their house swear a feud.`],
   ['brackets', 'Three-match tournaments', 'From the Silver Coliseum up (and in the Grand Tournament), a tournament is three matches in a row for one fighter: a Quarter-final and a Semi-final against weaker opponents, then the Final against the arena\'s listed opponent. Injuries carry over between matches. Each early win pays a small purse and XP; the prize comes with the Final. Lose any match and the tournament is lost. Between matches you can withdraw, which counts as capitulating.'],
   ['towel', 'Capitulating', 'Between rounds you can forfeit the match. You lose the buy-in and the match, but your fighter is guaranteed to survive.'],
@@ -109,6 +109,7 @@ export function gearText(g) {
   if (g.speed) bits.push(`${g.speed > 0 ? '+' : '−'}${Math.abs(g.speed)} Speed`);
   if (g.injure) bits.push(`+${g.injure / 1000}% chance to injure`);
   if (g.guard) bits.push(`−${g.guard / 1000}% chance to be injured (armor)`);
+  if (g.win) bits.push(`+${g.win / 1000}% win chance`);
   return `${bits.join(', ')}.`;
 }
 

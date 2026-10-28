@@ -347,3 +347,24 @@ Measured with `npm run check`'s bots plus two probes: each item's and gear piece
 - **Items** (Gold): War Paint 10 → 7, Adrenaline Draught 8 → 6, Blessed Bandage 10 → 6, Iron Tonic 6 → 5, Viper Venom 7 → 5, Throwing Net 5 → 7 (it did everything Adrenaline did, without the Stress, for less).
 - **Gear** (Gold): Gladius 6 → 7, Spiked Gauntlet 6 → 5 (now +10% to injure and +2% win; it did nothing for winning), Hunter's Bow and Light Greaves 6 → 12 (+2 Speed was worth twice anything else), Leather Vest 6 → 5, War Maul 14 → 12, Trident 14 → 11, Serrated Spatha 16 → 22, Bronze Cuirass 14 → 9 (no Speed penalty: it lost more fights than it saved), Throwing Axes 15 → 17, Imperial Gladius 28 → 32, Executioner's Axe 26 → 24 (no Speed penalty), Lorica Segmentata 28 → 24, Lion Pelt 24 → 20. Tier 1 now gives about 1–1.3 points per Gold, tier 2 about 0.7–1.1, tier 3 about 0.6–0.9 (better gear costs more per point, as it should).
 - **Lower-arena purses** are halved per tier below your top arena, like Prestige. Before, a late house sending a fighter to every arena piled up Gold it couldn't spend (a quarter of Imperial-arena weeks above 60 Gold, up to 559).
+
+## Playtest #6 changes (v5, no new tag)
+
+- **Arena Power:** Bronze 11 / 12 / 14 (was 12 / 13 / 14), Silver 17 / 18 / 19 (was 16 / 17 / 18), Imperial 24 / 25 / 26 (was 21 / 22 / 23), Grand 29 (was 26). The wall moves later and the finish gets tougher: softening Bronze alone took careful careers from 32% to 66%.
+- **Signature moves:** opponents in Boss tournaments use theirs in every round from level 3 (`SIGNATURE.bossLevel`). Regular opponents only use theirs in a tournament's Final, not its Quarter- or Semi-final. Hawk Strike gains +5% win; Cast the Net is now −10% opponent win (was −5%).
+- **Thumbs up or down:**
+  - Sparing a fighter the crowd wanted dead ends their house's feud, and the house owes you a life: −1 Power against you for 3 months (`house.owed`, "Owes you a life" in the fight math).
+  - Killing one the crowd wanted spared adds +2 Renown of infamy, as well as the feud.
+  - Sparing gives Favor only in your top arena.
+- **Kill marks:** Dreaded at 2 kills (was 3), Reaper at 5 (was 6).
+- **Underdog** (Human): +2 Power only when the opponent has 2+ more Power (was: equal or more).
+- **Items** cost half: War Paint 4, Adrenaline 3, Bandage 3, Iron Tonic 3, Viper Venom 3, Berserker Mushroom 4, Throwing Net 4, Smelling Salts 3, Crowd Bribe 6.
+- **Lower-arena wins** always pay at least the loss stipend + 2 Gold (`ECONOMY.lowerWinOverLoss`).
+- **Brackets:** Quarter- and Semi-final wins pay 3 × tier Gold (was 2 ×). Prestige per early win (+15 points of careful win rate) and refunding the buy-in on a lost Final (+9) were both measured and rejected: Prestige snowballs through House level and the Trainer cap.
+- **Skip to tournament** rests a trainee before training would leave them Overtrained on fight day.
+- **Display:**
+  - The Power breakdown gains a Perks part (Mighty, Juggernaut: `f.perkPower`). New fighters never show "Natural and training".
+  - The Morale chip shows where Morale is heading, why, and "Discontented soon".
+  - Opponent cards show their signature move when they'll use it.
+  - The text interface shows gear in Power and Speed, a per-round Power breakdown in fights, and whole-tournament odds; it prints the lower-arena rules once per screen.
+- **Names:** 40 more in the pool; retired fighters' names are never reused; the last 60 opponents' names aren't either.

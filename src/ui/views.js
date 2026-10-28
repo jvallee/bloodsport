@@ -271,6 +271,7 @@ export function standingsTable(run) {
   if (!run.houses) return '';
   const rows = standings(run).map((h, i) => {
     const notes = [h.feud ? `<span class="feud" title="You killed one of theirs: their fighters get +1 Power against you">feud ${h.feud}</span>` : '',
+      h.owed ? `<span class="vengeance" title="You spared one of theirs when the crowd wanted blood: their fighters get −1 Power against you">owes you ${h.owed}</span>` : '',
       h.vengeance ? `<span class="vengeance" title="They killed one of yours: your fighters get +5% win chance against them">vengeance ${h.vengeance}</span>` : ''].join('');
     return `<tr class="${h.you ? 'you' : ''}"><td>${i + 1}</td><td><span class="house-dot" style="background:${esc(h.color)}"></span>${esc(h.name)}${h.motto ? `<small title="${esc(h.motto)}"> ❝</small>` : ''} ${notes}</td><td>${esc(arenaName(Math.min(h.tier, 4)).replace('The ', ''))}</td><td><b>${h.glory}</b></td></tr>`;
   }).join('');
@@ -343,7 +344,7 @@ function rosterPanel(run) {
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>
     </div>`;
-    return fighterCard(f, { actions });
+    return fighterCard(f, { actions, morale: moraleTarget(run, f) });
   }).join('');
   return `
     <section class="panel">
@@ -402,7 +403,7 @@ function arenaBlock(run, tier, oddsFor) {
       ${stakes ? `<p class="sub">${stakes}</p>` : ''}${rival}${debuffNote}
       ${bout.festival ? `<div class="festival now">🏛 <b>${esc(FESTIVAL_BY_ID[bout.festival].name)}</b>: ${esc(FESTIVAL_BY_ID[bout.festival].desc)}</div>` : ''}
       ${bracketLine(run, tier)}
-      ${fighterCard(arena.opponent, { compact: true, stress: false, tag: hasBracket(tier) ? `Final · ${houseTag(run, arena.opponent)}` : houseTag(run, arena.opponent) })}
+      ${fighterCard(arena.opponent, { compact: true, stress: false, opponent: { boss: boutFor(run, tier).boss }, tag: hasBracket(tier) ? `Final · ${houseTag(run, arena.opponent)}` : houseTag(run, arena.opponent) })}
       ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
       ${choice}`;
   if (bout.top) return `<div class="arena-block top"><h3>${esc(arenaName(tier))} <small>your top arena</small></h3>${body}</div>`;
@@ -593,11 +594,14 @@ function mercyCard(run) {
   const m = run.mercy;
   const f = run.roster.find((x) => x.id === m.fighterId);
   const blood = m.crowd === 'kill';
+  const favor = m.top === false ? 'no Favor in a lower arena' : `+${MERCY.spareFavor} Favor`;
+  const spare = blood ? `${favor}; their house will owe you a life` : `${favor}, +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale (the crowd agrees)`;
+  const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale and a kill (the crowd agrees)` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy) and a kill${m.house ? '; their house swears a feud' : ''}`;
   return `<section class="panel event-card mercy-card"><div class="event-faces">${f ? portrait(f, 56) : ''}</div><div class="event-body">
     <div class="label">The crowd waits</div><h2>${esc(m.opp)}'s fate</h2><p>${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}. ${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'}</p>
     <div class="row event-choices">
-      <div class="event-choice"><button class="btn" data-action="mercy" data-choice="spare">👍 Spare them</button><small>+${MERCY.spareFavor} Favor${blood ? '' : `, +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale (the crowd agrees)`}</small></div>
-      <div class="event-choice"><button class="btn danger" data-action="mercy" data-choice="kill">👎 Finish them</button><small>+${MERCY.killRenown} Renown, a kill${m.house && !blood ? ', and their house swears a feud' : ''}${blood ? `; +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale (the crowd agrees)` : ''}</small></div>
+      <div class="event-choice"><button class="btn" data-action="mercy" data-choice="spare">👍 Spare them</button><small>${spare}</small></div>
+      <div class="event-choice"><button class="btn danger" data-action="mercy" data-choice="kill">👎 Finish them</button><small>${kill}</small></div>
     </div></div></section>`;
 }
 

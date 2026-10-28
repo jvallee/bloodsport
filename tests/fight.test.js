@@ -513,14 +513,14 @@ test('Challenger: the opponent gets +Power against a famous fighter', () => {
 
 // ---- Traits added after playtest 3 ----
 
-test('Underdog: +2 Power when the opponent has equal or more Power (before Underdog)', () => {
-  const [A, B] = pair({ kindTrait: 'underdog', power: 6 }, { power: 6 });
+test('Underdog: +2 Power when the opponent has 2+ more Power (before Underdog)', () => {
+  const [A, B] = pair({ kindTrait: 'underdog', power: 6 }, { power: 8 });
   assert.deepEqual(sources(computePower(A, B, 1).mods), ['Underdog:2']);
-  const [C, D] = pair({ kindTrait: 'underdog', power: 7 }, { power: 6 });
-  assert.deepEqual(sources(computePower(C, D, 1).mods), []);
-  // Two underdogs at equal Power both get it (no recursion).
-  const [E, F] = pair({ kindTrait: 'underdog' }, { kindTrait: 'underdog' });
-  assert.equal(computePower(E, F, 1).total, 7);
+  const [C, D] = pair({ kindTrait: 'underdog', power: 7 }, { power: 8 });
+  assert.deepEqual(sources(computePower(C, D, 1).mods), [], 'a 1-Power gap is not enough (playtest #6)');
+  // Two underdogs never trigger off each other (no recursion): at equal Power neither qualifies.
+  const [E, F] = pair({ kindTrait: 'underdog' }, { kindTrait: 'underdog', power: 7 });
+  assert.equal(computePower(E, F, 1).total, 7, 'the weaker one gets it, judged on raw Power');
   assert.equal(computePower(F, E, 1).total, 7);
 });
 
