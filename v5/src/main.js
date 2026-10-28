@@ -12,7 +12,7 @@ import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPat
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
-import { fightView, DICE_TIME } from './ui/fightView.js';
+import { fightView, DICE_TIME, revealTime, roundEndTime } from './ui/fightView.js';
 import { roundSounds, setSound, sfx } from './ui/sound.js';
 
 const app = document.getElementById('app');
@@ -141,7 +141,7 @@ function renderFight() {
   if (feed) feed.scrollTop = feed.scrollHeight;
 }
 
-// Auto-play: one round every ~2.5s, pausing whenever the capitulate decision really matters.
+// Auto-play: one round after another (each once its winner is announced), pausing whenever the capitulate decision really matters.
 function scheduleAuto() {
   clearTimeout(autoTimer);
   if (!ui.auto || !match || match.over) return;
@@ -152,11 +152,11 @@ function scheduleAuto() {
     lastAction = ['next-round', { stance }];
     act('next-round', { stance });
     ui.animateRound = match.round;
-    roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME });
+    roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath) });
     save();
     render();
     scheduleAuto();
-  }), match.round === 0 ? 300 : 3600);
+  }), match.round === 0 ? 300 : (roundEndTime(match, match.rounds.at(-1), ui.showMath) + 1.5) * 1000); // let the round sink in
 }
 
 // ---------- Careers ----------
@@ -301,7 +301,7 @@ const after = {
   },
   'next-round': () => {
     ui.animateRound = match?.round ?? 0;
-    if (match?.rounds.length) roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME });
+    if (match?.rounds.length) roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath) });
   },
   'event-choice': () => { sfx.event(); },
   withdraw: () => {

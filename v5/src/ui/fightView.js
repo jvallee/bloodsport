@@ -36,6 +36,32 @@ function tacticLine(m, r) {
 
 // The dice tumble for this long before the round plays out (seconds).
 export const DICE_TIME = 1.4;
+const LINE_GAP = 0.45;
+const SUSPENSE = 1; // the pause ("Steel meets steel…") before the round's winner is announced
+
+// When each line of the round's story appears: the line naming the winner waits a beat of suspense,
+// and lands with the banner. `reveal` is that moment; `end` is the last line.
+function roundTiming(m, r, showMath = false) {
+  const lines = (showMath ? narrateRound : narrateStory)(m, r);
+  const rollAt = lines.findIndex((l) => l.type === 'roll');
+  const delays = lines.map((l, i) => DICE_TIME + 0.3 + i * LINE_GAP + (rollAt >= 0 && i >= rollAt ? SUSPENSE : 0));
+  const reveal = rollAt >= 0 ? delays[rollAt] : DICE_TIME + 0.3 + lines.length * LINE_GAP + SUSPENSE;
+  const hurt = lines.findIndex((l, i) => i >= rollAt && l.type === 'injury');
+  return { lines, delays, reveal, end: Math.max(reveal, delays.at(-1) ?? 0), shake: hurt >= 0 ? delays[hurt] : reveal };
+}
+export const revealTime = (m, r, showMath = false) => roundTiming(m, r, showMath).reveal;
+// When the round has fully played out (auto-play waits for this, plus a moment to take it in).
+export const roundEndTime = (m, r, showMath = false) => roundTiming(m, r, showMath).end;
+
+// The round's winner, big and clear: who took it, and the score it leaves.
+function roundBanner(m, r, delay) {
+  const late = delay ? ` late" style="animation-delay:${delay}s` : '';
+  const ours = r.winner === 'A';
+  const who = esc((ours ? m.a : m.b).f.name);
+  const text = r.death ? (ours ? `☠ ${esc(m.b.f.name)} falls` : `☠ ${esc(m.a.f.name)} falls`)
+    : ours ? `⚔ Round ${r.round} to ${who}!` : `Round ${r.round} to ${who}`;
+  return `<div class="round-banner ${ours ? 'win' : 'loss'}${late}" role="status">${text}<small>${m.a.roundsWon}–${m.b.roundsWon}</small></div>`;
+}
 
 // Who strikes first: two dice tumble, then land. Footwork and Concussed skip the roll.
 function initiativeRoll(m, r, animate) {
@@ -61,12 +87,12 @@ function initiativeRoll(m, r, animate) {
 }
 
 function feed(m, ui) {
-  const narrate = ui.showMath ? narrateRound : narrateStory;
   const pre = m.preMatch.map((p) => `<div class="line warn static">${esc(m.a.f.name)} is overtrained and loses ${esc(p.disabled.map((s) => slotName(m.a.f, s)).join(', ') || 'focus')} for this match.</div>`).join('');
   return pre + m.rounds.map((r) => {
     const animate = r.round === ui.animateRound;
-    const lines = narrate(m, r).map((l, i) =>
-      `<div class="line ${l.type}${animate ? '' : ' static'}" style="${animate ? `animation-delay:${DICE_TIME + 0.3 + i * 0.45}s` : ''}">${esc(l.text)}</div>`).join('');
+    const { lines: story, delays } = roundTiming(m, r, ui.showMath);
+    const lines = story.map((l, i) =>
+      `<div class="line ${l.type}${animate ? '' : ' static'}" style="${animate ? `animation-delay:${delays[i]}s` : ''}">${esc(l.text)}</div>`).join('');
     return `<h4>Round ${r.round}</h4>${lines}`;
   }).join('');
 }
@@ -133,10 +159,12 @@ function controls(m, ui, bout, items = {}, nextBlocker = null) {
   if (m.over) {
     const won = m.result.winner === 'A';
     const advice = adviceFor(m);
-    const late = m.rounds.at(-1)?.round === ui.animateRound ? ` late" style="animation-delay:${DICE_TIME + 1.8}s` : '';
+    const last = m.rounds.at(-1);
+    const at = last?.round === ui.animateRound ? roundEndTime(m, last, ui.showMath) : 0;
+    const late = at ? ` late" style="animation-delay:${at + 0.6}s` : '';
     return `<div class="result ${won ? 'win' : 'loss'}${late}">${won ? 'Victory' : m.result.reason === 'towel' ? 'Capitulated' : m.result.reason === 'death' ? 'Slain' : 'Defeat'}</div>
-      <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${DICE_TIME + 1.9}s"` : ''}>${esc(resultText(m))}</div>
-      <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${DICE_TIME + 2.1}s"` : ''}>${report(m.summary)}</div>
+      <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${at + 0.8}s"` : ''}>${esc(resultText(m))}</div>
+      <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${at + 1}s"` : ''}>${report(m.summary)}</div>
       ${advice ? `<div class="advice">💡 ${esc(advice)}</div>` : ''}
       ${whyTable(m)}
       ${m.summary?.next ? `<div class="row"><button class="btn primary big" data-action="fight" data-id="${m.a.f.id}" data-tier="${bout.tier}" ${nextBlocker ? `disabled title="${esc(nextBlocker)}"` : ''}>On to the ${m.summary.next}</button>
@@ -178,29 +206,36 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
   const shook = animate && last.checks.some((c) => c.injury) ? ' shake' : '';
   const debuff = m.debuff ? BOSS_DEBUFFS[m.debuff] : null;
   const stats = roundStats(m);
-  // While the dice roll, hold back the score and the round winner so the result isn't spoiled.
+  // While the dice roll and the round plays out, hold back the score and the winner so the result isn't spoiled.
+  const timing = animate ? roundTiming(m, last, ui.showMath) : null;
+  const reveal = timing?.reveal ?? 0;
   const hold = (delay) => (animate ? ` late" style="animation-delay:${delay}s` : '');
+  // The round's winner glows; the loser's card dims a little.
+  const sideCls = (side) => (last && last.winner !== 'towel' ? (last.winner === side ? ' round-won' : ' round-lost') : '');
+  const sideStyle = animate ? ` style="--reveal:${reveal}s"` : '';
+  // This round's new wounds wait for the story to reach the blow.
+  const fresh = (side) => (animate ? { fresh: last.checks.filter((c) => c.defender === side && c.injury && c.injury.tag !== 'death').length, freshAt: timing.shake } : {});
   return `
     <div class="fight">
       <div class="fight-head">
         <div><h2>${esc(bout.name)}</h2>${debuff ? `<div class="debuff" title="${esc(debuff.desc)}">☠ ${esc(debuff.name)}: ${esc(debuff.desc)}</div>` : ''}${m.festival ? `<div class="festival now">🏛 ${esc(FESTIVAL_BY_ID[m.festival].name)}: ${esc(FESTIVAL_BY_ID[m.festival].desc)}</div>` : ''}</div>
-        <div class="score${hold(DICE_TIME + 1.2)}" aria-label="Score"><span class="a">${m.a.roundsWon}</span> – <span class="b">${m.b.roundsWon}</span></div>
+        <div class="score${hold(reveal)}" aria-label="Score"><span class="a">${m.a.roundsWon}</span> – <span class="b">${m.b.roundsWon}</span></div>
       </div>
-      <div class="arena${shook}">
-        <div><div class="side-label a">Your gladiator</div>${fighterCard(m.a.f, { combatant: m.a, compact: true })}${statLine(stats, 'A')}</div>
+      <div class="arena${shook}"${shook ? ` style="animation-delay:${timing?.shake ?? 0}s"` : ''}>
+        <div class="side${sideCls('A')}"${sideStyle}><div class="side-label a">Your gladiator</div>${fighterCard(m.a.f, { combatant: m.a, live: stats.A, ...fresh('A'), compact: true })}<div class="${hold(reveal)}">${statLine(stats, 'A')}</div></div>
         <div class="center">
           <div class="gauge-labels"><span>You're stronger</span><span>Power Delta ${last ? signed(delta) : '0'}</span><span>They're stronger</span></div>
           <div class="gauge" title="Leans towards the stronger side: yours on the left, theirs on the right"><div class="needle" style="left:${((10 - delta) / 20) * 100}%"></div></div>
           ${last ? initiativeRoll(m, last, animate) : ''}
           ${last ? tacticLine(m, last) : ''}
-          ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span><span class="${hold(DICE_TIME + 1.2)}">Round ${last.round} → <b>${esc((last.winner === 'A' ? m.a : m.b).f.name)}</b></span></div>` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
+          ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span>${animate ? `<span class="suspense" style="--from:${reveal - SUSPENSE}s;--reveal:${reveal}s">Steel meets steel…</span>` : ''}</div>${roundBanner(m, last, reveal)}` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
           <div class="tags">${pills.map((p, i) => `<span class="tag ${p.side.toLowerCase()}" style="animation-delay:${animate ? DICE_TIME + i * 0.2 : 0}s">${esc(p.text)}</span>`).join('')}</div>
           <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the math'}</button></div>
           <div class="feed" id="feed">${feed(m, ui)}</div>
         </div>
-        <div><div class="side-label b">${m.house ? `Opponent · <span style="color:${esc(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div>${fighterCard(m.b.f, { combatant: m.b, compact: true, stress: false })}${statLine(stats, 'B')}</div>
+        <div class="side${sideCls('B')}"${sideStyle}><div class="side-label b">${m.house ? `Opponent · <span style="color:${esc(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div>${fighterCard(m.b.f, { combatant: m.b, live: stats.B, ...fresh('B'), compact: true, stress: false })}<div class="${hold(reveal)}">${statLine(stats, 'B')}</div></div>
       </div>
       ${tutorial}
-      <div class="controls${hold(DICE_TIME + 1.4)}">${controls(m, ui, bout, items, nextBlocker)}</div>
+      <div class="controls${hold((timing?.end ?? 0) + 0.3)}">${controls(m, ui, bout, items, nextBlocker)}</div>
     </div>`;
 }

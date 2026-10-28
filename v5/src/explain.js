@@ -2,7 +2,7 @@
 
 import { ECONOMY, FAVOR, MORALE, STRESS } from './data.js';
 import { computePower, computeSpeed, effectiveInjuries } from './fight.js';
-import { boutFor, matchOptions, fightPowers, isChampionOf, bossLossFavor, GRAND_TIER, houseOf, opponentFor } from './run.js';
+import { boutFor, matchOptions, fightPowers, isChampionOf, bossLossFavor, GRAND_TIER, houseOf, opponentFor, crushingGapFor, hasBracket } from './run.js';
 
 // Warnings about sending this fighter to this arena. Each has text and a tone ('warn' | 'bad' | 'info').
 export function fighterWarnings(run, f, tier) {
@@ -16,7 +16,7 @@ export function fighterWarnings(run, f, tier) {
     const { mine, theirs } = fightPowers(run, f, tier);
     const gap = mine - theirs;
     if (isChampionOf(f, tier)) out.push({ tone: 'bad', text: `Champion here: a win earns no Prestige or Renown, and costs ${-FAVOR.championReturn} Favor and ${-MORALE.crowdJeers} Morale` });
-    else if (f.renown >= ECONOMY.knownRenown && gap >= ECONOMY.crushingGap) out.push({ tone: 'bad', text: `Crushing mismatch (+${gap} Power, ${f.renown} Renown): a win costs ${-FAVOR.crushingWin} Favor and ${-MORALE.crowdJeers} Morale` });
+    else if (f.renown >= ECONOMY.knownRenown && gap >= crushingGapFor(run, tier)) out.push({ tone: 'bad', text: `Crushing mismatch (+${gap} Power, ${f.renown} Renown): a win costs ${-FAVOR.crushingWin} Favor and ${-MORALE.crowdJeers} Morale` });
     else if (f.renown < ECONOMY.knownRenown) out.push({ tone: 'info', text: 'Rookie: the crowd won\'t jeer them here' });
   }
   const opts = matchOptions(run, f, tier);
@@ -32,7 +32,7 @@ export function arenaStakes(run, tier) {
   const bout = boutFor(run, tier);
   if (!bout.top) {
     return `Lower arena: no Favor for winning; Prestige is halved per tier below your top arena. Rookies (under ${ECONOMY.knownRenown} Renown) fight here freely. `
-      + `A known fighter winning with ${ECONOMY.crushingGap}+ more Power is jeered (${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale, no Renown); `
+      + `A known fighter winning with ${ECONOMY.crushingGap}+ more Power is jeered (${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale, no Renown)${hasBracket(tier) ? `; in a tournament only the Final is judged, at ${ECONOMY.bracketCrushingGap}+` : ''}; `
       + `a Champion of this arena gets no Prestige or Renown and costs ${FAVOR.championReturn} Favor. `
       + `Win ${ECONOMY.titleWins} times here (or beat the Boss) to become its Champion. Upsets and Bloodied Victories (wins with 2+ injuries) still earn Favor.`;
   }
@@ -45,6 +45,9 @@ export function arenaStakes(run, tier) {
 // Scouted, Challenger, items, injuries, arena rules).
 export function roundStats(match) {
   const round = Math.min(3, match.round + (match.over ? 0 : 1)) || 1;
-  const side = (c, o) => ({ power: computePower(c, o, round).total, speed: computeSpeed(c, round).total });
+  const side = (c, o) => {
+    const p = computePower(c, o, round);
+    return { power: p.total, speed: computeSpeed(c, round).total, mods: p.mods };
+  };
   return { round, A: side(match.a, match.b), B: side(match.b, match.a) };
 }
