@@ -114,12 +114,12 @@ test('at the start of winter the houses are paid by their place in the standings
   recruit(run, run.market[0].id);
   run.glory = 100; // first place
   run.week = 39;
-  run.gold = 0;
+  run.gold = 10; // 10 alone can't pay the 15 Gold tribute; with the purse it can
   run.boutPending = false;
   run.bouts = null;
   advanceWeek(run);
   const purse = HOUSES.yearPurse[0] * 1;
-  assert.equal(run.gold, purse - 15, 'the purse arrives before the 15 Gold tribute');
+  assert.equal(run.gold, 10 + purse - 15, 'the purse arrives before the 15 Gold tribute');
   assert.ok(run.log.some((l) => /year-end purse/i.test(l.text)));
   const last = createRun(9);
   recruit(last, last.market[0].id);
