@@ -61,8 +61,8 @@ test('the same seed replays the same match exactly', () => {
 
 // ---- Death gate ----
 
-test('severity adds +20 per prior injury and +5 per point of opponent advantage', () => {
-  assert.equal(injurySeverity(40, 2, 3, false).raw, 40 + 40 + 15);
+test('severity adds +25 per prior injury (v5; was +20) and +5 per point of opponent advantage', () => {
+  assert.equal(injurySeverity(40, 2, 3, false).raw, 40 + 50 + 15);
 });
 
 test('fighters with fewer than 2 injuries are clamped to 99 (never die)', () => {
@@ -75,7 +75,7 @@ test('fighters with fewer than 2 injuries are clamped to 99 (never die)', () => 
 });
 
 test('2+ injuries and a round loss can kill at 100+', () => {
-  const s = injurySeverity(60, 2, 0, false);
+  const s = injurySeverity(50, 2, 0, false);
   assert.equal(s.score, 100);
   assert.equal(s.injury.tag, 'death');
 });

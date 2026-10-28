@@ -319,6 +319,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Boss arena rules:** Lions in the Arena (the Death Gate opens one injury earlier for both fighters); The Emperor's Gaze (no capitulating).
 - **Stables** (Prestige level 2 / 3, 9 / 14 Gold): 1 / 2 Basa fighters in the Market each month.
 - **Events:** old wound, poet, insult, wandering healer (heals the newest wound), onlookers, imperial envoy.
+- **Deaths are more likely:** the injury roll adds +25 per existing effective injury (was +20). Measured with the v5 content: careful careers lose 0.28 fighters (was about 0.2), reckless ones 3.27 (was 2.97). The reckless-deaths gate is now 1–4 (was 1–3), at the user's request for more death.
 
 ### Saves
 - Save format version 3. Version-2 careers are upgraded on load: Favor = 50 − 15 per Strike, the old circuit becomes the top arena, and earlier arenas count as conquered. The Codex is stored separately and is never touched by career saves.

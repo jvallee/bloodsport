@@ -26,7 +26,7 @@ export function deltaRow(delta) {
 }
 
 // Injury roll: d100 + perInjury × prior injuries + perPowerGap × opponent's Power advantage (design doc used +15 per injury).
-export const INJURY_ROLL = { perInjury: 20, perPowerGap: 5 };
+export const INJURY_ROLL = { perInjury: 25, perPowerGap: 5 }; // v5: was 20 (the user asked for more deaths)
 
 export const INJURIES = [
   { tier: 1, min: 1, max: 25, tag: 'distracted', name: 'Distracted', weight: 1, desc: 'Disables 1 random trait or class ability for the rest of the match.' },
