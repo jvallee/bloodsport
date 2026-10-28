@@ -322,7 +322,7 @@ export const PRESTIGE_LEVELS = [
 export const BUILDINGS = {
   quarters: { name: 'Fighter Quarters', dept: 'housing', icon: 'bed', cost: [6, 6, 10], req: [1, 1, 3], per: [2, 4, 5], effect: (n) => `Houses ${n} fighters`, extra: (lv) => `Decor up to ${lv} of each item` },
   entertainment: { unique: true, name: 'Entertainment Room', dept: 'housing', icon: 'lyre', cost: [8, 12], req: [2, 3], per: [15, 30], effect: (n) => `All fighters −${n} Stress each week` },
-  trainer: { name: 'Trainer Room', dept: 'training', icon: 'dumbbell', cost: [8, 10, 16, 26, 40], req: [1, 2, 3, 4, 5], per: [3, 5, 8, 13, 21], effect: (n) => `Trains 1 fighter a week; each fighter can train up to ${n} points in total`, extra: (lv) => `Training costs ${lv} Gold per fighter-week (your best Trainer Room sets the cap and the fee)` },
+  trainer: { name: 'Trainer Room', dept: 'training', icon: 'dumbbell', cost: [8, 10, 16, 26, 40], req: [1, 2, 3, 4, 5], per: [3, 5, 8, 13, 21], effect: (n) => `Trains 1 fighter a week; each fighter can train up to ${n} points in total`, note: () => (VETERAN_CAP.perLevel ? `Veterans train longer: each fighter gets ${VETERAN_CAP.perLevel >= 1 ? `+${VETERAN_CAP.perLevel} training week${VETERAN_CAP.perLevel === 1 ? '' : 's'} per level` : `+1 training week every ${Math.round(1 / VETERAN_CAP.perLevel)} levels`} above level 1, on top of the room's cap.` : ''), extra: (lv) => `Training costs ${lv} Gold per fighter-week (your best Trainer Room sets the cap and the fee)` },
   medbay: { name: 'Medbay', dept: 'medical', icon: 'cross', cost: [8, 8, 14], req: [1, 2, 4], per: [1, 2, 3], effect: (n) => `Treats ${n} fighter${n > 1 ? 's' : ''} at a time`, extra: (lv) => (lv >= 2 ? 'Heals 2 weeks of injury per week' : 'Heals 1 week of injury per week') },
   oracle: { unique: true, name: 'Oracle', dept: 'scouting', icon: 'eye', cost: [8, 12], req: [2, 3], per: [1, 2], effect: (n) => (n >= 2 ? 'Exact odds and next Boss debuff' : 'Odds to the nearest 10%') },
   armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16, 24], req: [2, 3, 4], per: [5, 6, 8], effect: (n) => `Sells ${n} pieces of gear each month, and buys your spare gear back at half price`, extra: (lv) => (lv >= 3 ? 'Stocks Imperial (tier 3) gear' : lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
@@ -346,6 +346,10 @@ export const EVASION = { perPoint: 4000, max: 20000 };
 
 // XP to reach levels 2..6. Each level-up offers a choice of 3 perks.
 export const XP = { win: 3, loss: 1, bossMultiplier: 2, upsetBonus: 2, levels: [3, 8, 15, 25, 40] };
+// Veterans earn a higher training cap: each level above 1 raises that fighter's own Trainer cap by `perLevel` weeks
+// (rounded down, so 0.5 means one week every second level). Market fighters always arrive at level 1 with bonus
+// natural Power by arena, so without this a fresh Imperial recruit out-powers a capped veteran.
+export const VETERAN_CAP = { perLevel: 1 };
 
 // `req(f)` gates combo perks; `stat` perks change the fighter once, the rest are checked in the engine or run.
 export const PERKS = {

@@ -2,6 +2,7 @@
 
 import { ECONOMY, FAVOR, MORALE, STRESS } from './data.js';
 import { computePower, computeSpeed, effectiveInjuries } from './fight.js';
+import { trainCapFor, trainCapParts } from './ludus.js';
 import { boutFor, matchOptions, fightPowers, isChampionOf, bossLossFavor, GRAND_TIER, houseOf, opponentFor, crushingGapFor, hasBracket } from './run.js';
 
 // Warnings about sending this fighter to this arena. Each has text and a tone ('warn' | 'bad' | 'info').
@@ -51,4 +52,10 @@ export function roundStats(match) {
     return { power: p.total, speed: computeSpeed(c, round).total, mods: p.mods };
   };
   return { round, A: side(match.a, match.b), B: side(match.b, match.a) };
+}
+
+// "Training 4 / 5 (Trainer 3 + 2 from level 3)": training weeks used against this fighter's own cap.
+export function trainingText(run, f) {
+  const parts = trainCapParts(run, f);
+  return `Training ${f.trained} / ${trainCapFor(run, f)}${parts ? ` (${parts})` : ''}`;
 }

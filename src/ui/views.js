@@ -10,10 +10,10 @@ import {
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
-  plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel,
+  plotCount, rosterCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel,
 } from '../ludus.js';
 import { describeOdds } from '../odds.js';
-import { fighterWarnings, arenaStakes } from '../explain.js';
+import { fighterWarnings, arenaStakes, trainingText } from '../explain.js';
 import { gearText } from '../codex.js';
 import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON } from './components.js';
 import { portrait } from './portrait.js';
@@ -331,7 +331,7 @@ function rosterPanel(run) {
     const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(inj.tag === 'fleshWound' ? 'Flesh Wound' : inj.tag)} (${surgeonPrice(run)}g)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
     const augments = f.injuries.map((inj, i) => (['maimed', 'blinded'].includes(inj.tag) ? buttonWhy(`Replace the ${inj.tag === 'maimed' ? 'Maimed limb' : 'Blinded eye'}: ${AUGMENTS[inj.tag === 'maimed' ? 'arm' : 'eye'].name}`, 'augment', { id: f.id, index: i }, augmentBlocker(run, f.id, i)) : '')).join('');
     const actions = `${perkChooser(run, f)}<div class="actions">
-      <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week</small></div>
+      <div class="label">This week's job <small>· ${esc(trainingText(run, f))}, ${trainCost(run)} Gold per training week</small></div>
       <div class="segs">${jobs}</div>
       ${f.injuries.length > 1 ? `<div class="treat"><span class="label">Medbay treats first:</span> <select class="treat-select" data-change="treat-first" data-id="${f.id}" aria-label="Which injury the Medbay treats first">${f.injuries.map((inj, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${esc(INJURY_BY_TAG[inj.tag].name)} (${inj.weeksLeft} week${inj.weeksLeft === 1 ? '' : 's'})</option>`).join('')}</select></div>` : ''}
       ${f.job === 'rest' && jobBlocker(run, f.id, 'trainPower') && jobBlocker(run, f.id, 'trainSpeed') ? `<div class="why-not">Can't train this week: ${esc(jobBlocker(run, f.id, 'trainPower'))}</div>` : ''}
@@ -344,7 +344,7 @@ function rosterPanel(run) {
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>
     </div>`;
-    return fighterCard(f, { actions, morale: moraleTarget(run, f) });
+    return fighterCard(f, { actions, morale: moraleTarget(run, f), training: trainingText(run, f) });
   }).join('');
   return `
     <section class="panel">
@@ -433,7 +433,7 @@ function buildingCard(run, b) {
   const def = BUILDINGS[b.type];
   const pips = def.cost.map((_, i) => `<i class="${i < b.level ? 'on' : ''}"></i>`).join('');
   const nextLevel = b.level < def.cost.length ? b.level + 1 : null;
-  const extra = def.extra ? `<div class="sub">${esc(def.extra(b.level))}</div>` : '';
+  const extra = (def.extra ? `<div class="sub">${esc(def.extra(b.level))}</div>` : '') + (def.note?.() ? `<div class="sub">${esc(def.note())}</div>` : '');
   const up = nextLevel
     ? `<div class="next">Next: ${esc(def.effect(def.per[b.level]))}${def.extra ? `; ${esc(def.extra(nextLevel))}` : ''}</div>${button(`Upgrade · ${def.cost[b.level]} Gold`, 'upgrade', { id: b.id }, upgradeBlocker(run, b.id), 'btn small primary')}${upgradeBlocker(run, b.id) ? `<div class="why-not">${esc(upgradeBlocker(run, b.id))}</div>` : ''}`
     : '<div class="next">Fully upgraded</div>';
