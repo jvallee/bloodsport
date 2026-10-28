@@ -152,7 +152,9 @@ function controls(m, ui, bout, items = {}, nextBlocker = null) {
     ? `<div class="items-row"><span class="sub">Use an item (one of each kind per fight):</span>${usable.map(([k, n]) => `<button class="btn small" data-action="use-item" data-item="${k}" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</button>`).join('')}</div>`
     : ''}`;
   if (m.round === 0) {
-    return `${itemRow}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
+    // A fighter who walks in with the Death Gate open is warned before Round 1 too.
+    const pre = mortalDanger(m.a) ? `<div class="alert">⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death. Capitulating is only possible between rounds.</div>` : '';
+    return `${pre}${itemRow}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
   }
   const danger = mortalDanger(m.a);
   const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.</div>` : '';

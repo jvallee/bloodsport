@@ -71,3 +71,11 @@ test('in Mortal Danger the fight shows the chance of dying next round; the real 
   assert.equal(JSON.stringify(m.rng), before);
   assert.equal(deathRisk(createMatch({ a: blank(), b: blank(), rng: createRng(3) })), 0);
 });
+
+test('a fighter who starts a fight in Mortal Danger is warned before Round 1, with the risk', async () => {
+  const { fightView } = await import('../src/ui/fightView.js');
+  const { injuries } = await import('./helpers.js');
+  const m = createMatch({ a: blank({ name: 'Duma', injuries: injuries('poisoned') }), b: blank({ power: 12 }), rng: createRng(3) });
+  const html = fightView(m, { animateRound: 0, showMath: false, auto: false }, { name: 'Test', buyIn: 1, tier: 1 });
+  assert.match(html, /MORTAL DANGER from the first round: Duma enters with 2 injuries\. Losing Round 1: about <b>\d+%<\/b>/);
+});
