@@ -6,7 +6,7 @@
 
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
-import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE_LEVEL, MERCY } from '../src/data.js';
+import { STRESS, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
@@ -202,7 +202,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   function mercyText() {
     const v = run.mercy;
     return `*** THUMBS UP OR DOWN: ${v.opp} lies beaten. ${v.crowd === 'kill' ? 'The crowd roars for blood!' : 'The crowd chants for mercy.'} ***\n`
-      + `  \`spare\`: +${MERCY.spareFavor} Favor · \`kill\`: +${MERCY.killRenown} Renown and a kill${v.house ? ' (their house swears a feud)' : ''}. Doing what the crowd wants: +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale. Nothing else can happen until you decide.`;
+      + `  \`spare\`: +${MERCY.spareFavor} Favor · \`kill\`: +${MERCY.killRenown} Renown and a kill${v.house && v.crowd !== 'kill' ? ' (against the crowd: their house swears a feud)' : ''}. Doing what the crowd wants: +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale. Nothing else can happen until you decide.`;
   }
 
   function look() {
@@ -334,7 +334,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       if (match.itemsUsed?.length) lines.push(`  Items used this fight: ${match.itemsUsed.map((k) => CONSUMABLES[k].name).join(', ')}.`);
       const sig = signatureOf(match.a.f);
       if (sig) lines.push(match.a.sigRound ? `  Signature move ${sig.name}: ${match.a.sigRound > match.round ? 'ready for the next round' : 'used this fight'}.` : `  Signature move (\`signature\`, once per fight): ${sig.name}. ${sig.desc}`);
-      else if (SIGNATURES[match.a.f.cls]) lines.push(`  Signature move ${SIGNATURES[match.a.f.cls].name} unlocks at level ${SIGNATURE_LEVEL}.`);
+      else if (SIGNATURES[match.a.f.cls]) lines.push(`  Signature move ${SIGNATURES[match.a.f.cls].name} unlocks at level ${SIGNATURE.level}.`);
       lines.push(usable.length ? `  Items (one of each kind per fight, \`use <item>\`): ${usable.map(([k, n]) => `${k} ×${n} (${CONSUMABLES[k].desc})`).join('; ')}` : owned.length ? '  No other fight items to use.' : '  No fight items (the Apothecary in the `market` sells them).');
     }
     lines.push(match.round === 0 ? '  `next <tactic>` to begin Round 1 (`next` alone uses the suggestion).' : `  \`next <tactic>\` to fight Round ${match.round + 1}${canThrowTowel(match) ? `, or \`capitulate\` (lose the match and ${bout.buyIn} Prestige buy-in; your fighter survives)` : ''}.`);

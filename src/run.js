@@ -1497,7 +1497,7 @@ export function resolveMercy(run, choice) {
       log(run, `${fighter.name} has ${fighter.kills} kills and earns the mark ${out.mark}: ${marks.at(-1).desc}`, 'event');
     }
     run.graveyard = [...(run.graveyard ?? []), opp]; // the dead don't come back
-    if (house) {
+    if (house && crowd !== 'kill') { // a kill the crowd demanded is the crowd's will: no feud
       house.feud = HOUSES.feudMonths;
       out.feud = `${house.name} swears revenge: their fighters get +1 Power against you for ${HOUSES.feudMonths} months.`;
       log(run, out.feud, 'warn');

@@ -1,6 +1,6 @@
 // Shared UI pieces: escaping, buttons, icons, the fighter card. Returns HTML strings.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS, SIGNATURES, SIGNATURE_LEVEL } from '../data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS, SIGNATURES, SIGNATURE } from '../data.js';
 
 const HUMOR_ICON = { choleric: '🔥', sanguine: '💨', melancholic: '🪨', phlegmatic: '💧' };
 import { effectiveInjuries, mortalDanger, deathGateAt, killMarks, signatureOf } from '../fight.js';
@@ -75,7 +75,7 @@ function signatureChip(f) {
   const sig = SIGNATURES[f.cls];
   if (!sig) return '';
   const ready = Boolean(signatureOf(f));
-  return `<span class="chip signature${ready ? '' : ' locked'}" title="Signature move${ready ? '' : ` (unlocks at level ${SIGNATURE_LEVEL})`}: ${esc(sig.desc)} Once per fight.">★ ${esc(sig.name)}${ready ? '' : ` · Lv ${SIGNATURE_LEVEL}`}</span>`;
+  return `<span class="chip signature${ready ? '' : ' locked'}" title="Signature move${ready ? '' : ` (unlocks at level ${SIGNATURE.level})`}: ${esc(sig.desc)} Once per fight.">★ ${esc(sig.name)}${ready ? '' : ` · Lv ${SIGNATURE.level}`}</span>`;
 }
 const signedNum = (n) => (n >= 0 ? `+${n}` : `−${-n}`);
 

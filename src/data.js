@@ -179,8 +179,10 @@ export const CLASSES = {
 };
 
 // Signature moves: from level 3, once per fight, a fighter can unleash their class's move for the next round.
-// Opponents of level 3+ use theirs too: when they fall behind, or in Round 3. Values in ChanceE5 like the rest.
-export const SIGNATURE_LEVEL = 3;
+// Seasoned opponents (SIGNATURE.level) use theirs too: when they fall behind, or in Round 3. Values in ChanceE5 like the rest.
+// `level`: when your fighters unlock theirs. `opponentLevel`: seasoned opponents (Bosses from the Bronze Arena,
+// regulars from the Silver Coliseum). Swept: opponents at 4 with ×0.75 purses put careful careers at 52% (gate ≤45).
+export const SIGNATURE = { level: 3, opponentLevel: 3 };
 export const SIGNATURES = {
   cestus: { name: 'Haymaker', desc: 'Next round: +2 Power, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
   sagittarius: { name: 'Aimed Shot', desc: 'Next round: +10% win chance and +20% chance to injure.', boost: { win: 10000, injure: 20000 } },
@@ -195,7 +197,8 @@ export const SIGNATURES = {
 
 // Thumbs up or down: after a win over a wounded opponent, you decide their fate.
 // The crowd calls for blood against a feuding house or a beaten fighter at the Death Gate; otherwise for mercy.
-// Doing what the crowd wants earns +1 Renown and +5 Morale on top.
+// Doing what the crowd wants earns +1 Renown and +5 Morale on top, and a kill the crowd demanded starts no feud
+// (the crowd's will is law); killing against its wishes does.
 export const MERCY = { minInjuries: 1, spareFavor: 2, killRenown: 2, crowdRenown: 1, crowdMorale: 5 };
 
 export const WEAPONS = {

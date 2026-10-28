@@ -597,7 +597,7 @@ function mercyCard(run) {
     <div class="label">The crowd waits</div><h2>${esc(m.opp)}'s fate</h2><p>${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}. ${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'}</p>
     <div class="row event-choices">
       <div class="event-choice"><button class="btn" data-action="mercy" data-choice="spare">👍 Spare them</button><small>+${MERCY.spareFavor} Favor${blood ? '' : `, +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale (the crowd agrees)`}</small></div>
-      <div class="event-choice"><button class="btn danger" data-action="mercy" data-choice="kill">👎 Finish them</button><small>+${MERCY.killRenown} Renown, a kill${m.house ? ', and their house swears a feud' : ''}${blood ? `; +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale (the crowd agrees)` : ''}</small></div>
+      <div class="event-choice"><button class="btn danger" data-action="mercy" data-choice="kill">👎 Finish them</button><small>+${MERCY.killRenown} Renown, a kill${m.house && !blood ? ', and their house swears a feud' : ''}${blood ? `; +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale (the crowd agrees)` : ''}</small></div>
     </div></div></section>`;
 }
 

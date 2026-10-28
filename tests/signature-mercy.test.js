@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { SIGNATURES, SIGNATURE_LEVEL, MERCY, CLASSES, HOUSES } from '../src/data.js';
+import { SIGNATURES, SIGNATURE, MERCY, CLASSES, HOUSES } from '../src/data.js';
 import { createMatch, playRound, computePower, computePhase2, computeSpeed, signatureOf, signatureBlocker, useSignature } from '../src/fight.js';
 import { narrateStory, narrateRound } from '../src/narrate.js';
 import {
@@ -15,8 +15,8 @@ import { blank } from './helpers.js';
 
 test('every class has a signature move, unlocked at level 3', () => {
   for (const cls of Object.keys(CLASSES)) assert.ok(SIGNATURES[cls]?.name && SIGNATURES[cls].desc, cls);
-  assert.equal(signatureOf(blank({ cls: 'cestus', level: SIGNATURE_LEVEL - 1 })), null);
-  assert.equal(signatureOf(blank({ cls: 'cestus', level: SIGNATURE_LEVEL })).name, 'Haymaker');
+  assert.equal(signatureOf(blank({ cls: 'cestus', level: SIGNATURE.level - 1 })), null);
+  assert.equal(signatureOf(blank({ cls: 'cestus', level: SIGNATURE.level })).name, 'Haymaker');
   const m = createMatch({ a: blank({ cls: 'cestus', level: 2 }), b: blank(), rng: createRng(1) });
   assert.match(signatureBlocker(m), /level 3/);
 });
@@ -44,10 +44,10 @@ test('foe effects hit the opponent: Cast the Net slows them and cuts their win c
   assert.equal(ash.a.ash, 1);
 });
 
-test('opponents of level 3+ unleash theirs once they fall behind, or in Round 3', () => {
+test('seasoned opponents unleash theirs once they fall behind, or in Round 3', () => {
   let seen = 0;
   for (let seed = 1; seed <= 40; seed++) {
-    const m = createMatch({ a: blank({ power: 9 }), b: blank({ cls: 'fighter', weapon: 'sword', level: 3, power: 9 }), rng: createRng(seed) });
+    const m = createMatch({ a: blank({ power: 9 }), b: blank({ cls: 'fighter', weapon: 'sword', level: SIGNATURE.opponentLevel, power: 9 }), rng: createRng(seed) });
     const r1 = playRound(m);
     assert.equal(r1.signatures.length, 0, 'never in Round 1');
     if (m.over) continue;
@@ -123,8 +123,29 @@ test('kill: Renown, a kill, the graveyard, and their house swears a feud', () =>
   assert.equal(f.kills, 1);
   assert.equal(f.renown, renown + MERCY.killRenown);
   assert.ok(run.graveyard.includes(name));
-  if (house) assert.equal(house.feud, HOUSES.feudMonths);
+  if (house) assert.equal(house.feud, HOUSES.feudMonths, 'killing against the crowd starts a feud');
   assert.ok(houseOf);
+});
+
+test('a kill the crowd demanded starts no feud', () => {
+  for (let seed = 1; seed <= 20; seed++) {
+    const { run } = wonWounded(seed);
+    const house = run.houses.find((h) => h.id === run.mercy.house);
+    if (!house || house.feud) continue;
+    run.mercy.crowd = 'kill';
+    const out = resolveMercy(run, 'kill');
+    assert.equal(house.feud ?? 0, 0);
+    assert.equal(out.feud, null);
+    assert.equal(out.renown, MERCY.killRenown + MERCY.crowdRenown);
+    return;
+  }
+  assert.fail('no seed had a house opponent');
+});
+
+test('opponents use signature moves only from their level threshold', () => {
+  const m = createMatch({ a: blank({ power: 20 }), b: blank({ cls: 'cestus', level: SIGNATURE.opponentLevel - 1 }), rng: createRng(1) });
+  playRound(m);
+  if (!m.over) assert.equal(playRound(m).signatures.length, 0);
 });
 
 test('the crowd calls for blood at the Death Gate, otherwise for mercy', () => {

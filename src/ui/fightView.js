@@ -1,6 +1,6 @@
 // The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
 
-import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE_LEVEL, MERCY } from '../data.js';
+import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE, MERCY } from '../data.js';
 
 const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 
@@ -128,7 +128,7 @@ function report(s) {
 // Thumbs up or down: the beaten opponent's fate, with what the crowd wants.
 function mercyPanel(m, mercy, late) {
   const blood = mercy.crowd === 'kill';
-  const feud = m.house ? `; ${esc(m.house.name)} will swear a feud` : '';
+  const feud = m.house && !blood ? `; ${esc(m.house.name)} will swear a feud` : ''; // a kill the crowd demanded starts no feud
   return `<div class="mercy${late}">
     <div class="mercy-title">${esc(mercy.opp)} lies beaten in the sand. All eyes turn to you, Lanista.</div>
     <div class="mercy-crowd ${blood ? 'blood' : 'mercy'}">${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'}</div>
@@ -143,7 +143,7 @@ function mercyPanel(m, mercy, late) {
 // The signature move (level 3+): ready, used, or how to unlock it.
 function signatureRow(m) {
   const sig = signatureOf(m.a.f);
-  if (!sig) return SIGNATURES[m.a.f.cls] ? `<div class="sub">★ Signature move <b>${esc(SIGNATURES[m.a.f.cls].name)}</b> unlocks at level ${SIGNATURE_LEVEL}.</div>` : '';
+  if (!sig) return SIGNATURES[m.a.f.cls] ? `<div class="sub">★ Signature move <b>${esc(SIGNATURES[m.a.f.cls].name)}</b> unlocks at level ${SIGNATURE.level}.</div>` : '';
   if (m.a.sigRound) return `<div class="sub">★ ${esc(sig.name)} ${m.a.sigRound > m.round ? 'will be unleashed this round' : 'has been used this fight'}.</div>`;
   return `<div class="items-row"><button class="btn signature" data-action="signature" title="${esc(sig.desc)}">★ ${esc(sig.name)} <small>${esc(sig.desc)} Once per fight.</small></button></div>`;
 }
