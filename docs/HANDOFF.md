@@ -30,6 +30,23 @@ Last updated 2026-10-28. Read this file first, then `CLAUDE.md` (the project rul
   - The user wanted death to be **more** likely.
 - **Address the user as they/them.** Their email is only for git authorship.
 
+## Next task: veterans earn a higher training cap (requested by the user)
+
+**The problem.** The Trainer cap (`trainCap` in `src/ludus.js`; `TRAINER.per = [3, 5, 8, 13, 21]` weeks in `src/data.js`) is house-wide and counts training *weeks* (`f.trained`, checked in `src/run.js` near line 518). Every fighter shares the same ceiling. Market fighters always arrive at level 1, but with bonus natural Power by arena (`marketPower` +0 / +2 / +4 / +6 in `CIRCUITS`). So once both are capped, a fresh Imperial recruit out-powers a Dirt Pits starter who has fought for years. Veterans feel like they fall behind.
+
+**The user's chosen fix.** Each level a fighter gains raises *that fighter's* personal cap by +1 training week: `cap(f) = trainCap(run) + (f.level − 1)`. Levels come from XP (`XP.levels = [3, 8, 15, 25, 40]`, so levels 1–6, up to +5 weeks).
+
+**What to do**
+1. Add a tunable (for example `VETERAN_CAP = { perLevel: 1 }` in `src/data.js`) and a single `trainCapFor(run, f)` helper. Use it everywhere the cap is checked or shown: the training blocker, the auto-switch to Rest, `src/tutorial.js` (the `trainerCap` step), the roster and fighter cards, `src/explain.js`, `src/codex.js`, and `scripts/play-text.js`.
+2. Make it visible. The card and the Power/Speed hover should show something like "Training 9 / 10 (Trainer 8 + 2 from level 3)". The level-up log line should mention the extra training week. Update the Codex entry for the Trainer Room.
+3. The Old Veteran patron (level 3) gets +2 immediately. That is intended.
+4. Tests first: write a test per rule (the cap grows with level, a level-1 fighter is unchanged, the blocker message uses the personal cap, the UI shows the breakdown). Don't weaken existing tests; if a deliberate change breaks one, update the expected value and say so.
+5. Balance: run `npm run check` in the background. All 9 gates must pass. If one fails, sweep `perLevel` (0, 1, and maybe 1 every 2 levels) and choose from the table. Record the numbers in `docs/fight-rules.md` under a new heading.
+6. Bump nothing in `SAVE_VERSION`; old saves already have `level`.
+7. Check it in the browser (section 6, "Browser check"), commit in small steps, push, and confirm the live site.
+8. Ask the user whether to also refresh `/v5/` in place (section 6) rather than doing it unasked.
+9. Report back clearly: what changed, the gate numbers before and after, and a couple of fun ideas.
+
 ## 3. Current state (where I stopped)
 
 The v5 content release is live. On top of it, two batches of v5 updates were made on request.
@@ -146,7 +163,7 @@ Then change the four keys in `v5/src/main.js` back to `bloodsport.v5.career|pref
 
 ## 8. Open decisions and backlog (for the user)
 
-- **Speed may be too strong.** It trains 3× faster than Power and brings first strike, Feint and evasion. Speed gear was repriced, but the training rate is unchanged.
+- **Speed is a threshold stat, not too strong** (measured 2026-10-28 with `speedSplit`, n=3000, one fighter splitting training weeks between +1 Power and +3 Speed vs each Boss). The best split is 1–3 Speed weeks: just enough to out-speed the opponent. At the Imperial Boss, 3 of 13 weeks on Speed give 64% wins against 50% all-Power, and 19% injured against 53%. Pure Speed collapses to 10–13% wins. Initiative, evasion (capped at 20%) and Feint all plateau once you're about 5–6 Speed ahead. Offered but not chosen: a "Flurry" payoff for Speed beyond that point, and slowing Speed training to +2 a week.
 - **The Bronze wall.** Opponents jump in Power while the Trainer cap stays at 5 until House level 3. Bronze Bosses now also have signature moves. Options: unlock the higher Trainer cap earlier, or soften Bronze.
 - **New content is rarely seen.** A Fighter is 1 class in 9, then 1 weapon in 9, so the Axe and Dagger are rare. Weighting new content up is an option.
 - **Prestige spiral** after repeated Boss losses (raised by an earlier playtest).
