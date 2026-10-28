@@ -20,11 +20,14 @@ export const deathGateAt = (f, arena = null) => 2 + (f.kindTrait === 'unbreakabl
 // A fighter's style for matchups: their weapon if a Fighter, otherwise their class.
 export const styleId = (f) => (f.cls === 'fighter' ? f.weapon : f.cls);
 // The matchups that favour c against opp (data.js MATCHUPS).
+const MATCHUPS_BY_STYLE = MATCHUPS.reduce((map, x) => ({ ...map, [x.style]: [...(map[x.style] ?? []), x] }), {});
+const NONE = [];
 export function matchupsFor(c, opp) {
-  const mine = styleId(c.f);
+  const list = MATCHUPS_BY_STYLE[styleId(c.f)];
+  if (!list) return NONE;
   const theirs = styleId(opp.f);
   const armored = Boolean(opp.f.gear?.armor);
-  return MATCHUPS.filter((x) => x.style === mine && x.vs.some((v) => v === theirs || (v === 'armor' && armored)));
+  return list.filter((x) => x.vs.some((v) => v === theirs || (v === 'armor' && armored)));
 }
 export const killMarks = (f) => KILL_MARKS.filter((k) => (f.kills ?? 0) >= k.at);
 const hasMark = (f, id) => (f.kills ?? 0) >= KILL_MARKS.find((k) => k.id === id).at;

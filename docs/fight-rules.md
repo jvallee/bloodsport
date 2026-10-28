@@ -286,6 +286,40 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Year-end purse:** at the start of winter, before tribute, the Emperor pays the top two houses in the Glory standings 8 and 4 Gold × the year. It gives winter some income and makes the standings a race with a prize. (Swept: 30 / 20 / 10 took careful careers far too high.) With brackets, the purse and lower-arena Titles unchanged: careful 35%, reckless deaths 2.90, first Boss 67%, Grand +19 points harder; all gates pass.
 - **Firebug's Fire Braziers and cyborg augments** count in the card's Power, as they always did in fights.
 
+## v5 content (2026-10-28)
+- **Kinds:**
+  - **Vampire** (base Power 5): Blood Drinker (wounding the opponent closes this fighter's newest light wound from this fight), Nightborn (+1 Power in Round 3), Mesmerize (+5% win chance in Round 1).
+  - **Basa** (base Power 6, exotic: only from the **Stables**): Thick Hide (armor, −10% chance to be injured), Pounce (+3 Speed in Round 1), Rampage (+1 Power per round won, for the match).
+- **Classes:**
+  - **Retiarius:** winning a round entangles the opponent: −3 Speed next round.
+  - **Ash-Hungry:** each injury inflicted gives +1 Power and +5% chance to injure for the rest of the match.
+  - **Blood-Bearer:** +5% win chance; after losing a round, a free 15% off-hand strike at the winner.
+- **Weapons:** **Axe** (wounds +15 on the injury roll); **Dagger** (+10% chance to injure when striking first).
+- **Matchups** (`MATCHUPS` in data.js; a fighter's style is their weapon, or their class):
+  - Spear vs Cestus, Fists, Dagger: +5% win.
+  - Club vs anyone in armor: +10% to injure.
+  - Axe vs Samnite or armor: +5% to injure.
+  - Sword vs Dagger, Club: +5% win.
+  - Dagger vs Retiarius, Sagittarius: +5% win.
+  - Retiarius vs Sword, Axe: +5% win.
+  - Bow vs Retiarius: +5% win.
+  - Flail vs Samnite, Sword: +5% to injure.
+- **Items:**
+  - Iron Tonic (+5% win next round, 9 Gold)
+  - Viper Venom (+10% to injure next round, 11)
+  - Berserker Mushroom (+2 Power and +10% to be injured next round, 12)
+  - Throwing Net (opponent −3 Speed next round, 7)
+  - Smelling Salts: Distracted and Concussed stop working for the rest of the fight, but still count toward the Death Gate and still need healing (8).
+- **Gear:**
+  - Wooden Buckler (armor: −4% to be injured, +2% win)
+  - Throwing Axes (tier 2: +1 Power, +1 Speed, +3% to injure)
+  - Tier 3 (Armourer level 3, 24 Gold, Prestige level 4): Imperial Gladius (+2 Power, +2 Speed), Executioner's Axe (+2 Power, +10% to injure, −1 Speed), Lorica Segmentata (−12% to be injured, +1 Power), Lion Pelt (−5% to be injured, +5% win).
+- **Decor:** Bathhouse (−15 Stress a week, 4 Gold); Lion Cage (a Basa gets +1 Power, 5 Gold).
+- **Perks:** Bloodthirsty (+10% to injure a hurt opponent), Counterpuncher (+10% win after losing a round), Iron Will (Level 4+: the Death Gate opens one injury later).
+- **Boss arena rules:** Lions in the Arena (the Death Gate opens one injury earlier for both fighters); The Emperor's Gaze (no capitulating).
+- **Stables** (Prestige level 2 / 3, 9 / 14 Gold): 1 / 2 Basa fighters in the Market each month.
+- **Events:** old wound, poet, insult, wandering healer (heals the newest wound), onlookers, imperial envoy.
+
 ### Saves
 - Save format version 3. Version-2 careers are upgraded on load: Favor = 50 − 15 per Strike, the old circuit becomes the top arena, and earlier arenas count as conquered. The Codex is stored separately and is never touched by career saves.
 
