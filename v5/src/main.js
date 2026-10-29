@@ -1,7 +1,7 @@
 // App state, saving, coach tips and event wiring. Game rules live in run.js / fight.js; markup in src/ui/.
 
 import { mortalDanger, canThrowTowel, suggestTactic } from './fight.js';
-import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker } from './run.js';
+import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView } from './run.js';
 import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
@@ -17,7 +17,7 @@ import { roundSounds, setSound, sfx } from './ui/sound.js';
 
 const app = document.getElementById('app');
 const fightEl = document.getElementById('fight');
-const SAVE_KEY = 'bloodsport.v5.career'; // separate from the live game's save
+const SAVE_KEY = 'bloodsport.v5.career';
 const PREFS_KEY = 'bloodsport.v5.prefs';
 const CODEX_KEY = 'bloodsport.v5.codex';
 const LEGACY_KEY = 'bloodsport.v5.legacy';
@@ -29,6 +29,8 @@ let noticePage = 0;
 let tab = 'ludus';
 let showHelp = false;
 let autoTimer = null;
+let roundStartedAt = 0; // when the latest round began playing (auto-play waits for its story to finish, not for a fresh wait)
+let keepAuto = false; // auto-play carries on into the next match of a tournament
 const ui = { animateRound: 0, showMath: false, auto: false, open: {} }; // open: fold-outs the player opened or closed, by data-key
 let prefs = { tutorial: [], showMath: false, introSeen: false, sound: true };
 let codex = loadCodex(null);
@@ -136,7 +138,7 @@ function renderFight() {
   }
   fightEl.hidden = false;
   const nextBlocker = match.summary?.next ? fightBlocker(run, match.a.f.id, match.bout.tier) : null;
-  fightEl.innerHTML = fightView(match, ui, match.bout, tutorialCard(fightTutorial(), 'fight'), run.inventory.items, nextBlocker, run.mercy);
+  fightEl.innerHTML = fightView(match, ui, match.bout, tutorialCard(fightTutorial(), 'fight'), run.inventory.items, nextBlocker, run.mercy, bracketView(run, match.bout.tier));
   const feed = document.getElementById('feed');
   if (feed) feed.scrollTop = feed.scrollHeight;
 }
@@ -151,12 +153,13 @@ function scheduleAuto() {
     const stance = suggestTactic(match);
     lastAction = ['next-round', { stance }];
     act('next-round', { stance });
+    roundStartedAt = Date.now();
     ui.animateRound = match.round;
     roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath) });
     save();
     render();
     scheduleAuto();
-  }), match.round === 0 ? 300 : (roundEndTime(match, match.rounds.at(-1), ui.showMath) + 1.5) * 1000); // let the round sink in
+  }), match.round === 0 ? 300 : Math.max(300, roundStartedAt + (roundEndTime(match, match.rounds.at(-1), ui.showMath) + 1.5) * 1000 - Date.now())); // let the round sink in
 }
 
 // ---------- Careers ----------
@@ -293,13 +296,16 @@ const before = {
   withdraw: () => confirm('Withdraw from the tournament? It counts as capitulating; your fighter is safe.'),
   advance: () => { summaries = []; achieved = []; return true; },
   'advance-tournament': () => { summaries = []; achieved = []; return true; },
+  fight: () => { keepAuto = ui.auto && Boolean(match?.summary?.next); return true; },
 };
 const after = {
   fight: () => {
     ui.animateRound = 0;
-    ui.auto = false; // auto-play is per match: each fight starts paused
+    ui.auto = keepAuto; // each fight starts paused, except the next match of a tournament you were auto-playing
+    keepAuto = false;
   },
   'next-round': () => {
+    roundStartedAt = Date.now();
     ui.animateRound = match?.round ?? 0;
     if (match?.rounds.length) roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath) });
   },

@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES,
 } from './data.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower } from './fight.js';
 import { Refused } from './errors.js';
@@ -15,7 +15,7 @@ import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabe
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
-  maxLevel, effectAt, build,
+  maxLevel, effectAt, build, upgrade,
 } from './ludus.js';
 
 export const SAVE_VERSION = 3;
@@ -89,6 +89,18 @@ export function powerParts(f) {
 }
 export const championTitle = (tier) => `Champion of ${arenaName(tier).replace(/^The /, 'the ')}`;
 export const isChampionOf = (f, tier) => (f.titles ?? []).includes(championTitle(tier));
+// A Championship also crowns the fighter in every arena below it (+1 Power for each Title they didn't hold),
+// so a Silver champion never has to go back down to the Dirt Pits for the bonus (playtest #7). Returns the new Titles.
+export function crownChampion(f, tier) {
+  const won = [];
+  for (let t = tier; t >= (TITLES.cascade ? 1 : tier); t--) {
+    if (isChampionOf(f, t)) continue;
+    f.titles.push(championTitle(t));
+    f.power += t === tier ? 1 : TITLES.cascadePower;
+    won.push(championTitle(t));
+  }
+  return won;
+}
 // Harsh Judges (a decree) makes every Boss loss cost 5 more.
 export const bossLossFavor = (tier, run = null) => FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1] - (hasDecree(run, 'harshJudges') ? 5 : 0);
 export const hasDecree = (run, id) => Boolean(run?.setup?.decrees?.includes(id));
@@ -186,6 +198,13 @@ export function crushingGapFor(run, tier) {
 }
 export const bracketOf = (run, tier) => (hasBracket(tier) && run.bouts?.[tier] ? run.brackets?.[tier] ?? null : null);
 export const bracketRound = (run, tier) => BRACKET.rounds[bracketOf(run, tier)?.round ?? 0];
+// The bracket as the fight screen shows it: each round's opponent and which round you're on (playtest #7).
+export function bracketView(run, tier) {
+  const b = bracketOf(run, tier);
+  if (!b) return null;
+  const foes = [...b.foes, run.arenas[tier].opponent];
+  return { round: b.round, rounds: BRACKET.rounds.map((label, i) => ({ label, name: foes[i].name, power: effectivePower(foes[i]) })) };
+}
 
 // Who you fight next in this arena: a bracket's Quarter- or Semi-final opponent, else the arena's.
 // Read-only (safe to call while rendering): brackets are drawn when the tournament week begins.
@@ -294,6 +313,10 @@ function refreshLiaison(run) {
   if (!lv) return;
   const elite = lv >= 2;
   const f = createFighter(run.rng.market, { id: newId(run, 'f'), power: Math.max(3, currentBout(run).oppPower + (elite ? 1 : -2)), takenNames: takenNames(run), classes: run.setup?.classes });
+  // A prisoner arrives at their arena's Power, but anything above a Market fighter's natural Power is training they
+  // already did elsewhere: it counts toward the Trainer cap, so they can't train another full cap on top (playtest #7).
+  const prior = Math.max(0, f.power - (KINDS[f.kind].basePower + circuitInfo(run).marketPower));
+  Object.assign(f, { trained: prior, trainedPower: prior });
   f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
   f.stress = elite ? 30 : 40;
   f.morale = elite ? 40 : 30;
@@ -318,6 +341,13 @@ export function buildRoom(run, type) {
   if (type === 'armourer') refreshArmourer(run);
   if (type === 'liaison') refreshLiaison(run);
   if (type === 'stables') addStablesOffers(run);
+  return b;
+}
+
+// Upgrade a room; a bigger Stables brings its extra Basa straight away too.
+export function upgradeRoom(run, id) {
+  const b = upgrade(run, id);
+  if (b.type === 'stables') addStablesOffers(run);
   return b;
 }
 
@@ -1009,6 +1039,19 @@ export function unequip(run, id, slot) {
   f.gear[slot] = null;
 }
 
+// Return every fighter's gear to the storeroom at once, so it can be handed out afresh (playtest #7).
+export function unequipAllBlocker(run) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!run.roster.some((f) => f.gear.weapon || f.gear.armor)) return 'Nobody has gear equipped.';
+  return null;
+}
+
+export function unequipAll(run) {
+  assertOk(unequipAllBlocker(run));
+  for (const f of run.roster) for (const slot of ['weapon', 'armor']) if (f.gear[slot]) unequip(run, f.id, slot);
+}
+
 // ---------- Surgeon ----------
 
 export const surgeonPrice = (run) => ECONOMY.surgeonCost + ECONOMY.surgeonPerTier * (Math.min(run.topTier, CIRCUITS.length) - 1);
@@ -1315,10 +1358,9 @@ export function finishMatch(run, match) {
     if (tier !== GRAND_TIER) {
       fighter.arenaWins = { ...(fighter.arenaWins ?? {}), [tier]: (fighter.arenaWins?.[tier] ?? 0) + 1 };
       if (!isChampionOf(fighter, tier) && (bout.boss || fighter.arenaWins[tier] >= ECONOMY.titleWins)) {
-        const title = championTitle(tier);
-        fighter.titles.push(title);
-        fighter.power += 1;
-        summary.title = title;
+        const titles = crownChampion(fighter, tier);
+        summary.title = titles.join(', ');
+        summary.titlePower = titles.length;
       }
     }
     if (tier === GRAND_TIER) {
