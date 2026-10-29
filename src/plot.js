@@ -232,5 +232,5 @@ export const PLOT_EVENTS = [
 ];
 
 export const PLOT_EVENT_BY_ID = Object.fromEntries(PLOT_EVENTS.map((e) => [e.id, e]));
-// The win chance the freed contacts add in the coup Final (voices in the crowd).
-export const coupBonus = (run) => Math.min(PLOT.contactMax, PLOT.contactWin * (run.plot?.freed ?? []).filter((c) => !c.caught).length);
+// The win chance the coup Final adds for your champion: the armed barracks rising, plus the freed contacts' voices in the crowd.
+export const coupBonus = (run) => (isArmed(run) ? PLOT.armedWin : 0) + Math.min(PLOT.contactMax, PLOT.contactWin * (run.plot?.freed ?? []).filter((c) => !c.caught).length);

@@ -220,6 +220,8 @@ test('contacts are voices in the crowd at the coup: PLOT.contactWin each, up to 
   assert.equal(coupBonus(run), PLOT.contactMax);
   run.plot.freed = run.plot.freed.slice(0, 2);
   assert.equal(coupBonus(run), 2 * PLOT.contactWin);
+  run.plot.armed = true; // the armed barracks rise with the champion
+  assert.equal(coupBonus(run), PLOT.armedWin + 2 * PLOT.contactWin);
 });
 
 test('suspicion: political prisoners raise it each month; past 80 the Praetorians raid', () => {
@@ -316,7 +318,7 @@ test('the coup: the Emperor watches (no capitulating), and the freed cheer the c
   const { run, champ, f } = coupReady();
   assert.equal(run.plot.coup, true);
   assert.equal(run.arenas[GRAND_TIER].debuff, 'emperorsGaze');
-  assert.equal(matchOptions(run, champ, GRAND_TIER).rebels, PLOT.contactWin);
+  assert.equal(matchOptions(run, champ, GRAND_TIER).rebels, PLOT.armedWin + PLOT.contactWin);
   assert.equal(matchOptions(run, f, GRAND_TIER).rebels, 0, 'only for the champion');
 });
 

@@ -464,5 +464,6 @@ export const PLOT = {
   gap: [3, 6], firstGap: [1, 3], refusalsToCold: 2, survivesAt: 2,
   cause: { trust: 4, houseLevel: 3 }, ready: { trust: 6 },
   suspicion: { perPrisoner: 1, perContact: 1, decay: 2, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
-  contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30,
+  // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
+  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30,
 };
