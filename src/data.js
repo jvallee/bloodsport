@@ -450,3 +450,18 @@ export const NAMES = [
   'Urgulania', 'Valens', 'Gorrak', 'Hessa', 'Mordra', 'Skarn', 'Thessaly', 'Vael', 'Ysolde', 'Zarek',
   'Unit Theta', 'Unit Omega', 'Sol-4', 'Ferrum', 'Calyx', 'Nyssa', 'Ruun', 'Ghast', 'Lirien', 'Corvax',
 ];
+
+// ---- v6: the hidden plot (docs/roadmap-v6.md). Placeholder numbers; record changes in docs/fight-rules.md ----
+
+// Political prisoners among the Liaison's offers. guaranteeYear: from this year on, the first offer is always political
+// if none has been offered yet (so every career gets a chance at the plot). priceCut: they come cheap (someone paid).
+export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClue: 0.25 };
+// The thread. gap: weeks between plot cards. cause/ready: trust needed for each stage (cause also needs this House level).
+// suspicion: hidden 0–100, its monthly drift and the levels where its signs show. contactWin: win chance per contact in the
+// coup Final (×1000 = %), up to contactMax.
+export const PLOT = {
+  gap: [3, 6], firstGap: [1, 3], refusalsToCold: 2, survivesAt: 2,
+  cause: { trust: 4, houseLevel: 3 }, ready: { trust: 6 },
+  suspicion: { perPrisoner: 1, perContact: 1, decay: 2, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
+  contactWin: 3000, contactMax: 12000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30,
+};

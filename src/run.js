@@ -7,8 +7,9 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT,
 } from './data.js';
+import { CELL_IDS, CLUES, PLOT_EVENTS, isArmed, coupBonus } from './plot.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower } from './fight.js';
 import { Refused } from './errors.js';
 import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabel } from './events.js';
@@ -278,6 +279,8 @@ export function matchOptions(run, f, tier = run.topTier) {
     // +1 for a house feuding with you; −1 for a house that owes you a life (you spared one of theirs against the crowd).
     grudge: !run.arenas[tier] ? 0 : houseOf(run, opponentFor(run, tier))?.feud > 0 ? 1 : houseOf(run, opponentFor(run, tier))?.owed > 0 ? -1 : 0,
     vengeance: Boolean(run.arenas[tier]) && houseOf(run, opponentFor(run, tier))?.vengeance > 0,
+    // v6: in the coup Final, the people you freed are voices in the crowd for your champion.
+    rebels: tier === GRAND_TIER && run.plot?.coup && !run.plot.ended && f.id === run.plot.champion ? coupBonus(run) : 0,
   };
 }
 
@@ -322,7 +325,194 @@ function refreshLiaison(run) {
   f.morale = elite ? 40 : 30;
   f.price = elite ? 4 : 1;
   f.origin = elite ? 'Prisoner of war' : 'Condemned convict';
+  markPolitical(run, f);
   run.liaisonOffer = f;
+}
+
+// ---------- v6: the hidden plot (docs/roadmap-v6.md; cards in src/plot.js) ----------
+// Every roll here uses run.rng.plot, never the other streams, so a career that never meets the plot plays out
+// exactly as it would without it.
+
+// Some prisoners are secretly political. Nothing says so: their record carries clues, and they come cheap.
+export function markPolitical(run, f) {
+  const r = run.rng.plot;
+  const year = dateOf(run.week).year;
+  const political = next(r) < POLITICAL.chance || (year >= POLITICAL.guaranteeYear && !run.politicalOffered);
+  const clues = [];
+  if (political) {
+    run.politicalOffered = true;
+    f.political = { cell: pick(r, CELL_IDS) };
+    f.price = Math.max(1, f.price - POLITICAL.priceCut);
+    clues.push(pick(r, CLUES.telling));
+    if (next(r) < 0.5) clues.push(pick(r, CLUES.ambiguous));
+  } else if (next(r) < POLITICAL.falseClue) {
+    clues.push(pick(r, CLUES.ambiguous));
+  }
+  f.record = clues; // the prison record shown on the Liaison's card
+  for (const c of clues) chronicle(run, f, `Prison record: ${c}`);
+}
+
+const plotActive = (run) => Boolean(run.plot) && !run.plot.ended;
+
+// Buying a political prisoner starts the thread (or adds their cell to it).
+function joinPlot(run, f) {
+  if (!f.political) return;
+  if (!run.plot) {
+    run.plot = { stage: 'mark', trust: 0, suspicion: 0, refusals: 0, seen: [], cells: [], champion: null, freed: [], nextAt: run.week + int(run.rng.plot, ...PLOT.firstGap), ended: null };
+  }
+  if (!run.plot.cells.includes(f.political.cell)) run.plot.cells.push(f.political.cell);
+}
+
+const changeSuspicion = (run, n) => { run.plot.suspicion = clamp(run.plot.suspicion + n, 0, 100); };
+
+// A freed prisoner becomes a contact outside the Ludus.
+function addContact(run, name, cell, how) {
+  run.plot.freed.push({ name, cell, how, week: run.week, caught: false });
+  log(run, `${name} slips out of the city.`, 'event');
+}
+
+// Is a plot card due this week? Raids and the coup's eve come as soon as they can; the rest wait for nextAt.
+function duePlotCard(run) {
+  if (!plotActive(run) || !run.roster.length) return null;
+  const ok = (e) => e.stages.includes(run.plot.stage) && (!e.when || e.when(run)) && (e.forced || !run.plot.seen.includes(e.id));
+  const forced = PLOT_EVENTS.find((e) => e.forced && ok(e));
+  if (forced) return forced;
+  if (run.week < run.plot.nextAt) return null;
+  const options = PLOT_EVENTS.filter((e) => !e.forced && ok(e));
+  return options.length ? pick(run.rng.plot, options) : null;
+}
+
+// After the ordinary event roll (so its dice are always drawn the same way), a due plot card takes the week's slot.
+function rollPlot(run, recentBefore) {
+  const e = duePlotCard(run);
+  if (!e) return;
+  const t = e.target(run, run.rng.plot);
+  if (!t) return;
+  if (run.event) run.recentEvents = recentBefore; // the ordinary card it replaces never happened
+  run.event = { id: e.id, plot: true, ...t };
+  run.plot.seen.push(e.id);
+  run.plot.nextAt = run.week + int(run.rng.plot, ...PLOT.gap);
+}
+
+// The plot's month: suspicion drifts, contacts pay back, and the thread goes cold if nobody is left to carry it.
+function plotMonth(run) {
+  if (!plotActive(run)) return;
+  const p = run.plot;
+  const prisoners = run.roster.filter((f) => f.political).length;
+  const contacts = p.freed.filter((c) => !c.caught);
+  changeSuspicion(run, PLOT.suspicion.perPrisoner * prisoners + PLOT.suspicion.perContact * contacts.length - PLOT.suspicion.decay
+    - (contacts.some((c) => c.cell === 'courier') ? PLOT.suspicion.courier : 0));
+  if (contacts.some((c) => c.cell === 'scribe') && !p.pass && next(run.rng.plot) < 1 / 3) {
+    p.pass = true;
+    log(run, 'A sealed letter arrives with no name on it. Inside: a pass bearing the Emperor\'s seal.', 'event');
+  }
+  if (contacts.some((c) => c.cell === 'priest')) for (const f of run.roster) f.mood = { n: (f.mood?.n ?? 0) + 3, weeks: MOOD_WEEKS };
+  // The signs of suspicion: never a number, only what the house can see.
+  if (p.suspicion >= PLOT.suspicion.cold) changeFavor(run, -1, 'the palace grows cold toward your house');
+  else if (p.suspicion >= PLOT.suspicion.watch && next(run.rng.plot) < 0.5) log(run, 'A Praetorian watched training today, and wrote something down.', 'warn');
+  if (!prisoners && p.trust < PLOT.survivesAt && !['ready'].includes(p.stage)) endPlot(run, 'cold');
+}
+
+function endPlot(run, how) {
+  run.plot.ended = how;
+}
+
+// Stages move on when the rebels trust you enough.
+function advancePlot(run) {
+  const p = run.plot;
+  if (p.refusals >= PLOT.refusalsToCold) return endPlot(run, 'cold');
+  if (p.stage === 'favours' && p.trust >= PLOT.cause.trust && run.prestigeLevel >= PLOT.cause.houseLevel) p.stage = 'cause';
+  if (p.stage === 'cause' && p.trust >= PLOT.ready.trust && isArmed(run) && run.roster.some((f) => f.id === p.champion)) p.stage = 'ready';
+}
+
+// A plot card's hidden effects. `out` collects what the house log may say.
+function applyPlotEffects(run, eff, ev, out) {
+  const p = run.plot;
+  const f = findFighter(run, ev.f);
+  if (eff.trust) p.trust = Math.max(0, p.trust + eff.trust);
+  if (eff.suspicion) changeSuspicion(run, eff.suspicion);
+  if (eff.stage) p.stage = eff.stage;
+  if (eff.reveal) p.reveal = run.topTier;
+  if (eff.hide) { p.hidden = eff.hide; out.push('a stranger sleeps in the Medbay'); }
+  if (eff.crowd) p.crowdUntil = run.week + eff.crowd;
+  if (eff.pass) p.pass = true;
+  if (eff.usePass) p.pass = false;
+  if (eff.armed) p.armed = true;
+  if (eff.giveGear) run.inventory.gear.splice(0, eff.giveGear);
+  if (eff.champion && f) { p.champion = f.id; out.push(`${f.name} is with you`); }
+  if (eff.mark) { const o = run.arenas[run.topTier]?.opponent; if (o) o.rebel = true; }
+  if (eff.contact === 'new') addContact(run, ev.name, pick(run.rng.plot, CELL_IDS), ev.id);
+  if (eff.freeAsker && f) {
+    removeFromRoster(run, f);
+    addContact(run, f.name, f.political?.cell ?? 'courier', 'freed');
+  }
+  if (eff.askedFree && f) {
+    f.askedFree = (f.askedFree ?? 0) + 1;
+    // Asked twice and refused twice: they try to get out on their own.
+    if (f.askedFree >= 2) {
+      removeFromRoster(run, f);
+      if (next(run.rng.plot) < 0.5) addContact(run, f.name, f.political?.cell ?? 'courier', 'escaped');
+      else { changeSuspicion(run, 10); log(run, `${f.name} tried to escape over the wall and was caught by the watch. They are executed.`, 'bad'); }
+    }
+  }
+  if (eff.execute && f) {
+    removeFromRoster(run, f);
+    run.fallen.push({ ...f, alive: false, diedWeek: run.week });
+    log(run, `${f.name} is taken by the Praetorians and executed in the arena at noon.`, 'bad');
+  }
+  if (eff.cold) endPlot(run, 'cold');
+  if (eff.coup) {
+    p.coup = true;
+    run.arenas[run.topTier].debuff = 'emperorsGaze'; // the Emperor watches: no capitulating
+  }
+  if (eff.betray) betray(run);
+  if (eff.treason) {
+    endPlot(run, 'treason');
+    run.status = 'lost';
+    run.ending = 'treason';
+    run.endReason = 'The Praetorians break down the gates. Your house is tried for treason, and the sentence is read at the games.';
+  }
+}
+
+function removeFromRoster(run, f) {
+  for (const slot of ['weapon', 'armor']) if (f.gear?.[slot]) run.inventory.gear.push(f.gear[slot]);
+  run.roster = run.roster.filter((x) => x !== f);
+  if (run.plot?.champion === f.id) run.plot.champion = null;
+}
+
+// The Loyalist: name the names. The Emperor is grateful; the people you freed, and the prisoners you kept, are not spared.
+function betray(run) {
+  const p = run.plot;
+  const victims = [...run.roster.filter((f) => f.political).map((f) => f.name), ...p.freed.filter((c) => !c.caught).map((c) => c.name)];
+  for (const f of run.roster.filter((x) => x.political)) {
+    removeFromRoster(run, f);
+    run.fallen.push({ ...f, alive: false, diedWeek: run.week });
+  }
+  for (const c of p.freed) c.caught = true;
+  p.executed = victims;
+  changeFavor(run, PLOT.betrayFavor, 'you gave the Emperor the names he wanted');
+  run.epilogue = [...(run.epilogue ?? []), victims.length ? `Executed on your word: ${victims.join(', ')}.` : 'You gave the Emperor names. He made sure they were the right ones.'];
+  endPlot(run, 'loyalist');
+}
+
+// The Grand Final with the plot under way: the coup succeeds only if the recruited champion wins.
+function resolveCoup(run, fighter, won) {
+  const p = run.plot;
+  if (won && fighter.id === p.champion) {
+    endPlot(run, 'coup');
+    run.ending = 'coup';
+    run.endReason = `${fighter.name} wins the Final, turns, and climbs into the imperial box. Silbannacus falls on the sand he filled with blood. The empire is yours to remake.`;
+    const freed = p.freed.filter((c) => !c.caught).map((c) => c.name);
+    if (freed.length) run.epilogue = [...(run.epilogue ?? []), `In the crowd, the people you freed were the first to cheer: ${freed.join(', ')}.`];
+  } else if (won) {
+    endPlot(run, 'cold');
+    run.epilogue = [...(run.epilogue ?? []), 'The signal never came: the wrong fighter won the Final, and the moment passed. Somewhere, a chalk mark fades.'];
+  } else {
+    endPlot(run, 'martyr');
+    run.status = 'lost';
+    run.ending = 'martyr';
+    run.endReason = `${fighter.name} falls in the Final, and the rising dies with them. The broken chain is scrubbed from every door, but the city remembers.`;
+  }
 }
 
 function refreshArmourer(run) {
@@ -430,7 +620,9 @@ export function createRun(seed = randomSeed(), setup = {}) {
       growth: createRng(deriveSeed(seed, 4)),
       events: createRng(deriveSeed(seed, 5)),
       houses: housesRng,
+      plot: createRng(deriveSeed(seed, 8)), // v6: the hidden plot draws only from here
     },
+    plot: null, // v6: the hidden plot's state, once a political prisoner joins (docs/roadmap-v6.md)
     houses: makeHouses(housesRng),
     glory: 0,
     event: null, // this week's event card: { id, f, g } (fighter ids), decided before the week can end
@@ -523,6 +715,7 @@ export function recruit(run, id) {
   run.roster.push(fighter);
   chronicle(run, fighter, `Joined the Ludus${fighter.origin ? ` (${fighter.origin})` : ''}.`);
   log(run, `${fighter.name} joins the Ludus.`);
+  joinPlot(run, fighter);
   return fighter;
 }
 
@@ -698,7 +891,9 @@ export function advanceWeek(run) {
     refreshMarket(run);
     refreshLiaison(run);
     refreshArmourer(run);
+    plotMonth(run);
   }
+  if (run.plot?.hidden && --run.plot.hidden <= 0) { delete run.plot.hidden; log(run, 'The stranger in the Medbay is gone before dawn, leaving a purse.', 'event'); }
   if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) if (!tributePaid(run)) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
   if (run.week % WEEKS_PER_YEAR === WEEKS_PER_YEAR - 4) {
     payYearPurse(run);
@@ -713,7 +908,11 @@ export function advanceWeek(run) {
   }
   if (tournamentEnds) rivalsCompete(run);
   checkLoss(run);
-  if (run.status === 'active') rollEvent(run);
+  if (run.status === 'active') {
+    const recentBefore = run.recentEvents;
+    rollEvent(run);
+    rollPlot(run, recentBefore);
+  }
 }
 
 // Advance until the next tournament week (stops early if the run ends or a decision is needed).
@@ -763,7 +962,7 @@ function rollEvent(run) {
 // Names for an event's text: { f, g }.
 export function eventNames(run, ev = run.event) {
   const name = (id) => findFighter(run, id)?.name;
-  return { f: name(ev?.f), g: name(ev?.g) };
+  return { f: name(ev?.f), g: name(ev?.g), name: ev?.name, house: ev?.house, opp: ev?.opp };
 }
 
 export function eventChoiceBlocker(run, index) {
@@ -771,13 +970,13 @@ export function eventChoiceBlocker(run, index) {
   const choice = EVENT_BY_ID[run.event.id].choices[index];
   if (!choice) return 'No such choice.';
   if (choice.cost && run.gold < choice.cost) return `Needs ${choice.cost} Gold.`;
-  return null;
+  return choice.needs?.(run, run.event) ?? null;
 }
 
 function applyEventEffects(run, eff, ev, out) {
   const targets = (to) => (to === 'all' ? run.roster : (to === 'both' ? [ev.f, ev.g] : [ev[to]]).map((id) => findFighter(run, id)).filter(Boolean));
   if (eff.gold) { run.gold = Math.max(0, run.gold + eff.gold); out.push(`${eff.gold > 0 ? '+' : ''}${eff.gold} Gold`); }
-  if (eff.favor) { changeFavor(run, eff.favor, EVENT_BY_ID[ev.id].title.toLowerCase()); out.push(`${eff.favor > 0 ? '+' : ''}${eff.favor} Favor`); }
+  if (eff.favor) { changeFavor(run, eff.favor, EVENT_BY_ID[ev.id].title.toLowerCase().replace(/^the /, '')); out.push(`${eff.favor > 0 ? '+' : ''}${eff.favor} Favor`); }
   if (eff.item) { run.inventory.items[eff.item] = (run.inventory.items[eff.item] ?? 0) + 1; out.push(`+1 ${CONSUMABLES[eff.item].name}`); }
   for (const [key, label] of [['morale', 'Morale'], ['stress', 'Stress'], ['renown', 'Renown']]) {
     if (!eff[key]) continue;
@@ -803,8 +1002,10 @@ function applyEventEffects(run, eff, ev, out) {
       if (inj) out.push(`${f.name}'s ${INJURY_BY_TAG[inj.tag].name} is healed`);
     }
   }
+  if (ev.plot) applyPlotEffects(run, eff, ev, out);
   if (eff.chance) {
-    const won = next(run.rng.events) < eff.chance.p;
+    const p = typeof eff.chance.p === 'function' ? eff.chance.p(run, ev) : eff.chance.p;
+    const won = next(ev.plot ? run.rng.plot : run.rng.events) < p;
     out.push(won ? 'It went well' : 'It went badly');
     applyEventEffects(run, won ? eff.chance.win : eff.chance.lose, ev, out);
   }
@@ -818,6 +1019,11 @@ export function chooseEvent(run, index) {
   const choice = e.choices[index];
   const out = [];
   applyEventEffects(run, choice.effects, ev, out);
+  if (ev.plot && plotActive(run)) {
+    if (choice.refuse) run.plot.refusals += 1;
+    else if (choice.help) run.plot.refusals = 0;
+    advancePlot(run);
+  }
   const text = `${e.title}: ${choiceLabel(choice, eventNames(run, ev))}.${out.length ? ` ${out.join(', ')}.` : ''}`;
   log(run, text, 'event');
   run.event = null;
@@ -1321,7 +1527,8 @@ export function finishMatch(run, match) {
     summary.prestige += bout.buyIn + (champion ? 0 : bout.winPrestige);
     if (!crushing && !champion) {
       summary.renown = RENOWN.win + (bout.boss ? RENOWN.bossWin : 0) + (upset ? RENOWN.upset : 0) + (fighter.perks.includes('crowdPleaser') ? 1 : 0)
-        + (fighter.decor.warBanner ?? 0) * DECOR.warBanner.renown + (bloodied ? BLOODIED.renown : 0) + (fest?.renown ?? 0);
+        + (fighter.decor.warBanner ?? 0) * DECOR.warBanner.renown + (bloodied ? BLOODIED.renown : 0) + (fest?.renown ?? 0)
+        + (plotActive(run) && run.plot.crowdUntil > run.week ? 1 : 0); // v6: the pamphlets warmed the crowd to your house
     }
     if (bloodied) bumpMorale(fighter, BLOODIED.morale);
     // Kill tally and marks.
@@ -1468,7 +1675,9 @@ export function finishMatch(run, match) {
   run.history.push(summary);
   log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
   advanceArena(run, tier, won, arena.opponent);
+  if (tier === GRAND_TIER && plotActive(run) && run.plot.coup) resolveCoup(run, fighter, won);
   offerMercy(run, match, summary, fighter, opp, tier);
+  if (won && opp.rebel && plotActive(run)) rebelBeaten(run, opp, match.result.reason === 'death' ? 'kill' : run.mercy ? null : 'spare');
   return summary;
 }
 
@@ -1528,9 +1737,22 @@ export function mercyBlocker(run, choice) {
 
 // Spare: +Favor (the Emperor likes clemency). Kill: Renown, a kill toward the marks, and their house's feud.
 // Doing what the crowd wants adds Renown and Morale. Returns what changed.
+// v6: you promised to spare a rebel fighting for another house. Spared, they join your contacts; killed, the rebels know.
+function rebelBeaten(run, opp, verdict) {
+  if (!verdict) { run.mercy.rebel = true; return; } // the thumbs decide
+  if (verdict === 'spare') addContact(run, opp.name, pick(run.rng.plot, CELL_IDS), 'spared');
+  else {
+    run.plot.trust = Math.max(0, run.plot.trust - 3);
+    log(run, `Overnight, every chalk mark on your doors is washed away.`, 'warn');
+  }
+}
+
 export function resolveMercy(run, choice) {
   assertOk(mercyBlocker(run, choice));
-  const { fighterId, opp, house: houseId, crowd, at, top = true } = run.mercy;
+  const { fighterId, opp, house: houseId, crowd, at, top = true, rebel = false } = run.mercy;
+  if (rebel && plotActive(run)) rebelBeaten(run, { name: opp }, choice);
+  // v6: sparing against the crowd's call for blood in your top arena draws the palace's eye.
+  if (choice === 'spare' && crowd === 'kill' && top && plotActive(run)) changeSuspicion(run, 5);
   run.mercy = null;
   const fighter = findFighter(run, fighterId);
   const house = run.houses?.find((h) => h.id === houseId) ?? null;
@@ -1698,6 +1920,8 @@ export function deserialize(text) {
   if (run?.version !== SAVE_VERSION) throw new Error('This save is from an older version of the game.');
   run.inventory.items = { ...emptyItems(), ...(run.inventory.items ?? {}) }; // saves from before consumables
   run.rng.events ??= createRng(deriveSeed(run.seed, 5)); // saves from before events
+  run.rng.plot ??= createRng(deriveSeed(run.seed, 8)); // saves from before v6's hidden plot
+  run.plot ??= null;
   run.event ??= null;
   run.setup ??= { patron: null, decrees: [], classes: [] };
   if (!run.houses) { // saves from before rival houses

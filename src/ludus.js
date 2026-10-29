@@ -21,7 +21,8 @@ export const rosterCap = (run) => Math.min(ofType(run, 'quarters').reduce((s, b)
 export const trainerRooms = (run) => ofType(run, 'trainer').length;
 export const trainCap = (run) => effectAt('trainer', maxLevel(run, 'trainer'));
 export const trainCost = (run) => Math.max(1, maxLevel(run, 'trainer'));
-export const medbaySlots = (run) => ofType(run, 'medbay').reduce((s, b) => s + effectAt('medbay', b.level), 0);
+// A stranger hidden in the Medbay (v6's hidden plot) takes up one bed.
+export const medbaySlots = (run) => Math.max(0, ofType(run, 'medbay').reduce((s, b) => s + effectAt('medbay', b.level), 0) - (run.plot?.hidden ? 1 : 0));
 export const healRate = (run) => (maxLevel(run, 'medbay') >= 2 ? 2 : 1);
 export const decorCap = (run) => maxLevel(run, 'quarters');
 export const oracleLevel = (run) => maxLevel(run, 'oracle');

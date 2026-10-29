@@ -274,6 +274,7 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (t?.self) self.push({ source: t.name, value: t.self });
   if (c.stance && COUNTERS[c.stance] === opp.stance) win.push({ source: `Counter (${t.name} beats ${TACTICS[opp.stance].name})`, value: COUNTER.win });
   if (c.vengeance) win.push({ source: 'Vengeance', value: 5000 });
+  if (c.rebels) win.push({ source: 'Voices in the crowd', value: c.rebels });
   for (const sc of activeScars(c, opp)) {
     if (sc.enemy) enemy.push({ source: sc.label, value: sc.enemy });
     if (sc.self) self.push({ source: sc.label, value: sc.self });
@@ -395,7 +396,7 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
 // Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favorite boosts the opponent (B).
 const BOTH_SIDES = ['bloodMoon', 'crowdFavorite', 'lions', 'emperorsGaze'];
 
-export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false }) {
+export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0 }) {
   const m = {
     a: makeCombatant(a, 'A', debuff),
     b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
@@ -409,6 +410,8 @@ export function createMatch({ a, b, rng, debuff = null, overtrained = false, sco
   // Feuds between houses: theirs fights you harder after you killed one of them; yours fights for vengeance.
   if (grudge) m.b.grudge = grudge;
   if (vengeance) m.a.vengeance = true;
+  // v6: the coup Final, with the people you freed in the crowd.
+  if (rebels) m.a.rebels = rebels;
   // Scouted: opponents who have studied your fighter fight them with extra Power.
   if (scouted) m.b.scouted = scouted;
   // Challenger: famous fighters draw tougher opponents in your top arena.

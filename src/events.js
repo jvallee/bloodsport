@@ -6,6 +6,8 @@
 //   morale/stress/renown/xp/injury apply to `to`: 'f', 'g', 'both' or 'all' (the whole roster).
 // The first choice is the cautious one (the careful bot takes it). A choice with `cost` needs that much Gold.
 
+import { PLOT_EVENTS } from './plot.js';
+
 export const EVENT_CHANCE = { season: 0.25, winter: 0.2 }; // v5: was 0.3 (playtest #5: too many)
 // Event Morale is a mood that shifts where Morale is heading for this many weeks (a one-off bump would drift away in a week).
 export const MOOD_WEEKS = 4;
@@ -169,10 +171,10 @@ export const EVENTS = [
   },
 ];
 
-export const EVENT_BY_ID = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
+export const EVENT_BY_ID = Object.fromEntries([...EVENTS, ...PLOT_EVENTS].map((e) => [e.id, e])); // plot cards are looked up here, but never drawn as ordinary events
 
 // A choice's label with the fighter names filled in.
-export const choiceLabel = (choice, names) => choice.label.replace('${f}', names.f ?? '').replace('${g}', names.g ?? '');
+export const choiceLabel = (choice, names) => choice.label.replace(/\$\{(\w+)\}/g, (_, k) => names[k] ?? '');
 
 // A choice's stakes in plain words, e.g. "−2 Gold; them: +15 Morale for 4 weeks, −10 Stress".
 const WHO = { f: 'them', g: 'the other', both: 'both', all: 'everyone' };
@@ -195,7 +197,10 @@ export function stakesText(eff, sep = '; ') {
   if (eff.chance) {
     const win = stakesText(eff.chance.win, ', ');
     const lose = stakesText(eff.chance.lose, ', ');
-    parts.push(`${Math.round(eff.chance.p * 100)}%: ${win === 'Nothing happens' ? 'nothing' : win}; otherwise: ${lose === 'Nothing happens' ? 'nothing' : lose}`);
+    // A plot card's odds can depend on the fighter (a function); its hidden effects never show, so say it's a gamble.
+    const odds = typeof eff.chance.p === 'function' ? 'A chance' : `${Math.round(eff.chance.p * 100)}%`;
+    if (win === 'Nothing happens' && lose === 'Nothing happens') parts.push(`A gamble${typeof eff.chance.p === 'function' ? '' : ` (${odds})`}`);
+    else parts.push(`${odds}: ${win === 'Nothing happens' ? 'nothing' : win}; otherwise: ${lose === 'Nothing happens' ? 'nothing' : lose}`);
   }
   return parts.length ? parts.join(sep) : 'Nothing happens';
 }
