@@ -23,6 +23,7 @@ import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFesti
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
+import { SCENES, SPEAKERS, dueScene } from '../src/dialogue.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText } from '../src/codex.js';
 
 // A card choice's visible stakes. Plot cards (v6) show nothing rather than "Nothing happens" when only hidden things change.
@@ -73,6 +74,10 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
 export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   const run = createRun(seed);
   const codex = createCodex();
+  // Dialogue scenes (src/dialogue.js), as text: the opening once, then the Emperor's visits as they come due.
+  const scenesSeen = [];
+  // (The intro's pages already print at the start, so the opening's narrator page is skipped here.)
+  const sceneText = (id) => `\n${SCENES[id].filter((b) => b.speaker !== 'narrator').map((b) => `${SPEAKERS[b.speaker].name ? `${SPEAKERS[b.speaker].name}: ` : ''}${b.title ? `[${b.title}] ` : ''}${(b.text ?? b.html).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}`).join('\n')}`;
   const done = []; // dismissed tutorial steps
   const oddsCache = new Map();
   let match = null;
@@ -225,6 +230,11 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (match) return fightStatus();
     lowerShown = 0;
     const out = [header()];
+    const due = scenesSeen.includes('opening') ? dueScene(run, scenesSeen) : 'opening';
+    if (due) {
+      scenesSeen.push(due);
+      out.push(sceneText(due));
+    }
     if (run.mercy) out.push(`\n${mercyText()}`);
     if (run.status !== 'active') {
       const fought = run.history.filter((h) => !h.skipped && !h.forfeit);

@@ -555,3 +555,19 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .record { margin: 6px 0; padding: 6px 8px; border-left: 2px solid var(--line); font-size: 13px; font-style: italic; color: var(--muted); }
 .record .label { font-style: normal; }
 .epilogue { font-style: italic; color: var(--muted); margin: 6px 0; }
+
+/* Dialogue: characters who speak to you (src/dialogue.js) */
+.dialogue .dialogue-body { max-width: 560px; width: 100%; border-color: var(--gold); }
+.dialogue-speaker { display: flex; gap: 14px; align-items: center; margin-bottom: 10px; }
+.dialogue-name { font-family: var(--display, inherit); color: var(--gold); font-size: 18px; letter-spacing: 0.04em; }
+.dialogue-speaker h2 { margin: 2px 0 0; }
+.dialogue-text { font-size: 16px; line-height: 1.55; }
+.dialogue-text p { margin: 0 0 8px; }
+.speaker-emperor { border-color: #9a4fa0; box-shadow: 0 0 40px rgba(154, 79, 160, 0.25); }
+.speaker-emperor .dialogue-name { color: #d6a3dc; }
+.speaker-emperor .dialogue-text { font-style: italic; }
+.dialogue-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.dialogue-actions .dots i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--line); margin-right: 4px; }
+.dialogue-actions .dots i.on { background: var(--gold); }
+.dialogue.tutorial { background: rgba(0, 0, 0, 0.45); }
+.tip.tutorial .portrait { flex-shrink: 0; }

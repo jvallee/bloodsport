@@ -16,7 +16,8 @@ import { describeOdds } from '../odds.js';
 import { fighterWarnings, arenaStakes } from '../explain.js';
 import { gearText } from '../codex.js';
 import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON } from './components.js';
-import { portrait } from './portrait.js';
+import { portrait, npcPortrait } from './portrait.js';
+import { SPEAKERS, tipSpeaker } from '../dialogue.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../events.js';
 
 const JOB_LABELS = { rest: 'Rest', trainPower: '+1 Power', trainSpeed: '+3 Speed', medbay: 'Medbay' };
@@ -206,12 +207,37 @@ export function noticePager(items, page = 0) {
   return `<div class="notices">${nav}${items[p]}</div>`;
 }
 
+// The tutorial is your steward talking (src/dialogue.js). In the Ludus a tip opens as a dialogue box; on the fight screen it
+// stays inline, so it never blocks a fight.
 export function tutorialCard(step, where = 'ludus') {
   if (!step) return '';
-  return `<div class="tip tutorial ${where}" role="note">
-    <div><div class="tip-title">📜 ${step.title}</div><div>${step.body}</div></div>
-    <div class="tip-actions"><button class="btn small primary" data-action="tutorial-done" data-step="${step.id}">Got it</button>
-    <button class="link small" data-action="tutorial-skip">Skip tutorial</button></div></div>`;
+  const who = SPEAKERS[tipSpeaker];
+  const actions = `<button class="btn small primary" data-action="tutorial-done" data-step="${step.id}">Got it</button>
+    <button class="link small" data-action="tutorial-skip">Skip tutorial</button>`;
+  if (where === 'ludus') return dialogueBox({ speaker: tipSpeaker, title: step.title, html: step.body }, actions, 'tutorial');
+  return `<div class="tip tutorial ${where}" role="note">${npcPortrait(who.portrait, 44)}
+    <div><div class="tip-title">${esc(who.name)}: ${step.title}</div><div>${step.body}</div></div>
+    <div class="tip-actions">${actions}</div></div>`;
+}
+
+// A character speaking: portrait, name, and what they say (one beat). `actions` are the buttons.
+function dialogueBox(beat, actions, kind = 'scene') {
+  const who = SPEAKERS[beat.speaker] ?? SPEAKERS.narrator;
+  const body = beat.html ?? `<p>${esc(beat.text)}</p>`;
+  return `<div class="modal dialogue ${kind}" role="dialog" aria-label="${esc(who.name || beat.title || 'Story')}"><div class="modal-body dialogue-body speaker-${beat.speaker}">
+    <div class="dialogue-speaker">${npcPortrait(who.portrait, 72)}<div>${who.name ? `<div class="dialogue-name">${esc(who.name)}</div>` : ''}${beat.title ? `<h2>${beat.title}</h2>` : ''}</div></div>
+    <div class="dialogue-text">${body}</div>
+    <div class="dialogue-actions">${actions}</div>
+  </div></div>`;
+}
+
+// A scene from src/dialogue.js, one beat at a time.
+export function dialogueModal(scene, beats, index) {
+  const last = index >= beats.length - 1;
+  const dots = beats.length > 1 ? `<span class="dots">${beats.map((_, i) => `<i class="${i === index ? 'on' : ''}"></i>`).join('')}</span>` : '';
+  const actions = `${dots}<span class="row">${last ? '' : '<button class="link" data-action="scene-skip">Skip</button>'}
+    <button class="btn primary" data-action="scene-next" autofocus>${last ? (scene === 'opening' ? 'Enter the Ludus' : 'Continue') : 'Next'}</button></span>`;
+  return dialogueBox(beats[index], actions);
 }
 
 export function introModal(page, pages) {

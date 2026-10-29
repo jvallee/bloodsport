@@ -11,6 +11,11 @@ Every piece of story text in the game, with the file and line where it lives (cl
 - **An apostrophe inside a 'single-quoted' string must be written `\'`.** Alternatively, switch that string to backticks.
 - **After editing,** run `npm test`. A few tests look for key phrases (for example "Silbannacus falls", "Prison record", "Refuses to salute"); if you change those, tell the next agent so the tests are updated, not weakened.
 
+**Dialogue scenes** (the Emperor and your steward) live in [src/dialogue.js](../src/dialogue.js):
+- Every line there is a placeholder for you to rewrite.
+- The opening scene's first page is your intro page from `src/tutorial.js`, so edits there flow straight in.
+- The steward speaks the tutorial tips, which are in section 10.
+
 **Suggested order** (highest impact first): the intro, the hidden plot, the endings, weekly events, fight narration, the crowd's verdict, the house log, the tutorial, Codex lore.
 
 

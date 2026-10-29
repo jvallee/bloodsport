@@ -55,6 +55,11 @@ Phases A–F of `docs/roadmap-v6.md` are built and pushed. Playtest #7 (blind an
   - `LIAISON`, `POLITICAL` and `PLOT` in `src/data.js`.
   - `tests/plot.test.js`.
 - **Bots:** `opts.plot` in `scripts/bots.js` is `rebel`, `loyalist` or `bystander`.
+- **Dialogue** (`src/dialogue.js`, rendered by `dialogueModal` and `tutorialCard` in `src/ui/views.js`):
+  - The Emperor opens the career and returns at turning points (`dueScene`).
+  - The steward voices the tutorial. The designer chose a plain, neutral helper.
+  - Scenes are cosmetic. Their seen state is stored apart from the career (`bloodsport.scenes`), so replays are unaffected.
+  - Not done yet: fighters speaking in event cards. The plot's cards must not be the only ones with a speaker, or the dialogue box would give the plot away. The designer will write first-person lines for ordinary events as well.
 - **The designer's decisions:** the evil (loyalist) road is the easy one, and the coup is the hard, heroic one. Story text is placeholder for the designer to rewrite.
 - **Next:**
   - The designer's text pass, with a voice guide first.

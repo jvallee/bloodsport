@@ -5,6 +5,10 @@ What changed from version to version, newest first. Each frozen version can stil
 ## Unreleased (live game, after the v5 refreshes)
 
 **v6 in progress: the hidden plot** (design: `docs/roadmap-v6.md`)
+- **Characters talk to you.**
+  - The Emperor pulls you through the portal and tells you the stakes himself.
+  - Your steward, a plain and neutral helper, guides you through the game in place of the old tutorial cards.
+  - The Emperor drops in at a few turning points: your first Boss win, the first winter's tribute, low Favor, and the Grand Tournament.
 - There is a revolt brewing in the empire. Some of the Liaison's prisoners are not what their records say. *(Deliberately vague: the plot is meant to be found.)*
 - **The Liaison** is rebalanced: convicts are Market-strength and cost 2 Gold; prisoners of war are near the arena's Power and cost more in higher arenas.
 - **Fixes from playtests:**

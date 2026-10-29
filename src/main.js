@@ -7,11 +7,12 @@ import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, introModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
-import { INTRO, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
+import { STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
+import { SCENES, dueScene } from './dialogue.js';
 import { fightView, DICE_TIME, revealTime, roundEndTime } from './ui/fightView.js';
 import { roundSounds, setSound, sfx } from './ui/sound.js';
 
@@ -21,6 +22,7 @@ const SAVE_KEY = 'bloodsport.career';
 const PREFS_KEY = 'bloodsport.prefs';
 const CODEX_KEY = 'bloodsport.codex';
 const LEGACY_KEY = 'bloodsport.legacy';
+const SCENES_KEY = 'bloodsport.scenes'; // dialogue scenes already played: { seed, seen: [ids] } (cosmetic, not in the career save)
 
 let run = null;
 let match = null;
@@ -35,7 +37,7 @@ const ui = { animateRound: 0, showMath: false, auto: false, open: {} }; // open:
 let prefs = { tutorial: [], showMath: false, introSeen: false, sound: true };
 let codex = loadCodex(null);
 let codexShownNew = []; // entries highlighted as new while the Codex tab is open
-let introPage = null; // index into INTRO while the intro is showing
+let scene = null; // the dialogue scene showing: { id, beat } (src/dialogue.js)
 let legacy = loadLegacy(null);
 let achieved = []; // achievements earned this week, shown as notices
 let setupChoice = null; // the New career dialog: { patron, decrees } while it's open
@@ -84,7 +86,33 @@ function oddsFor(f, tier = run.topTier, opp = opponentFor(run, tier)) {
 
 // ---------- Tutorial ----------
 
-const tutorialStep = () => (run.status === 'active' && introPage === null ? nextStep(STEPS, prefs.tutorial, run) : null);
+// The steward's tips wait for any other dialog, and for the fight screen to close.
+const tutorialStep = () => (run.status === 'active' && !scene && !match && !showHelp && !setupChoice && !run.event && !run.mercy ? nextStep(STEPS, prefs.tutorial, run) : null);
+
+// ---------- Dialogue (src/dialogue.js) ----------
+
+function scenesSeen() {
+  try {
+    const s = JSON.parse(storage.get(SCENES_KEY) ?? 'null');
+    return s?.seed === run.seed ? s.seen : [];
+  } catch { return []; }
+}
+function markSceneSeen(id) {
+  storage.set(SCENES_KEY, JSON.stringify({ seed: run.seed, seen: [...new Set([...scenesSeen(), id])] }));
+}
+// The Emperor drops in at turning points, once each per career, when nothing else is on screen.
+function checkScene() {
+  if (scene || match || setupChoice || showHelp || !prefs.introSeen) return;
+  const id = dueScene(run, scenesSeen());
+  if (id) {
+    markSceneSeen(id);
+    scene = { id, beat: 0 };
+  }
+}
+function closeScene() {
+  if (scene?.id === 'opening') { prefs.introSeen = true; savePrefs(); markSceneSeen('opening'); }
+  scene = null;
+}
 const fightTutorial = () => (match ? nextStep(FIGHT_STEPS, prefs.tutorial, match) : null);
 
 // ---------- Rendering ----------
@@ -103,9 +131,10 @@ function render() {
   else if (tab === 'market') body = marketTab(run);
   else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore) + legacyPanel(legacy);
   else body = ludusTab(run, oddsFor);
-  const modal = setupChoice ? setupModal(legacy, setupChoice) : introPage !== null ? introModal(introPage, INTRO) : showHelp ? helpModal() : '';
-  // Notifications: the tutorial step first, then this week's results (newest first), one page at a time.
-  const notices = [tutorialCard(tutorialStep()), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
+  checkScene();
+  const modal = setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, SCENES[scene.id], scene.beat) : showHelp ? helpModal() : tutorialCard(tutorialStep());
+  // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
+  const notices = [...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
   app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
@@ -172,7 +201,7 @@ function newRun(seed, setup = { classes: unlockedClasses(legacy) }) {
   summaries = [];
   tab = 'market';
   oddsCache.clear();
-  if (!prefs.introSeen) introPage = 0;
+  scene = prefs.introSeen ? null : { id: 'opening', beat: 0 };
   const url = new URL(location.href);
   url.searchParams.set('seed', run.seed);
   history.replaceState(null, '', url);
@@ -231,10 +260,9 @@ const actions = {
   'tutorial-done': (d) => { prefs.tutorial.push(d.step); savePrefs(); },
   'tutorial-skip': () => { prefs.tutorial = [...STEPS, ...FIGHT_STEPS].map((s) => s.id); savePrefs(); },
   'tutorial-replay': () => { prefs.tutorial = []; showHelp = false; savePrefs(); },
-  'intro-next': () => { introPage = Math.min(INTRO.length - 1, introPage + 1); },
-  'intro-back': () => { introPage = Math.max(0, introPage - 1); },
-  'intro-close': () => { introPage = null; prefs.introSeen = true; savePrefs(); },
-  'intro-replay': () => { introPage = 0; showHelp = false; },
+  'scene-next': () => { if (scene && scene.beat < SCENES[scene.id].length - 1) scene.beat += 1; else closeScene(); },
+  'scene-skip': () => closeScene(),
+  'intro-replay': () => { scene = { id: 'opening', beat: 0 }; showHelp = false; },
   'dismiss-summary': (d) => {
     summaries = summaries.filter((s) => `${s.week}-${s.tier}-${s.fighterId}` !== d.key);
   },
@@ -394,13 +422,16 @@ const pressButton = (selector) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select')) return;
-  if (e.key === 'Escape' && (showHelp || introPage !== null)) {
+  if (e.key === 'Escape' && (showHelp || scene)) {
     showHelp = false;
-    if (introPage !== null) actions['intro-close']();
+    if (scene) closeScene();
     render();
     return;
   }
-  if (introPage !== null) return;
+  if (scene) { // a character is talking: Space or Enter goes on
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); actions['scene-next'](); render(); }
+    return;
+  }
   if (e.key === ' ' || e.key === 'Enter') {
     if (e.target.closest?.('button, summary')) return; // let focused buttons and fold-outs work as usual
     const done = match ? pressButton('#fight [data-action=next-round].primary') || pressButton('#fight [data-action=next-round]') || pressButton('#fight [data-action=leave-fight]') : pressButton('#app [data-action=advance]');
