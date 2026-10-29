@@ -259,11 +259,11 @@ test('Overclocked gives +10% win and +5% self-injury only on its round', () => {
   assert.deepEqual([sources(p.win), sources(p.self)], [['Overclocked:10000'], ['Overheating:5000']]);
 });
 
-test('Alloyed Skin and Ego Armour are armor; Ego Armour only while uninjured', () => {
+test('Alloyed Skin and Ego Armor are armor; Ego Armor only while uninjured', () => {
   const [A, B] = pair({ kindTrait: 'alloyedSkin' }, {});
   assert.deepEqual(computePhase2(A, B, 1).self, [{ source: 'Alloyed Skin', value: -10000, armor: true }]);
   const [E, F] = pair({ kindTrait: 'egoArmour' }, {});
-  assert.deepEqual(sources(computePhase2(E, F, 1).win), ['Ego Armour:5000']);
+  assert.deepEqual(sources(computePhase2(E, F, 1).win), ['Ego Armor:5000']);
   E.f.injuries = injuries('distracted');
   const hurt = computePhase2(E, F, 1);
   assert.deepEqual([hurt.win.length, hurt.self.length], [0, 0]);

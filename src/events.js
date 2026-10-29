@@ -19,14 +19,14 @@ export const EVENTS = [
     id: 'brawl', who: 'pair', title: 'Brawl in the barracks',
     text: ({ f, g }) => `${f} and ${g} came to blows over a bunk. The whole Ludus is watching to see what you do.`,
     choices: [
-      { label: 'Throw a feast to make peace', cost: 4, effects: { gold: -4, morale: { to: 'both', n: 5 } } },
+      { label: 'Throw a feast to make peace (4 Gold)', cost: 4, effects: { gold: -4, morale: { to: 'both', n: 5 } } },
       { label: 'Punish them both', effects: { morale: { to: 'both', n: -10 }, stress: { to: 'both', n: -10 } } },
       { label: 'Let them settle it in the yard', effects: { chance: { p: 0.5, win: { renown: { to: 'f', n: 1 }, injury: { to: 'g', tag: 'fleshWound' } }, lose: { renown: { to: 'g', n: 1 }, injury: { to: 'f', tag: 'fleshWound' } } } } },
     ],
   },
   {
     id: 'senator', who: 'famous', title: 'A senator\'s offer',
-    text: ({ f }) => `A senator's slave brings a purse: his patron wants ${f} to dine at his villa, and to praise him to the crowd. The Emperor's spies are everywhere.`,
+    text: ({ f }) => `A senator's slave brings a purse. His master wants ${f} to dine at his villa and praise him to the crowd. The Emperor's spies are everywhere.`,
     choices: [
       { label: 'Decline politely', effects: { favor: 2 } },
       { label: 'Accept the purse', effects: { gold: 10, chance: { p: 0.35, win: {}, lose: { favor: -8 } } } },
@@ -36,7 +36,7 @@ export const EVENTS = [
     id: 'plague', title: 'Fever in the city',
     text: () => 'A fever is spreading through the city. Physicians are expensive this week.',
     choices: [
-      { label: 'Pay the physicians', cost: 5, effects: { gold: -5 } },
+      { label: 'Pay the physicians (5 Gold)', cost: 5, effects: { gold: -5 } },
       { label: 'Trust to the gods', effects: { chance: { p: 0.5, win: {}, lose: { injury: { to: 'f', tag: 'distracted' }, stress: { to: 'all', n: 10 } } } } },
     ],
     who: 'any',
@@ -45,7 +45,7 @@ export const EVENTS = [
     id: 'trainer', who: 'green', title: 'A wandering lanista',
     text: ({ f }) => `A retired lanista passing through offers a week of lessons for ${f}. He's old, but he has seen everything.`,
     choices: [
-      { label: 'Pay him for lessons', cost: 6, effects: { gold: -6, xp: { to: 'f', n: 4 } } },
+      { label: 'Pay him for lessons (6 Gold)', cost: 6, effects: { gold: -6, xp: { to: 'f', n: 4 } } },
       { label: 'Send him on his way', effects: {} },
     ],
   },
@@ -104,7 +104,7 @@ export const EVENTS = [
   },
   {
     id: 'injuredDog', who: 'any', title: 'A stray at the gate',
-    text: ({ f }) => `${f} has found a half-starved war dog at the gate and wants to keep it.`,
+    text: ({ f }) => `${f} found a half-starved war dog at the gate and wants to keep it.`,
     choices: [
       { label: 'Let them keep it (2 Gold of meat)', cost: 2, effects: { gold: -2, morale: { to: 'f', n: 15 }, stress: { to: 'f', n: -10 } } },
       { label: 'Turn it away', effects: { morale: { to: 'f', n: -5 } } },
@@ -120,7 +120,7 @@ export const EVENTS = [
   },
   {
     id: 'oldWound', who: 'any', title: 'An old wound aches',
-    text: ({ f }) => `${f} limps out to training, favouring an old wound. They swear it's nothing.`,
+    text: ({ f }) => `${f} limps out to training, favoring an old wound. They swear it's nothing.`,
     choices: [
       { label: 'Rest them this week', effects: { stress: { to: 'f', n: -20 } } },
       { label: 'Push through it', effects: { xp: { to: 'f', n: 2 }, chance: { p: 0.7, win: {}, lose: { injury: { to: 'f', tag: 'fleshWound' } } } } },
@@ -147,7 +147,7 @@ export const EVENTS = [
     id: 'healer', who: 'any', title: 'A wandering healer',
     text: ({ f }) => `A healer from the eastern provinces offers to treat ${f}'s wounds with herbs and hot iron.`,
     choices: [
-      { label: 'No thank you', effects: {} },
+      { label: 'No, thank you', effects: {} },
       { label: 'Pay the healer (5 Gold)', cost: 5, effects: { gold: -5, heal: { to: 'f' } } },
     ],
     when: (run) => run.roster.some((x) => x.injuries.length),

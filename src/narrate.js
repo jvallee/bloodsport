@@ -71,7 +71,7 @@ export function narrateRound(m, r) {
       continue;
     }
     let text = `${def} suffers ${inj.name} (severity ${severity}).`;
-    if (inj.doubled) text += ' The Boss debuff makes it count double.';
+    if (inj.doubled) text += ' The arena rule makes it count double.';
     if (inj.disabled?.length) text += ` Disabled: ${inj.disabled.map((s) => slotName(fighter(c.defender), s)).join(', ')}.`;
     add('injury', text);
   }
@@ -156,12 +156,12 @@ export function adviceFor(m) {
   const worst = Math.min(...m.rounds.map((r) => r.delta));
   const avgDelta = m.rounds.reduce((n, r) => n + r.delta, 0) / Math.max(1, m.rounds.length);
   if (m.result.reason === 'towel') return 'You saved your fighter. Heal them in the Medbay before the next bout.'; // capitulated: not "lost anyway"
-  if (avgDelta >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
-  if (chance >= 60000) return `${you} was favoured in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.`;
+  if (avgDelta >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favorites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
+  if (chance >= 60000) return `${you} was favored in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.`;
   if (worst <= -2 && chance < 45000) return `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.`;
   if (m.rounds.some((r) => r.checks.some((c) => c.pierced && c.defender === 'A'))) return `Their weapon pierced your armor. Against Gun or Flail fighters, armor won't save you; win the rounds instead.`;
   if (m.result.reason === 'towel') return 'You saved your fighter. Heal them in the Medbay before the next bout.';
   const avg = m.rounds.reduce((n, r) => n + r.delta, 0) / Math.max(1, m.rounds.length);
-  if (avg >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
+  if (avg >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favorites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
   return 'An even fight that went the other way. Small edges add up: training, decor and fighting rested.';
 }

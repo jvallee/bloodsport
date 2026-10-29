@@ -505,7 +505,7 @@ function applyPlotEffects(run, eff, ev, out) {
     if (f.askedFree >= 2) {
       removeFromRoster(run, f);
       if (next(run.rng.plot) < 0.5) addContact(run, f.name, f.political?.cell ?? 'courier', 'escaped');
-      else { changeSuspicion(run, 10); log(run, `${f.name} tried to escape over the wall and was caught by the watch. They are executed.`, 'bad'); }
+      else { changeSuspicion(run, 10); log(run, `${f.name} tried to escape over the wall, and was caught by the watch and executed.`, 'bad'); }
     }
   }
   if (eff.execute && f) {
@@ -544,7 +544,7 @@ function betray(run) {
     chronicle(run, f, 'Named as a traitor by their own house, and executed.');
     removeFromRoster(run, f);
     run.fallen.push({ ...f, alive: false, diedWeek: run.week });
-    log(run, `${f.name} is dragged from the barracks by the Praetorians, on your word. They are executed at noon.`, 'bad');
+    log(run, `On your word, the Praetorians drag ${f.name} from the barracks. They are executed at noon.`, 'bad');
   }
   for (const c of p.freed.filter((x) => !x.caught)) log(run, `${c.name} is found hiding in the city, and executed.`, 'bad');
   for (const c of p.freed) c.caught = true;
@@ -896,7 +896,7 @@ export function advanceBlocker(run) {
   const midBracket = Object.entries(run.brackets ?? {}).find(([t, b]) => b.fighterId && b.round > 0 && run.bouts?.[t] === 'open');
   if (midBracket) return `${findFighter(run, midBracket[1].fighterId)?.name ?? 'Your fighter'} is through to the ${BRACKET.rounds[midBracket[1].round]} in ${arenaName(Number(midBracket[0]))}: fight on, or withdraw.`;
   if (run.boutPending) return `Tournament week: send a fighter to ${arenaName(run.topTier)}, or skip the bout first.`;
-  if (run.roster.some((f) => f.pendingPerks.length)) return 'A fighter levelled up: choose their perk first.';
+  if (run.roster.some((f) => f.pendingPerks.length)) return 'A fighter leveled up: choose their perk first.';
   return null;
 }
 
@@ -973,7 +973,7 @@ export function advanceWeek(run) {
     refreshArmourer(run);
     plotMonth(run);
   }
-  if (run.plot?.hidden && --run.plot.hidden <= 0) { delete run.plot.hidden; log(run, 'The stranger in the Medbay is gone before dawn, leaving a purse.', 'event'); }
+  if (run.plot?.hidden && --run.plot.hidden <= 0) { delete run.plot.hidden; log(run, 'The stranger in the Medbay slipped away before dawn.', 'event'); }
   if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) if (!tributePaid(run)) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
   if (run.week % WEEKS_PER_YEAR === WEEKS_PER_YEAR - 4) {
     payYearPurse(run);
@@ -1451,7 +1451,7 @@ export function fightBlocker(run, id, tier = run.topTier) {
   const midBracket = bracket?.fighterId && bracket.round > 0;
   if (midBracket && bracket.fighterId !== id) return `${findFighter(run, bracket.fighterId)?.name ?? 'Another fighter'} is in the bracket here.`;
   if (!midBracket && foughtThisWeek(run).includes(id)) return `${f.name} already fought this week.`;
-  if (f.pendingPerks.length) return `${f.name} levelled up: choose a perk first.`;
+  if (f.pendingPerks.length) return `${f.name} leveled up: choose a perk first.`;
   if (f.morale < MORALE.mutinous) return `${f.name} is mutinous and refuses to fight.`;
   if (!midBracket && run.prestige < boutFor(run, tier).buyIn) return `Needs ${boutFor(run, tier).buyIn} Prestige for the buy-in (you have ${run.prestige}).`;
   return null;
@@ -1533,7 +1533,7 @@ export function skipBout(run) {
   for (const f of run.roster) f.stress = clampStress(f.stress - ECONOMY.skipStressRelief);
   const bout = currentBout(run);
   run.history.push({ week: run.week, tier: bout.tier, name: bout.name, skipped: true });
-  log(run, `You skip ${bout.name}: +${ECONOMY.skipGold} Gold, the roster recovers.`);
+  log(run, `You skip ${bout.name}: +${ECONOMY.skipGold} Gold, and the roster rests.`);
   settleBout(run, bout.tier);
   run.arenas[bout.tier].stage += 1;
   newOpponent(run, bout.tier);

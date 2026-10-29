@@ -53,7 +53,7 @@ export const TRAITS = {
   perpetualMotion: { name: 'Perpetual Motion Machine', desc: 'After winning a round: +10% win chance and +5% chance to be injured next round.' },
   firebug: { name: 'Firebug', desc: '+1 Power per Fire Brazier in quarters.' },
   footwork: { name: 'Footwork', desc: 'Strikes first automatically when faster than the opponent.' },
-  egoArmour: { name: 'Ego Armour', desc: 'While uninjured: +5% win chance and armor −10% chance to be injured.' },
+  egoArmour: { name: 'Ego Armor', desc: 'While uninjured: +5% win chance and armor −10% chance to be injured.' },
   elvenEyes: { name: 'Elven Eyes', desc: 'When an injury check against this fighter misses by 50%+, makes a free 15% counter-injury check.' },
   bloodFaith: { name: 'Blood Faith', desc: 'If this fighter dies in a match, the Prestige buy-in is refunded.' },
   underdog: { name: 'Underdog', desc: '+2 Power when the opponent has 2 or more Power more.' },
@@ -235,7 +235,7 @@ export const DECOR = {
   shrine: { price: 3, calm: 10, name: 'Shrine of Mars', feeds: 'Stress', effect: 'Comfort for Morale and −10 Stress a week: prayer steadies a fighter between bouts.', helps: () => false },
   bathhouse: { price: 4, calm: 15, name: 'Bathhouse', feeds: 'Stress', effect: 'Comfort for Morale and −15 Stress a week: hot water heals more than the Medbay admits.', helps: () => false },
   lionCage: { price: 5, name: 'Lion Cage', feeds: 'Basa', effect: 'Comfort for Morale. Basa fighters with a Lion Cage get +1 Power (they train with the beasts).', helps: (f) => f.kind === 'basa' },
-  warBanner: { price: 4, renown: 1, name: 'War Banner', feeds: 'Renown', effect: 'Comfort for Morale, and +1 Renown for every win (per Banner): the crowd learns their colours.', helps: () => true },
+  warBanner: { price: 4, renown: 1, name: 'War Banner', feeds: 'Renown', effect: 'Comfort for Morale, and +1 Renown for every win (per Banner): the crowd learns their colors.', helps: () => true },
 };
 
 // ---- Career placeholders (docs/fight-rules.md, "Career rules"); tune with scripts/simulate.js ----
@@ -416,7 +416,7 @@ export const GEAR = {
 export const BOSS_DEBUFFS = {
   firstInjuryDouble: { name: 'First Blood Counts Double', desc: 'The first injury your fighter takes counts as two, opening the Death Gate at once.' },
   rainyMud: { name: 'Rainy Mud', desc: 'Your fighter has −2 Speed every round.' },
-  noArmor: { name: 'Stripped of Armor', desc: "Your fighter's armor doesn't work: Alloyed Skin, Ego Armour and armor gear. Speed evasion still does." },
+  noArmor: { name: 'Stripped of Armor', desc: "Your fighter's armor doesn't work: Alloyed Skin, Ego Armor and armor gear. Speed evasion still does." },
   ironRules: { name: 'Iron Rules', desc: 'Room decor gives no bonus to your fighter.' },
   bloodMoon: { name: 'Blood Moon', desc: 'Both fighters have +10% chance to be injured.' },
   crowdFavorite: { name: 'Crowd Favorite', desc: 'The champion fights with +1 Power.' },

@@ -13,7 +13,7 @@ export function nextHint(run) {
   }
   if (run.event) return { text: 'Something has happened in the Ludus: make your choice on the card below.', tone: 'event' };
   const levelled = run.roster.find((f) => f.pendingPerks.length);
-  if (levelled) return { text: `${levelled.name} levelled up: pick a perk on their card.`, tone: 'event' };
+  if (levelled) return { text: `${levelled.name} leveled up: pick a perk on their card.`, tone: 'event' };
   if (run.boutPending) {
     // Nobody can afford the top arena: say so, and point at the way out.
     const bout = boutFor(run, run.topTier);

@@ -7,15 +7,16 @@ import { mortalDanger } from './fight.js';
 
 export const INTRO = [
   {
-    title: 'Welcome to Battleworld',
-    body: `<p>Battleworld is a planet that steals. Its portals pull warriors from every world and century to feed the arenas of <b>Emperor Silbannacus</b>, a Roman usurper who fused magic and machinery into an empire of bloodsport.</p>
-      <p>This week the portals took <b>you</b>. The Emperor has made you <b>Lanista</b>, the manager of a bankrupt gladiator school (a <b>Ludus</b>) in the lowest arena on the planet.</p>`,
+    title: 'Another Day on Your Computer',
+    body: `<p>You are scrolling, cursing, dare I say surfing the web. Suddenly the screen shimmers. A hand reaches out of it, grabs you by the head and pulls you through.</p>
+      <p>You land hard on cold stone, under a sun that isn't yours. This is <b>Battleworld</b>, whose portals pull warriors from every world and century to feed the arenas of <b>Emperor Silbannacus</b>, a Roman usurper who fused magic and machinery into an empire of bloodsport.</p>
+      <p>Then everything goes dark.</p>`,
   },
   {
     title: 'How you win',
     body: `<p>Climb four arenas, from <b>the Dirt Pits</b> to <b>the Imperial Coliseum</b>. Each arena holds a circuit: <b>Tournament 1 → Tournament 2 → Boss</b>.</p>
       <p>Beat all four Bosses, then win <b>the Grand Tournament</b>, and the Emperor names you Master of the Games.</p>
-      <p>You don't fight. You recruit, train, heal and choose who to send, then make the hard calls from the manager's box.</p>`,
+      <p>You don't fight. You recruit, train, heal and choose who to send, then make the hard calls from your box above the sand.</p>`,
   },
   {
     title: 'How you lose',
@@ -52,9 +53,9 @@ export const STEPS = [
   { id: 'levelup', when: (r) => r.roster.some((f) => f.pendingPerks.length), title: 'Level up!',
     body: 'Every match earns XP. When a fighter levels up, pick <b>one of three perks</b> on their card. Some perks need both Power and Speed, which is a reason to build balanced fighters.' },
   { id: 'arenas', when: (r) => Object.keys(r.arenas).length > 1, title: 'More arenas, more fights',
-    body: 'Your old arenas still hold bouts every tournament week. Send a <b>different fighter to each</b> to earn Gold, XP and Renown. Only your <b>top arena</b> can win you Favor. Win 3 times in an arena (or beat its Boss) to become its <b>Champion</b>; Champions are booed if they go back, but rookies fight there freely. Opponents <b>scout</b> a fighter who fights in your top arena month after month (+1 Power after a month in a row there), so rotate your stars.' },
+    body: 'Your old arenas still hold bouts every tournament week. Send a <b>different fighter to each</b> to earn Gold, XP and Renown. Only your <b>top arena</b> can win you Favor. Win 3 times in an arena (or beat its Boss) to become its <b>Champion</b>; Champions are booed if they go back, but rookies fight there freely. Opponents <b>scout</b> a fighter who fights in your top arena two months running (+1 Power against them), so rotate your stars.' },
   { id: 'morale', when: (r) => r.roster.some((f) => f.renown >= 4 || f.morale < 45), title: 'Keep your stars happy',
-    body: 'Winning makes fighters famous (<b>Renown</b>), and famous fighters expect better rooms. Their <b>Morale</b> drifts toward comfort minus expectations: place decor, upgrade Quarters, build an Entertainment Room. Inspired fighters fight better; restless ones won\'t train.' },
+    body: 'Winning makes fighters famous (<b>Renown</b>), and famous fighters expect better rooms. Their <b>Morale</b> drifts toward comfort minus expectations: place decor, upgrade Quarters, build an Entertainment Room. Inspired fighters fight better; Discontented ones won\'t train.' },
   { id: 'estate', when: (r) => r.prestigeLevel >= 2, title: 'Your house has grown',
     body: 'A new Prestige level unlocks <b>room plots</b> and buildings. Visit the <b>Estate</b>: plots are limited, so choose what your house needs most. Trainer upgrades raise how far fighters can train.' },
 ];
@@ -62,13 +63,13 @@ export const STEPS = [
 // Fight-screen steps.
 export const FIGHT_STEPS = [
   { id: 'fight-start', when: (m) => m.round === 0, title: 'How a round works',
-    body: 'Each round: the faster fighter (Speed + a die) strikes first, Power decides the odds (the gauge shows the gap), traits pop up as coloured tags, then a roll decides the round. After that, each fighter rolls to injure the other. <b>First to win two rounds takes the match.</b>' },
+    body: 'Each round: the faster fighter (Speed + a die) strikes first, Power decides the odds (the gauge shows the gap), traits pop up as colored tags, then a roll decides the round. After that, each fighter rolls to injure the other. <b>First to win two rounds takes the match.</b>' },
   { id: 'fight-tactics', when: (m) => !m.over, title: 'Read your opponent',
     body: 'Before each round, pick a <b>tactic</b>. <b>Press</b> beats Feint, <b>Feint</b> beats Guard, <b>Guard</b> beats Press: guess right and you get +10% to win the round. Every fighter has a <b>humor</b> (temperament) that hints at what they\'ll do: a Choleric opponent loves to Press, so Guard against them. The ★ marks what auto-play would pick.' },
   { id: 'fight-towel', when: (m) => m.round >= 1 && !m.over, title: 'Your call between rounds',
     body: 'Fight on, or <b>capitulate</b>: you lose the match and the buy-in, but your fighter is guaranteed to survive. It matters most when the <b>Death Gate</b> is open (usually two injuries).' },
   { id: 'fight-danger', when: (m) => !m.over && mortalDanger(m.a), title: 'Mortal danger',
-    body: 'Your fighter\'s Death Gate is open (usually two injuries; lions in the arena open it sooner). If they lose the next round and get hit, they can die permanently. Is this match worth it?' },
+    body: 'Your fighter\'s Death Gate is open (usually two injuries; lions in the arena open it sooner). If they lose the next round and are wounded, they can die. Is this match worth it?' },
   { id: 'fight-over', when: (m) => m.over, title: 'Why you won or lost',
     body: 'Open <b>"Show the round-by-round math"</b> to see every number: Power, the gap, each bonus, and the roll. Nothing is hidden.' },
 ];

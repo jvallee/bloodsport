@@ -520,7 +520,7 @@ test('playtest: betrayal is logged as it happens, with a line in each victim\'s 
   run.plot.freed.push({ name: 'Varia', cell: 'priest', caught: false });
   card(run, 'theOffer', 1);
   const text = run.log.map((l) => l.text).join(' ');
-  assert.match(text, new RegExp(`${f.name} is dragged from the barracks`));
+  assert.match(text, new RegExp(`the Praetorians drag ${f.name} from the barracks`));
   assert.match(text, /Varia is found hiding/);
   assert.match(run.fallen.find((x) => x.id === f.id).story.at(-1).text, /Named as a traitor/);
 });

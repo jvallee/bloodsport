@@ -232,8 +232,8 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (gunActive) enemy.push({ source: 'Armor-Piercing Volley', value: 15000 });
   if (kindActive(c, 'alloyedSkin', round)) self.push({ source: 'Alloyed Skin', value: -10000, armor: true });
   if (kindActive(c, 'egoArmour', round) && eff === 0) {
-    win.push({ source: 'Ego Armour', value: 5000 });
-    self.push({ source: 'Ego Armour', value: -10000, armor: true });
+    win.push({ source: 'Ego Armor', value: 5000 });
+    self.push({ source: 'Ego Armor', value: -10000, armor: true });
   }
   const fleshWounds = countInjury(f, 'fleshWound');
   if (fleshWounds) enemy.push({ source: 'Flesh Wound', value: -10000 * fleshWounds });

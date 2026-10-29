@@ -14,7 +14,7 @@ export const ACHIEVEMENTS = [
   { id: 'bloodied', name: 'Blood and Sand', desc: 'Win a Bloodied Victory (with 2+ injuries).', check: (run) => run.history.some((h) => h.bloodied), unlock: { patron: 'friend' } },
   { id: 'silver', name: 'A Rising House', desc: 'Reach the Silver Coliseum.', check: (run) => run.topTier >= 3, unlock: { patron: 'purse' } },
   { id: 'dreaded', name: 'Dreaded', desc: 'Have a fighter earn a kill mark (3 kills).', check: (run) => allFighters(run).some((f) => (f.kills ?? 0) >= 3), unlock: { patron: 'warChest' } },
-  { id: 'festival', name: "The Gods' Favourite", desc: "Win a match on a Gods' Day.", check: (run) => run.history.some((h) => h.festival && h.won), unlock: null },
+  { id: 'festival', name: "The Gods' Favorite", desc: "Win a match on a Gods' Day.", check: (run) => run.history.some((h) => h.festival && h.won), unlock: null },
   { id: 'topHouse', name: 'First Among Houses', desc: 'Top the house standings.', check: (run) => run.glory > 0 && standings(run)[0].you, unlock: { patron: 'defector' } },
   { id: 'imperial', name: 'Imperial Ambitions', desc: 'Reach the Imperial Coliseum.', check: (run) => run.topTier >= 4, unlock: { cls: 'samnite' } },
   { id: 'champion', name: 'Master of the Games', desc: 'Win a career.', check: (run) => run.status === 'won', unlock: { decrees: true } },

@@ -76,7 +76,7 @@ export const PLOT_EVENTS = [
   {
     id: 'chalkMark', plot: true, stages: ['mark'], title: 'Chalk on the door',
     target: asker(political),
-    text: ({ f }) => `This morning someone had chalked a sign on ${f}'s door: a broken chain. ${f} says nothing, and watches to see what you'll do.`,
+    text: ({ f }) => `Overnight, someone chalked a sign on ${f}'s door: a broken chain. ${f} says nothing, and watches to see what you'll do.`,
     choices: [
       { label: 'Scrub it off', refuse: true, effects: {} },
       { label: 'Copy the sign onto another door', help: true, effects: { trust: 1, stage: 'favours' } },
@@ -121,14 +121,14 @@ export const PLOT_EVENTS = [
   },
   // ---- Rescue requests: one of your gladiators asks you to free a political prisoner ----
   {
-    id: 'freeFromCells', plot: true, stages: ['favours', 'cause', 'ready'], title: 'My brother is in the cells',
+    id: 'freeFromCells', plot: true, stages: ['favours', 'cause', 'ready'], title: 'A friend in the cells',
     when: (run) => run.buildings.some((b) => b.type === 'liaison'),
     // Political prisoners ask, and the sworn champion (playtest #7: an ordinary fighter's "brother" felt arbitrary).
     target: (run, rng) => {
       const list = run.roster.filter((f) => f.political || f.id === run.plot?.champion);
       return list.length ? { f: pick(rng, list).id, name: freshName(run, rng) } : null;
     },
-    text: ({ f, name }) => `${f} comes to you at night. "${name} is in the Liaison's cells. Buy them, then let them go. They're worth more outside these walls than any purse."`,
+    text: ({ f, name }) => `${f} comes to you at night. "${name} is in the Liaison's cells, and I owe them my life. Buy them, then let them go. They're worth more outside these walls than any purse."`,
     choices: [
       { label: 'Refuse', refuse: true, effects: { morale: { to: 'f', n: -15 } } },
       { label: `Buy \${name} and let them go (${PLOT.freeCost} Gold)`, help: true, cost: PLOT.freeCost, effects: { gold: -PLOT.freeCost, contact: 'new', trust: 2, suspicion: 5 } },
@@ -148,7 +148,7 @@ export const PLOT_EVENTS = [
     id: 'freeCondemned', plot: true, stages: ['cause', 'ready'], title: 'Thrown to the beasts',
     when: (run) => Boolean(run.bouts),
     target: (run, rng) => (run.roster.length ? { f: pick(rng, run.roster).id, name: freshName(run, rng) } : null),
-    text: ({ f, name }) => `${f} is pale. "They're throwing ${name} to the beasts at the games today, for sedition. You have the Emperor's ear, and a key to every gate in the arena."`,
+    text: ({ f, name }) => `${f} has gone pale. "They're throwing ${name} to the beasts at the games today, for sedition. You have the Emperor's ear, and a key to every gate in the arena."`,
     choices: [
       { label: 'Do nothing', refuse: true, effects: { morale: { to: 'f', n: -20 } } },
       { label: `Plead for clemency (−${PLOT.clemencyFavor} Favor)`, help: true, effects: { favor: -PLOT.clemencyFavor, contact: 'new', trust: 2 } },
@@ -170,7 +170,7 @@ export const PLOT_EVENTS = [
     id: 'forgedPass', plot: true, stages: ['cause', 'ready'], title: 'The forged pass',
     when: (run) => !run.plot?.pass,
     target: asker(anyFighter),
-    text: () => 'A clerk from the palace archives offers a pass with the Emperor\'s own seal, good for one visit from the Praetorians.',
+    text: () => 'A clerk from the palace archives offers a pass bearing the Emperor\'s own seal. Shown at the right moment, it will send the Praetorians away once.',
     choices: [
       { label: 'Decline', refuse: true, effects: {} },
       { label: `Buy it (${PLOT.passCost} Gold)`, help: true, cost: PLOT.passCost, effects: { gold: -PLOT.passCost, pass: true, trust: 1 } },
@@ -181,7 +181,7 @@ export const PLOT_EVENTS = [
     when: (run) => !isArmed(run),
     needed: (run) => !isArmed(run),
     target: asker(anyFighter),
-    text: () => 'An old centurion asks for weapons from your storeroom. "When the day comes, the barracks must be armed. Two blades will do."',
+    text: () => 'An old centurion asks for weapons from your storeroom. "When the day comes, the barracks must be armed. Two pieces of steel will do."',
     choices: [
       { label: 'Refuse', refuse: true, effects: {} },
       { label: 'Hand over two pieces of gear', help: true, needs: (run) => (gearCount(run) >= 2 ? null : 'Needs 2 pieces of gear (from the storeroom first, then off your weakest fighters).'), effects: { giveGear: 2, armed: true, suspicion: 10, trust: 1 } },
@@ -196,7 +196,7 @@ export const PLOT_EVENTS = [
       const [f, g] = [...run.roster].sort((a, b) => b.renown - a.renown || b.power - a.power);
       return f ? { f: f.id, g: g?.id, fOdds: recruitOdds(f), gOdds: g ? recruitOdds(g) : null } : null;
     },
-    text: ({ f, g }) => `The rebels want a champion of your house. "When the Emperor comes to the games, the crowd must see one of their own strike the blow." They name ${f}${g ? `, or ${g}` : ''}.`,
+    text: ({ f, g }) => `The rebels want a champion from your house. "When the Emperor comes to the games, the crowd must see one of their own strike the blow." They name ${f}${g ? `, or ${g}` : ''}.`,
     choices: [
       { label: 'Keep your fighters out of it', refuse: true, effects: {} },
       { label: `Sound \${f} out (\${fOdds}% they say yes)`, help: true, effects: { chance: { p: (run, ev) => ev.fOdds / 100, win: { champion: 'f', trust: 1 }, lose: { morale: { to: 'f', n: -5 } } } } },
@@ -218,7 +218,7 @@ export const PLOT_EVENTS = [
     id: 'theOffer', plot: true, stages: ['cause', 'ready'], title: 'The prefect\'s offer',
     when: (run) => run.week >= (run.plot?.causeWeek ?? 0) + PLOT.offerAfter,
     target: asker(anyFighter),
-    text: () => 'A Praetorian prefect calls on you, alone. "The Emperor knows there are traitors in the ludus houses. Give him their names, and he will remember your house kindly."',
+    text: () => 'A Praetorian prefect calls on you, alone. "The Emperor knows there are traitors in the gladiator houses. Give him their names, and he will remember your house kindly."',
     choices: [
       { label: 'Know nothing', effects: { trust: 1 } },
       { label: 'Name the names', betray: true, effects: { betray: true } },
