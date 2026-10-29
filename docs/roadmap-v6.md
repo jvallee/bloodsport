@@ -57,6 +57,7 @@ run.plot = {
   seen: [],               // plot encounter ids already shown
   cells: ['scribe'],      // roles you hold (from the prisoners you own)
   champion: null,         // fighter id recruited to the cause (Act 3)
+  freed: [],              // contacts outside the Ludus: [{ name, cell, how, week, caught }] (section 4.3b)
   nextAt: 37,             // the earliest week the next encounter can fire
 }
 ```
@@ -85,6 +86,33 @@ Every encounter has a cautious first choice, matching the rule for normal events
 | `theOffer` | cause or ready | A Praetorian prefect offers a pardon and a title for names | **Betray them** (ends the plot: the Loyalist ending) | Refuse | — |
 
 That's 11 encounters in the first draft. Target 14–18 for v6.0, including a few that only appear with a particular cell (the priest's Gods' Day rites, for example).
+
+### 4.3b Rescue requests: "Free my brother"
+
+One of your own gladiators asks you to free another political prisoner. These are the plot's most personal cards. The person asking is someone the player has fought with, so refusing hurts.
+
+- **Who asks:**
+  - Usually a political prisoner in your roster, or your recruited champion.
+  - Once the thread reaches `cause`, sometimes an ordinary fighter with a reason: a sibling, an old comrade, or a debt. The rebellion reaches beyond the people you bought.
+- **Who they want freed:** a named prisoner with a cell, made by the plot RNG. If freed, they become a **contact** outside the Ludus (`plot.freed`).
+- **How (one per card, picked by what's possible right now):**
+
+| Id | The ask (placeholder) | Free them | Refuse | Notes |
+|---|---|---|---|---|
+| `freeFromCells` | "My brother is in the Liaison's cells. Buy him, then let him go." | Pay the prisoner's price plus a bribe. They never join your roster. Suspicion +5. | The asker's Morale −15 for 4 weeks | Needs a Liaison |
+| `freeCondemned` | "They'll throw her to the beasts at your next tournament." | **Plead for clemency:** costs Favor, always works. **Arrange an escape:** a chance roll, with suspicion +15 if it fails. | The prisoner dies in the arena (a log line). The asker's Morale −20, and they may gain the Afeared scar. | Tournament weeks only |
+| `freeAcrossSand` | "A friend of ours fights for House X. Spare him if you meet." | Spare that opponent when you beat them (uses the thumbs up/down system), or buy out their contract for Gold | You may still meet them, and nothing stops you killing them | Links the plot to the crowd verdict: sparing a marked rebel against the crowd's wishes is the costly choice |
+| `freeMe` | "Free me. I can do more outside these walls." | Release the asker: you lose the fighter, and they become a contact. Trust +3. | Their Morale −15. Ask twice, and they may try to escape. | Political prisoners only, after trust ≥ 3 |
+
+- **What contacts give back:** each freed prisoner pays back later, in their cell's way:
+  - A freed scribe sends a forged pass for free.
+  - A freed officer arms the barracks without costing you gear.
+  - A freed courier lowers suspicion.
+  - A freed priest gives Morale to the roster on Gods' Days.
+- **At the coup:** each contact adds one more voice in the crowd during the Final (placeholder: +3% win chance each, up to +12%). Freeing people throughout the career is how the player stacks the odds for the coup.
+- **Refusing:** rescue requests count toward the "2 refusals in a row" rule like any other plot card. They also cost the asker's Morale, so saying no is personal, not just a cooling of the plot.
+- **Suspicion:** freeing is the riskiest kind of help. Each contact also adds +1 suspicion a month while the Emperor hunts for them, until the coup or until a raid "finds" one (a raid can name a contact who was caught, and their payback stops).
+- **Endings:** the coup epilogue names the people you freed. The Loyalist ending's list of the executed includes them too, so betrayal costs more the more people you've freed.
 
 ### 4.4 Suspicion, raids and danger
 
@@ -148,7 +176,8 @@ That's 11 encounters in the first draft. Target 14–18 for v6.0, including a fe
 ## 5. Interaction with existing systems
 
 - **Liaison:** the political roll happens in `refreshLiaison` (`src/run.js`) after the prisoner is created, using `run.rng.plot`.
-- **Weekly events:** plot encounters are `EVENTS` entries flagged `plot: true`. They're filtered out of the normal draw and delivered by a new `rollPlot(run)` called before `rollEvent`. Event effects are reused, plus new ones: `trust`, `suspicion`, `plot` (stage change), `medbaySlot`, `throwBout`, `reveal` (Boss rule) and `giveGear`.
+- **Weekly events:** plot encounters are `EVENTS` entries flagged `plot: true`. They're filtered out of the normal draw and delivered by a new `rollPlot(run)` called before `rollEvent`. Event effects are reused, plus new ones: `trust`, `suspicion`, `plot` (stage change), `medbaySlot`, `throwBout`, `reveal` (Boss rule), `giveGear` and `free` (adds a contact; for `freeMe`, removes the asker from the roster).
+- **Rescue requests:** `freeAcrossSand` marks a rival-house opponent (`opp.rebel = true`). Sparing them in `resolveMercy` frees them. `freeCondemned` resolves at the end of the tournament week. Contacts' paybacks run in the monthly step.
 - **Fights:** `throwBout` needs one new match flag that forces capitulation at the first chance in the next lower-arena bout. The marked rival who throws a match is a one-off opponent flag.
 - **Crowd verdicts (`resolveMercy`):** sparing against the crowd in the top arena raises suspicion.
 - **Grand Tournament (`advanceArena`):** an extra branch for the coup ending.
@@ -176,9 +205,9 @@ Each phase is a small set of commits, tested first, with `npm test` and `npm run
 | Phase | Scope | Tests | Done when |
 |---|---|---|---|
 | **A: Foundations** | `run.plot`, `run.rng.plot`, `SAVE_VERSION` 4 with migration, `POLITICAL` tunables, political roll in the Liaison, clue table and Story lines, false clues on ordinary prisoners | Political rate within tolerance over many seeds. **Plot RNG isolation:** a career with the plot on and one with it off draw identical markets, fights and events until the first plot card. Migration from v3 saves. | Gates unchanged (the plot can't fire yet) |
-| **B: The thread** | `rollPlot`, the stage machine, trust and refusals, the first 6 encounters (`chalkMark` to `pamphlets`), new event effects | One test per encounter's effects. The thread goes cold after 2 refusals. It survives the prisoner's death at trust ≥ 2. Plot cards never appear without a political prisoner. | A seeded career can reach `cause` |
-| **C: Danger** | Suspicion and its visible signs, the inspector and informer events, raids, the treason ending | Each threshold's sign. Raid choices. Treason ends the career. Suspicion decay. | |
-| **D: The coup** | Act 3 encounters, champion recruitment, the Grand Tournament branch, the coup / martyr / loyalist / bystander endings, end-screen epilogues, score | Each ending is reachable from a scripted run. The coup only happens with every requirement met. | A full scripted career ends in each ending |
+| **B: The thread** | `rollPlot`, the stage machine, trust and refusals, the first 6 encounters (`chalkMark` to `pamphlets`), new event effects, the rescue requests `freeFromCells` and `freeMe`, and contacts with their paybacks | One test per encounter's effects. The thread goes cold after 2 refusals. It survives the prisoner's death at trust ≥ 2. Plot cards never appear without a political prisoner. | A seeded career can reach `cause` |
+| **C: Danger** | Suspicion and its visible signs, the inspector and informer events, raids (including a contact being caught), the treason ending, and the rescue requests `freeCondemned` and `freeAcrossSand` | Each threshold's sign. Raid choices. Treason ends the career. Suspicion decay. | |
+| **D: The coup** | Act 3 encounters, champion recruitment, the contacts' help in the Final, the Grand Tournament branch, the coup / martyr / loyalist / bystander endings, end-screen epilogues, score | Each ending is reachable from a scripted run. The coup only happens with every requirement met. | A full scripted career ends in each ending |
 | **E: Legacy and Codex** | Achievements, unlocks, the hidden Rebellion Codex section | Discovered entries persist. The section is hidden until found. | |
 | **F: Bots and balance** | Teach the bots (section 8). New balance gates. Tune `PLOT` | New gates pass | All gates pass |
 | **G: Playtests and text** | A blind LLM playtest (discoverability), an informed playtest (full thread), the designer's text pass | | Discovery rate is about 1 in 3. No bugs left open. |
@@ -205,7 +234,7 @@ Each phase is a small set of commits, tested first, with `npm test` and `npm run
 Story text is placeholder throughout. The highest-impact pieces for the designer's voice:
 
 1. **The intro additions** (Act 0 seeds) in `INTRO`, `src/tutorial.js`.
-2. **Every plot encounter card:** its title, text and choice labels. Each should read like ordinary life in the Ludus, not like a quest.
+2. **Every plot encounter card,** especially the rescue requests (spoken by your own gladiators, so they're the most personal): its title, text and choice labels. Each should read like ordinary life in the Ludus, not like a quest.
 3. **The clue lines and Story lines** for political prisoners, plus false clues for ordinary ones.
 4. **The suspicion signs:** log lines and inspector events.
 5. **The five ending epilogues.**
@@ -223,3 +252,5 @@ Write a one-page voice guide first (narrator, tone, a few example lines), so any
 4. **The faction's name and the Emperor's history.** Placeholders: "the Unbroken", and Silbannacus the usurper.
 5. **Should the coup require a specific champion,** or any of your fighters in the Final? Recommended: the recruited champion. It gives Act 3's recruitment real weight.
 6. **Patron Lounge:** part of v6.0, or v6.1 after the plot ships? Recommended: v6.1.
+7. **Can ordinary fighters ask for a rescue?** If so, a career without a political prisoner can still be pulled into the plot, which bends pillar 4 a little. Recommended: only once the thread reaches `cause`, so the very first step still needs a political prisoner.
+8. **Should `freeMe` let a prisoner escape on their own if refused twice?** Recommended: yes, as a chance roll, with suspicion +10 if they're caught. It gives refusal a sting.
