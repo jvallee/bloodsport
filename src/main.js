@@ -102,7 +102,7 @@ function markSceneSeen(id) {
 }
 // The Emperor drops in at turning points, once each per career, when nothing else is on screen.
 function checkScene() {
-  if (scene || match || setupChoice || showHelp || !prefs.introSeen) return;
+  if (scene || match || setupChoice || showHelp || !scenesSeen().includes('opening')) return; // the Emperor's visits come after the opening
   const id = dueScene(run, scenesSeen());
   if (id) {
     markSceneSeen(id);
@@ -110,8 +110,10 @@ function checkScene() {
   }
 }
 function closeScene() {
+  const then = scene?.then;
   if (scene?.id === 'opening') { prefs.introSeen = true; savePrefs(); markSceneSeen('opening'); }
   scene = null;
+  if (then === 'setup') setupChoice = { patron: '', decrees: [] }; // the opening came first; now choose a patron
 }
 const fightTutorial = () => (match ? nextStep(FIGHT_STEPS, prefs.tutorial, match) : null);
 
@@ -193,7 +195,8 @@ function scheduleAuto() {
 
 // ---------- Careers ----------
 
-function newRun(seed, setup = { classes: unlockedClasses(legacy) }) {
+// `opening: false` when the opening has just played (before the patron choice).
+function newRun(seed, setup = { classes: unlockedClasses(legacy) }, { opening = true } = {}) {
   run = createRun(seed ?? undefined, setup);
   achieved = [];
   setupChoice = null;
@@ -201,7 +204,8 @@ function newRun(seed, setup = { classes: unlockedClasses(legacy) }) {
   summaries = [];
   tab = 'market';
   oddsCache.clear();
-  scene = prefs.introSeen ? null : { id: 'opening', beat: 0 };
+  scene = opening ? { id: 'opening', beat: 0 } : null; // every career opens with the Emperor pulling you through (skippable)
+  if (!opening) markSceneSeen('opening');
   const url = new URL(location.href);
   url.searchParams.set('seed', run.seed);
   history.replaceState(null, '', url);
@@ -217,6 +221,11 @@ function boot() {
     try {
       run = deserialize(saved);
       tab = run.roster.length ? 'ludus' : 'market';
+      // A career under way has had its opening; a brand-new one (nothing done yet) still gets it.
+      if (!scenesSeen().includes('opening')) {
+        if (run.week > 0 || run.roster.length) markSceneSeen('opening');
+        else scene = { id: 'opening', beat: 0 };
+      }
       save();
       render();
       return;
@@ -233,8 +242,9 @@ const actions = {
   'new-run': () => {
     if (run.status === 'active' && run.week > 0 && !confirm('Abandon this career and start a new one?')) return;
     // Once a past career has unlocked something, choose a patron and decrees first.
+    // The opening plays first, then the patron and decree choice, then the career (without a second opening).
     if (unlockedPatrons(legacy).length || decreesUnlocked(legacy)) {
-      setupChoice = { patron: '', decrees: [] };
+      scene = { id: 'opening', beat: 0, then: 'setup' };
       render();
     } else {
       newRun();
@@ -243,7 +253,7 @@ const actions = {
   'start-career': () => {
     const patron = document.querySelector('input[name=patron]:checked')?.value || null;
     const decrees = [...document.querySelectorAll('input[name=decree]:checked')].map((i) => i.value);
-    newRun(null, { patron, decrees, classes: unlockedClasses(legacy) });
+    newRun(null, { patron, decrees, classes: unlockedClasses(legacy) }, { opening: false });
   },
   'setup-cancel': () => { setupChoice = null; },
   'replay-seed': () => newRun(run.seed, run.setup),

@@ -6,7 +6,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 **v6 in progress: the hidden plot** (design: `docs/roadmap-v6.md`)
 - **Characters talk to you.**
-  - The Emperor pulls you through the portal and tells you the stakes himself.
+  - The Emperor pulls you through the portal and tells you the stakes himself. This opening plays at the start of every career, before anything else (Skip is one click).
   - Your steward, a plain and neutral helper, guides you through the game in place of the old tutorial cards.
   - The Emperor drops in at a few turning points: your first Boss win, the first winter's tribute, low Favor, and the Grand Tournament.
 - There is a revolt brewing in the empire. Some of the Liaison's prisoners are not what their records say. *(Deliberately vague: the plot is meant to be found.)*
