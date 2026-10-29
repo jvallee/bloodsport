@@ -5,6 +5,7 @@
 
 import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
+import { coupBonus } from '../src/plot.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic, effectiveInjuries, signatureBlocker, useSignature } from '../src/fight.js';
 import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
 import {
@@ -230,12 +231,20 @@ function recklessBouts(run) {
 }
 
 // v6, the hidden plot. `opts.plot`: 'rebel' helps the rebels at every turn (and goes through with the coup);
-// 'loyalist' helps until the prefect's offer, then names the names. Without it, a bot takes the cautious first choice
+// 'loyalist' helps until the prefect's offer, then names the names; 'bystander' buys political prisoners but always refuses. Without it, a bot takes the cautious first choice
 // and the plot goes cold. Returns the order to try a plot card's choices in.
 function plotOrder(run, side) {
   const choices = EVENT_BY_ID[run.event.id].choices;
   const all = [...choices.keys()];
   if (run.event.id === 'raid') return [2, 0, 3, 1].filter((i) => i < choices.length); // pass, bribe, bar the gates, hand over
+  if (side === 'bystander') return all; // takes the prisoners, never the plot: the cautious first choice
+  // The coup's eve: go ahead only when the champion has a fair chance against the Final's opponent; otherwise wait a year.
+  if (run.event.id === 'coupEve') {
+    const champ = run.roster.find((f) => f.id === run.plot.champion);
+    const final = run.arenas[run.topTier].opponent;
+    const o = champ && estimateOdds(champ, final, { ...matchOptions(run, champ, run.topTier), debuff: 'emperorsGaze', rebels: coupBonus(run), n: 200 });
+    return o && o.win >= 0.4 ? [1, 0] : [0, 1];
+  }
   if (side === 'loyalist') {
     const betray = all.filter((i) => choices[i].betray);
     if (betray.length) return betray;

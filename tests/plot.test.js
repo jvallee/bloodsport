@@ -214,7 +214,7 @@ test('rescue: a rebel across the sand, beaten and spared, becomes a contact; kil
   }
 });
 
-test('contacts are voices in the crowd at the coup: +3% each, up to +12%', () => {
+test('contacts are voices in the crowd at the coup: PLOT.contactWin each, up to PLOT.contactMax', () => {
   const { run } = withPrisoner();
   for (let i = 0; i < 6; i++) run.plot.freed.push({ name: `C${i}`, cell: 'courier', caught: false });
   assert.equal(coupBonus(run), PLOT.contactMax);

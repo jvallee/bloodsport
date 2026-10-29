@@ -9,7 +9,7 @@ const N = Number(args.find((a) => /^\d+$/.test(a))) || 200;
 const pct = (x) => `${(x * 100).toFixed(0)}%`;
 const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
-const { gates, careful, reckless, split } = runGates({ careers: N });
+const { gates, careful, reckless, split, rebel, loyalist } = runGates({ careers: N });
 
 for (const [name, results] of [['CAREFUL', careful], ['RECKLESS', reckless]]) {
   const wins = results.filter((r) => r.won);
@@ -35,6 +35,9 @@ for (const r of split.rows) {
 }
 
 const fmt = (g) => ({ pct: pct(g.value), pctDiff: `${g.value >= 0 ? '+' : ''}${(g.value * 100).toFixed(0)} pts`, ratio: `${g.value.toFixed(2)}×`, num: g.value.toFixed(2), count: `${g.value}/4` })[g.fmt];
+// v6: how the plot's careers end.
+const endings = (rs) => Object.entries(rs.reduce((o, r) => ({ ...o, [r.run.ending ?? (r.won ? 'won' : 'lost')]: (o[r.run.ending ?? (r.won ? 'won' : 'lost')] ?? 0) + 1 }), {})).map(([k, n]) => `${k} ${Math.round((100 * n) / rs.length)}%`).join(', ');
+console.log(`\nThe hidden plot (${rebel.length} careers each)\n  Rebel     ${endings(rebel)}\n  Loyalist  ${endings(loyalist)}`);
 console.log('\nGates');
 for (const g of gates) console.log(`  ${g.pass ? 'PASS' : 'FAIL'}  ${g.name}: ${fmt(g)}`);
 if (check && gates.some((g) => !g.pass)) {

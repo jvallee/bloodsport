@@ -75,6 +75,11 @@ export function runGates({ careers = 200, quick = false } = {}) {
   const split = speedSplit({ n: quick ? 800 : 3000 });
   const curve = bossCurve(careful);
   const tactics = tacticsEdge({ n: quick ? 1500 : 4000 });
+  // v6, the hidden plot: bots that play it (half as many careers, to keep the check quick).
+  const plotN = Math.max(50, Math.round(careers / 2));
+  const rebel = Array.from({ length: plotN }, (_, i) => playCareer(1000 + i, 'careful', { plot: 'rebel' }));
+  const loyalist = Array.from({ length: plotN }, (_, i) => playCareer(1000 + i, 'careful', { plot: 'loyalist' }));
+  const ending = (rs, e) => rs.filter((r) => r.run.ending === e).length / rs.length;
   const gates = [
     { name: 'Careful career win rate is 20–45%', value: rate(careful), pass: rate(careful) >= 0.2 && rate(careful) <= 0.45, fmt: 'pct' },
     { name: 'Careful wins at least as often as reckless', value: rate(careful) - rate(reckless), pass: rate(careful) >= rate(reckless), fmt: 'pctDiff' },
@@ -85,6 +90,9 @@ export function runGates({ careers = 200, quick = false } = {}) {
     { name: 'Tactics matter: reading the opponent beats always-Steady by 3–15 points a match', value: tactics.smart - tactics.steady, pass: tactics.smart - tactics.steady >= 0.03 && tactics.smart - tactics.steady <= 0.15, fmt: 'pctDiff' },
     { name: 'No dominant tactic: always-Press does worse than reading the opponent', value: tactics.smart - tactics.press, pass: tactics.press < tactics.smart, fmt: 'pctDiff' },
     { name: 'Tough finish: the Grand Tournament is 10+ points harder than the first Boss', value: (curve[1] ?? 0) - (curve[5] ?? 1), pass: (curve[1] ?? 0) - (curve[5] ?? 1) >= 0.1, fmt: 'pctDiff' },
+    { name: 'The evil road is easier: the loyalist wins 5–20 points more often than careful', value: rate(loyalist) - rate(careful), pass: rate(loyalist) - rate(careful) >= 0.05 && rate(loyalist) - rate(careful) <= 0.2, fmt: 'pctDiff' },
+    { name: 'The coup is rare but real: 5–25% of rebel careers', value: ending(rebel, 'coup'), pass: ending(rebel, 'coup') >= 0.05 && ending(rebel, 'coup') <= 0.25, fmt: 'pct' },
+    { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
   ];
-  return { gates, careful, reckless, split, curve, tactics };
+  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist };
 }
