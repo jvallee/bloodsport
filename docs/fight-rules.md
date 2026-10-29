@@ -430,3 +430,7 @@ All numbers are tunables in `src/data.js` (`POLITICAL`, `PLOT`, `LIAISON`); stor
   - The caravan's War Paint costs 2 Gold, really half price.
   - Feuds and lives owed set in a tournament week start counting down the month after.
   - The crowd calls for blood at the beaten fighter's real Death Gate.
+- **Gates after playtest #7** (`npm run check`, 300 careers, 150 per plot bot): all 12 pass.
+  - Careful 41%, careful deaths 0.54, reckless deaths 3.28. Balanced build 2/4, first Boss 71%, tactics +8, always-Press −7, Grand +26 points harder.
+  - Loyalist wins 13 points more than careful (54%).
+  - Rebel careers: 9% coup, 27% ordinary wins, 0% treason. Raids are rare when suspicion is managed.

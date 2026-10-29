@@ -30,7 +30,7 @@ Last updated 2026-10-28. Read this file first, then `CLAUDE.md` (the project rul
   - The user wanted death to be **more** likely.
 - **Address the user as they/them.** Their email is only for git authorship.
 
-## Tried and rejected: a higher training cap for veterans
+## Tried and rejected: a higher training cap for veterans (v5)
 
 The user asked for each level to add +1 week to that fighter's own Trainer cap. It was built (`e26085f`) and reverted (`f80b949`) because it broke the careful-win gate (limit 45%). Careful career win rates, 300 careers each:
 
@@ -44,6 +44,27 @@ The user asked for each level to add +1 week to that fighter's own Trainer cap. 
 | No bonus, Market Power bonus halved (0/1/2/3) | 37% |
 
 Every fighter is limited by the cap, so any extra cap adds Power across the whole roster. The user's real complaint (a late prisoner far too strong) was fixed at the source instead: see playtest #7 below. Halving the Market's Power bonus is an untried option for keeping veterans ahead of recruits.
+
+## v6 in progress: the hidden plot (read docs/roadmap-v6.md)
+
+Phases A–F of `docs/roadmap-v6.md` are built and pushed. Playtest #7 (blind and informed) fixes are applied (`docs/playtest-llm-7-changes.md`). All 12 gates pass (careful 41%, loyalist +13, coup 9% of rebel careers).
+
+- **Code:**
+  - `src/plot.js`: cards, clues, cells and suspicion signs.
+  - The "hidden plot" section of `src/run.js`.
+  - `LIAISON`, `POLITICAL` and `PLOT` in `src/data.js`.
+  - `tests/plot.test.js`.
+- **Bots:** `opts.plot` in `scripts/bots.js` is `rebel`, `loyalist` or `bystander`.
+- **The designer's decisions:** the evil (loyalist) road is the easy one, and the coup is the hard, heroic one. Story text is placeholder for the designer to rewrite.
+- **Next:**
+  - The designer's text pass, with a voice guide first.
+  - A second blind playtest to measure discovery after the Liaison hint.
+  - Phase H, the Patron Lounge (needs its own design doc).
+  - A freeze as v6 when the designer says so.
+- **Open, noted in the playtest #7 changes doc:**
+  - Lower arenas freeze when unvisited.
+  - Preview odds without an Oracle.
+  - An injury-chance breakdown in `math` mode.
 
 ## 3. Current state (where I stopped)
 
