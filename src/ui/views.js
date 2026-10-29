@@ -100,6 +100,14 @@ function tributeStat(run) {
 // ---------- Banners ----------
 
 // The end of a career: how it ended, its score, its best fighter, the fallen and the final standings.
+// v6's hidden plot: the endings' titles, and a quiet line for a plot that started and went nowhere.
+const ENDING_TITLES = { coup: '⛓ The Tyrant Falls', martyr: '⛓ The Rising Fails', treason: '⚖ Tried for Treason' };
+function plotAftermath(run) {
+  if (run.plot?.ended === 'cold' && !run.ending && !(run.epilogue ?? []).length) return '<p class="epilogue">Some say a different house could have changed the empire.</p>';
+  if (run.plot?.ended === 'loyalist') return '<p class="epilogue">The Emperor remembers your loyalty. So does everyone else.</p>';
+  return '';
+}
+
 export function endBanner(run, legacy = null) {
   const won = run.status === 'won';
   const deaths = run.fallen.length;
@@ -111,8 +119,10 @@ export function endBanner(run, legacy = null) {
   const rank = standings(run).findIndex((h) => h.you) + 1;
   const kills = [...run.roster, ...run.fallen].reduce((n, f) => n + (f.kills ?? 0), 0);
   return `<div class="banner end ${won ? 'win' : 'loss'}">
-    <h2>${won ? '👑 Master of the Games' : 'Your house has fallen'}</h2>
+    <h2>${ENDING_TITLES[run.ending] ?? (won ? '👑 Master of the Games' : 'Your house has fallen')}</h2>
     <div>${esc(run.endReason)}</div>
+    ${(run.epilogue ?? []).map((line) => `<p class="epilogue">${esc(line)}</p>`).join('')}
+    ${plotAftermath(run)}
     <div class="end-score">Score <b>${score}</b>${legacy ? ` · best ever ${Math.max(legacy.best, score)} · career ${legacy.careers}` : ''}</div>
     <div class="end-grid">
       <div><div class="label">The career</div>${formatDate(run.week)}<br>${wins} won, ${fought.length - wins} lost · ${kills} kill${kills === 1 ? '' : 's'}<br>Top arena: ${esc(arenaName(run.topTier))}<br>House rank: #${rank} of ${standings(run).length} · Glory ${run.glory ?? 0}</div>
@@ -399,10 +409,11 @@ function arenaBlock(run, tier, oddsFor) {
   const arena = run.arenas[tier];
   const state = run.bouts?.[tier];
   // The Dirt Pits Boss has no arena rule; the Oracle (Lv 2) previews the top Boss's rule early.
-  const ruleId = bout.boss ? bout.debuff : bout.top && oracleLevel(run) >= 2 && tier > 1 ? arena.debuff : null;
+  const revealed = run.plot?.reveal === tier; // v6: a rebel's visitor knew the Boss's arena rule
+  const ruleId = bout.boss ? bout.debuff : bout.top && (oracleLevel(run) >= 2 || revealed) && tier > 1 ? arena.debuff : null;
   const debuff = ruleId ? BOSS_DEBUFFS[ruleId] : null;
   const debuffNote = debuff
-    ? `<div class="debuff">☠ ${bout.boss ? 'Boss arena' : 'Oracle foresees the Boss arena'}: <b>${esc(debuff.name)}</b>. ${esc(debuff.desc)}</div>`
+    ? `<div class="debuff">☠ ${bout.boss ? 'Boss arena' : revealed && oracleLevel(run) < 2 ? 'A visitor whispered the Boss arena' : 'Oracle foresees the Boss arena'}: <b>${esc(debuff.name)}</b>. ${esc(debuff.desc)}</div>`
     : bout.boss && tier === 1 ? '<div class="sub">This first Boss fights without an arena rule.</div>' : '';
   const stakes = esc(arenaStakes(run, tier));
   const rival = arena.opponent.rival ? '<div class="warn">⚔ A rival returns: this Boss beat you before, and has grown stronger.</div>' : '';
@@ -502,7 +513,7 @@ export function marketTab(run) {
     : `<p class="sub">Build the Stables${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for exotic Basa fighters each month.</p>`;
   const offer = run.liaisonOffer;
   const liaison = offer
-    ? fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })
+    ? fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, notes: offer.record?.length ? `<div class="record"><div class="label">Prison record</div>${offer.record.map((c) => `<div>“${esc(c)}”</div>`).join('')}</div>` : '', actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })
     : maxLevel(run, 'liaison') ? '<p class="sub">No prisoner on offer this month.</p>' : `<p class="sub">Build a Liaison${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for a cheap monthly prisoner.</p>`;
   const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small> <span class="chip small good" title="Each decor item in a fighter's room adds ${MORALE.perDecor} comfort: their Morale drifts ${MORALE.perDecor} points higher.">+${MORALE.perDecor} comfort</span>${d.calm ? ` <span class="chip small" title="Lowers Stress each week">−${d.calm} Stress/wk</span>` : ''}<br><small>${esc(d.effect)}</small></div>
     ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`).join('');

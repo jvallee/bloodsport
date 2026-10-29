@@ -82,7 +82,7 @@ function signatureChip(f, opponent = null) {
 const signedNum = (n) => (n >= 0 ? `+${n}` : `−${-n}`);
 
 // In a fight, `fresh` wounds (the newest injuries) appear only at `freshAt` seconds, when the story reaches the blow.
-export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true } = {}) {
+export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true, notes = '' } = {}) {
   const off = (slot) => (combatant?.disabled.includes(slot) ? ' off' : '');
   const trait = f.kindTrait ? TRAITS[f.kindTrait] : null;
   const clsName = f.cls ? CLASSES[f.cls].name + (f.weapon ? ` · ${WEAPONS[f.weapon].name}` : '') : '';
@@ -134,7 +134,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
         ${f.renown ? `<span class="renown" title="Renown: fame from wins. +1 Gold per 5 on wins, but famous fighters expect better rooms.">★ ${f.renown}</span>` : ''}
       </div>
       ${injuries || decor ? `<div class="chips">${injuries}${decor}</div>` : ''}
-      ${actions}
+      ${notes}${actions}
     </article>`;
 }
 

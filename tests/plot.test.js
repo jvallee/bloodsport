@@ -351,3 +351,16 @@ test('saves keep the plot, and older saves load without one', () => {
   assert.equal(loaded.plot, null);
   assert.ok(loaded.rng.plot);
 });
+
+test('the Liaison card shows the prisoner\'s record; the end screen names the plot\'s endings', async () => {
+  const { marketTab, endBanner } = await import('../src/ui/views.js');
+  const run = createRun(1);
+  run.buildings.push({ id: 'bl', type: 'liaison', level: 1 });
+  const f = createFighter(createRng(1), { id: 'px' });
+  Object.assign(f, { price: 1, origin: 'Condemned convict', record: [CLUES.telling[0]] });
+  run.liaisonOffer = f;
+  assert.match(marketTab(run), /Prison record.*Refuses to salute/s);
+  const { run: won, champ } = coupReady();
+  playGrand(won, champ.id, true);
+  assert.match(endBanner(won), /The Tyrant Falls[\s\S]*Varia/);
+});

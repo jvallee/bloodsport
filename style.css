@@ -549,3 +549,8 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .chip.small { font-size: 0.75em; padding: 1px 6px; }
 .fight-bracket ol { justify-content: center; margin: 6px 0; }
 .bracket li.next { border-color: var(--gold); background: rgba(217, 180, 90, 0.08); }
+
+/* v6: the hidden plot */
+.record { margin: 6px 0; padding: 6px 8px; border-left: 2px solid var(--line); font-size: 13px; font-style: italic; color: var(--muted); }
+.record .label { font-style: normal; }
+.epilogue { font-style: italic; color: var(--muted); margin: 6px 0; }
