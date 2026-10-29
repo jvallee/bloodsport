@@ -238,6 +238,7 @@ function plotOrder(run, side) {
   const all = [...choices.keys()];
   if (run.event.id === 'raid') return [2, 0, 3, 1].filter((i) => i < choices.length); // pass, bribe, bar the gates, hand over
   if (side === 'bystander') return all; // takes the prisoners, never the plot: the cautious first choice
+  if (side === 'loyalist' && run.event.id === 'coupEve') return [0]; // a loyalist never strikes
   // The coup's eve: go ahead only when the champion has a fair chance against the Final's opponent; otherwise wait a year.
   if (run.event.id === 'coupEve') {
     const champ = run.roster.find((f) => f.id === run.plot.champion);

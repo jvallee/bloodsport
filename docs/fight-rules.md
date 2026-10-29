@@ -379,3 +379,54 @@ Measured with `npm run check`'s bots plus two probes: each item's and gear piece
 - **Prisoners of war:** still arrive at their arena's Power + 1, but everything above a Market fighter's natural Power (kind base + the arena's `marketPower`) counts as training already done (`trained` and `trainedPower`), so they can't train a full cap on top.
 - **Veteran training cap (+1 week per level): tried and reverted.** Careful wins: 85% at +1 per level, 64% at +1 every 2 levels, 64% from level 4. Kept in history (`e26085f`).
 - **Gates after these changes:** all 9 pass. Careful 41%, careful deaths 0.54, reckless deaths 3.21, balanced build best vs 2 of 4 Bosses, first Boss 71%, tactics +8, always-Press −7, Grand +25 points harder than the first Boss.
+
+## v6: the hidden plot (design: docs/roadmap-v6.md)
+
+All numbers are tunables in `src/data.js` (`POLITICAL`, `PLOT`, `LIAISON`); story text is placeholder for the designer.
+
+- **Political prisoners.**
+  - 25% of Liaison offers are political (`POLITICAL.chance`). From Year 2, the first offer is political if none has been yet.
+  - Political prisoners cost 2 Gold less (minimum 1).
+  - Each has a telling clue on their prison record, sometimes with an ambiguous one too. 25% of ordinary prisoners show one ambiguous clue.
+- **The Liaison** (playtest #7):
+  - A convict has a Market fighter's natural Power and costs 2 Gold.
+  - A prisoner of war (Lv 2) has the top arena's Power − 1 and costs 3 + 2 × tier Gold.
+  - Power above natural counts as training already done.
+- **The thread** runs mark → favours → cause → ready, then ends in coup, martyr, loyalist, treason or cold.
+  - **Card spacing:** plot cards come every 3–6 weeks, and the first 1–3 weeks after buying a political prisoner.
+  - **Refusals:** two in a row end the thread (cold). It also goes cold if no political prisoner is left and trust is under 2.
+  - **Reaching the Cause** needs trust 4, 3 favours done, 12 weeks since the Mark, and House level 3. Trust is capped at 10.
+  - **Reaching "ready"** needs trust 6, armed barracks and a recruited champion. Arms and a champion keep being asked for, first half the time.
+  - **The prefect's offer** comes no earlier than 16 weeks into the Cause.
+  - **Recruiting the champion:** the chance of a yes is the fighter's Morale, from 20% to 90%. A failure costs 5 Morale.
+- **Suspicion** (hidden, 0–100).
+  - **Each month:** +1 per political prisoner, +1 per contact, −2 decay, and −3 if a courier is free.
+  - **Signs:** log lines from 20; the informer card from 40; −1 Favor a month from 60; a raid at 80.
+  - **Raid choices:**
+    - Pay 15 Gold: −30 suspicion.
+    - Hand over a prisoner: executed, −40 suspicion, −3 trust, −10 Morale for everyone.
+    - Show a forged pass: −40 suspicion.
+    - Bar the gates: 50% chance of −20 suspicion and +2 trust, otherwise treason (the career ends).
+- **Contacts** (freed prisoners):
+  - Scribe: a forged pass, about a third of months.
+  - Officer: arms the barracks.
+  - Priest: +5 Morale mood each month (eases a bad mood, never prolongs it).
+  - Courier: −3 suspicion.
+- **The coup.**
+  - The Grand Tournament with the plot ready opens with "Tonight" or "Not tonight".
+  - With the coup on, the Emperor's Gaze applies (no capitulating).
+  - The champion gets +10% win chance for the armed barracks, plus +5% per contact (up to +20%).
+  - The champion winning the Final is the coup.
+  - The champion losing the Final is the Martyr ending.
+  - Any earlier exit, or another fighter losing, postpones the coup to the next Grand Tournament.
+- **Betrayal** (the Loyalist): +30 Favor and a purse of 20 Gold × tier (swept: 0 → 46%, 20 → 54%, 40 → 50% loyalist wins, ±4). Every political prisoner and contact is executed. The career goes on. By the designer's choice, the evil road is the easy one.
+- **Score:** a coup is +100.
+- **Gates** (`scripts/checks.js`, bots with `opts.plot`):
+  - The loyalist wins 5–20 points more often than careful.
+  - The coup ends 5–25% of rebel careers.
+  - Treason ends under 10% of rebel careers.
+  - The careful bot never builds a Liaison, so the v5 gates are untouched.
+- **Blind playtest fixes (not plot):**
+  - The caravan's War Paint costs 2 Gold, really half price.
+  - Feuds and lives owed set in a tournament week start counting down the month after.
+  - The crowd calls for blood at the beaten fighter's real Death Gate.

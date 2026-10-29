@@ -550,6 +550,11 @@ function betray(run) {
   for (const c of p.freed) c.caught = true;
   p.executed = victims;
   changeFavor(run, PLOT.betrayFavor, 'you gave the Emperor the names he wanted');
+  const purse = PLOT.betrayGold * Math.min(run.topTier, CIRCUITS.length);
+  if (purse) {
+    run.gold += purse;
+    log(run, `A purse of ${purse} Gold arrives from the palace, with the Emperor's thanks.`, 'event');
+  }
   run.epilogue = [...(run.epilogue ?? []), victims.length ? `Executed on your word: ${victims.join(', ')}.` : 'You gave the Emperor names. He made sure they were the right ones.'];
   endPlot(run, 'loyalist');
 }

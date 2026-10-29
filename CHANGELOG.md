@@ -4,6 +4,17 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (live game, after the v5 refreshes)
 
+**v6 in progress: the hidden plot** (design: `docs/roadmap-v6.md`)
+- There is a revolt brewing in the empire. Some of the Liaison's prisoners are not what their records say. *(Deliberately vague: the plot is meant to be found.)*
+- **The Liaison** is rebalanced: convicts are Market-strength and cost 2 Gold; prisoners of war are near the arena's Power and cost more in higher arenas.
+- **Fixes from playtests:**
+  - The caravan's War Paint really is half price.
+  - Feuds and "owes you a life" last their full months.
+  - The crowd calls for blood when a beaten fighter's Death Gate is really open.
+  - Capitulation advice no longer says "lost anyway".
+  - A festival no longer leaks into a newly opened arena's preview.
+  - A Codex entry for Challengers.
+
 **From the designer's playtest (#7)**
 - **Prisoners of war** still arrive at their arena's Power, but anything above a Market fighter's natural Power counts as training they've already done. They can no longer train a full Trainer cap on top and end up far stronger than everyone else.
 - **Championships cascade:** becoming Champion of an arena also crowns the fighter in every arena below it, +1 Power for each Title they didn't hold. A Silver champion no longer has to go back to the Dirt Pits for the bonus.

@@ -470,5 +470,5 @@ export const PLOT = {
   cause: { trust: 4, favours: 3, weeks: 12, houseLevel: 3 }, ready: { trust: 6 }, offerAfter: 16, maxTrust: 10, priestMorale: 5,
   suspicion: { perPrisoner: 1, perContact: 1, decay: 2, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
   // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
-  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30,
+  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30, betrayGold: 20, // betrayGold: the Emperor's purse for the names, × tier
 };

@@ -275,7 +275,9 @@ test('the Loyalist: naming names executes the political prisoners and the freed,
   run.plot.stage = 'cause';
   run.plot.freed.push({ name: 'Varia', cell: 'priest', caught: false });
   run.favor = 40;
+  const gold = run.gold;
   card(run, 'theOffer', 1);
+  assert.equal(run.gold, gold + PLOT.betrayGold * run.topTier, 'the Emperor\'s purse');
   assert.equal(run.plot.ended, 'loyalist');
   assert.equal(run.favor, 40 + PLOT.betrayFavor);
   assert.ok(!run.roster.includes(f));
