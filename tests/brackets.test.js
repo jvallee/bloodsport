@@ -134,7 +134,7 @@ test('bracket opponents never share a name, and are truly weaker than the Final 
   }
 });
 
-test('losing an early match of a top-arena Boss bracket costs half the Boss-loss Favor', async () => {
+test('losing an early match of a top-arena Boss bracket costs half the Boss-loss Favour', async () => {
   const { FAVOR } = await import('../src/data.js');
   const { bossLossFavor } = await import('../src/run.js');
   const { run, f } = atSilver(8);

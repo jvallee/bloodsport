@@ -24,13 +24,13 @@ test('the estimate is deterministic and leaves the fighter untouched', () => {
 
 test('the Oracle level controls how precise the numbers are', () => {
   const odds = { win: 0.634, injury: 0.31, death: 0.004 };
-  assert.deepEqual(describeOdds(odds, 0), { win: 'Favored', winPct: null, injury: 'Some', injuryPct: null, death: 'Low', deathPct: null });
+  assert.deepEqual(describeOdds(odds, 0), { win: 'Favoured', winPct: null, injury: 'Some', injuryPct: null, death: 'Low', deathPct: null });
   assert.equal(describeOdds(odds, 1).winPct, '~60%');
   assert.equal(describeOdds(odds, 2).winPct, '63%');
 });
 
 test('win labels cover the range', () => {
-  assert.deepEqual([0.9, 0.6, 0.5, 0.3, 0.1].map(winLabel), ['Strong favorite', 'Favored', 'Even fight', 'Underdog', 'Long shot']);
+  assert.deepEqual([0.9, 0.6, 0.5, 0.3, 0.1].map(winLabel), ['Strong favourite', 'Favoured', 'Even fight', 'Underdog', 'Long shot']);
 });
 
 test('a small but real risk never shows as ~0%', () => {

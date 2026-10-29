@@ -50,7 +50,7 @@ const conquerTop = (run, id) => {
 
 // ---------- Setup ----------
 
-test('a new career: 12 Gold, 5 Prestige, Favor 50, Martius week 1, one arena, no bout yet', () => {
+test('a new career: 12 Gold, 5 Prestige, Favour 50, Martius week 1, one arena, no bout yet', () => {
   const run = createRun(1);
   assert.deepEqual([run.gold, run.prestige, run.favor, run.prestigeLevel, run.week, run.topTier], [12, 5, 50, 1, 0, 1]);
   assert.deepEqual(Object.keys(run.arenas), ['1']);
@@ -356,7 +356,7 @@ test('the Liaison offers a cheap injured convict once built', () => {
   assert.ok(run.roster.some((x) => x.id === id));
 });
 
-test('tribute is paid at the start of winter; unpaid tribute costs Favor', () => {
+test('tribute is paid at the start of winter; unpaid tribute costs Favour', () => {
   const run = createRun(1);
   recruit(run, run.market[0].id);
   for (const h of run.houses) h.glory = 99; // last in the standings: no year-end purse muddling the tribute
@@ -457,7 +457,7 @@ test('skipping Tournament 1 gives Gold and rest, but Bosses cannot be skipped', 
   assert.equal(forfeitBlocker(run), null);
 });
 
-test('beating your top Boss grants a Title, Favor and the next arena; the old arena stays open', () => {
+test('beating your top Boss grants a Title, Favour and the next arena; the old arena stays open', () => {
   const { run, f } = atBout();
   playBout(run, f.id);
   nextBout(run);
@@ -477,7 +477,7 @@ test('beating your top Boss grants a Title, Favor and the next arena; the old ar
   assert.equal(run.arenas[1].stage, 0);
 });
 
-test('losing your top Boss costs Favor, and that Boss returns stronger next circuit', () => {
+test('losing your top Boss costs Favour, and that Boss returns stronger next circuit', () => {
   const { run, f } = atBout();
   skipBout(run);
   nextBout(run);
@@ -499,7 +499,7 @@ test('losing your top Boss costs Favor, and that Boss returns stronger next circ
   assert.equal(run.arenas[1].opponent.power, boss.power + 1);
 });
 
-test('forfeiting a Boss costs 5 more Favor than losing it; at 0 Favor you are executed', () => {
+test('forfeiting a Boss costs 5 more Favour than losing it; at 0 Favour you are executed', () => {
   const { run } = atBout();
   run.prestige = 100;
   skipBout(run);
@@ -516,7 +516,7 @@ test('forfeiting a Boss costs 5 more Favor than losing it; at 0 Favor you are ex
   nextBout(run);
   forfeitBout(run);
   assert.equal(run.status, 'lost');
-  assert.match(run.endReason, /Favor is gone/);
+  assert.match(run.endReason, /Favour is gone/);
 });
 
 // ---------- Multiple arenas ----------
@@ -557,7 +557,7 @@ test('lower arenas pay half Prestige per tier below, and only the top arena must
   assert.equal(advanceBlocker(run), null, 'the lower arena can be left alone');
 });
 
-test('a known fighter crushing a weaker opponent in a lower arena angers the crowd: no Renown, −Morale, −Favor', () => {
+test('a known fighter crushing a weaker opponent in a lower arena angers the crowd: no Renown, −Morale, −Favour', () => {
   const { run, b } = twoArenas(); // b is not a champion of the Dirt Pits
   b.renown = ECONOMY.knownRenown;
   b.power = run.arenas[1].opponent.power + ECONOMY.crushingGap;
@@ -567,7 +567,7 @@ test('a known fighter crushing a weaker opponent in a lower arena angers the cro
   assert.deepEqual([b.renown, b.morale, run.favor], [renown, morale + MORALE.crowdJeers, favor + FAVOR.crushingWin]);
 });
 
-test('losing a lower-arena Boss costs no Favor and no title is re-awarded', () => {
+test('losing a lower-arena Boss costs no Favour and no title is re-awarded', () => {
   const { run, a, b } = twoArenas();
   run.arenas[1].stage = 2;
   const favor = run.favor;
@@ -656,7 +656,7 @@ test('reloading in the middle of a match counts as throwing in the towel', () =>
   assert.equal(loaded.roster[0].alive, true);
 });
 
-test('a v2 save is upgraded: Strikes become Favor and the circuit becomes arenas', () => {
+test('a v2 save is upgraded: Strikes become Favour and the circuit becomes arenas', () => {
   const run = createRun(9);
   const f = recruit(run, run.market[0].id);
   const v2 = JSON.parse(serialize(run));
@@ -775,7 +775,7 @@ test('Scouted: consecutive top-arena months raise the opponent\'s Power against 
   assert.equal(matchOptions(run, f, 1).scouted, 0, 'sitting out a top-arena month resets it');
 });
 
-test('Boss losses cost Favor by tier, as in the table', () => {
+test('Boss losses cost Favour by tier, as in the table', () => {
   assert.deepEqual([1, 2, 3, 4, GRAND_TIER].map((t) => bossLossFavor(t)), [...FAVOR.bossLoss, FAVOR.bossLoss.at(-1)]);
   const { run, f } = atBout();
   run.arenas[1].stage = 2;
@@ -851,7 +851,7 @@ test('three wins in an arena make a fighter its Champion (+1 Power, once per are
   assert.equal(refight(run, b, 1).title, null, 'only one title per arena');
 });
 
-test('a Champion fighting back in a lower arena gets no Prestige or Renown and loses Morale and Favor', () => {
+test('a Champion fighting back in a lower arena gets no Prestige or Renown and loses Morale and Favour', () => {
   const { run, a } = lowerArenaSetup();
   assert.ok(a.titles.some((t) => /Dirt Pits/.test(t)));
   const [favor, renown] = [run.favor, a.renown];
@@ -1003,7 +1003,7 @@ test('Adrenaline Draught: +3 Speed next round, +15 Stress after the fight', () =
   if (f.alive) assert.equal(f.stress, Math.min(100, stress + STRESS.fight + 15));
 });
 
-test('Blessed Bandage: -10% chance to be injured next round (not armor, so Gun/Flail don\'t ignore it)', () => {
+test('Blessed Bandage: -10% chance to be injured next round (not armour, so Gun/Flail don\'t ignore it)', () => {
   const { run, m } = midMatch();
   if (m.over) return;
   run.inventory.items.blessedBandage = 1;
@@ -1012,7 +1012,7 @@ test('Blessed Bandage: -10% chance to be injured next round (not armor, so Gun/F
   assert.deepEqual(self, { source: 'Blessed Bandage', value: -10000 });
 });
 
-test('Crowd Bribe: capitulating this fight costs no Favor and no Renown', () => {
+test('Crowd Bribe: capitulating this fight costs no Favour and no Renown', () => {
   const { run, f, m } = midMatch();
   if (m.over) return;
   run.inventory.items.crowdBribe = 1;
@@ -1096,7 +1096,7 @@ test('tribute can be paid early, and is then not collected again that winter', (
 
 // ---------- Playtest #3 ----------
 
-test('a Bloodied Victory (winning with 2+ injuries) earns extra Favor, Renown, XP and Morale', () => {
+test('a Bloodied Victory (winning with 2+ injuries) earns extra Favour, Renown, XP and Morale', () => {
   const clean = atBout(3);
   clean.f.morale = 50;
   const plain = playBout(clean.run, clean.f.id);

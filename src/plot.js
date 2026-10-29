@@ -151,7 +151,7 @@ export const PLOT_EVENTS = [
     text: ({ f, name }) => `${f} has gone pale. "They're throwing ${name} to the beasts at the games today, for sedition. You have the Emperor's ear, and a key to every gate in the arena."`,
     choices: [
       { label: 'Do nothing', refuse: true, effects: { morale: { to: 'f', n: -20 } } },
-      { label: `Plead for clemency (−${PLOT.clemencyFavor} Favor)`, help: true, effects: { favor: -PLOT.clemencyFavor, contact: 'new', trust: 2 } },
+      { label: `Plead for clemency (−${PLOT.clemencyFavor} Favour)`, help: true, effects: { favor: -PLOT.clemencyFavor, contact: 'new', trust: 2 } },
       { label: 'Arrange an escape', help: true, effects: { chance: { p: 0.6, win: { contact: 'new', trust: 2 }, lose: { suspicion: 15, morale: { to: 'f', n: -10 } } } } },
     ],
   },

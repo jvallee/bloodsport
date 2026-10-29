@@ -15,8 +15,8 @@ export function fighterWarnings(run, f, tier) {
   if (!bout.top && tier !== GRAND_TIER) {
     const { mine, theirs } = fightPowers(run, f, tier);
     const gap = mine - theirs;
-    if (isChampionOf(f, tier)) out.push({ tone: 'bad', text: `Champion here: a win earns no Prestige or Renown, and costs ${-FAVOR.championReturn} Favor and ${-MORALE.crowdJeers} Morale` });
-    else if (f.renown >= ECONOMY.knownRenown && gap >= crushingGapFor(run, tier)) out.push({ tone: 'bad', text: `Crushing mismatch (+${gap} Power, ${f.renown} Renown): a win costs ${-FAVOR.crushingWin} Favor and ${-MORALE.crowdJeers} Morale` });
+    if (isChampionOf(f, tier)) out.push({ tone: 'bad', text: `Champion here: a win earns no Prestige or Renown, and costs ${-FAVOR.championReturn} Favour and ${-MORALE.crowdJeers} Morale` });
+    else if (f.renown >= ECONOMY.knownRenown && gap >= crushingGapFor(run, tier)) out.push({ tone: 'bad', text: `Crushing mismatch (+${gap} Power, ${f.renown} Renown): a win costs ${-FAVOR.crushingWin} Favour and ${-MORALE.crowdJeers} Morale` });
     else if (f.renown < ECONOMY.knownRenown) out.push({ tone: 'info', text: 'Rookie: the crowd won\'t jeer them here' });
   }
   const opts = matchOptions(run, f, tier);
@@ -32,14 +32,14 @@ export function fighterWarnings(run, f, tier) {
 export function arenaStakes(run, tier) {
   const bout = boutFor(run, tier);
   if (!bout.top) {
-    return `Lower arena: no Favor for winning; Prestige and the purse are halved per tier below your top arena. Rookies (under ${ECONOMY.knownRenown} Renown) fight here freely. `
-      + `A known fighter winning with ${ECONOMY.crushingGap}+ more Power is jeered (${FAVOR.crushingWin} Favor, ${MORALE.crowdJeers} Morale, no Renown)${hasBracket(tier) ? `; in a tournament only the Final is judged, at ${ECONOMY.bracketCrushingGap}+` : ''}; `
-      + `a Champion of this arena gets no Prestige or Renown and costs ${FAVOR.championReturn} Favor. `
-      + `Win ${ECONOMY.titleWins} times here (or beat the Boss) to become its Champion. Upsets and Bloodied Victories (wins with 2+ injuries) still earn Favor.`;
+    return `Lower arena: no Favour for winning; Prestige and the purse are halved per tier below your top arena. Rookies (under ${ECONOMY.knownRenown} Renown) fight here freely. `
+      + `A known fighter winning with ${ECONOMY.crushingGap}+ more Power is jeered (${FAVOR.crushingWin} Favour, ${MORALE.crowdJeers} Morale, no Renown)${hasBracket(tier) ? `; in a tournament only the Final is judged, at ${ECONOMY.bracketCrushingGap}+` : ''}; `
+      + `a Champion of this arena gets no Prestige or Renown and costs ${FAVOR.championReturn} Favour. `
+      + `Win ${ECONOMY.titleWins} times here (or beat the Boss) to become its Champion. Upsets and Bloodied Victories (wins with 2+ injuries) still earn Favour.`;
   }
   if (!bout.boss) return '';
-  if (tier === GRAND_TIER) return `Win: the career. Lose: ${bossLossFavor(tier, run)} Favor and try again next month.`;
-  return `Win: a Title (+1 Power), +${FAVOR.bossWin} Favor and the next arena. Lose: ${bossLossFavor(tier, run)} Favor. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favor.`;
+  if (tier === GRAND_TIER) return `Win: the career. Lose: ${bossLossFavor(tier, run)} Favour and try again next month.`;
+  return `Win: a Title (+1 Power), +${FAVOR.bossWin} Favour and the next arena. Lose: ${bossLossFavor(tier, run)} Favour. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour.`;
 }
 
 // The Power and Speed each side brings to the next round (everything included: gear, Titles,

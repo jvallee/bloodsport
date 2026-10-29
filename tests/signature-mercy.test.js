@@ -97,7 +97,7 @@ test('no verdict after beating an unwounded opponent', () => {
   assert.equal(run.mercy ?? null, null);
 });
 
-test('spare: +Favor; with the crowd: +Renown and Morale', () => {
+test('spare: +Favour; with the crowd: +Renown and Morale', () => {
   const { run, f, s } = wonWounded();
   run.mercy.crowd = 'spare';
   const favor = run.favor;
@@ -189,7 +189,7 @@ test('sparing against a call for blood ends their feud and makes their house owe
   assert.fail('no seed had a house opponent');
 });
 
-test('sparing in a lower arena gives no Favor (only the top arena affects Favor)', () => {
+test('sparing in a lower arena gives no Favour (only the top arena affects Favour)', () => {
   const { run } = wonWounded(1);
   run.mercy.top = false;
   run.mercy.crowd = 'kill';

@@ -194,7 +194,7 @@ test('rescue: "Free me" lets the asker go as a contact; refused twice, they try 
   assert.ok(!second.run.roster.includes(second.f), 'two refusals: gone over the wall');
 });
 
-test('rescue: the condemned can be saved by clemency (Favor) or a risky escape', () => {
+test('rescue: the condemned can be saved by clemency (Favour) or a risky escape', () => {
   const { run } = withPrisoner();
   run.plot.stage = 'cause';
   const favor = run.favor;
@@ -270,7 +270,7 @@ test('raids: hand over a prisoner, pay, show a pass, or bar the gates and risk t
   assert.ok(treason);
 });
 
-test('the Loyalist: naming names executes the political prisoners and the freed, for a lot of Favor', () => {
+test('the Loyalist: naming names executes the political prisoners and the freed, for a lot of Favour', () => {
   const { run, f } = withPrisoner();
   run.plot.stage = 'cause';
   run.plot.freed.push({ name: 'Varia', cell: 'priest', caught: false });

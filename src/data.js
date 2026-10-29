@@ -49,11 +49,11 @@ export const TRAITS = {
   hateful: { name: 'Hateful', desc: '+10% chance to injure the opponent.' },
   masochist: { name: 'Masochist', desc: '+1 Power per effective injury.' },
   quantumAnalyzer: { name: 'Quantum Analyzer', desc: 'Each round lost gives +1 Power for the rest of the match.' },
-  alloyedSkin: { name: 'Alloyed Skin', desc: 'Armor: −10% chance to be injured.' },
+  alloyedSkin: { name: 'Alloyed Skin', desc: 'Armour: −10% chance to be injured.' },
   perpetualMotion: { name: 'Perpetual Motion Machine', desc: 'After winning a round: +10% win chance and +5% chance to be injured next round.' },
   firebug: { name: 'Firebug', desc: '+1 Power per Fire Brazier in quarters.' },
   footwork: { name: 'Footwork', desc: 'Strikes first automatically when faster than the opponent.' },
-  egoArmour: { name: 'Ego Armor', desc: 'While uninjured: +5% win chance and armor −10% chance to be injured.' },
+  egoArmour: { name: 'Ego Armour', desc: 'While uninjured: +5% win chance and armour −10% chance to be injured.' },
   elvenEyes: { name: 'Elven Eyes', desc: 'When an injury check against this fighter misses by 50%+, makes a free 15% counter-injury check.' },
   bloodFaith: { name: 'Blood Faith', desc: 'If this fighter dies in a match, the Prestige buy-in is refunded.' },
   underdog: { name: 'Underdog', desc: '+2 Power when the opponent has 2 or more Power more.' },
@@ -63,7 +63,7 @@ export const TRAITS = {
   bloodDrinker: { name: 'Blood Drinker', desc: 'Wounding the opponent heals this fighter\'s newest light wound (Flesh Wound or Distracted) taken this match.' },
   nightborn: { name: 'Nightborn', desc: '+1 Power in Round 3.' },
   mesmerize: { name: 'Mesmerize', desc: '+5% win chance in Round 1.' },
-  thickHide: { name: 'Thick Hide', desc: 'Armor: −10% chance to be injured.' },
+  thickHide: { name: 'Thick Hide', desc: 'Armour: −10% chance to be injured.' },
   pounce: { name: 'Pounce', desc: '+3 Speed in Round 1.' },
   rampage: { name: 'Rampage', desc: 'Each round won gives +1 Power for the rest of the match.' },
 };
@@ -111,7 +111,7 @@ export const HOUSES = {
 // Patrons: one per career, chosen when it starts.
 export const PATRONS = {
   veteran: { name: 'The Old Veteran', desc: 'Start with a level-3 veteran in your roster.' },
-  friend: { name: 'A Friend at Court', desc: 'Start with +15 Imperial Favor.' },
+  friend: { name: 'A Friend at Court', desc: 'Start with +15 Imperial Favour.' },
   purse: { name: "A Merchant's Purse", desc: 'Start with +10 Gold.' },
   warChest: { name: 'The War Chest', desc: 'Start with 2 War Paint and a Blessed Bandage.' },
   defector: { name: 'A Defector', desc: 'A strong fighter from a rival house joins you at the start (Power +3).' },
@@ -122,7 +122,7 @@ export const PATRONS = {
 export const DECREES = {
   ironBosses: { name: 'Iron Bosses', desc: 'Every Boss fights with +1 Power.', score: 30 },
   greedyEmperor: { name: 'A Greedy Emperor', desc: 'Tribute costs 50% more.', score: 20 },
-  harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favor.', score: 20 },
+  harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favour.', score: 20 },
 };
 
 // Fighter stories (roadmap v3, phase C). Scars come from surviving severe wounds (`vs`: 'melee' or 'ranged', the style
@@ -153,7 +153,7 @@ export const RETIRE = { level: 4, prestige: 5, morale: 10 };
 // A Championship also crowns every arena below it (playtest #7). cascadePower: Power for each lower Title gained that way.
 export const TITLES = { cascade: true, cascadePower: 1 };
 export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 3, prestige: 0, earlyBossLoss: 0.5 };
-// prestige: × tier for each early win (swept: 1 took careful careers from 41% to 54%, so it's off); earlyBossLoss: share of the Boss-loss Favor for losing before the Final. // swept: -3/-2 took careful careers to 22%, -4/-3 to 28%
+// prestige: × tier for each early win (swept: 1 took careful careers from 41% to 54%, so it's off); earlyBossLoss: share of the Boss-loss Favour for losing before the Final. // swept: -3/-2 took careful careers to 22%, -4/-3 to 28%
 
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
 // Underdog (Human trait): +2 Power when the opponent has at least `gap` more (playtest #6: at 0 a cheap Human was the best fighter).
@@ -211,7 +211,7 @@ export const SIGNATURES = {
 // (the crowd's will is law); killing against its wishes does.
 // Going against the crowd is a real choice: sparing a fighter it wanted dead ends their house's feud and makes the house
 // owe you a life (−1 Power against you for HOUSES.feudMonths); killing one it wanted spared adds infamy (+Renown) and a feud.
-// Sparing gives Favor only in your top arena (only it affects Favor).
+// Sparing gives Favour only in your top arena (only it affects Favour).
 export const MERCY = { minInjuries: 1, spareFavor: 2, killRenown: 2, infamyRenown: 2, crowdRenown: 1, crowdMorale: 5 };
 
 export const WEAPONS = {
@@ -220,8 +220,8 @@ export const WEAPONS = {
   bow: { name: 'Bow', ability: 'Pin at Range', desc: 'Rounds 1–2: +1 Power against melee-only opponents (unless Blinded).' },
   spear: { name: 'Spear', ability: 'First-Strike Reach', desc: "Round 1: +3 Speed. Negates the opponent's Bow bonus." },
   sword: { name: 'Sword', ability: 'Riposte', desc: '20% chance to parry an injury; a parry gives +3 Speed next round.' },
-  flail: { name: 'Flail', ability: 'Shield-Breaker', desc: 'Injury checks ignore enemy parries and armor.' },
-  gun: { name: 'Gun', ability: 'Armor-Piercing Volley', desc: 'Rounds 1 and 3 (unless Blinded): +15% injure chance, ignores armor.' },
+  flail: { name: 'Flail', ability: 'Shield-Breaker', desc: 'Injury checks ignore enemy parries and armour.' },
+  gun: { name: 'Gun', ability: 'Armour-Piercing Volley', desc: 'Rounds 1 and 3 (unless Blinded): +15% injure chance, ignores armour.' },
   axe: { name: 'Axe', ability: 'Cleave', desc: 'Wounds they inflict are worse: +15 on the injury roll.' },
   dagger: { name: 'Dagger', ability: 'Backstab', desc: 'Striking first: +10% chance to injure that round.' },
 };
@@ -235,7 +235,7 @@ export const DECOR = {
   shrine: { price: 3, calm: 10, name: 'Shrine of Mars', feeds: 'Stress', effect: 'Comfort for Morale and −10 Stress a week: prayer steadies a fighter between bouts.', helps: () => false },
   bathhouse: { price: 4, calm: 15, name: 'Bathhouse', feeds: 'Stress', effect: 'Comfort for Morale and −15 Stress a week: hot water heals more than the Medbay admits.', helps: () => false },
   lionCage: { price: 5, name: 'Lion Cage', feeds: 'Basa', effect: 'Comfort for Morale. Basa fighters with a Lion Cage get +1 Power (they train with the beasts).', helps: (f) => f.kind === 'basa' },
-  warBanner: { price: 4, renown: 1, name: 'War Banner', feeds: 'Renown', effect: 'Comfort for Morale, and +1 Renown for every win (per Banner): the crowd learns their colors.', helps: () => true },
+  warBanner: { price: 4, renown: 1, name: 'War Banner', feeds: 'Renown', effect: 'Comfort for Morale, and +1 Renown for every win (per Banner): the crowd learns their colours.', helps: () => true },
 };
 
 // ---- Career placeholders (docs/fight-rules.md, "Career rules"); tune with scripts/simulate.js ----
@@ -264,7 +264,7 @@ export const ECONOMY = {
   scoutedMax: 1, // opponents gain +1 Power per consecutive top-arena month a fighter has fought, up to this (swept: 2+ is too punishing)
 };
 
-// Imperial Favor replaces v1's three Strikes. At 0 you're executed.
+// Imperial Favour replaces v1's three Strikes. At 0 you're executed.
 export const FAVOR = {
   start: 50, max: 100, warning: 25,
   bossWin: 15, upsetWin: 5, spectacleWin: 5,
@@ -294,7 +294,7 @@ export const FESTIVALS = {
   Quintilis: { id: 'apollo', name: 'Ludi Apollinares', god: 'Apollo', desc: 'Games for the archer god: ranged fighters (Sagittarius, or a Bow, Gun or Spear) get +1 Power.', ranged: 1 },
   September: { id: 'romani', name: 'Ludi Romani', god: 'Jupiter', desc: 'The great games of Rome: wins pay +50% Prestige.', prestige: 1.5 },
   October: { id: 'mars', name: 'Armilustrium', god: 'Mars', desc: 'The god of war loves aggression: fighters who Press get +5% win chance, and every win earns +1 Renown.', tactic: { press: 5000 }, renown: 1 },
-  November: { id: 'plebeii', name: 'Ludi Plebeii', god: 'Fortuna', desc: "The people's games, blessed by Fortuna: an upset win pays double Gold and double Favor.", upset: 2 },
+  November: { id: 'plebeii', name: 'Ludi Plebeii', god: 'Fortuna', desc: "The people's games, blessed by Fortuna: an upset win pays double Gold and double Favour.", upset: 2 },
   December: { id: 'saturnalia', name: 'Saturnalia', god: 'Saturn', desc: 'The world turned upside down: no buy-ins this tournament week.', freeEntry: true },
 };
 export const FESTIVAL_BY_ID = Object.fromEntries(Object.values(FESTIVALS).map((f) => [f.id, f]));
@@ -380,7 +380,7 @@ export const MORALE = {
   inspired: 80, restless: 40, mutinous: 20, inspiredWin: 5000,
 };
 
-// Gear: one weapon and one armor slot per fighter. `guard` lowers the chance to be injured (counts as armor).
+// Gear: one weapon and one armour slot per fighter. `guard` lowers the chance to be injured (counts as armour).
 // Consumables: single-use, one per fight, used between rounds. `boost` lasts the next round only.
 export const CONSUMABLES = {
   warPaint: { name: 'War Paint', price: 4, desc: '+1 Power next round.', boost: { power: 1 } },
@@ -391,7 +391,7 @@ export const CONSUMABLES = {
   berserkerMushroom: { name: 'Berserker Mushroom', price: 4, desc: '+2 Power next round, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
   throwingNet: { name: 'Throwing Net', price: 4, desc: 'The opponent has −3 Speed next round.', foe: { speed: -3 } },
   smellingSalts: { name: 'Smelling Salts', price: 3, desc: 'Clears a Distracted or Concussed wound for the rest of this fight (it still needs healing after).', salts: true },
-  crowdBribe: { name: 'Crowd Bribe', price: 6, desc: 'If you capitulate this fight, the crowd forgives it: no Favor or Renown lost for capitulating (losing a Boss still counts).', bribe: true },
+  crowdBribe: { name: 'Crowd Bribe', price: 6, desc: 'If you capitulate this fight, the crowd forgives it: no Favour or Renown lost for capitulating (losing a Boss still counts).', bribe: true },
 };
 
 export const GEAR = {
@@ -416,19 +416,19 @@ export const GEAR = {
 export const BOSS_DEBUFFS = {
   firstInjuryDouble: { name: 'First Blood Counts Double', desc: 'The first injury your fighter takes counts as two, opening the Death Gate at once.' },
   rainyMud: { name: 'Rainy Mud', desc: 'Your fighter has −2 Speed every round.' },
-  noArmor: { name: 'Stripped of Armor', desc: "Your fighter's armor doesn't work: Alloyed Skin, Ego Armor and armor gear. Speed evasion still does." },
+  noArmor: { name: 'Stripped of Armour', desc: "Your fighter's armour doesn't work: Alloyed Skin, Ego Armour and armour gear. Speed evasion still does." },
   ironRules: { name: 'Iron Rules', desc: 'Room decor gives no bonus to your fighter.' },
   bloodMoon: { name: 'Blood Moon', desc: 'Both fighters have +10% chance to be injured.' },
-  crowdFavorite: { name: 'Crowd Favorite', desc: 'The champion fights with +1 Power.' },
+  crowdFavorite: { name: 'Crowd Favourite', desc: 'The champion fights with +1 Power.' },
   lions: { name: 'Lions in the Arena', desc: 'Hungry lions roam the sand: the Death Gate opens one injury earlier for both fighters.' },
   emperorsGaze: { name: "The Emperor's Gaze", desc: 'The Emperor is watching: no capitulating in this fight.' },
 };
 
 // Weapon and style matchups (v5): a fighter's style is their weapon if they're a Fighter, otherwise their class.
-// `vs` lists opposing styles (or 'armor': any armor gear). win/injure apply to the first fighter.
+// `vs` lists opposing styles (or 'armor': any armour gear). win/injure apply to the first fighter.
 export const MATCHUPS = [
   { style: 'spear', vs: ['cestus', 'fists', 'dagger'], win: 5000, why: 'Reach keeps brawlers at bay' },
-  { style: 'club', vs: ['armor'], injure: 10000, why: 'Crushes armor' },
+  { style: 'club', vs: ['armor'], injure: 10000, why: 'Crushes armour' },
   { style: 'axe', vs: ['samnite', 'armor'], injure: 5000, why: 'Splits shields and plate' },
   { style: 'sword', vs: ['dagger', 'club'], win: 5000, why: 'Outfences short and clumsy weapons' },
   { style: 'dagger', vs: ['retiarius', 'sagittarius'], win: 5000, why: 'Inside their guard' },

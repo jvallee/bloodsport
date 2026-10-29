@@ -284,7 +284,7 @@ test('gear is equipped from a dropdown that says what each item does', () => {
   assert.match(html, /data-action="room-tab" data-id="[^"]+" data-tab="gear" aria-pressed="true"/);
   assert.match(html, new RegExp(`<select class="gear-select equip" data-change="equip" data-id="${f.id}"`));
   assert.match(html, /<option value="0">Gladius: \+1 Power\.<\/option>/);
-  assert.match(html, /<option value="1">Leather Vest: −5% chance to be injured \(armor\)\.<\/option>/);
+  assert.match(html, /<option value="1">Leather Vest: −5% chance to be injured \(armour\)\.<\/option>/);
 });
 
 test('a fighter card counts their wins, with the wins in each arena on hover', () => {

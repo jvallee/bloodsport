@@ -11,7 +11,7 @@ test('a scripted text career prints cleanly: intro, shops, jobs, a fight, the Co
   const [a, b] = s.run.market;
   const script = [
     `recruit ${a.id}`, `recruit ${b.id}`, 'ok', 'ok', `job ${a.id} trainPower`, `job ${b.id} trainPower`, 'end-week',
-    'market', 'estate', 'store', 'codex', 'codex basics:favor', 'codex nope', 'help', 'buy-decor trophy', `place ${a.id} trophy`,
+    'market', 'estate', 'store', 'codex', 'codex basics:favour', 'codex nope', 'help', 'buy-decor trophy', `place ${a.id} trophy`,
     'end-week', 'fight f1', 'bogus', 'to-tournament', 'look', `fight ${a.id}`, 'end-week', 'math', 'next', 'next', 'next', 'next', 'look',
   ];
   const outputs = script.map((line) => s.exec(line));

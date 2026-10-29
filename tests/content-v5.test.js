@@ -40,7 +40,7 @@ test('Blood Drinker: wounding the opponent closes their own newest light wound f
   assert.deepEqual(V.f.injuries, []);
 });
 
-test('Basa traits: Thick Hide is armor, Pounce +3 Speed in Round 1, Rampage grows with rounds won', () => {
+test('Basa traits: Thick Hide is armour, Pounce +3 Speed in Round 1, Rampage grows with rounds won', () => {
   const [H, X] = pair({ kind: 'basa', kindTrait: 'thickHide' }, {});
   assert.ok(computePhase2(H, X, 1).self.some((x) => x.source === 'Thick Hide' && x.armor));
   const [P] = pair({ kind: 'basa', kindTrait: 'pounce' }, {});
@@ -96,12 +96,12 @@ test('Axe cleaves (+15 on the injury roll); Dagger backstabs when striking first
   assert.ok(first.mods.some((x) => x.source === 'Backstab'));
 });
 
-test('matchups: a Spear against a Cestus, a Club against armor', () => {
+test('matchups: a Spear against a Cestus, a Club against armour', () => {
   const [S, C] = pair({ cls: 'fighter', weapon: 'spear' }, { cls: 'cestus' });
   assert.deepEqual(matchupsFor(S, C).map((x) => x.style), ['spear']);
   assert.ok(computePhase2(S, C, 1).win.some((x) => x.source === 'Reach keeps brawlers at bay'));
   const [K, Arm] = pair({ cls: 'fighter', weapon: 'club' }, { gear: { weapon: null, armor: 'leatherVest' } });
-  assert.ok(computePhase2(K, Arm, 1).enemy.some((x) => x.source === 'Crushes armor'));
+  assert.ok(computePhase2(K, Arm, 1).enemy.some((x) => x.source === 'Crushes armour'));
   const [K2, Bare] = pair({ cls: 'fighter', weapon: 'club' }, {});
   assert.equal(matchupsFor(K2, Bare).length, 0);
 });

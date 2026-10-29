@@ -12,14 +12,13 @@ Every piece of story text in the game, with the file and line where it lives (cl
 - **After editing,** run `npm test`. A few tests look for key phrases (for example "Silbannacus falls", "Prison record", "Refuses to salute"); if you change those, tell the next agent so the tests are updated, not weakened.
 
 **Dialogue scenes** (the Emperor and your steward) live in [src/dialogue.js](../src/dialogue.js):
-- Every line there is a placeholder for you to rewrite.
 - The opening scene's first page is your intro page from `src/tutorial.js`.
 - The steward speaks the tutorial tips, which are in section 10.
 
-**Style used in the editing pass (2026-10-28):**
-- US spelling everywhere players read (Favor, color, armor). "The Armourer" stays, as a name.
+**Style:**
+- British spelling everywhere players read: armour, Favour, colour, favourite, levelled.
+- Code names stay as they are, because they're save data, not text (`run.favor`, the gear slot `'armor'`, the trait id `egoArmour`).
 - The narrator is dry and slightly wry, the Emperor grand and menacing, and the steward plain and practical.
-- Rules text stays short and exact.
 
 **Suggested order** (highest impact first): the intro, the hidden plot, the endings, weekly events, fight narration, the crowd's verdict, the house log, the tutorial, Codex lore.
 
@@ -33,7 +32,7 @@ Every piece of story text in the game, with the file and line where it lives (cl
 | [src/tutorial.js:16](../src/tutorial.js#L16) | **How you win** |
 | [src/tutorial.js:17](../src/tutorial.js#L17) | (starts here, several lines) Climb four arenas, from the Dirt Pits to the Imperial Coliseum. Each arena holds a circuit: Tournament 1 → Tournament 2 → Boss.       Beat all four Bosses, then win the Grand Tournament, and the Emperor names you Master of the Games.       You don't fight. You recruit, train, heal and choose who to send, then make the hard calls from your box above the sand. |
 | [src/tutorial.js:22](../src/tutorial.js#L22) | **How you lose** |
-| [src/tutorial.js:23](../src/tutorial.js#L23) | (starts here, several lines) The Emperor watches you through Imperial Favor. Losing a Boss in your top arena, forfeiting, and failing to pay his yearly tribute all cost Favor. At 0 Favor you're executed.       You also fall if every gladiator is dead and you can't afford another, or if your miserable gladiators revolt.       Your fighters are mortal. One injury is survivable; with two injuries, losing a round can kill them. Between rounds you can always capitulate to save a fighter, at the cost of the match. |
+| [src/tutorial.js:23](../src/tutorial.js#L23) | (starts here, several lines) The Emperor watches you through Imperial Favour. Losing a Boss in your top arena, forfeiting, and failing to pay his yearly tribute all cost Favour. At 0 Favour you're executed.       You also fall if every gladiator is dead and you can't afford another, or if your miserable gladiators revolt.       Your fighters are mortal. One injury is survivable; with two injuries, losing a round can kill them. Between rounds you can always capitulate to save a fighter, at the cost of the match. |
 | [src/tutorial.js:28](../src/tutorial.js#L28) | **Power, Speed and luck** |
 | [src/tutorial.js:29](../src/tutorial.js#L29) | (starts here, several lines) Power wins rounds. What counts is the gap between the fighters: +1 is 55% per round, +3 is 70%, +5 is 95%.       Speed decides who strikes first (+10% to win that round, and the first chance to wound), and being faster makes you harder to wound. A balanced fighter wins and stays healthy.       Traits, weapons and injuries tilt the odds further. Every number is shown in the fight and explained in the Codex. Good luck, Lanista. |
 
@@ -112,7 +111,7 @@ Each card has a title, its text, and choice labels. A choice's visible stakes ("
 | [src/plot.js:148](../src/plot.js#L148) | Title: Thrown to the beasts |
 | [src/plot.js:151](../src/plot.js#L151) | {f} has gone pale. "They're throwing {name} to the beasts at the games today, for sedition. You have the Emperor's ear, and a key to every gate in the arena." |
 | [src/plot.js:153](../src/plot.js#L153) | Choice: Do nothing |
-| [src/plot.js:154](../src/plot.js#L154) | Choice: Plead for clemency (−8 Favor) |
+| [src/plot.js:154](../src/plot.js#L154) | Choice: Plead for clemency (−8 Favour) |
 | [src/plot.js:155](../src/plot.js#L155) | Choice: Arrange an escape |
 
 **One of ours across the sand** (`acrossSand`)
@@ -268,7 +267,7 @@ End-screen titles and closing lines:
 | Where | Text |
 |---|---|
 | [src/run.js:1925](../src/run.js#L1925) | 'You won the Grand Tournament. The Emperor names you Master of the Games.' |
-| [src/run.js:1960](../src/run.js#L1960) | `The Emperor's Favor is gone. You are executed in ${formatDate(run.week)}.` |
+| [src/run.js:1960](../src/run.js#L1960) | `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.` |
 | [src/run.js:1965](../src/run.js#L1965) | 'Your gladiators revolt and burn the Ludus.' |
 | [src/run.js:1971](../src/run.js#L1971) | 'No fighters left and not enough Gold to buy one. Your house falls.' |
 | Where | Text |
@@ -378,7 +377,7 @@ End-screen titles and closing lines:
 
 | Where | Text |
 |---|---|
-| [src/events.js:123](../src/events.js#L123) | {f} limps out to training, favoring an old wound. They swear it's nothing. |
+| [src/events.js:123](../src/events.js#L123) | {f} limps out to training, favouring an old wound. They swear it's nothing. |
 | [src/events.js:125](../src/events.js#L125) | Choice: Rest them this week |
 | [src/events.js:126](../src/events.js#L126) | Choice: Push through it |
 
@@ -453,12 +452,12 @@ These are templates: keep the `${...}` parts. A line with several variants picks
 | [src/narrate.js:152](../src/narrate.js#L152) | `${you} fought on with the Death Gate open. When the Death Gate is open, capitulating or healing first keeps fighters alive.` |
 | [src/narrate.js:153](../src/narrate.js#L153) | `${you} entered overtrained (−1 Power, one ability lost). Rest the week before a fight to keep Stress under 50.` |
 | [src/narrate.js:158](../src/narrate.js#L158) | 'You saved your fighter. Heal them in the Medbay before the next bout.'; // capitulated: not "lost anyway" |
-| [src/narrate.js:159](../src/narrate.js#L159) | `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favorites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
-| [src/narrate.js:160](../src/narrate.js#L160) | `${you} was favored in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.` |
+| [src/narrate.js:159](../src/narrate.js#L159) | `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
+| [src/narrate.js:160](../src/narrate.js#L160) | `${you} was favoured in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.` |
 | [src/narrate.js:161](../src/narrate.js#L161) | `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.` |
-| [src/narrate.js:162](../src/narrate.js#L162) | `Their weapon pierced your armor. Against Gun or Flail fighters, armor won't save you; win the rounds instead.` |
+| [src/narrate.js:162](../src/narrate.js#L162) | `Their weapon pierced your armour. Against Gun or Flail fighters, armour won't save you; win the rounds instead.` |
 | [src/narrate.js:163](../src/narrate.js#L163) | 'You saved your fighter. Heal them in the Medbay before the next bout.' |
-| [src/narrate.js:165](../src/narrate.js#L165) | `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favorites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
+| [src/narrate.js:165](../src/narrate.js#L165) | `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
 | [src/narrate.js:166](../src/narrate.js#L166) | 'An even fight that went the other way. Small edges add up: training, decor and fighting rested.' |
 
 ## 8. The crowd's verdict (thumbs up or down) and fight-screen lines
@@ -500,7 +499,7 @@ Lines the house steward writes each week. The plot's lines are in section 4.
 | [src/run.js:1157](../src/run.js#L1157) | 'The Emperor\'s collectors find your tribute already paid.', 'event' |
 | [src/run.js:1160](../src/run.js#L1160) | `You pay the Emperor's tribute: ${due} Gold.`, 'event' |
 | [src/run.js:1162](../src/run.js#L1162) | `You can't pay the ${due} Gold tribute. The Emperor takes what you have, and remembers.`, 'bad' |
-| [src/run.js:1171](../src/run.js#L1171) | `Imperial Favor ${delta > 0 ? '+' : ''}${delta} (${why}): now ${run.favor}.`, delta > 0 ? 'good' : 'bad' |
+| [src/run.js:1171](../src/run.js#L1171) | `Imperial Favour ${delta > 0 ? '+' : ''}${delta} (${why}): now ${run.favor}.`, delta > 0 ? 'good' : 'bad' |
 | [src/run.js:1193](../src/run.js#L1193) | `${f.name} reaches level ${f.level}! Choose a perk.`, 'event' |
 | [src/run.js:1313](../src/run.js#L1313) | `Sold a ${GEAR[key].name} for ${sellPrice(key)} Gold.` |
 | [src/run.js:1412](../src/run.js#L1412) | `${f.name} wakes with a ${AUGMENTS[key].name}. The crowd mutters about machines.`, 'event' |
@@ -539,17 +538,17 @@ Lines the house steward writes each week. The plot's lines are in section 4.
 | [src/tutorial.js:49](../src/tutorial.js#L49) | **Injuries and the Death Gate** |
 | [src/tutorial.js:50](../src/tutorial.js#L50) | An injured fighter shows red chips and filled Death Gate dots. At two dots the gate is open: losing a round can kill them. Heal them in the Medbay, or pay the Emergency Surgeon if you need them right away. |
 | [src/tutorial.js:51](../src/tutorial.js#L51) | **A Boss fight** |
-| [src/tutorial.js:52](../src/tutorial.js#L52) | Bosses are stronger and fight under a special arena rule (shown in red). They can't be skipped. Beat your top arena's Boss and your fighter earns a Title (+1 Power), you gain Favor and a new arena opens. Lose and you lose Favor (more in higher tiers), and that Boss will be waiting for you, stronger. Remember: a "Strong favorite" still loses about one match in four. |
+| [src/tutorial.js:52](../src/tutorial.js#L52) | Bosses are stronger and fight under a special arena rule (shown in red). They can't be skipped. Beat your top arena's Boss and your fighter earns a Title (+1 Power), you gain Favour and a new arena opens. Lose and you lose Favour (more in higher tiers), and that Boss will be waiting for you, stronger. Remember: a "Strong favourite" still loses about one match in four. |
 | [src/tutorial.js:53](../src/tutorial.js#L53) | **Level up!** |
 | [src/tutorial.js:54](../src/tutorial.js#L54) | Every match earns XP. When a fighter levels up, pick one of three perks on their card. Some perks need both Power and Speed, which is a reason to build balanced fighters. |
 | [src/tutorial.js:55](../src/tutorial.js#L55) | **More arenas, more fights** |
-| [src/tutorial.js:56](../src/tutorial.js#L56) | Your old arenas still hold bouts every tournament week. Send a different fighter to each to earn Gold, XP and Renown. Only your top arena can win you Favor. Win 3 times in an arena (or beat its Boss) to become its Champion; Champions are booed if they go back, but rookies fight there freely. Opponents scout a fighter who fights in your top arena two months running (+1 Power against them), so rotate your stars. |
+| [src/tutorial.js:56](../src/tutorial.js#L56) | Your old arenas still hold bouts every tournament week. Send a different fighter to each to earn Gold, XP and Renown. Only your top arena can win you Favour. Win 3 times in an arena (or beat its Boss) to become its Champion; Champions are booed if they go back, but rookies fight there freely. Opponents scout a fighter who fights in your top arena two months running (+1 Power against them), so rotate your stars. |
 | [src/tutorial.js:57](../src/tutorial.js#L57) | **Keep your stars happy** |
 | [src/tutorial.js:58](../src/tutorial.js#L58) | Winning makes fighters famous (Renown), and famous fighters expect better rooms. Their Morale drifts toward comfort minus expectations: place decor, upgrade Quarters, build an Entertainment Room. Inspired fighters fight better; Discontented ones won't train. |
 | [src/tutorial.js:59](../src/tutorial.js#L59) | **Your house has grown** |
 | [src/tutorial.js:60](../src/tutorial.js#L60) | A new Prestige level unlocks room plots and buildings. Visit the Estate: plots are limited, so choose what your house needs most. Trainer upgrades raise how far fighters can train. |
 | [src/tutorial.js:65](../src/tutorial.js#L65) | **How a round works** |
-| [src/tutorial.js:66](../src/tutorial.js#L66) | Each round: the faster fighter (Speed + a die) strikes first, Power decides the odds (the gauge shows the gap), traits pop up as colored tags, then a roll decides the round. After that, each fighter rolls to injure the other. First to win two rounds takes the match. |
+| [src/tutorial.js:66](../src/tutorial.js#L66) | Each round: the faster fighter (Speed + a die) strikes first, Power decides the odds (the gauge shows the gap), traits pop up as coloured tags, then a roll decides the round. After that, each fighter rolls to injure the other. First to win two rounds takes the match. |
 | [src/tutorial.js:67](../src/tutorial.js#L67) | **Read your opponent** |
 | [src/tutorial.js:68](../src/tutorial.js#L68) | Before each round, pick a tactic. Press beats Feint, Feint beats Guard, Guard beats Press: guess right and you get +10% to win the round. Every fighter has a humor (temperament) that hints at what they'll do: a Choleric opponent loves to Press, so Guard against them. The ★ marks what auto-play would pick. |
 | [src/tutorial.js:69](../src/tutorial.js#L69) | **Your call between rounds** |
@@ -566,7 +565,7 @@ The "next step" bar (`src/hints.js`):
 | [src/hints.js:11](../src/hints.js#L11) | ? { text: 'Recruit a gladiator in the Market.', action: 'tab', tab: 'market', label: 'Go to Market' } |
 | [src/hints.js:12](../src/hints.js#L12) | : { text: 'No gladiators and not enough Gold: build a Liaison or wait for cheaper offers.', tone: 'bad' } |
 | [src/hints.js:14](../src/hints.js#L14) | { text: 'Something has happened in the Ludus: make your choice on the card below.', tone: 'event' } |
-| [src/hints.js:16](../src/hints.js#L16) | { text: `${levelled.name} leveled up: pick a perk on their card.`, tone: 'event' } |
+| [src/hints.js:16](../src/hints.js#L16) | { text: `${levelled.name} levelled up: pick a perk on their card.`, tone: 'event' } |
 | [src/hints.js:23](../src/hints.js#L23) | text: `Not enough Prestige for ${arenaName(run.topTier)}: the buy-in is ${bout.buyIn} and you have ${run.prestige}. ${bout.boss ? 'Forfeit the Boss' : 'Skip it'}${pits ? ', and win Prestige back in The Dirt Pits (they take whatever Prestige you have)' : ''}.` |
 | [src/hints.js:27](../src/hints.js#L27) | { text: `Tournament week: send a fighter to ${arenaName(run.topTier)} (or skip it). Odds are on the right.`, tone: 'event' } |
 | [src/hints.js:31](../src/hints.js#L31) | { text: `Optional: send a free fighter to ${open.map(arenaName).join(' or ')} for extra Gold and XP, or end the week.` } |
@@ -587,7 +586,7 @@ The "next step" bar (`src/hints.js`):
 | [src/codex.js:29](../src/codex.js#L29) | 'class:cestus': 'Boxers in iron-studded gloves called cestus. They start slow and hit harder every round; even the Romans thought them the most brutal of the arena specialists.' |
 | [src/codex.js:30](../src/codex.js#L30) | 'class:sagittarius': 'Archers. In old Rome, sagittarii were auxiliaries from the eastern provinces; on Battleworld they open every exchange with a volley, gambling on a quick lead or a crippling wound.' |
 | [src/codex.js:31](../src/codex.js#L31) | 'class:ornitharius': 'Bird-handlers who fight beside hawks and ravens kept in their quarters. The birds smell blood: once their master is hurt, they go for the eyes.' |
-| [src/codex.js:32](../src/codex.js#L32) | 'class:fighter': 'Weapon masters with no single tradition, just a favorite tool and a lifetime of practice with it.' |
+| [src/codex.js:32](../src/codex.js#L32) | 'class:fighter': 'Weapon masters with no single tradition, just a favourite tool and a lifetime of practice with it.' |
 | [src/codex.js:33](../src/codex.js#L33) | 'kind:vampire': 'Pale nobles from a world without a sun. The Emperor bought them by the shipload; they fight best when the sand is soaked and the torches burn low.' |
 | [src/codex.js:34](../src/codex.js#L34) | 'kind:basa': 'Beast-folk from the jungle moons, sold only by the Stables. Hide like boiled leather, a pounce that clears half the arena, and a rage that grows with every round they win.' |
 | [src/codex.js:35](../src/codex.js#L35) | 'class:retiarius': 'The net-fighter of old Rome: a trident, a weighted net, and no helmet. Win an exchange and the net flies, leaving the opponent tangled and slow.' |
@@ -602,23 +601,23 @@ The "next step" bar (`src/hints.js`):
 | [src/codex.js:44](../src/codex.js#L44) | 'weapon:axe': 'A heavy, honest weapon. It does not wound so much as open.' |
 | [src/codex.js:45](../src/codex.js#L45) | 'weapon:dagger': 'For fighters who strike before the other has drawn breath: a knife is fastest when it is already moving.' |
 | [src/codex.js:46](../src/codex.js#L46) | 'weapon:sword': 'The gladius: short, quick, and as good at turning a blow aside as dealing one.' |
-| [src/codex.js:47](../src/codex.js#L47) | 'weapon:flail': 'A ball and chain that wraps around shields and laughs at armor.' |
-| [src/codex.js:48](../src/codex.js#L48) | 'weapon:gun': 'Contraband from another century. Loud, armor-piercing, and slow to reload.' |
+| [src/codex.js:47](../src/codex.js#L47) | 'weapon:flail': 'A ball and chain that wraps around shields and laughs at armour.' |
+| [src/codex.js:48](../src/codex.js#L48) | 'weapon:gun': 'Contraband from another century. Loud, armour-piercing, and slow to reload.' |
 
 The hidden Rebellion section:
 
 | Where | Text |
 |---|---|
-| [src/codex.js:125](../src/codex.js#L125) | ['mark', 'The broken chain', 'The rebels\' sign, chalked on doors across the city. Copy it, and they know you have answered.'] |
-| [src/codex.js:126](../src/codex.js#L126) | ['political', 'Political prisoners', 'Some of the Liaison\'s prisoners were locked up for what they said, not what they did. Their prison records give them away to anyone who reads closely, and they always come cheap: someone pays to place them in a house.'] |
-| [src/codex.js:127](../src/codex.js#L127) | ['officer', 'The Officer', 'A former centurion. Freed, an officer arms your barracks for the rising without costing you any gear.'] |
-| [src/codex.js:128](../src/codex.js#L128) | ['scribe', 'The Scribe', 'A clerk from the palace archives. Freed, a scribe sometimes sends a forged imperial pass, good for one visit from the Praetorians.'] |
-| [src/codex.js:129](../src/codex.js#L129) | ['priest', 'The Priest', 'A priest of a forbidden god. Freed, a priest\'s blessing lifts every fighter\'s Morale each month.'] |
-| [src/codex.js:130](../src/codex.js#L130) | ['courier', 'The Courier', 'A runner who knows every alley. Freed, a courier keeps the Praetorians looking elsewhere: suspicion falls each month.'] |
-| [src/codex.js:131](../src/codex.js#L131) | ['suspicion', 'The Emperor\'s eye', 'Every favor you do the rebels draws the palace\'s attention, and so does every prisoner and every freed contact. A Praetorian taking notes, Favor slipping for no reason, a curious guest: these are the signs. Ignore them and the Praetorians come at dawn.'] |
-| [src/codex.js:132](../src/codex.js#L132) | ['freed', 'The freed', 'Everyone you free becomes a contact outside the Ludus. When the day comes, they will be in the crowd: each one a voice cheering your champion (+5% win chance, up to +20%). The armed barracks rise with them (+10%).'] |
-| [src/codex.js:133](../src/codex.js#L133) | ['usurper', 'Silbannacus', 'He took the throne with a knife and a bribed legion, and he has feared knives ever since. The rebels say a usurper can be usurped.'] |
-| [src/codex.js:134](../src/codex.js#L134) | ['coup', 'The day of the games', 'When the barracks are armed, the rebels trust you, and your champion is ready, the Emperor will come to watch the Grand Final. If your champion wins it, the empire changes hands.'] |
+| [src/codex.js:128](../src/codex.js#L128) | ['mark', 'The broken chain', 'The rebels\' sign, chalked on doors across the city. Copy it, and they know you have answered.'] |
+| [src/codex.js:129](../src/codex.js#L129) | ['political', 'Political prisoners', 'Some of the Liaison\'s prisoners were locked up for what they said, not what they did. Their prison records give them away to anyone who reads closely, and they always come cheap: someone pays to place them in a house.'] |
+| [src/codex.js:130](../src/codex.js#L130) | ['officer', 'The Officer', 'A former centurion. Freed, an officer arms your barracks for the rising without costing you any gear.'] |
+| [src/codex.js:131](../src/codex.js#L131) | ['scribe', 'The Scribe', 'A clerk from the palace archives. Freed, a scribe sometimes sends a forged imperial pass, good for one visit from the Praetorians.'] |
+| [src/codex.js:132](../src/codex.js#L132) | ['priest', 'The Priest', 'A priest of a forbidden god. Freed, a priest\'s blessing lifts every fighter\'s Morale each month.'] |
+| [src/codex.js:133](../src/codex.js#L133) | ['courier', 'The Courier', 'A runner who knows every alley. Freed, a courier keeps the Praetorians looking elsewhere: suspicion falls each month.'] |
+| [src/codex.js:134](../src/codex.js#L134) | ['suspicion', 'The Emperor\'s eye', 'Every favour you do the rebels draws the palace\'s attention, and so does every prisoner and every freed contact. A Praetorian taking notes, Favour slipping for no reason, a curious guest: these are the signs. Ignore them and the Praetorians come at dawn.'] |
+| [src/codex.js:135](../src/codex.js#L135) | ['freed', 'The freed', 'Everyone you free becomes a contact outside the Ludus. When the day comes, they will be in the crowd: each one a voice cheering your champion (+5% win chance, up to +20%). The armed barracks rise with them (+10%).'] |
+| [src/codex.js:136](../src/codex.js#L136) | ['usurper', 'Silbannacus', 'He took the throne with a knife and a bribed legion, and he has feared knives ever since. The rebels say a usurper can be usurped.'] |
+| [src/codex.js:137](../src/codex.js#L137) | ['coup', 'The day of the games', 'When the barracks are armed, the rebels trust you, and your champion is ready, the Emperor will come to watch the Grand Final. If your champion wins it, the empire changes hands.'] |
 
 ## 12. Names, flavour and descriptions (lower priority)
 

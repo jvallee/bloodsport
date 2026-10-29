@@ -14,7 +14,7 @@ import {
 } from '../ludus.js';
 import { describeOdds } from '../odds.js';
 import { fighterWarnings, arenaStakes } from '../explain.js';
-import { gearText } from '../codex.js';
+import { gearText, slotLabel } from '../codex.js';
 import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON } from './components.js';
 import { portrait, npcPortrait } from './portrait.js';
 import { SPEAKERS, tipSpeaker } from '../dialogue.js';
@@ -60,8 +60,8 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
       <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
       <div class="stat prestige" title="${esc(prestigeTip(run))}">${ICON.prestige}<b>${run.prestige}</b>
         <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${next.at}</small>` : ''}</span></div>
-      <div class="favor${low ? ' low' : ''}" title="Imperial Favor: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
-        <span>Favor</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
+      <div class="favor${low ? ' low' : ''}" title="Imperial Favour: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
+        <span>Favour</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
       ${tributeStat(run)}
       <div class="track" title="Arena tiers">${tiers}</div>
       <div class="spacer"></div>
@@ -95,7 +95,7 @@ function tributeStat(run) {
   const weeks = weeksUntilWinter(run.week);
   if (tributePaid(run)) return `<div class="stat due paid" title="This year's tribute is already paid. The next one is due next winter.">⚖ <b>Tribute paid</b></div>`;
   const short = run.gold < due && weeks <= 4;
-  return `<div class="stat due${short ? ' short' : ''}" title="The Emperor's tribute: ${due} Gold, collected at the start of winter. You can pay early from the week panel. If you can't pay, he takes all your Gold and ${-FAVOR.unpaidTribute} Favor (it only ends the career if Favor hits 0).">⚖ <b>${due}</b> <small>in ${weeks} wk${weeks === 1 ? '' : 's'}</small></div>`;
+  return `<div class="stat due${short ? ' short' : ''}" title="The Emperor's tribute: ${due} Gold, collected at the start of winter. You can pay early from the week panel. If you can't pay, he takes all your Gold and ${-FAVOR.unpaidTribute} Favour (it only ends the career if Favour hits 0).">⚖ <b>${due}</b> <small>in ${weeks} wk${weeks === 1 ? '' : 's'}</small></div>`;
 }
 
 // ---------- Banners ----------
@@ -178,9 +178,9 @@ export function summaryBanner(s) {
   const bits = [`${plus(s.gold)} Gold`, `${plus(s.prestige)} Prestige`];
   if (s.xp && !s.died) bits.push(`${plus(s.xp)} XP`);
   if (s.renown) bits.push(`${plus(s.renown)} Renown`);
-  if (s.favor) bits.push(`${plus(s.favor)} Favor`);
+  if (s.favor) bits.push(`${plus(s.favor)} Favour`);
   if (s.title) bits.push(`🏆 ${s.fighter} earns ${s.titlePower > 1 ? 'the titles' : 'the title'} "${s.title}"${s.title === 'Master of the Games' ? '' : ` (+${s.titlePower ?? 1} Power)`}`);
-  if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favor, Renown, XP and Morale)`);
+  if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favour, Renown, XP and Morale)`);
   if (s.kill) bits.push(`💀 A kill${s.mark ? `: ${s.fighter} earns the mark "${s.mark}"` : ''}`);
   if (s.next) bits.push(`🏟 On to the ${s.next}`);
   if (s.feud) bits.push(`⚔ ${s.feud}`);
@@ -266,7 +266,7 @@ function weekPanel(run) {
   const toTribute = weeksUntilWinter(run.week);
   const due = tributeDue(run);
   const tribute = toTribute > 0 && toTribute <= 4 && !tributePaid(run)
-    ? `<div class="tribute${run.gold < due ? ' short' : ''}">⚖ The Emperor's tribute of <b>${due} Gold</b> is due in <b>${toTribute}</b> week${toTribute === 1 ? '' : 's'}. You have ${run.gold}.${run.gold < due ? ` Short by ${due - run.gold}: if you can't pay, the Emperor takes all your Gold and ${-FAVOR.unpaidTribute} Favor.` : ''}</div>`
+    ? `<div class="tribute${run.gold < due ? ' short' : ''}">⚖ The Emperor's tribute of <b>${due} Gold</b> is due in <b>${toTribute}</b> week${toTribute === 1 ? '' : 's'}. You have ${run.gold}.${run.gold < due ? ` Short by ${due - run.gold}: if you can't pay, the Emperor takes all your Gold and ${-FAVOR.unpaidTribute} Favour.` : ''}</div>`
     : '';
   const recent = run.log.slice(-9).reverse().map((l) => `<li class="${l.tone}">${esc(l.text)}</li>`).join('');
   return `
@@ -359,9 +359,9 @@ function roomPanel(run, f) {
     const options = run.inventory.gear.map((k, i) => (GEAR[k].slot === slot && !equipBlocker(run, f.id, i)
       ? `<option value="${i}">${esc(GEAR[k].name)}: ${esc(gearText(GEAR[k]))}</option>` : '')).join('');
     const picker = options
-      ? `<select class="gear-select equip" data-change="equip" data-id="${f.id}" aria-label="Equip a ${slot === 'weapon' ? 'weapon' : 'piece of armor'}"><option value="">${cur ? 'Swap for…' : 'Equip from the storeroom…'}</option>${options}</select>`
+      ? `<select class="gear-select equip" data-change="equip" data-id="${f.id}" aria-label="Equip a ${slot === 'weapon' ? 'weapon' : 'piece of armour'}"><option value="">${cur ? 'Swap for…' : 'Equip from the storeroom…'}</option>${options}</select>`
       : '';
-    return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armor'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot), 'btn small unequip')}` : '<small>empty</small>'}
+    return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armour'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot), 'btn small unequip')}` : '<small>empty</small>'}
       ${picker ? `<div class="row tight">${picker}</div>` : ''}</div>`;
   }).join('');
   const room = `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown})${f.mood ? `, mood ${f.mood.n > 0 ? '+' : ''}${f.mood.n} for ${f.mood.weeks} more week${f.mood.weeks === 1 ? '' : 's'}` : ''}.</div>
@@ -417,7 +417,7 @@ function oddsRow(run, f, tier, oddsFor) {
   const odds = describeOdds(oddsFor(f, tier), oracleLevel(run));
   const pct = (p) => (p ? ` <small>${p}</small>` : '');
   const warn = fighterWarnings(run, f, tier).map((w) => esc(w.text));
-  const tone = odds.win === 'Strong favorite' || odds.win === 'Favored' ? 'good' : odds.win === 'Even fight' ? '' : 'bad';
+  const tone = odds.win === 'Strong favourite' || odds.win === 'Favoured' ? 'good' : odds.win === 'Even fight' ? '' : 'bad';
   return `<div class="odds-row">
     <div class="who"><b>${esc(f.name)}</b> ${warn.length ? `<span class="warn">${warn.join(' · ')}</span>` : ''}</div>
     <div class="o ${tone}" title="Chance to win ${hasBracket(tier) ? `the next match (against ${esc(opponentFor(run, tier).name)})` : 'the whole match (best of 3)'}, not one round">${hasBracket(tier) ? `Next (${esc(opponentFor(run, tier).name)})` : 'Match'}: ${odds.win}${pct(odds.winPct)}</div>
@@ -455,7 +455,7 @@ function arenaBlock(run, tier, oddsFor) {
   const rival = arena.opponent.rival ? '<div class="warn">⚔ A rival returns: this Boss beat you before, and has grown stronger.</div>' : '';
   const rows = state === 'open' || !run.bouts ? run.roster.map((f) => oddsRow(run, f, tier, oddsFor)).join('') : '';
   const choice = bout.top && run.boutPending
-    ? `<div class="row">${bout.boss ? button(`Forfeit (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favor)`, 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
+    ? `<div class="row">${bout.boss ? button(`Forfeit (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour)`, 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
     : '';
   const buyIn = bout.pauper ? `Buy-in ${bout.buyIn} Prestige <i>(normally ${bout.fullBuyIn}: the Dirt Pits take whatever Prestige you have)</i>` : `Buy-in ${bout.buyIn} Prestige`;
   const body = `<p class="sub"><b>${esc(bout.name)}</b> · ${buyIn} · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
@@ -555,12 +555,12 @@ export function marketTab(run) {
     ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`).join('');
   const armourer = maxLevel(run, 'armourer')
     ? run.armourerStock.length
-      ? run.armourerStock.map((k, i) => `<div class="shop-row"><div><b>${esc(GEAR[k].name)}</b> · ${GEAR[k].price} Gold <small>${GEAR[k].slot}</small><br><small>${esc(gearText(GEAR[k]))}</small></div>
+      ? run.armourerStock.map((k, i) => `<div class="shop-row"><div><b>${esc(GEAR[k].name)}</b> · ${GEAR[k].price} Gold <small>${slotLabel(GEAR[k].slot)}</small><br><small>${esc(gearText(GEAR[k]))}</small></div>
         ${button('Buy', 'buy-gear', { index: i }, buyGearBlocker(run, i), 'btn small primary')}</div>`).join('')
       : '<p class="sub">Sold out until next month.</p>'
-    : '<p class="sub">Build an Armourer (Prestige level 2) to buy weapons and armor; it stocks up the moment it opens. Beaten opponents sometimes drop theirs, and your top arena\'s Boss always does.</p>';
+    : '<p class="sub">Build an Armourer (Prestige level 2) to buy weapons and armour; it stocks up the moment it opens. Beaten opponents sometimes drop theirs, and your top arena\'s Boss always does.</p>';
   const stored = run.inventory.gear.length
-    ? run.inventory.gear.map((k, i) => `<div class="shop-row"><div><b>${esc(GEAR[k].name)}</b> <small>${GEAR[k].slot}</small><br><small>${esc(gearText(GEAR[k]))}</small></div>
+    ? run.inventory.gear.map((k, i) => `<div class="shop-row"><div><b>${esc(GEAR[k].name)}</b> <small>${slotLabel(GEAR[k].slot)}</small><br><small>${esc(gearText(GEAR[k]))}</small></div>
       ${button(`Sell · ${sellPrice(k)} Gold`, 'sell-gear', { index: i }, sellGearBlocker(run, i), 'btn small')}</div>`).join('')
     : '<small class="sub">No spare gear.</small>';
   const storedDecor = Object.entries(run.inventory.decor).filter(([, n]) => n).map(([k, n]) => `<span class="chip decor">${esc(DECOR[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">No spare decor.</small>';
@@ -575,7 +575,7 @@ export function marketTab(run) {
       <div class="stack">
         ${fold('storeroom', 'The Storeroom', `<p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room, decor &amp; gear" panel. A fallen fighter's things come back here.</p>
           <div class="label">Gear <small>(sells for half price)</small></div><div>${stored}</div>
-          <div class="row">${button('Unequip all fighters', 'unequip-all', {}, unequipAllBlocker(run), 'btn small')}<small class="sub">Returns every fighter's weapon and armor here, to hand out afresh.</small></div>
+          <div class="row">${button('Unequip all fighters', 'unequip-all', {}, unequipAllBlocker(run), 'btn small')}<small class="sub">Returns every fighter's weapon and armour here, to hand out afresh.</small></div>
           <div class="label">Decor</div><div class="chips">${storedDecor}</div>
           <div class="label">Fight items</div><div class="chips">${Object.entries(run.inventory.items ?? {}).filter(([, n]) => n).map(([k, n]) => `<span class="chip" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">None. The Apothecary sells them.</small>'}</div>
           ${run.plot?.pass && !run.plot.ended ? '<div class="label">In the strongbox</div><div class="chips"><span class="chip" title="A pass bearing the Emperor\'s seal. Good for one visit from the Praetorians.">📜 Forged imperial pass</span></div>' : ''}`)}
@@ -600,7 +600,7 @@ export function helpModal() {
       <li><b>Fight</b> best-of-3 rounds. Between rounds you can capitulate to save a badly hurt fighter.</li>
       <li><b>Grow your fighters.</b> Matches give XP; each level lets you pick a perk. Wins bring Renown, and famous fighters want better rooms: keep their Morale up with decor, Quarters and entertainment.</li>
       <li><b>Equip them</b> from the storeroom: decor and gear belong to the house and pass on when a fighter falls.</li>
-      <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favor</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
+      <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favour</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
     </ol>
     <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or ends the week · T skips to the tournament · 1–4 switch tabs · ? opens this page.</p>
@@ -666,7 +666,7 @@ function mercyCard(run) {
   const m = run.mercy;
   const f = run.roster.find((x) => x.id === m.fighterId);
   const blood = m.crowd === 'kill';
-  const favor = m.top === false ? 'no Favor in a lower arena' : `+${MERCY.spareFavor} Favor`;
+  const favor = m.top === false ? 'no Favour in a lower arena' : `+${MERCY.spareFavor} Favour`;
   const spare = blood ? `${favor}; their house will owe you a life` : `${favor}, +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale (the crowd agrees)`;
   const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale and a kill (the crowd agrees)` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy) and a kill${m.house ? '; their house swears a feud' : ''}`;
   return `<section class="panel event-card mercy-card"><div class="event-faces">${f ? portrait(f, 56) : ''}</div><div class="event-body">

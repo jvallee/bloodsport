@@ -18,6 +18,7 @@ What changed from version to version, newest first. Each frozen version can stil
   - Capitulation advice no longer says "lost anyway".
   - A festival no longer leaks into a newly opened arena's preview.
   - A Codex entry for Challengers.
+- **British spelling throughout:** armour, Imperial Favour, colour, favourite.
 - **Long names no longer hide behind the Power and Speed badges** on fighter cards: when a name needs the room, the badges move to their own line.
 
 **From the designer's playtest (#7)**

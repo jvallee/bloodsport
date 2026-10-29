@@ -20,7 +20,7 @@ export const INTRO = [
   },
   {
     title: 'How you lose',
-    body: `<p>The Emperor watches you through <b>Imperial Favor</b>. Losing a Boss in your top arena, forfeiting, and failing to pay his <b>yearly tribute</b> all cost Favor. <b>At 0 Favor you're executed.</b></p>
+    body: `<p>The Emperor watches you through <b>Imperial Favour</b>. Losing a Boss in your top arena, forfeiting, and failing to pay his <b>yearly tribute</b> all cost Favour. <b>At 0 Favour you're executed.</b></p>
       <p>You also fall if every gladiator is dead and you can't afford another, or if your miserable gladiators revolt.</p>
       <p>Your fighters are mortal. One injury is survivable; with <b>two injuries, losing a round can kill them</b>. Between rounds you can always <b>capitulate</b> to save a fighter, at the cost of the match.</p>`,
   },
@@ -49,11 +49,11 @@ export const STEPS = [
   { id: 'injury', when: (r) => r.roster.some((f) => f.injuries.length), title: 'Injuries and the Death Gate',
     body: 'An injured fighter shows red chips and filled <b>Death Gate</b> dots. At <b>two dots</b> the gate is open: losing a round can kill them. Heal them in the Medbay, or pay the Emergency Surgeon if you need them right away.' },
   { id: 'boss', when: (r) => r.boutPending && currentBout(r).boss, title: 'A Boss fight',
-    body: 'Bosses are stronger and fight under a special <b>arena rule</b> (shown in red). They can\'t be skipped. Beat your <b>top arena\'s</b> Boss and your fighter earns a <b>Title</b> (+1 Power), you gain Favor and a new arena opens. Lose and you lose <b>Favor</b> (more in higher tiers), and that Boss will be waiting for you, stronger. Remember: a "Strong favorite" still loses about one match in four.' },
+    body: 'Bosses are stronger and fight under a special <b>arena rule</b> (shown in red). They can\'t be skipped. Beat your <b>top arena\'s</b> Boss and your fighter earns a <b>Title</b> (+1 Power), you gain Favour and a new arena opens. Lose and you lose <b>Favour</b> (more in higher tiers), and that Boss will be waiting for you, stronger. Remember: a "Strong favourite" still loses about one match in four.' },
   { id: 'levelup', when: (r) => r.roster.some((f) => f.pendingPerks.length), title: 'Level up!',
     body: 'Every match earns XP. When a fighter levels up, pick <b>one of three perks</b> on their card. Some perks need both Power and Speed, which is a reason to build balanced fighters.' },
   { id: 'arenas', when: (r) => Object.keys(r.arenas).length > 1, title: 'More arenas, more fights',
-    body: 'Your old arenas still hold bouts every tournament week. Send a <b>different fighter to each</b> to earn Gold, XP and Renown. Only your <b>top arena</b> can win you Favor. Win 3 times in an arena (or beat its Boss) to become its <b>Champion</b>; Champions are booed if they go back, but rookies fight there freely. Opponents <b>scout</b> a fighter who fights in your top arena two months running (+1 Power against them), so rotate your stars.' },
+    body: 'Your old arenas still hold bouts every tournament week. Send a <b>different fighter to each</b> to earn Gold, XP and Renown. Only your <b>top arena</b> can win you Favour. Win 3 times in an arena (or beat its Boss) to become its <b>Champion</b>; Champions are booed if they go back, but rookies fight there freely. Opponents <b>scout</b> a fighter who fights in your top arena two months running (+1 Power against them), so rotate your stars.' },
   { id: 'morale', when: (r) => r.roster.some((f) => f.renown >= 4 || f.morale < 45), title: 'Keep your stars happy',
     body: 'Winning makes fighters famous (<b>Renown</b>), and famous fighters expect better rooms. Their <b>Morale</b> drifts toward comfort minus expectations: place decor, upgrade Quarters, build an Entertainment Room. Inspired fighters fight better; Discontented ones won\'t train.' },
   { id: 'estate', when: (r) => r.prestigeLevel >= 2, title: 'Your house has grown',
@@ -63,7 +63,7 @@ export const STEPS = [
 // Fight-screen steps.
 export const FIGHT_STEPS = [
   { id: 'fight-start', when: (m) => m.round === 0, title: 'How a round works',
-    body: 'Each round: the faster fighter (Speed + a die) strikes first, Power decides the odds (the gauge shows the gap), traits pop up as colored tags, then a roll decides the round. After that, each fighter rolls to injure the other. <b>First to win two rounds takes the match.</b>' },
+    body: 'Each round: the faster fighter (Speed + a die) strikes first, Power decides the odds (the gauge shows the gap), traits pop up as coloured tags, then a roll decides the round. After that, each fighter rolls to injure the other. <b>First to win two rounds takes the match.</b>' },
   { id: 'fight-tactics', when: (m) => !m.over, title: 'Read your opponent',
     body: 'Before each round, pick a <b>tactic</b>. <b>Press</b> beats Feint, <b>Feint</b> beats Guard, <b>Guard</b> beats Press: guess right and you get +10% to win the round. Every fighter has a <b>humor</b> (temperament) that hints at what they\'ll do: a Choleric opponent loves to Press, so Guard against them. The ★ marks what auto-play would pick.' },
   { id: 'fight-towel', when: (m) => m.round >= 1 && !m.over, title: 'Your call between rounds',

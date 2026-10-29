@@ -20,8 +20,8 @@ export function estimateOdds(fighter, opponent, { debuff = null, overtrained = f
 }
 
 export function winLabel(p) {
-  if (p >= 0.75) return 'Strong favorite';
-  if (p >= 0.55) return 'Favored';
+  if (p >= 0.75) return 'Strong favourite';
+  if (p >= 0.55) return 'Favoured';
   if (p >= 0.45) return 'Even fight';
   if (p >= 0.25) return 'Underdog';
   return 'Long shot';

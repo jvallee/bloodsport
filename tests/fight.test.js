@@ -259,21 +259,21 @@ test('Overclocked gives +10% win and +5% self-injury only on its round', () => {
   assert.deepEqual([sources(p.win), sources(p.self)], [['Overclocked:10000'], ['Overheating:5000']]);
 });
 
-test('Alloyed Skin and Ego Armor are armor; Ego Armor only while uninjured', () => {
+test('Alloyed Skin and Ego Armour are armour; Ego Armour only while uninjured', () => {
   const [A, B] = pair({ kindTrait: 'alloyedSkin' }, {});
   assert.deepEqual(computePhase2(A, B, 1).self, [{ source: 'Alloyed Skin', value: -10000, armor: true }]);
   const [E, F] = pair({ kindTrait: 'egoArmour' }, {});
-  assert.deepEqual(sources(computePhase2(E, F, 1).win), ['Ego Armor:5000']);
+  assert.deepEqual(sources(computePhase2(E, F, 1).win), ['Ego Armour:5000']);
   E.f.injuries = injuries('distracted');
   const hurt = computePhase2(E, F, 1);
   assert.deepEqual([hurt.win.length, hurt.self.length], [0, 0]);
 });
 
-test('Gun pierces armor with +15% in odd rounds; Flail always pierces and ignores parry', () => {
+test('Gun pierces armour with +15% in odd rounds; Flail always pierces and ignores parry', () => {
   const [G, H] = pair({ cls: 'fighter', weapon: 'gun' }, {});
   assert.equal(computePhase2(G, H, 1).piercing, true);
   assert.equal(computePhase2(G, H, 2).piercing, false);
-  assert.deepEqual(sources(computePhase2(G, H, 3).enemy), ['Armor-Piercing Volley:15000']);
+  assert.deepEqual(sources(computePhase2(G, H, 3).enemy), ['Armour-Piercing Volley:15000']);
   const [F, X] = pair({ cls: 'fighter', weapon: 'flail' }, {});
   const p = computePhase2(F, X, 2);
   assert.deepEqual([p.piercing, p.ignoresParry], [true, true]);
@@ -300,7 +300,7 @@ test('a hit rolls on the injury table and records the injury', () => {
   assert.deepEqual(m.b.f.injuries, [{ tag: 'fleshWound', weight: 1 }]);
 });
 
-test('armor lowers injure chance unless the attacker pierces', () => {
+test('armour lowers injure chance unless the attacker pierces', () => {
   const m = matchOf({}, { kindTrait: 'alloyedSkin' }, [e5(99999)]);
   assert.equal(injuryCheck(m, m.a, m.b, roundRecord({ winner: 'A' }), 'x').chance, 15000);
   const g = matchOf({ cls: 'fighter', weapon: 'gun' }, { kindTrait: 'alloyedSkin' }, [e5(99999)]);
@@ -346,7 +346,7 @@ test('a Flesh Wound from Roll 4B immediately lowers the 4C retaliation', () => {
   assert.equal(retaliation.chance, 0);
 });
 
-test('armor modifiers in a check are labeled with the defender', () => {
+test('armour modifiers in a check are labeled with the defender', () => {
   const m = matchOf({}, { kindTrait: 'alloyedSkin' }, [e5(99999)]);
   const check = injuryCheck(m, m.a, m.b, roundRecord({ winner: 'A' }), 'x');
   assert.deepEqual(check.mods.map((x) => [x.source, x.side]), [['Alloyed Skin', 'B']]);
@@ -406,7 +406,7 @@ test('Rainy Mud gives your fighter −2 Speed', () => {
   assert.equal(computeSpeed(m.b, 1).total, 3);
 });
 
-test('Stripped of Armor removes your armor only', () => {
+test('Stripped of Armour removes your armour only', () => {
   const m = createMatch({ a: blank({ kindTrait: 'alloyedSkin' }), b: blank({ kindTrait: 'alloyedSkin' }), rng: createRng(1), debuff: 'noArmor' });
   assert.equal(computePhase2(m.a, m.b, 1).self.length, 0);
   assert.equal(computePhase2(m.b, m.a, 1).self.length, 1);
@@ -422,7 +422,7 @@ test('Blood Moon raises injury chance for both fighters', () => {
   for (const [x, y] of [[m.a, m.b], [m.b, m.a]]) assert.deepEqual(sources(computePhase2(x, y, 1).self), ['Blood Moon:10000']);
 });
 
-test('Crowd Favorite gives the opponent +1 Power', () => {
+test('Crowd Favourite gives the opponent +1 Power', () => {
   const m = createMatch({ a: blank(), b: blank(), rng: createRng(1), debuff: 'crowdFavorite' });
   assert.equal(computePower(m.b, m.a, 1).total, 6);
   assert.equal(computePower(m.a, m.b, 1).total, 5);
@@ -455,7 +455,7 @@ test('Evasion: each point of Speed above the opponent is −4% to be injured, up
   assert.deepEqual(sources(computePhase2(C, D, 1).self), ['Evasion:-20000']);
 });
 
-test('Evasion is not armor: Gun and Flail do not ignore it', () => {
+test('Evasion is not armour: Gun and Flail do not ignore it', () => {
   const m = matchOf({ cls: 'fighter', weapon: 'flail' }, { speed: 5 }, [e5(99999)]);
   const check = injuryCheck(m, m.a, m.b, roundRecord({ winner: 'A' }), 'x');
   assert.deepEqual(sources(check.mods), ['Evasion:-8000']);
@@ -483,7 +483,7 @@ test('Tactician makes First Strike worth +15%', () => {
   assert.deepEqual(sources(r.win.modsA), ['First Strike:15000']);
 });
 
-test('gear adds Power, Speed, injure chance and armor', () => {
+test('gear adds Power, Speed, injure chance and armour', () => {
   const [A, B] = pair({ gear: { weapon: 'trident', armor: 'bronzeCuirass' } }, {});
   assert.deepEqual(sources(computePower(A, B, 1).mods), ['Trident:1']);
   assert.deepEqual(sources(computeSpeed(A, 1).mods), [], 'the Bronze Cuirass no longer slows (v5 economy pass)');

@@ -24,7 +24,7 @@ import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
 import { SCENES, SPEAKERS, dueScene } from '../src/dialogue.js';
-import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText } from '../src/codex.js';
+import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText, slotLabel } from '../src/codex.js';
 
 // A card choice's visible stakes. Plot cards (v6) show nothing rather than "Nothing happens" when only hidden things change.
 const plotStakes = (run, c) => {
@@ -44,7 +44,7 @@ const injuryName = (tag) => INJURY_BY_TAG[tag].name;
 export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   look                          show the house again
   market | estate | store       the Market (fighters, decor, Armourer, Liaison), the Estate (buildings), the storeroom
-  codex [key]                   list unlocked Codex entries, or read one (e.g. codex basics:favor)
+  codex [key]                   list unlocked Codex entries, or read one (e.g. codex basics:favour)
   ok                            dismiss the current tutorial card
   recruit <id> | release <id>
   job <id> <rest|trainPower|trainSpeed|medbay>
@@ -56,7 +56,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   spare | kill                  thumbs up or down: decide a beaten, wounded opponent's fate after a win
   use <item>                    during a fight, before Round 1 or between rounds: one of each kind per fight
   place <id> <item> | remove <id> <item>      put decor in a fighter's room, or take it back
-  buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armor> | sell-gear <storeroom#> (half price)
+  buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armour> | sell-gear <storeroom#> (half price)
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).join(', ')}
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
   pay-tribute                   pay this year's tribute early
@@ -191,7 +191,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       const whole = left.length > 1 ? describeOdds({ win: left.reduce((p, x) => p * oddsFor(f, tier, x).win, 1), injury: 0, death: 0 }, oracleLevel(run)) : null;
       lines.push(`     ${f.name} [${f.id}]: ${b ? `next match (${BRACKET.rounds[b.round]})` : 'match'} ${o.win}${pct(o.winPct)}${whole ? ` · whole tournament ${whole.win}${pct(whole.winPct)}` : ''} · Injury ${o.injury}${pct(o.injuryPct)} · Death ${o.death}${pct(o.deathPct)}${warn.length ? ` · ${warn.join(', ')}` : ''}${blocker ? ` · can't fight: ${blocker}` : ''}`);
     }
-    if (bout.top && run.boutPending) lines.push(`     ${bout.boss ? `Bosses can't be skipped: fight or \`forfeit\` (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favor).` : `Or \`skip\` (+${ECONOMY.skipGold} Gold, the roster rests).`}`);
+    if (bout.top && run.boutPending) lines.push(`     ${bout.boss ? `Bosses can't be skipped: fight or \`forfeit\` (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour).` : `Or \`skip\` (+${ECONOMY.skipGold} Gold, the roster rests).`}`);
     return lines.join('\n');
   }
 
@@ -201,13 +201,13 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const toTribute = weeksUntilWinter(run.week);
     const fest = nextFestival(run.week);
     const festival = fest ? `Next Gods' Day: ${fest.festival.name} (${fest.festival.god}) ${fest.weeks ? `in ${plural(fest.weeks, 'week')}` : 'THIS tournament week'}: ${fest.festival.desc}` : '';
-    const tribute = tributePaid(run) ? 'Tribute paid for this year' : toTribute > 0 ? `Tribute ${due} Gold due at the start of winter (in ${plural(toTribute, 'week')})${toTribute <= 4 && run.gold < due ? ` · SHORT by ${due - run.gold}: unpaid tribute takes all your Gold and ${-FAVOR.unpaidTribute} Favor` : ''} (\`pay-tribute\` to pay early)` : 'Tribute collected for this year';
+    const tribute = tributePaid(run) ? 'Tribute paid for this year' : toTribute > 0 ? `Tribute ${due} Gold due at the start of winter (in ${plural(toTribute, 'week')})${toTribute <= 4 && run.gold < due ? ` · SHORT by ${due - run.gold}: unpaid tribute takes all your Gold and ${-FAVOR.unpaidTribute} Favour` : ''} (\`pay-tribute\` to pay early)` : 'Tribute collected for this year';
     const when = run.boutPending ? 'TOURNAMENT WEEK: settle your top arena before ending the week.'
       : run.bouts ? 'Your top arena is settled. Send fighters to other open arenas, or end the week.'
         : `${isWinter(run.week) ? 'Winter Dead Season: no tournaments. ' : ''}Next tournament in ${plural(weeksUntilTournament(run.week), 'week')}.`;
     return [
       `=== ${formatDate(run.week)} ===`,
-      `Gold ${run.gold} · Prestige ${run.prestige} (House level ${run.prestigeLevel}${next ? `, level ${next.level} at ${next.at}` : ''}) · Imperial Favor ${run.favor}/${FAVOR.max}${run.favor <= FAVOR.warning ? ' (DANGER)' : ''}`,
+      `Gold ${run.gold} · Prestige ${run.prestige} (House level ${run.prestigeLevel}${next ? `, level ${next.level} at ${next.at}` : ''}) · Imperial Favour ${run.favor}/${FAVOR.max}${run.favor <= FAVOR.warning ? ' (DANGER)' : ''}`,
       tribute,
       `Coming up in ${arenaName(run.topTier)}: ${upcomingBouts(run).map((b) => `${b.stage} ${b.weeks ? `in ${plural(b.weeks, 'week')}` : 'THIS WEEK'} (${dateOf(b.week).month}${b.festival ? `, ${b.festival}` : ''})`).join(' → ')}`,
       festival,
@@ -218,7 +218,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   function mercyText() {
     const v = run.mercy;
     const blood = v.crowd === 'kill';
-    const favor = v.top === false ? 'no Favor (lower arena)' : `+${MERCY.spareFavor} Favor`;
+    const favor = v.top === false ? 'no Favour (lower arena)' : `+${MERCY.spareFavor} Favour`;
     const spare = blood ? `${favor}; their house will owe you a life (−1 Power against you for ${HOUSES.feudMonths} months)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale`;
     const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${v.house ? '; their house swears a feud (+1 Power against you)' : ''}`;
     return `*** THUMBS UP OR DOWN: ${v.opp} lies beaten. ${blood ? 'The crowd roars for blood!' : 'The crowd chants for mercy.'} ***\n`
@@ -280,9 +280,9 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     out.push('\nApothecary (single-use fight items, `buy-item <item>`; use one between rounds with `use <item>`):');
     for (const [k, c] of Object.entries(CONSUMABLES)) out.push(`  ${k} · ${c.name} · ${c.price} Gold (${run.inventory.items?.[k] ?? 0} in storeroom): ${c.desc}`);
     out.push('\nArmourer:');
-    if (!maxLevel(run, 'armourer')) out.push('  Build an Armourer (Prestige level 2) to buy weapons and armor. Beaten opponents sometimes drop theirs; Bosses always do.');
+    if (!maxLevel(run, 'armourer')) out.push('  Build an Armourer (Prestige level 2) to buy weapons and armour. Beaten opponents sometimes drop theirs; Bosses always do.');
     else if (!run.armourerStock.length) out.push('  Sold out until next month.');
-    else run.armourerStock.forEach((k, i) => out.push(`  #${i} ${GEAR[k].name} · ${GEAR[k].slot} · ${GEAR[k].price} Gold: ${gearText(GEAR[k])}`));
+    else run.armourerStock.forEach((k, i) => out.push(`  #${i} ${GEAR[k].name} · ${slotLabel(GEAR[k].slot)} · ${GEAR[k].price} Gold: ${gearText(GEAR[k])}`));
     return out.join('\n');
   }
 
@@ -308,7 +308,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const out = ['-- The Storeroom (everything here belongs to the house) --'];
     out.push('Gear:');
     if (!run.inventory.gear.length) out.push('  No spare gear.');
-    run.inventory.gear.forEach((k, i) => out.push(`  #${i} ${GEAR[k].name} · ${GEAR[k].slot}: ${gearText(GEAR[k])}`));
+    run.inventory.gear.forEach((k, i) => out.push(`  #${i} ${GEAR[k].name} · ${slotLabel(GEAR[k].slot)}: ${gearText(GEAR[k])}`));
     const decor = Object.entries(run.inventory.decor).filter(([, n]) => n).map(([k, n]) => `${DECOR[k].name} ×${n}`);
     out.push(`Decor: ${decor.join(', ') || 'none'}`);
     return out.join('\n');
@@ -384,7 +384,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     match = null;
     if (s.next) out.push(`${s.fighter} wins the ${s.bracket} and is through to the ${s.next}. \`fight ${s.fighterId} ${s.tier}\` to fight on, or \`withdraw ${s.tier}\`.`);
     const bits = [`${s.gold >= 0 ? '+' : ''}${s.gold} Gold`, `${s.prestige >= 0 ? '+' : ''}${s.prestige} Prestige`];
-    if (s.favor) bits.push(`${s.favor > 0 ? '+' : ''}${s.favor} Favor`);
+    if (s.favor) bits.push(`${s.favor > 0 ? '+' : ''}${s.favor} Favour`);
     if (!s.died) bits.push(`+${s.xp} XP`);
     if (s.renown) bits.push(`${s.renown > 0 ? '+' : ''}${s.renown} Renown`);
     if (s.bloodied) bits.push('Bloodied Victory (won with 2+ injuries)');
@@ -535,7 +535,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       return `Sold the ${GEAR[key].name} for ${gold} Gold. Gold ${run.gold}.`;
     },
     unequip: ([id, slot]) => {
-      need([id, slot].filter(Boolean), 2, 'unequip <id> <weapon|armor>');
+      need([id, slot].filter(Boolean), 2, 'unequip <id> <weapon|armour>');
       unequip(run, id, slot);
       return 'Returned to the storeroom.';
     },
@@ -572,7 +572,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     },
     spare: () => {
       const v = resolveMercy(run, 'spare');
-      const gains = [v.favor && `+${v.favor} Favor`, v.renown && `+${v.renown} Renown`, v.morale && `+${v.morale} Morale`].filter(Boolean);
+      const gains = [v.favor && `+${v.favor} Favour`, v.renown && `+${v.renown} Renown`, v.morale && `+${v.morale} Morale`].filter(Boolean);
       return `Thumbs up.${gains.length ? ` ${gains.join(', ')}.` : ''}${v.crowd === 'spare' ? ' The crowd roars its approval.' : ''}${v.owed ? ` ${v.owed}` : ''}\n\n${look()}`;
     },
     kill: () => {

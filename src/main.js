@@ -320,7 +320,7 @@ const actions = {
 const before = {
   release: () => confirm('Release this fighter for good?'),
   retire: () => confirm('Retire this fighter to the Hall of Champions? They leave your roster for good.'),
-  forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favor than losing the fight.'),
+  forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favour than losing the fight.'),
   withdraw: () => confirm('Withdraw from the tournament? It counts as capitulating; your fighter is safe.'),
   advance: () => { summaries = []; achieved = []; return true; },
   'advance-tournament': () => { summaries = []; achieved = []; return true; },

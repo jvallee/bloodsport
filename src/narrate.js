@@ -59,7 +59,7 @@ export function narrateRound(m, r) {
     const att = name(c.attacker);
     const def = name(c.defender);
     const prefix = c.counter ? `${c.label === 'Off-hand strike' ? 'Off-hand!' : 'Elven Eyes!'} ${att} counters` : `${att} strikes at ${def}`;
-    const pierce = c.pierced ? ' (armor pierced)' : '';
+    const pierce = c.pierced ? ' (armour pierced)' : '';
     add(c.hit ? 'hit' : 'miss', `${prefix}: needs ${roll100(c.chance)} or less to wound${pierce}, rolled ${roll100(c.roll)}. ${c.hit ? 'Hit!' : 'Miss.'}`);
     if (c.drained) add('effect', `${att} drinks deep: their own ${c.drained === 'fleshWound' ? 'Flesh Wound' : 'Distraction'} closes (Blood Drinker).`);
     if (c.parry) add(c.parry.success ? 'parry' : 'hit', c.parry.success ? (c.parry.shield ? `${def} catches it on the shield!` : `${def} parries with the Sword! Riposte: +3 Speed next round.`) : `${def}'s parry fails.`);
@@ -156,12 +156,12 @@ export function adviceFor(m) {
   const worst = Math.min(...m.rounds.map((r) => r.delta));
   const avgDelta = m.rounds.reduce((n, r) => n + r.delta, 0) / Math.max(1, m.rounds.length);
   if (m.result.reason === 'towel') return 'You saved your fighter. Heal them in the Medbay before the next bout.'; // capitulated: not "lost anyway"
-  if (avgDelta >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favorites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
-  if (chance >= 60000) return `${you} was favored in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.`;
+  if (avgDelta >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
+  if (chance >= 60000) return `${you} was favoured in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.`;
   if (worst <= -2 && chance < 45000) return `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.`;
-  if (m.rounds.some((r) => r.checks.some((c) => c.pierced && c.defender === 'A'))) return `Their weapon pierced your armor. Against Gun or Flail fighters, armor won't save you; win the rounds instead.`;
+  if (m.rounds.some((r) => r.checks.some((c) => c.pierced && c.defender === 'A'))) return `Their weapon pierced your armour. Against Gun or Flail fighters, armour won't save you; win the rounds instead.`;
   if (m.result.reason === 'towel') return 'You saved your fighter. Heal them in the Medbay before the next bout.';
   const avg = m.rounds.reduce((n, r) => n + r.delta, 0) / Math.max(1, m.rounds.length);
-  if (avg >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favorites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
+  if (avg >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
   return 'An even fight that went the other way. Small edges add up: training, decor and fighting rested.';
 }

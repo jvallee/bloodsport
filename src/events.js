@@ -2,7 +2,7 @@
 //
 // `who`: which fighters the event is about: 'any' (random), 'famous' (most Renown), 'green' (lowest level),
 //   'pair' (two different fighters). `f` and `g` in text are their names.
-// `when(run)`: extra condition. Effects: { gold, favor, morale, stress, renown, xp, injury, item, chance: { p, win, lose } }.
+// `when(run)`: extra condition. Effects: { gold, favour, morale, stress, renown, xp, injury, item, chance: { p, win, lose } }.
 //   morale/stress/renown/xp/injury apply to `to`: 'f', 'g', 'both' or 'all' (the whole roster).
 // The first choice is the cautious one (the careful bot takes it). A choice with `cost` needs that much Gold.
 
@@ -120,7 +120,7 @@ export const EVENTS = [
   },
   {
     id: 'oldWound', who: 'any', title: 'An old wound aches',
-    text: ({ f }) => `${f} limps out to training, favoring an old wound. They swear it's nothing.`,
+    text: ({ f }) => `${f} limps out to training, favouring an old wound. They swear it's nothing.`,
     choices: [
       { label: 'Rest them this week', effects: { stress: { to: 'f', n: -20 } } },
       { label: 'Push through it', effects: { xp: { to: 'f', n: 2 }, chance: { p: 0.7, win: {}, lose: { injury: { to: 'f', tag: 'fleshWound' } } } } },
@@ -183,7 +183,7 @@ const INJURY_NAMES = { fleshWound: 'Flesh Wound', distracted: 'Distracted', conc
 export function stakesText(eff, sep = '; ') {
   const house = [];
   if (eff.gold) house.push(`${sign(eff.gold)} Gold`);
-  if (eff.favor) house.push(`${sign(eff.favor)} Favor`);
+  if (eff.favor) house.push(`${sign(eff.favor)} Favour`);
   if (eff.item) house.push(`+1 ${eff.item === 'warPaint' ? 'War Paint' : eff.item}`);
   const people = {};
   const add = (to, text) => { (people[to] ??= []).push(text); };

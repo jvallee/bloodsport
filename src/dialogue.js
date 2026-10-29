@@ -24,7 +24,7 @@ export const SCENES = {
     { speaker: 'emperor', text: 'I am Silbannacus, Emperor of Battleworld, and I pulled you here myself, out of a world of glowing screens and soft hands. You will find mine harder.' },
     { speaker: 'emperor', text: 'You are my newest Lanista: the master of a gladiator school, a Ludus. Yours is a ruin in the Dirt Pits, the lowest arena on the planet.' },
     { speaker: 'emperor', text: 'Buy fighters. Train them. Send them onto the sand. Climb my four arenas and beat their Bosses. Win my Grand Tournament, and I will name you Master of the Games.' },
-    { speaker: 'emperor', text: 'Pay my tribute every winter. Keep my favor. Lose it, and the crowd will watch you die on the same sand as your gladiators.' },
+    { speaker: 'emperor', text: 'Pay my tribute every winter. Keep my favour. Lose it, and the crowd will watch you die on the same sand as your gladiators.' },
     { speaker: 'emperor', text: 'I took this throne with a knife, Lanista. I know exactly what a person will do to keep breathing. Show me.' },
     // PLACEHOLDER: the steward, plain and neutral, takes over as your guide.
     { speaker: 'steward', text: 'He\'s gone. You can breathe now. I am the steward of this house: I keep the books, the keys and the peace. I\'ll tell you what you need to know as we go.' },

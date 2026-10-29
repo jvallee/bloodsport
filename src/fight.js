@@ -176,7 +176,7 @@ export function computePower(c, opp, round, raw = false) {
   if (kindActive(c, 'quantumAnalyzer', round) && c.analyzed) mods.push({ source: 'Quantum Analyzer', value: c.analyzed });
   const blinded = countInjury(f, 'blinded');
   if (blinded) mods.push({ source: 'Blinded', value: -2 * blinded });
-  if (c.side === 'B' && c.arena === 'crowdFavorite') mods.push({ source: 'Crowd Favorite', value: 1 });
+  if (c.side === 'B' && c.arena === 'crowdFavorite') mods.push({ source: 'Crowd Favourite', value: 1 });
   if (c.overtrained) mods.push({ source: 'Overtrained', value: -1 });
   if (c.thornRound === round) mods.push({ source: 'Thorn Lash', value: -1 });
   if (c.scouted) mods.push({ source: 'Scouted', value: c.scouted });
@@ -229,11 +229,11 @@ export function computePhase2(c, opp, round, volley = {}) {
   }
   if (c.proneRound === round) win.push({ source: 'Prone', value: -5000 });
   const gunActive = weaponActive(c, 'gun', round) && round % 2 === 1 && !blind;
-  if (gunActive) enemy.push({ source: 'Armor-Piercing Volley', value: 15000 });
+  if (gunActive) enemy.push({ source: 'Armour-Piercing Volley', value: 15000 });
   if (kindActive(c, 'alloyedSkin', round)) self.push({ source: 'Alloyed Skin', value: -10000, armor: true });
   if (kindActive(c, 'egoArmour', round) && eff === 0) {
-    win.push({ source: 'Ego Armor', value: 5000 });
-    self.push({ source: 'Ego Armor', value: -10000, armor: true });
+    win.push({ source: 'Ego Armour', value: 5000 });
+    self.push({ source: 'Ego Armour', value: -10000, armor: true });
   }
   const fleshWounds = countInjury(f, 'fleshWound');
   if (fleshWounds) enemy.push({ source: 'Flesh Wound', value: -10000 * fleshWounds });
@@ -393,7 +393,7 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
   return check;
 }
 
-// Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favorite boosts the opponent (B).
+// Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favourite boosts the opponent (B).
 const BOTH_SIDES = ['bloodMoon', 'crowdFavorite', 'lions', 'emperorsGaze'];
 
 export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0 }) {

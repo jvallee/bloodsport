@@ -106,7 +106,7 @@ function report(s) {
   const rows = [
     row('Gold', plus(s.gold), tone(s.gold)),
     row('Prestige', plus(s.prestige), tone(s.prestige)),
-    s.favor ? row('Imperial Favor', plus(s.favor), tone(s.favor)) : '',
+    s.favor ? row('Imperial Favour', plus(s.favor), tone(s.favor)) : '',
     s.died ? '' : row('XP', `${plus(s.xp)}${s.levels ? ` · ⭐ level up! Choose a perk on their card` : ''}`, 'good'),
     s.died ? '' : row('Renown', plus(s.renown), tone(s.renown)),
     s.died ? '' : row('Morale', plus(s.morale), tone(s.morale)),
@@ -129,7 +129,7 @@ function report(s) {
 // Thumbs up or down: the beaten opponent's fate, with what the crowd wants.
 function mercyPanel(m, mercy, late) {
   const blood = mercy.crowd === 'kill';
-  const favor = mercy.top === false ? 'no Favor in a lower arena' : `+${MERCY.spareFavor} Favor`;
+  const favor = mercy.top === false ? 'no Favour in a lower arena' : `+${MERCY.spareFavor} Favour`;
   const house = m.house ? esc(m.house.name) : 'their house';
   const spare = blood ? `${favor}; ${house} will owe you a life (−1 Power against you)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale (the crowd agrees)`;
   const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill (the crowd agrees)` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${m.house ? `; ${house} will swear a feud` : ''}`;

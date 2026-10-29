@@ -159,10 +159,10 @@ function moraleChip(f, info = null) {
 }
 
 const gearSpd = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].speed ?? 0), 0);
-// Gear effects that the badges don't show: injure chance and armor.
+// Gear effects that the badges don't show: injure chance and armour.
 function gearBonus(f) {
   const items = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => GEAR[k]);
   const injure = items.reduce((n, g) => n + (g.injure ?? 0), 0);
   const guard = items.reduce((n, g) => n + (g.guard ?? 0), 0);
-  return [injure ? `+${injure / 1000}% to injure` : '', guard ? `−${guard / 1000}% to be injured (armor)` : ''].filter(Boolean).join(', ');
+  return [injure ? `+${injure / 1000}% to injure` : '', guard ? `−${guard / 1000}% to be injured (armour)` : ''].filter(Boolean).join(', ');
 }

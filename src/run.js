@@ -896,7 +896,7 @@ export function advanceBlocker(run) {
   const midBracket = Object.entries(run.brackets ?? {}).find(([t, b]) => b.fighterId && b.round > 0 && run.bouts?.[t] === 'open');
   if (midBracket) return `${findFighter(run, midBracket[1].fighterId)?.name ?? 'Your fighter'} is through to the ${BRACKET.rounds[midBracket[1].round]} in ${arenaName(Number(midBracket[0]))}: fight on, or withdraw.`;
   if (run.boutPending) return `Tournament week: send a fighter to ${arenaName(run.topTier)}, or skip the bout first.`;
-  if (run.roster.some((f) => f.pendingPerks.length)) return 'A fighter leveled up: choose their perk first.';
+  if (run.roster.some((f) => f.pendingPerks.length)) return 'A fighter levelled up: choose their perk first.';
   return null;
 }
 
@@ -1057,7 +1057,7 @@ export function eventChoiceBlocker(run, index) {
 function applyEventEffects(run, eff, ev, out) {
   const targets = (to) => (to === 'all' ? run.roster : (to === 'both' ? [ev.f, ev.g] : [ev[to]]).map((id) => findFighter(run, id)).filter(Boolean));
   if (eff.gold) { run.gold = Math.max(0, run.gold + eff.gold); out.push(`${eff.gold > 0 ? '+' : ''}${eff.gold} Gold`); }
-  if (eff.favor) { changeFavor(run, eff.favor, EVENT_BY_ID[ev.id].title.toLowerCase().replace(/^the /, '')); out.push(`${eff.favor > 0 ? '+' : ''}${eff.favor} Favor`); }
+  if (eff.favor) { changeFavor(run, eff.favor, EVENT_BY_ID[ev.id].title.toLowerCase().replace(/^the /, '')); out.push(`${eff.favor > 0 ? '+' : ''}${eff.favor} Favour`); }
   if (eff.item) { run.inventory.items[eff.item] = (run.inventory.items[eff.item] ?? 0) + 1; out.push(`+1 ${CONSUMABLES[eff.item].name}`); }
   for (const [key, label] of [['morale', 'Morale'], ['stress', 'Stress'], ['renown', 'Renown']]) {
     if (!eff[key]) continue;
@@ -1116,7 +1116,7 @@ export function chooseEvent(run, index) {
   return text;
 }
 
-// ---------- Tribute and Favor ----------
+// ---------- Tribute and Favour ----------
 
 // The year whose tribute comes next: in winter this year's is already settled, so it's next year's.
 const tributeYear = (run) => dateOf(run.week).year + (dateOf(run.week).winter ? 1 : 0);
@@ -1168,7 +1168,7 @@ function collectTribute(run) {
 function changeFavor(run, delta, why) {
   if (!delta) return;
   run.favor = clamp(run.favor + delta, 0, FAVOR.max);
-  log(run, `Imperial Favor ${delta > 0 ? '+' : ''}${delta} (${why}): now ${run.favor}.`, delta > 0 ? 'good' : 'bad');
+  log(run, `Imperial Favour ${delta > 0 ? '+' : ''}${delta} (${why}): now ${run.favor}.`, delta > 0 ? 'good' : 'bad');
 }
 
 // ---------- Growth: XP, levels, perks ----------
@@ -1451,7 +1451,7 @@ export function fightBlocker(run, id, tier = run.topTier) {
   const midBracket = bracket?.fighterId && bracket.round > 0;
   if (midBracket && bracket.fighterId !== id) return `${findFighter(run, bracket.fighterId)?.name ?? 'Another fighter'} is in the bracket here.`;
   if (!midBracket && foughtThisWeek(run).includes(id)) return `${f.name} already fought this week.`;
-  if (f.pendingPerks.length) return `${f.name} leveled up: choose a perk first.`;
+  if (f.pendingPerks.length) return `${f.name} levelled up: choose a perk first.`;
   if (f.morale < MORALE.mutinous) return `${f.name} is mutinous and refuses to fight.`;
   if (!midBracket && run.prestige < boutFor(run, tier).buyIn) return `Needs ${boutFor(run, tier).buyIn} Prestige for the buy-in (you have ${run.prestige}).`;
   return null;
@@ -1548,7 +1548,7 @@ export function forfeitBlocker(run) {
   return null;
 }
 
-// Forfeiting your top arena's Boss costs Imperial Favor.
+// Forfeiting your top arena's Boss costs Imperial Favour.
 export function forfeitBout(run) {
   assertOk(forfeitBlocker(run));
   const bout = currentBout(run);
@@ -1823,7 +1823,7 @@ export function mercyBlocker(run, choice) {
   return null;
 }
 
-// Spare: +Favor (the Emperor likes clemency). Kill: Renown, a kill toward the marks, and their house's feud.
+// Spare: +Favour (the Emperor likes clemency). Kill: Renown, a kill toward the marks, and their house's feud.
 // Doing what the crowd wants adds Renown and Morale. Returns what changed.
 // v6: you promised to spare a rebel fighting for another house. Spared, they join your contacts; killed, the rebels know.
 function rebelBeaten(run, opp, verdict) {
@@ -1846,7 +1846,7 @@ export function resolveMercy(run, choice) {
   const house = run.houses?.find((h) => h.id === houseId) ?? null;
   const out = { verdict: choice, crowd, favor: 0, renown: 0, morale: 0, kill: false, mark: null, feud: null, owed: null };
   if (choice === 'spare') {
-    // Only your top arena affects Favor (the same rule as wins).
+    // Only your top arena affects Favour (the same rule as wins).
     if (top) {
       const before = run.favor;
       changeFavor(run, MERCY.spareFavor, `spared ${opp}`);
@@ -1957,7 +1957,7 @@ function checkLoss(run) {
   if (run.status !== 'active') return;
   if (run.favor <= 0) {
     run.status = 'lost';
-    run.endReason = `The Emperor's Favor is gone. You are executed in ${formatDate(run.week)}.`;
+    run.endReason = `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.`;
     return;
   }
   if (run.revoltWeeks >= REVOLT.weeks) {
@@ -1976,7 +1976,7 @@ function checkLoss(run) {
 
 export const serialize = (run) => JSON.stringify(run);
 
-// v2 careers (save version 2) upgrade in place: Strikes become Favor, the single circuit becomes arenas.
+// v2 careers (save version 2) upgrade in place: Strikes become Favour, the single circuit becomes arenas.
 function migrateV2(run) {
   const fighters = [...run.roster, ...run.market, ...run.fallen, ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...(run.opponent ? [run.opponent] : [])];
   for (const f of fighters) {

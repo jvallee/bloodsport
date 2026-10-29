@@ -29,17 +29,17 @@ test('a known fighter far stronger than the opponent gets the crushing warning w
   assert.match(fighterWarnings(run, f, 1).map((w) => w.text).join(' | '), /Crushing mismatch \(\+4 Power/);
 });
 
-test('lower-arena stakes no longer claim "no Favor at stake" and mention what still earns Favor', () => {
+test('lower-arena stakes no longer claim "no Favour at stake" and mention what still earns Favour', () => {
   const { run } = twoTiers();
   const text = arenaStakes(run, 1);
-  assert.doesNotMatch(text, /no Favor at stake/);
-  assert.match(text, /Upsets and Bloodied Victories \(wins with 2\+ injuries\) still earn Favor/);
+  assert.doesNotMatch(text, /no Favour at stake/);
+  assert.match(text, /Upsets and Bloodied Victories \(wins with 2\+ injuries\) still earn Favour/);
 });
 
-test('Boss stakes show the real per-tier Favor loss and forfeit cost', () => {
+test('Boss stakes show the real per-tier Favour loss and forfeit cost', () => {
   const run = createRun(2);
   run.arenas[1].stage = 2;
-  assert.match(arenaStakes(run, 1), /Lose: -10 Favor\. Forfeit: -15 Favor/);
+  assert.match(arenaStakes(run, 1), /Lose: -10 Favour\. Forfeit: -15 Favour/);
 });
 
 test('roundStats reports the Power and Speed the round will actually use', () => {
