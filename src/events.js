@@ -193,6 +193,13 @@ export function stakesText(eff, sep = '; ') {
   if (eff.xp) add(eff.xp.to, `${sign(eff.xp.n)} XP`);
   if (eff.injury) add(eff.injury.to, INJURY_NAMES[eff.injury.tag] ?? eff.injury.tag);
   if (eff.heal) add(eff.heal.to, 'their newest wound healed');
+  // v6 plot cards: what anyone could see happen (trust and suspicion stay hidden).
+  if (eff.freeAsker) add('f', 'leaves your house for good');
+  if (eff.execute) add(eff.execute, 'executed');
+  if (eff.hide) house.push(`one Medbay bed taken for ${eff.hide} weeks`);
+  if (eff.giveGear) house.push(`${eff.giveGear} pieces of gear handed over`);
+  if (eff.contact === 'new') house.push('a prisoner goes free');
+  if (eff.coup) house.push('there is no turning back');
   const parts = [house.join(', '), ...Object.entries(people).map(([to, list]) => `${WHO[to]}: ${list.join(', ')}`)].filter(Boolean);
   if (eff.chance) {
     const win = stakesText(eff.chance.win, ', ');

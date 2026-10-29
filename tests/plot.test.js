@@ -279,6 +279,9 @@ test('hidden effects never show on the buttons', () => {
   assert.equal(stakesText(PLOT_EVENT_BY_ID.cousinVisit.choices[1].effects), 'Nothing happens');
   assert.match(stakesText(PLOT_EVENT_BY_ID.hideWounded.choices[1].effects), /\+6 Gold/);
   assert.equal(stakesText(PLOT_EVENT_BY_ID.informer.choices[1].effects), 'A gamble (50%)');
+  // What anyone could see does show: a fighter leaving, an execution, a bed taken.
+  assert.match(stakesText(PLOT_EVENT_BY_ID.freeMe.choices[1].effects), /leaves your house for good/);
+  assert.match(stakesText(PLOT_EVENT_BY_ID.raid.choices[1].effects), /executed/);
   for (const e of PLOT_EVENTS) assert.ok(EVENT_BY_ID[e.id], `${e.id} can be looked up`);
 });
 
