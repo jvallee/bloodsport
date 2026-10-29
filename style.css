@@ -115,15 +115,16 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .card.dead { opacity: 0.45; filter: grayscale(1); }
 .card.danger { border-color: var(--blood); box-shadow: 0 0 0 1px var(--blood), 0 0 18px rgba(192, 54, 44, 0.35); }
 .card-tag { position: absolute; top: -10px; left: 12px; font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); padding: 1px 8px; border-radius: 99px; color: var(--muted); }
-.card-head { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+/* The name never hides behind the Power/Speed badges: when it needs the room, the badges drop to their own line. */
+.card-head { display: flex; justify-content: space-between; gap: 8px; row-gap: 6px; align-items: start; flex-wrap: wrap; }
 .card-head h3 { font-size: 17px; display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-.card-head h3 .nm { overflow-wrap: break-word; }
+.card-head h3 .nm { white-space: nowrap; }
 .card.compact .card-head { flex-wrap: wrap; }
 .chip.signature { border-color: var(--gold); color: var(--gold); }
 .chip.signature.locked { opacity: 0.55; }
-.card-head .who { min-width: 0; }
+.card-head .who { min-width: auto; }
 .card-head .kind { color: var(--muted); font-size: 13px; }
-.badges { display: flex; gap: 6px; }
+.badges { display: flex; gap: 6px; margin-left: auto; }
 .badge { display: flex; align-items: center; gap: 4px; border-radius: 8px; padding: 3px 8px; background: #0f0b0a; border: 1px solid var(--line); cursor: help; }
 .badge b { font-size: 18px; font-variant-numeric: tabular-nums; }
 .traits, .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
@@ -428,7 +429,7 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .line.tactic { color: var(--gold); }
 
 /* Portraits (phase F1) */
-.card-head .id-row { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.card-head .id-row { display: flex; gap: 10px; align-items: center; flex: 1 1 auto; }
 .portrait { flex-shrink: 0; border-radius: 10px; border: 1px solid var(--line); }
 
 /* Weekly events (phase B1) */

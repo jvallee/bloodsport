@@ -14,6 +14,7 @@ What changed from version to version, newest first. Each frozen version can stil
   - Capitulation advice no longer says "lost anyway".
   - A festival no longer leaks into a newly opened arena's preview.
   - A Codex entry for Challengers.
+- **Long names no longer hide behind the Power and Speed badges** on fighter cards: when a name needs the room, the badges move to their own line.
 
 **From the designer's playtest (#7)**
 - **Prisoners of war** still arrive at their arena's Power, but anything above a Market fighter's natural Power counts as training they've already done. They can no longer train a full Trainer cap on top and end up far stronger than everyone else.
