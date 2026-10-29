@@ -255,7 +255,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (!run.market.length) out.push('Sold out until next month.');
     const offer = run.liaisonOffer;
     out.push(offer
-      ? `\nLiaison (${offer.origin}, ${offer.price} Gold): [${offer.id}] ${identity(offer)} · Power ${offer.power} · Speed ${offer.speed} · Stress ${offer.stress} · Morale ${offer.morale} · Injuries: ${injuriesText(offer)}\n     ${abilities(offer)}`
+      ? `\nLiaison (${offer.origin}, ${offer.price} Gold): [${offer.id}] ${identity(offer)} · Power ${offer.power} · Speed ${offer.speed} · Stress ${offer.stress} · Morale ${offer.morale} · Injuries: ${injuriesText(offer)}\n     ${abilities(offer)}${offer.record?.length ? `\n     Prison record: ${offer.record.map((c) => `"${c}"`).join(' ')}` : ''}`
       : maxLevel(run, 'liaison') ? '\nLiaison: no prisoner on offer this month.' : `\nLiaison: build one${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for a cheap monthly prisoner.`);
     out.push('\nDecor merchant:');
     for (const [k, d] of Object.entries(DECOR)) out.push(`  ${k} · ${d.name} · ${d.price} Gold (${run.inventory.decor[k]} in storeroom): ${d.effect}`);

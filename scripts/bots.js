@@ -29,7 +29,7 @@ function pickPerks(run) {
 // Value of a gear item to this bot: Power counts most, then injure/armor, then Speed.
 const gearScore = (k) => (GEAR[k].power ?? 0) * 3 + (GEAR[k].injure ?? 0) / 2500 + (GEAR[k].guard ?? 0) / 2500 + (GEAR[k].speed ?? 0);
 
-function spend(run, reserve) {
+function spend(run, reserve, opts = {}) {
   const tryUp = (type) => {
     const b = run.buildings.find((x) => x.type === type && !upgradeBlocker(run, x.id));
     if (b && run.gold - BUILDINGS[type].cost[b.level] >= reserve) upgrade(run, b.id);
@@ -38,6 +38,7 @@ function spend(run, reserve) {
     if (!buildBlocker(run, type) && run.gold - BUILDINGS[type].cost[0] >= reserve) buildRoom(run, type);
   };
   // The bot reads exact odds and never needs cheap recruits, so it skips the Oracle and Liaison.
+  if (opts.plot) tryBuild('liaison'); // v6: the plot starts with the Liaison's prisoners
   tryUp('trainer');
   tryBuild('entertainment');
   tryBuild('armourer');
@@ -82,16 +83,17 @@ function keepHappy(run) {
 
 function carefulWeek(run, opts) {
   pickPerks(run);
-  if (opts.build !== false) spend(run, 6);
+  if (opts.build !== false) spend(run, 6, opts);
   else for (const b of run.buildings) if (b.type === 'trainer' && !upgradeBlocker(run, b.id)) upgrade(run, b.id);
   if (opts.gear !== false) equipAll(run, 4);
   if (opts.morale !== false) keepHappy(run);
 
   // Roster: enough fighters to cover every arena, plus a spare.
   const want = Math.min(rosterCap(run), unlockedTiers(run).length + 2);
-  const offers = [...run.market, ...(run.liaisonOffer ? [run.liaisonOffer] : [])].sort((a, b) => b.power - a.power);
+  // A plot-playing bot (v6) takes any political prisoner it's offered (it can read their record better than most players).
+  const offers = [...run.market, ...(run.liaisonOffer ? [run.liaisonOffer] : [])].sort((a, b) => (opts.plot ? Number(Boolean(b.political)) - Number(Boolean(a.political)) : 0) || b.power - a.power);
   for (const f of offers) {
-    if (run.roster.length >= want) break;
+    if (run.roster.length >= (f.political && opts.plot ? rosterCap(run) : want)) continue;
     const price = f === run.liaisonOffer ? f.price : marketPrice(run);
     if (run.gold - price >= 4 && !recruitBlocker(run, f.id)) recruit(run, f.id);
   }
@@ -178,6 +180,9 @@ function carefulBouts(run, n, opts) {
     const score = o.win - 1.5 * o.death;
     if (!best || score > best.score) best = { f, o, score };
   }
+  // The coup Final: the recruited champion must be the one who fights it.
+  const champ = run.plot?.coup && !run.plot.ended ? run.roster.find((f) => f.id === run.plot.champion && !fightBlocker(run, f.id, top)) : null;
+  if (champ) best = { f: champ, o: odds(champ, top), score: 0 };
   const bout = boutFor(run, top);
   if (!best || (best.o.win < 0.35 && !bout.boss && opts.skip !== false)) {
     if (!skipBlocker(run)) skipBout(run);
@@ -224,6 +229,20 @@ function recklessBouts(run) {
   playMatch(run, f, run.topTier, false, false, 'press');
 }
 
+// v6, the hidden plot. `opts.plot`: 'rebel' helps the rebels at every turn (and goes through with the coup);
+// 'loyalist' helps until the prefect's offer, then names the names. Without it, a bot takes the cautious first choice
+// and the plot goes cold. Returns the order to try a plot card's choices in.
+function plotOrder(run, side) {
+  const choices = EVENT_BY_ID[run.event.id].choices;
+  const all = [...choices.keys()];
+  if (run.event.id === 'raid') return [2, 0, 3, 1].filter((i) => i < choices.length); // pass, bribe, bar the gates, hand over
+  if (side === 'loyalist') {
+    const betray = all.filter((i) => choices[i].betray);
+    if (betray.length) return betray;
+  }
+  return [...all.filter((i) => choices[i].help), ...all.filter((i) => !choices[i].help && !choices[i].betray)];
+}
+
 // `onWeek(run)`: optional, called at every step (for economy and other probes).
 export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxWeeks = 400, onWeek = null, ...opts } = {}) {
   const run = createRun(seed);
@@ -233,7 +252,7 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
     // Events: the careful bot takes the cautious (first) choice it can afford; the reckless one the boldest.
     if (run.event) {
       const n = EVENT_BY_ID[run.event.id].choices.length;
-      const order = strategy === 'careful' ? [...Array(n).keys()] : [...Array(n).keys()].reverse();
+      const order = run.event.plot && opts.plot ? plotOrder(run, opts.plot) : strategy === 'careful' ? [...Array(n).keys()] : [...Array(n).keys()].reverse();
       chooseEvent(run, order.find((i) => !eventChoiceBlocker(run, i)));
       continue;
     }
