@@ -44,16 +44,29 @@ export const CLUES = {
   ],
 };
 
+// What the house can see of the Emperor's suspicion, and of a rising that is ready and waiting (house log lines).
+export const SUSPICION_SIGNS = {
+  low: ['A Praetorian watched training today, and wrote something down.', 'A stranger asked the water-seller which gladiators go out at night.'],
+  mid: ['Praetorians stopped your steward in the market and searched his basket.', 'Someone has been through the papers in your office. Nothing is missing.', 'The guards at the arena gate know your fighters\' names now.'],
+  high: ['A Praetorian prefect sits in your box at the games, watching you, not the sand.', 'Your steward says a man has been standing across the street for three days.', 'An invitation to the palace was withdrawn without a word.'],
+  ready: ['The chalk marks are everywhere now, and nobody scrubs them off.', 'In the barracks, blades are oiled at night that nobody will admit to owning.', 'The city is waiting for the Emperor\'s games.'],
+};
+
 const political = (run) => run.roster.filter((f) => f.political);
 const anyFighter = (run) => run.roster;
 const asker = (list) => (run, rng) => (list(run).length ? { f: pick(rng, list(run)).id } : null);
 const freshName = (run, rng) => {
-  const taken = new Set([...run.roster, ...run.market, ...run.fallen].map((f) => f.name).concat((run.plot?.freed ?? []).map((c) => c.name)));
+  // Nobody you could meet: your house, the market, the dead, contacts, and every arena and bracket opponent.
+  const opponents = [...Object.values(run.arenas ?? {}).flatMap((a) => [a.opponent, a.rival]), ...Object.values(run.brackets ?? {}).flatMap((b) => b.foes ?? [])].filter(Boolean);
+  const taken = new Set([...run.roster, ...run.market, ...run.fallen, ...opponents].map((f) => f.name)
+    .concat((run.plot?.freed ?? []).map((c) => c.name), run.graveyard ?? [], run.liaisonOffer ? [run.liaisonOffer.name] : []));
   const free = NAMES.filter((n) => !taken.has(n));
   return pick(rng, free.length ? free : NAMES);
 };
 const topOpponent = (run) => run.arenas[run.topTier]?.opponent;
 const houseName = (run, f) => run.houses?.find((h) => h.id === f?.house)?.name;
+// Will a fighter join the cause? Content fighters are more willing (20–90%, by Morale).
+export const recruitOdds = (f) => Math.round(Math.min(0.9, Math.max(0.2, (f.morale ?? 50) / 100)) * 100);
 const hasContact = (run, cell) => (run.plot?.freed ?? []).some((c) => c.cell === cell && !c.caught);
 const gearCount = (run) => run.inventory.gear.length + run.roster.reduce((n, f) => n + (f.gear.weapon ? 1 : 0) + (f.gear.armor ? 1 : 0), 0);
 export const isArmed = (run) => Boolean(run.plot?.armed) || hasContact(run, 'officer');
@@ -71,7 +84,7 @@ export const PLOT_EVENTS = [
   },
   // ---- Act 2: favours ----
   {
-    id: 'cousinVisit', plot: true, stages: ['favours', 'cause'], title: 'A cousin at the gate',
+    id: 'cousinVisit', plot: true, stages: ['favours', 'cause', 'ready'], title: 'A cousin at the gate',
     target: asker(political),
     text: ({ f }) => `A man who says he is ${f}'s cousin asks to visit the barracks. He has no letter, and he isn't looking at ${f}.`,
     choices: [
@@ -80,16 +93,16 @@ export const PLOT_EVENTS = [
     ],
   },
   {
-    id: 'hideWounded', plot: true, stages: ['favours', 'cause'], title: 'Blood at the gate',
+    id: 'hideWounded', plot: true, stages: ['favours', 'cause', 'ready'], title: 'Blood at the gate',
     target: asker(anyFighter),
     text: () => 'A man bleeding from a Praetorian blade collapses at your gate after curfew. The watch will pass within the hour.',
     choices: [
       { label: 'Call the watch', refuse: true, effects: { favor: 2, trust: -1 } },
-      { label: 'Hide him in the Medbay', help: true, effects: { trust: 2, hide: 2, gold: 6 } },
+      { label: 'Hide him in the Medbay', help: true, effects: { trust: 2, hide: 2, gold: 3, suspicion: 5 } },
     ],
   },
   {
-    id: 'pamphlets', plot: true, stages: ['favours', 'cause'], title: 'Pamphlets in the storeroom',
+    id: 'pamphlets', plot: true, stages: ['favours', 'cause', 'ready'], title: 'Pamphlets in the storeroom',
     target: asker(anyFighter),
     text: () => 'Your steward found a bundle of pamphlets behind the grain jars: the Emperor drawn as a jackal on a stolen throne.',
     choices: [
@@ -108,11 +121,11 @@ export const PLOT_EVENTS = [
   },
   // ---- Rescue requests: one of your gladiators asks you to free a political prisoner ----
   {
-    id: 'freeFromCells', plot: true, stages: ['favours', 'cause'], title: 'My brother is in the cells',
+    id: 'freeFromCells', plot: true, stages: ['favours', 'cause', 'ready'], title: 'My brother is in the cells',
     when: (run) => run.buildings.some((b) => b.type === 'liaison'),
-    // Ordinary fighters ask too once the plot has reached the Cause.
+    // Political prisoners ask, and the sworn champion (playtest #7: an ordinary fighter's "brother" felt arbitrary).
     target: (run, rng) => {
-      const list = run.plot?.stage === 'cause' ? anyFighter(run) : political(run);
+      const list = run.roster.filter((f) => f.political || f.id === run.plot?.champion);
       return list.length ? { f: pick(rng, list).id, name: freshName(run, rng) } : null;
     },
     text: ({ f, name }) => `${f} comes to you at night. "${name} is in the Liaison's cells. Buy them, then let them go. They're worth more outside these walls than any purse."`,
@@ -132,7 +145,7 @@ export const PLOT_EVENTS = [
     ],
   },
   {
-    id: 'freeCondemned', plot: true, stages: ['cause'], title: 'Thrown to the beasts',
+    id: 'freeCondemned', plot: true, stages: ['cause', 'ready'], title: 'Thrown to the beasts',
     when: (run) => Boolean(run.bouts),
     target: (run, rng) => (run.roster.length ? { f: pick(rng, run.roster).id, name: freshName(run, rng) } : null),
     text: ({ f, name }) => `${f} is pale. "They're throwing ${name} to the beasts at the games today, for sedition. You have the Emperor's ear, and a key to every gate in the arena."`,
@@ -143,7 +156,7 @@ export const PLOT_EVENTS = [
     ],
   },
   {
-    id: 'acrossSand', plot: true, stages: ['cause'], title: 'One of ours across the sand',
+    id: 'acrossSand', plot: true, stages: ['cause', 'ready'], title: 'One of ours across the sand',
     when: (run) => Boolean(topOpponent(run)?.house) && !topOpponent(run)?.rebel,
     target: (run, rng) => (run.roster.length ? { f: pick(rng, run.roster).id, opp: topOpponent(run).name, house: houseName(run, topOpponent(run)) } : null),
     text: ({ f, opp, house }) => `${f} lowers their voice. "${opp}, who fights for ${house ?? 'another house'}, is one of us. If you meet in the arena, beat them if you must, but let them live."`,
@@ -166,6 +179,7 @@ export const PLOT_EVENTS = [
   {
     id: 'armBarracks', plot: true, repeat: true, stages: ['cause'], title: 'Steel for the cause',
     when: (run) => !isArmed(run),
+    needed: (run) => !isArmed(run),
     target: asker(anyFighter),
     text: () => 'An old centurion asks for weapons from your storeroom. "When the day comes, the barracks must be armed. Two blades will do."',
     choices: [
@@ -176,11 +190,17 @@ export const PLOT_EVENTS = [
   {
     id: 'recruitChampion', plot: true, repeat: true, stages: ['cause'], title: 'The champion',
     when: (run) => !run.roster.some((f) => f.id === run.plot?.champion),
-    target: (run) => (run.roster.length ? { f: [...run.roster].sort((a, b) => b.renown - a.renown || b.power - a.power)[0].id } : null),
-    text: ({ f }) => `The rebels want ${f}, the most famous fighter in your house. "When the Emperor comes to the games, the crowd must see one of their own strike the blow."`,
+    needed: (run) => !run.roster.some((f) => f.id === run.plot?.champion),
+    // Your two most famous fighters; whether they'll say yes depends on their Morale (shown on the buttons).
+    target: (run) => {
+      const [f, g] = [...run.roster].sort((a, b) => b.renown - a.renown || b.power - a.power);
+      return f ? { f: f.id, g: g?.id, fOdds: recruitOdds(f), gOdds: g ? recruitOdds(g) : null } : null;
+    },
+    text: ({ f, g }) => `The rebels want a champion of your house. "When the Emperor comes to the games, the crowd must see one of their own strike the blow." They name ${f}${g ? `, or ${g}` : ''}.`,
     choices: [
-      { label: `Keep \${f} out of it`, refuse: true, effects: {} },
-      { label: `Sound \${f} out`, help: true, effects: { chance: { p: (run, ev) => Math.min(0.9, Math.max(0.2, (run.roster.find((x) => x.id === ev.f)?.morale ?? 50) / 100)), win: { champion: 'f', trust: 1 }, lose: { suspicion: 5, morale: { to: 'f', n: -10 } } } } },
+      { label: 'Keep your fighters out of it', refuse: true, effects: {} },
+      { label: `Sound \${f} out (\${fOdds}% they say yes)`, help: true, effects: { chance: { p: (run, ev) => ev.fOdds / 100, win: { champion: 'f', trust: 1 }, lose: { morale: { to: 'f', n: -5 } } } } },
+      { label: `Sound \${g} out (\${gOdds}% they say yes)`, help: true, needs: (run, ev) => (ev.g ? null : 'Only one fighter in your house.'), effects: { chance: { p: (run, ev) => ev.gOdds / 100, win: { champion: 'g', trust: 1 }, lose: { morale: { to: 'g', n: -5 } } } } },
     ],
   },
   // ---- Danger (any time after the Mark) ----
@@ -196,6 +216,7 @@ export const PLOT_EVENTS = [
   },
   {
     id: 'theOffer', plot: true, stages: ['cause', 'ready'], title: 'The prefect\'s offer',
+    when: (run) => run.week >= (run.plot?.causeWeek ?? 0) + PLOT.offerAfter,
     target: asker(anyFighter),
     text: () => 'A Praetorian prefect calls on you, alone. "The Emperor knows there are traitors in the ludus houses. Give him their names, and he will remember your house kindly."',
     choices: [

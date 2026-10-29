@@ -330,7 +330,7 @@ export const BUILDINGS = {
   oracle: { unique: true, name: 'Oracle', dept: 'scouting', icon: 'eye', cost: [8, 12], req: [2, 3], per: [1, 2], effect: (n) => (n >= 2 ? 'Exact odds and next Boss debuff' : 'Odds to the nearest 10%') },
   armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16, 24], req: [2, 3, 4], per: [5, 6, 8], effect: (n) => `Sells ${n} pieces of gear each month, and buys your spare gear back at half price`, extra: (lv) => (lv >= 3 ? 'Stocks Imperial (tier 3) gear' : lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
   stables: { unique: true, name: 'Stables', dept: 'scouting', icon: 'paw', cost: [9, 14], req: [2, 3], per: [1, 2], effect: (n) => `${n} exotic Basa fighter${n === 1 ? '' : 's'} in the Market each month` },
-  liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly 1-Gold condemned convict') },
+  liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly cheap condemned convict'), note: () => 'Read their prison records: not every prisoner is what the guards say.' },
 };
 
 export const DEPARTMENTS = {
@@ -456,13 +456,18 @@ export const NAMES = [
 
 // Political prisoners among the Liaison's offers. guaranteeYear: from this year on, the first offer is always political
 // if none has been offered yet (so every career gets a chance at the plot). priceCut: they come cheap (someone paid).
+// The Liaison's monthly prisoner (playtest #7). A convict: Market-strength, wounded, cheap. A prisoner of war (Lv 2): the
+// top arena's Power + elitePower, priced elitePrice + elitePerTier × tier. Political prisoners come cheaper still.
+export const LIAISON = { convictPrice: 2, elitePrice: 3, elitePerTier: 2, elitePower: -1 };
 export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClue: 0.25 };
 // The thread. gap: weeks between plot cards. cause/ready: trust needed for each stage (cause also needs this House level).
 // suspicion: hidden 0–100, its monthly drift and the levels where its signs show. contactWin: win chance per contact in the
 // coup Final (×1000 = %), up to contactMax.
 export const PLOT = {
   gap: [3, 6], firstGap: [1, 3], refusalsToCold: 2, survivesAt: 2,
-  cause: { trust: 4, houseLevel: 3 }, ready: { trust: 6 },
+  // cause: trust, favours done and weeks since the Mark it takes (playtest #7: Acts 1–2 were over in 7 weeks); offerAfter: the
+  // prefect's offer waits this long into the Cause, so betrayal has something to cost. maxTrust: trust stops piling up here.
+  cause: { trust: 4, favours: 3, weeks: 12, houseLevel: 3 }, ready: { trust: 6 }, offerAfter: 16, maxTrust: 10, priestMorale: 5,
   suspicion: { perPrisoner: 1, perContact: 1, decay: 2, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
   // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
   armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30,

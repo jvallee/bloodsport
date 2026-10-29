@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR, TRIBUTE, CONSUMABLES, BLOODIED, DECOR } from '../src/data.js';
+import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR, TRIBUTE, CONSUMABLES, BLOODIED, DECOR, LIAISON, POLITICAL } from '../src/data.js';
 import { autoPlay } from '../src/fight.js';
 import { build, rosterCap, plotsFree } from '../src/ludus.js';
 import {
@@ -347,7 +347,8 @@ test('the Liaison offers a cheap injured convict once built', () => {
   advanceToTournament(run);
   run.boutPending = false;
   advanceWeek(run);
-  assert.equal(run.liaisonOffer.price, 1);
+  // A convict costs LIAISON.convictPrice (playtest #7: was 1); a political one comes cheaper still.
+  assert.equal(run.liaisonOffer.price, run.liaisonOffer.political ? Math.max(1, LIAISON.convictPrice - POLITICAL.priceCut) : LIAISON.convictPrice);
   assert.equal(run.liaisonOffer.injuries[0].tag, 'fleshWound');
   const id = run.liaisonOffer.id;
   recruit(run, id);

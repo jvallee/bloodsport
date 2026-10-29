@@ -133,13 +133,19 @@ test('helping moves the thread on; refusing twice in a row lets it go cold', () 
   assert.equal(run.plot.ended, 'cold');
 });
 
-test('enough trust and House level 3 bring the Cause', () => {
+test('the Cause takes trust, three favours, time since the Mark and House level 3 (playtest #7: it came in 7 weeks)', () => {
   const { run } = withPrisoner();
   card(run, 'chalkMark', 1);
   card(run, 'hideWounded', 1);
-  assert.equal(run.plot.stage, 'favours');
   card(run, 'cousinVisit', 1);
-  assert.equal(run.plot.stage, 'cause', `trust ${run.plot.trust}`);
+  assert.equal(run.plot.trust, 4);
+  assert.equal(run.plot.stage, 'favours', 'two favours, no time passed: not yet');
+  card(run, 'pamphlets', 1);
+  assert.equal(run.plot.stage, 'favours', 'three favours, but too soon after the Mark');
+  run.week += PLOT.cause.weeks;
+  card(run, 'yardBout', 1);
+  assert.equal(run.plot.stage, 'cause');
+  assert.equal(run.plot.causeWeek, run.week);
 });
 
 test('hiding the wounded man takes a Medbay bed for two weeks, and pays', () => {
@@ -148,7 +154,7 @@ test('hiding the wounded man takes a Medbay bed for two weeks, and pays', () => 
   const gold = run.gold;
   card(run, 'hideWounded', 1);
   assert.equal(medbaySlots(run), beds - 1);
-  assert.equal(run.gold, gold + 6);
+  assert.equal(run.gold, gold + 3);
   run.boutPending = false;
   advanceWeek(run);
   advanceWeek(run);
@@ -279,7 +285,7 @@ test('the Loyalist: naming names executes the political prisoners and the freed,
 
 test('hidden effects never show on the buttons', () => {
   assert.equal(stakesText(PLOT_EVENT_BY_ID.cousinVisit.choices[1].effects), 'Nothing happens');
-  assert.match(stakesText(PLOT_EVENT_BY_ID.hideWounded.choices[1].effects), /\+6 Gold/);
+  assert.match(stakesText(PLOT_EVENT_BY_ID.hideWounded.choices[1].effects), /\+3 Gold/);
   assert.equal(stakesText(PLOT_EVENT_BY_ID.informer.choices[1].effects), 'A gamble (50%)');
   // What anyone could see does show: a fighter leaving, an execution, a bed taken.
   assert.match(stakesText(PLOT_EVENT_BY_ID.freeMe.choices[1].effects), /leaves your house for good/);
@@ -405,7 +411,11 @@ test('the Codex\'s Rebellion section is hidden until the plot is found', async (
   const html = codexTab(codex, ENTRIES, SECTIONS, [], progress(codex), isUnlocked, hasLore);
   assert.match(html, /The Rebellion/);
   assert.match(html, /The broken chain/);
-  assert.match(html, /The Scribe/);
+  // Buying a prisoner never names their cell (playtest #7: that unmasked political prisoners); freeing someone does.
+  assert.doesNotMatch(html, /The Scribe/);
+  run.plot.freed.push({ name: 'Varia', cell: 'priest', caught: false });
+  discover(codex, run);
+  assert.match(codexTab(codex, ENTRIES, SECTIONS, [], progress(codex), isUnlocked, hasLore), /The Priest/);
 });
 
 test('knocked out before the Final, the coup waits for another Grand Tournament instead of failing', () => {
@@ -468,6 +478,8 @@ test('review: trust earned before House level 3 still brings the Cause later; th
   run.prestigeLevel = 2;
   run.plot.stage = 'favours';
   run.plot.trust = 5;
+  run.plot.favours = 3;
+  run.plot.markWeek = run.week - PLOT.cause.weeks;
   run.plot.seen = PLOT_EVENTS.map((e) => e.id); // every card already seen
   run.prestigeLevel = 3;
   run.plot.nextAt = 999; // no cards in the way: only the monthly check can move the stage
@@ -496,4 +508,127 @@ test('review: executed prisoners leave their gear in the storeroom, not on their
   chooseEvent(run, 1);
   assert.ok(run.inventory.gear.includes('gladius'));
   assert.equal(run.fallen.find((x) => x.id === f.id).gear.weapon, null);
+});
+
+// ---- Playtest #7 (informed) fixes ----
+
+test('playtest: betrayal is logged as it happens, with a line in each victim\'s story', () => {
+  const { run, f } = withPrisoner();
+  run.plot.stage = 'cause';
+  run.plot.freed.push({ name: 'Varia', cell: 'priest', caught: false });
+  card(run, 'theOffer', 1);
+  const text = run.log.map((l) => l.text).join(' ');
+  assert.match(text, new RegExp(`${f.name} is dragged from the barracks`));
+  assert.match(text, /Varia is found hiding/);
+  assert.match(run.fallen.find((x) => x.id === f.id).story.at(-1).text, /Named as a traitor/);
+});
+
+test('playtest: a scrubbed chalk mark comes back once; scrubbed twice, the thread goes cold (never stuck)', () => {
+  const { run } = withPrisoner();
+  card(run, 'chalkMark', 0);
+  assert.equal(run.plot.ended, null);
+  run.plot.nextAt = run.week;
+  run.event = null;
+  run.boutPending = false;
+  advanceWeek(run);
+  assert.equal(run.event?.id, 'chalkMark', 'the mark is back');
+  chooseEvent(run, 0);
+  assert.equal(run.plot.ended, 'cold');
+});
+
+test('playtest: the house log names a fighter who was freed (not "Free .")', () => {
+  const { run, f } = withPrisoner();
+  run.plot.trust = 3;
+  card(run, 'freeMe', 1, { f: f.id });
+  assert.match(run.log.findLast((l) => l.tone === 'event' && /Free me/.test(l.text)).text, new RegExp(`Free ${f.name}`));
+});
+
+test('playtest: a freed priest lifts spirits without stacking forever or prolonging a bad mood', () => {
+  const { run, f } = withPrisoner();
+  card(run, 'chalkMark', 1);
+  run.plot.freed.push({ name: 'Varia', cell: 'priest', caught: false });
+  const other = run.roster.find((x) => x !== f);
+  f.mood = { n: -15, weeks: 2 };
+  run.plot.nextAt = 999;
+  const week = () => { run.event = null; run.boutPending = false; advanceWeek(run); };
+  while (run.week % 4 !== 3) week();
+  week();
+  assert.deepEqual(f.mood ?? { n: 0 }, f.mood?.n < 0 ? { n: -10, weeks: f.mood.weeks } : f.mood ?? { n: 0 });
+  assert.ok(!f.mood || f.mood.weeks <= 2 || f.mood.n >= 0, 'a bad mood is eased, never prolonged');
+  for (let i = 0; i < 12; i++) week();
+  assert.ok((other.mood?.n ?? 0) <= PLOT.priestMorale, 'never piles up');
+  assert.match(run.log.map((l) => l.text).join(' '), /A blessing from Varia/);
+});
+
+test('playtest: freed prisoners never share a name with an arena or bracket opponent', () => {
+  const { run } = withPrisoner();
+  for (let seed = 1; seed <= 30; seed++) {
+    const t = PLOT_EVENT_BY_ID.freeCondemned.target(run, createRng(seed));
+    const opponents = Object.values(run.arenas).flatMap((a) => [a.opponent?.name, a.rival?.name]);
+    assert.ok(!opponents.includes(t.name), t.name);
+  }
+});
+
+test('playtest: recruiting the champion shows its odds, offers two fighters, and the roll matches the odds', async () => {
+  const { recruitOdds } = await import('../src/plot.js');
+  const { choiceLabel } = await import('../src/events.js');
+  const { eventNames } = await import('../src/run.js');
+  const { run } = withPrisoner();
+  run.plot.stage = 'cause';
+  run.roster[0].morale = 70;
+  run.event = { id: 'recruitChampion', plot: true, ...PLOT_EVENT_BY_ID.recruitChampion.target(run, run.rng.plot) };
+  const labels = PLOT_EVENT_BY_ID.recruitChampion.choices.map((c) => choiceLabel(c, eventNames(run)));
+  assert.match(labels[1], /\(\d+% they say yes\)/);
+  assert.equal(recruitOdds({ morale: 70 }), 70);
+  assert.equal(recruitOdds({ morale: 5 }), 20);
+  let yes = 0;
+  for (let seed = 1; seed <= 400; seed++) {
+    const r = withPrisoner(seed).run;
+    r.plot.stage = 'cause';
+    for (const x of r.roster) x.morale = 60;
+    card(r, 'recruitChampion', 1);
+    if (r.plot.champion) yes++;
+  }
+  assert.ok(Math.abs(yes / 400 - 0.6) < 0.07, `${yes}/400`);
+});
+
+test('playtest: the prefect\'s offer waits until the Cause is well under way', () => {
+  const { run } = withPrisoner();
+  run.plot.stage = 'cause';
+  run.plot.causeWeek = run.week;
+  assert.equal(PLOT_EVENT_BY_ID.theOffer.when(run), false);
+  run.week += PLOT.offerAfter;
+  assert.equal(PLOT_EVENT_BY_ID.theOffer.when(run), true);
+});
+
+test('playtest: in the Cause, the coup\'s must-haves (arms, a champion) come up first about half the time', () => {
+  let needed = 0;
+  for (let seed = 1; seed <= 200; seed++) {
+    const { run } = withPrisoner(seed);
+    Object.assign(run.plot, { stage: 'cause', nextAt: 0, causeWeek: run.week });
+    run.event = null;
+    run.boutPending = false;
+    advanceWeek(run);
+    if (['armBarracks', 'recruitChampion'].includes(run.event?.id)) needed++;
+  }
+  assert.ok(needed >= 100, `${needed}/200`);
+});
+
+test('playtest: plot cards hide "Nothing happens"; the Codex never names a prisoner\'s cell on purchase', async () => {
+  const { eventCard } = await import('../src/ui/views.js');
+  const { run, f } = withPrisoner();
+  run.event = { id: 'chalkMark', plot: true, f: f.id };
+  assert.doesNotMatch(eventCard(run), /Nothing happens/);
+});
+
+test('playtest: the Liaison\'s convict is Market-strength; its prisoner of war costs more by tier', async () => {
+  const { LIAISON } = await import('../src/data.js');
+  const run = createRun(6);
+  run.prestigeLevel = 2;
+  run.buildings.push({ id: 'bl', type: 'liaison', level: 1 });
+  for (let i = 0; i < 6 && !run.liaisonOffer; i++) { if (run.event) chooseEvent(run, 0); run.boutPending = false; advanceWeek(run); } // to a month start
+  const f = run.liaisonOffer;
+  const { KINDS, CIRCUITS } = await import('../src/data.js');
+  assert.equal(f.power, KINDS[f.kind].basePower + CIRCUITS[0].marketPower);
+  assert.ok([LIAISON.convictPrice, 1].includes(f.price));
 });

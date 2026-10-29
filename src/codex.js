@@ -1,7 +1,7 @@
 // The Codex: an unlockable glossary that persists across careers. Pure.
 // Rules entries unlock the first time you see something; lore unlocks when you defeat it.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE, FAVOR, BLOODIED, KILL_MARKS, TACTICS, HUMORS, FESTIVALS, SCARS, AUGMENTS, SIGNATURES, SIGNATURE, MERCY } from './data.js';
+import { ECONOMY, KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE, FAVOR, BLOODIED, KILL_MARKS, TACTICS, HUMORS, FESTIVALS, SCARS, AUGMENTS, SIGNATURES, SIGNATURE, MERCY } from './data.js';
 import { oracleLevel } from './ludus.js';
 import { boutFor, unlockedTiers } from './run.js';
 
@@ -49,6 +49,7 @@ const LORE = {
 };
 
 const BASICS = [
+  ['challenger', 'Challengers', `From the Silver Coliseum on, famous fighters draw tougher opponents in your top arena: +1 Power for the opponent per ${ECONOMY.challengerRenown} Renown of the fighter they face, up to +${ECONOMY.challengerMax}.`],
   ['power', 'Power', 'Decides who wins each round. What matters is the difference (Delta): +1 gives 55%, +3 gives 70%, +5 gives 95% per round. Being out-powered also makes injuries worse.'],
   ['speed', 'Speed', 'Decides who strikes first each round (Speed + a d6 roll). The first striker gets +10% to win the round and rolls to injure before the other can hit back. Speed trains at +3 a week, and every point faster than your opponent is −4% to be injured (up to −20%).'],
   ['rounds', 'Rounds and matches', 'A match is best of 3 rounds. Each round: strike order (Speed + a die), then Power, then trait bonuses, then a roll for the round winner. Then BOTH fighters try to injure each other, whoever won: the round loser is much easier to hurt (25% vs 10% at even Power, more as the gap grows), and the first striker swings first.'],
@@ -190,7 +191,8 @@ function rebellionKeys(run) {
   if (!p) return [];
   const keys = [];
   if (p.trust > 0 || p.stage !== 'mark') keys.push('rebellion:mark', 'rebellion:political');
-  for (const c of [...p.cells, ...p.freed.map((x) => x.cell)]) if (p.trust > 0) keys.push(`rebellion:${c}`);
+  // A cell is learned from someone you freed: never from a prisoner just bought (playtest #7: that unmasked them).
+  for (const c of p.freed.map((x) => x.cell)) keys.push(`rebellion:${c}`);
   if (p.suspicion >= 20) keys.push('rebellion:suspicion');
   if (p.freed.length) keys.push('rebellion:freed');
   if (['cause', 'ready'].includes(p.stage) || ['coup', 'martyr'].includes(p.ended)) keys.push('rebellion:usurper');

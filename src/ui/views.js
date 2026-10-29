@@ -258,6 +258,7 @@ function weekPanel(run) {
       <p class="sub">Each fighter does their job once per week. Jobs stay set until you change them.
         ${tributePaid(run) ? '<span class="good">✔ Tribute already paid for this year.</span> The next one is due next winter.' : `Tribute of <b>${tributeDue(run)} Gold</b> is due in ${toTribute} week${toTribute === 1 ? '' : 's'}. ${buttonWhy('Pay now', 'pay-tribute', {}, payTributeBlocker(run), 'btn small')}`}</p>
       ${standingsTable(run)}
+      ${friendsOutside(run)}
       <h3 class="mini">House log</h3>
       <ul class="log">${recent}</ul>
       ${run.log.length > 9 ? `<details class="more" data-key="full-log"><summary>Full house log (${run.log.length} entries)</summary>
@@ -289,6 +290,14 @@ export function houseTag(run, f) {
 }
 
 // The rival houses and your place among them.
+// v6: the people you freed (contacts), once there are any. Only the player's own memory of who they freed: no numbers.
+const CELL_NOTE = { officer: 'an old soldier', scribe: 'a palace clerk', priest: 'a priest', courier: 'a runner' };
+function friendsOutside(run) {
+  const freed = run.plot?.freed ?? [];
+  if (!freed.length) return '';
+  return `<h3 class="mini">Friends outside the walls</h3><ul class="log">${freed.map((c) => `<li class="${c.caught ? 'bad' : 'good'}">${esc(c.name)}, ${CELL_NOTE[c.cell] ?? 'a friend'}${c.caught ? ' (taken by the Praetorians)' : ''}</li>`).join('')}</ul>`;
+}
+
 export function standingsTable(run) {
   if (!run.houses) return '';
   const rows = standings(run).map((h, i) => {
@@ -542,7 +551,8 @@ export function marketTab(run) {
           <div class="label">Gear <small>(sells for half price)</small></div><div>${stored}</div>
           <div class="row">${button('Unequip all fighters', 'unequip-all', {}, unequipAllBlocker(run), 'btn small')}<small class="sub">Returns every fighter's weapon and armor here, to hand out afresh.</small></div>
           <div class="label">Decor</div><div class="chips">${storedDecor}</div>
-          <div class="label">Fight items</div><div class="chips">${Object.entries(run.inventory.items ?? {}).filter(([, n]) => n).map(([k, n]) => `<span class="chip" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">None. The Apothecary sells them.</small>'}</div>`)}
+          <div class="label">Fight items</div><div class="chips">${Object.entries(run.inventory.items ?? {}).filter(([, n]) => n).map(([k, n]) => `<span class="chip" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</span>`).join(' ') || '<small class="sub">None. The Apothecary sells them.</small>'}</div>
+          ${run.plot?.pass && !run.plot.ended ? '<div class="label">In the strongbox</div><div class="chips"><span class="chip" title="A pass bearing the Emperor\'s seal. Good for one visit from the Praetorians.">📜 Forged imperial pass</span></div>' : ''}`)}
         ${fold('apothecary', 'Apothecary', `<p class="sub">Single-use items for a fight. Use them before Round 1 or between rounds: one of each kind per fight.</p>${Object.entries(CONSUMABLES).map(([k, c]) => `<div class="shop-row"><div><b>${esc(c.name)}</b> · ${c.price} Gold <small>(${run.inventory.items?.[k] ?? 0} in storeroom)</small><br><small>${esc(c.desc)}</small></div>
           ${button('Buy', 'buy-item', { item: k }, buyItemBlocker(run, k), 'btn small primary')}</div>`).join('')}`)}
         ${fold('decor', 'Decor merchant', `<p class="sub">Every item adds +${MORALE.perDecor} comfort to the fighter whose room it's in: their Morale drifts that much higher. Each room fits up to ${maxLevel(run, 'quarters')} of each item (your best Fighter Quarters level).</p>${decorShop}`)}
@@ -641,6 +651,12 @@ function mercyCard(run) {
     </div></div></section>`;
 }
 
+// A choice's visible stakes; a plot card (v6) shows nothing rather than "Nothing happens" when only hidden things change.
+const cardStakes = (run, c) => {
+  const t = stakesText(c.effects);
+  return run.event?.plot && t === 'Nothing happens' ? '' : t;
+};
+
 export function eventCard(run) {
   if (run.mercy) return mercyCard(run);
   if (!run.event) return '';
@@ -648,7 +664,7 @@ export function eventCard(run) {
   const names = eventNames(run);
   const who = [run.event.f, run.event.g].map((id) => run.roster.find((f) => f.id === id)).filter(Boolean);
   const faces = who.map((f) => portrait(f, 56)).join('');
-  const choices = e.choices.map((c, i) => `<div class="event-choice">${buttonWhy(esc(choiceLabel(c, names)), 'event-choice', { index: i }, eventChoiceBlocker(run, i), 'btn')}<small>${esc(stakesText(c.effects).replace(/\bthem\b/g, names.f ?? 'them').replace(/\bthe other\b/g, names.g ?? 'the other'))}</small></div>`).join('');
+  const choices = e.choices.map((c, i) => `<div class="event-choice">${buttonWhy(esc(choiceLabel(c, names)), 'event-choice', { index: i }, eventChoiceBlocker(run, i), 'btn')}<small>${esc(cardStakes(run, c).replace(/\bthem\b/g, names.f ?? 'them').replace(/\bthe other\b/g, names.g ?? 'the other'))}</small></div>`).join('');
   return `<section class="panel event-card"><div class="event-faces">${faces}</div><div class="event-body">
     <div class="label">This week</div><h2>${esc(e.title)}</h2><p>${esc(e.text(names))}</p>
     <div class="row event-choices">${choices}</div></div></section>`;

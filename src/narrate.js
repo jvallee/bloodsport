@@ -155,6 +155,7 @@ export function adviceFor(m) {
   const chance = m.rounds.reduce((n, r) => n + (r.win?.chance ?? deltaRow(r.delta).win), 0) / Math.max(1, m.rounds.length);
   const worst = Math.min(...m.rounds.map((r) => r.delta));
   const avgDelta = m.rounds.reduce((n, r) => n + r.delta, 0) / Math.max(1, m.rounds.length);
+  if (m.result.reason === 'towel') return 'You saved your fighter. Heal them in the Medbay before the next bout.'; // capitulated: not "lost anyway"
   if (avgDelta >= 2) return `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.`;
   if (chance >= 60000) return `${you} was favoured in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.`;
   if (worst <= -2 && chance < 45000) return `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.`;

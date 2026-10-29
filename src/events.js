@@ -71,7 +71,7 @@ export const EVENTS = [
     text: () => 'A caravan from the east stops at your gate, selling War Paint at half price.',
     choices: [
       { label: 'Not today', effects: {} },
-      { label: 'Buy War Paint (5 Gold)', cost: 5, effects: { gold: -5, item: 'warPaint' } },
+      { label: 'Buy War Paint (2 Gold)', cost: 2, effects: { gold: -2, item: 'warPaint' } },
     ],
     who: 'any',
   },
@@ -200,6 +200,8 @@ export function stakesText(eff, sep = '; ') {
   if (eff.giveGear) house.push(`${eff.giveGear} pieces of gear handed over`);
   if (eff.contact === 'new') house.push('a prisoner goes free');
   if (eff.coup) house.push('there is no turning back');
+  if (eff.champion) add(eff.champion, 'joins the cause');
+  if (eff.betray) house.push('your political prisoners and everyone you freed are executed; the Emperor rewards you');
   const parts = [house.join(', '), ...Object.entries(people).map(([to, list]) => `${WHO[to]}: ${list.join(', ')}`)].filter(Boolean);
   if (eff.chance) {
     const win = stakesText(eff.chance.win, ', ');

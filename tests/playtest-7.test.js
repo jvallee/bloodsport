@@ -87,3 +87,28 @@ test('the fight screen shows the tournament bracket: this match, then who is up 
   assert.match(bracketStrip({ ...bracket, round: 2 }, true), /Final · up next<\/b><small>Cato/);
   assert.equal(bracketStrip(null, false), '');
 });
+
+test('blind playtest: the caravan\'s "half price" War Paint really is half price', async () => {
+  const { EVENT_BY_ID } = await import('../src/events.js');
+  const { CONSUMABLES } = await import('../src/data.js');
+  assert.equal(EVENT_BY_ID.caravan.choices[1].cost, CONSUMABLES.warPaint.price / 2);
+});
+
+test('blind playtest: a feud or a life owed set at a tournament lasts its full months', async () => {
+  const { HOUSES } = await import('../src/data.js');
+  const run = createRun(1);
+  recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  const h = run.houses[0];
+  h.owed = HOUSES.feudMonths;
+  h.since = run.week; // set during this tournament week
+  run.boutPending = false;
+  advanceWeek(run); // the tournament week ends
+  assert.equal(h.owed, HOUSES.feudMonths, 'not counted down at the end of the week it was set');
+});
+
+test('blind playtest: capitulating as the stronger fighter isn\'t called "lost anyway"', async () => {
+  const { adviceFor } = await import('../src/narrate.js');
+  const m = { a: { f: { name: 'Ignatia' } }, result: { winner: 'B', reason: 'towel' }, preMatch: [], rounds: [{ delta: 3, win: { chance: 70000 }, checks: [] }] };
+  assert.match(adviceFor(m), /You saved your fighter/);
+});

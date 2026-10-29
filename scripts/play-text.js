@@ -25,6 +25,12 @@ import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotNa
 import { INTRO, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText } from '../src/codex.js';
 
+// A card choice's visible stakes. Plot cards (v6) show nothing rather than "Nothing happens" when only hidden things change.
+const plotStakes = (run, c) => {
+  const t = stakesText(c.effects);
+  return run.event?.plot && t === 'Nothing happens' ? '' : ` → ${t}`;
+};
+
 // Web-only phrasing ("hover", "on the right", key shortcuts) translated for the text port.
 const textHint = (t) => t
   .replace(/\s*\(Space\)/g, ' (`end-week`)').replace(/\s*\(T\)/g, ' (`to-tournament`)')
@@ -156,8 +162,9 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const stakes = arenaStakes(run, tier);
     // The long lower-arena rules print once per screen; later lower arenas point back to them.
     if (stakes) lines.push(!bout.top && tier !== GRAND_TIER && lowerShown++ ? '     Lower arena: same rules as above.' : `     ${stakes}`);
-    const ruleId = bout.boss ? bout.debuff : bout.top && oracleLevel(run) >= 2 && tier > 1 ? arena.debuff : null;
-    if (ruleId) lines.push(`     ${bout.boss ? 'Boss arena rule' : 'The Oracle foresees the Boss arena rule'}: ${BOSS_DEBUFFS[ruleId].name}. ${BOSS_DEBUFFS[ruleId].desc}`);
+    const revealed = run.plot?.reveal === tier; // v6: a rebel visitor whispered it
+    const ruleId = bout.boss ? bout.debuff : bout.top && (oracleLevel(run) >= 2 || revealed) && tier > 1 ? arena.debuff : null;
+    if (ruleId) lines.push(`     ${bout.boss ? 'Boss arena rule' : revealed && oracleLevel(run) < 2 ? 'A visitor whispered the Boss arena rule' : 'The Oracle foresees the Boss arena rule'}: ${BOSS_DEBUFFS[ruleId].name}. ${BOSS_DEBUFFS[ruleId].desc}`);
     else if (bout.boss && tier === 1) lines.push('     This first Boss fights without an arena rule.');
     if (hasBracket(tier)) {
       const b = bracketOf(run, tier);
@@ -221,12 +228,13 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (run.mercy) out.push(`\n${mercyText()}`);
     if (run.status !== 'active') {
       const fought = run.history.filter((h) => !h.skipped && !h.forfeit);
+      for (const line of run.epilogue ?? []) out.push(`\n${line}`);
       out.push(`\n*** CAREER OVER: ${run.endReason} ***\nSurvived ${plural(run.week, 'week')} · ${fought.filter((h) => h.won).length} wins, ${fought.filter((h) => !h.won).length} losses · top arena: ${arenaName(run.topTier)} · fallen: ${run.fallen.map((f) => f.name).join(', ') || 'none'}`);
     }
     if (run.event) {
       const e = EVENT_BY_ID[run.event.id];
       const names = eventNames(run);
-      out.push(`\n*** EVENT: ${e.title} ***\n${e.text(names)}\n${e.choices.map((c, i) => `  choose ${i}: ${choiceLabel(c, names)} → ${stakesText(c.effects)}${eventChoiceBlocker(run, i) ? ` (can't: ${eventChoiceBlocker(run, i)})` : ''}`).join('\n')}`);
+      out.push(`\n*** EVENT: ${e.title} ***\n${e.text(names)}\n${e.choices.map((c, i) => `  choose ${i}: ${choiceLabel(c, names)}${plotStakes(run, c)}${eventChoiceBlocker(run, i) ? ` (can't: ${eventChoiceBlocker(run, i)})` : ''}`).join('\n')}`);
     }
     out.push(`\n-- Your gladiators ${run.roster.length}/${rosterCap(run)} · training costs ${trainCost(run)} Gold a week --`);
     out.push(run.roster.length ? run.roster.map(fighterBlock).join('\n') : '(none: `market` to see who is for sale)');
@@ -303,6 +311,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       for (const [cat, title] of Object.entries(SECTIONS)) {
         const list = ENTRIES.filter((e) => e.cat === cat);
         const open = list.filter((e) => isUnlocked(codex, e));
+        if (list.some((e) => e.hidden) && !open.length) continue; // v6: hidden until something in it is found
         out.push(`${title} (${open.length}/${list.length}): ${open.map((e) => e.key).join(', ') || '—'}`);
       }
       return out.join('\n');

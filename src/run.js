@@ -7,10 +7,10 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON,
 } from './data.js';
-import { CELL_IDS, CLUES, PLOT_EVENTS, isArmed, coupBonus } from './plot.js';
-import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower } from './fight.js';
+import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
+import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt } from './fight.js';
 import { Refused } from './errors.js';
 import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabel } from './events.js';
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament } from './calendar.js';
@@ -125,7 +125,8 @@ export function boutFor(run, tier = run.topTier) {
   const s = arena.stage;
   // This tournament week's festival (or the coming one's, for previews).
   // A settled arena previews next month's bout, so it looks past this week.
-  const from = run.bouts?.[tier] === 'done' ? run.week + 1 : run.week;
+  // An arena with no open bout this week (settled, or opened mid-tournament) previews next month's (blind playtest #7).
+  const from = run.bouts && run.bouts[tier] !== 'open' ? run.week + 1 : run.week;
   const fest = festivalOn(from + weeksUntilTournament(from));
   // The Dirt Pits never turn a house away: one that can't afford the buy-in pays what Prestige it has (even 0),
   // so a career can always win its way back.
@@ -315,7 +316,11 @@ function refreshLiaison(run) {
   run.liaisonOffer = null;
   if (!lv) return;
   const elite = lv >= 2;
-  const f = createFighter(run.rng.market, { id: newId(run, 'f'), power: Math.max(3, currentBout(run).oppPower + (elite ? 1 : -2)), takenNames: takenNames(run), classes: run.setup?.classes });
+  // A convict is a Market-strength fighter, wounded and cheap; a prisoner of war is near the arena's Power and costs more
+  // (playtest #7: 1-Gold convicts at Power 16 against the Market's 7–10 made the Liaison a no-brainer).
+  const natural = (kind) => KINDS[kind].basePower + circuitInfo(run).marketPower;
+  const f = createFighter(run.rng.market, { id: newId(run, 'f'), takenNames: takenNames(run), classes: run.setup?.classes });
+  f.power = elite ? Math.max(natural(f.kind), currentBout(run).oppPower + LIAISON.elitePower) : natural(f.kind);
   // A prisoner arrives at their arena's Power, but anything above a Market fighter's natural Power is training they
   // already did elsewhere: it counts toward the Trainer cap, so they can't train another full cap on top (playtest #7).
   const prior = Math.max(0, f.power - (KINDS[f.kind].basePower + circuitInfo(run).marketPower));
@@ -323,7 +328,7 @@ function refreshLiaison(run) {
   f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
   f.stress = elite ? 30 : 40;
   f.morale = elite ? 40 : 30;
-  f.price = elite ? 4 : 1;
+  f.price = elite ? LIAISON.elitePrice + LIAISON.elitePerTier * Math.min(run.topTier, CIRCUITS.length) : LIAISON.convictPrice;
   f.origin = elite ? 'Prisoner of war' : 'Condemned convict';
   markPolitical(run, f);
   run.liaisonOffer = f;
@@ -379,9 +384,12 @@ function duePlotCard(run) {
   if (forced) return forced;
   if (run.week < run.plot.nextAt) return null;
   const options = PLOT_EVENTS.filter((e) => !e.forced && ok(e));
+  // In the Cause, what the coup still needs (arms, a champion) comes first, half the time (playtest #7: they took 60 weeks).
+  const needed = options.filter((e) => e.needed?.(run));
+  if (needed.length && next(run.rng.plot) < 0.5) return pick(run.rng.plot, needed);
   if (options.length) return pick(run.rng.plot, options);
   // Nothing new for this stage: the rebels ask again (never the Mark or the prefect's one-time offer).
-  const again = PLOT_EVENTS.filter((e) => !e.forced && !['chalkMark', 'theOffer'].includes(e.id) && e.stages.includes(run.plot.stage) && (!e.when || e.when(run)));
+  const again = PLOT_EVENTS.filter((e) => !e.forced && e.id !== 'theOffer' && e.stages.includes(run.plot.stage) && (!e.when || e.when(run)));
   return again.length ? pick(run.rng.plot, again) : null;
 }
 
@@ -409,10 +417,22 @@ function plotMonth(run) {
     p.pass = true;
     log(run, 'A sealed letter arrives with no name on it. Inside: a pass bearing the Emperor\'s seal.', 'event');
   }
-  if (contacts.some((c) => c.cell === 'priest')) for (const f of run.roster) f.mood = { n: (f.mood?.n ?? 0) + 3, weeks: MOOD_WEEKS };
+  const priest = contacts.find((c) => c.cell === 'priest');
+  if (priest) {
+    // A blessing lifts spirits: a good mood for the month, or a bad one eased (never prolonged).
+    for (const f of run.roster) f.mood = f.mood?.n < 0 ? { ...f.mood, n: Math.min(0, f.mood.n + PLOT.priestMorale) } : { n: Math.max(f.mood?.n ?? 0, PLOT.priestMorale), weeks: MOOD_WEEKS };
+    log(run, `A blessing from ${priest.name} reaches the barracks in secret. Spirits lift.`, 'good');
+  }
+  const courier = contacts.find((c) => c.cell === 'courier');
+  if (courier && p.suspicion >= PLOT.suspicion.watch && next(run.rng.plot) < 0.5) log(run, `${courier.name} sends word: the Praetorians are watching another house this month.`, 'good');
   // The signs of suspicion: never a number, only what the house can see.
-  if (p.suspicion >= PLOT.suspicion.cold) changeFavor(run, -1, 'the palace grows cold toward your house');
-  else if (p.suspicion >= PLOT.suspicion.watch && next(run.rng.plot) < 0.5) log(run, 'A Praetorian watched training today, and wrote something down.', 'warn');
+  if (p.suspicion >= PLOT.suspicion.cold) {
+    changeFavor(run, -1, 'the palace grows cold toward your house');
+    log(run, pick(run.rng.plot, SUSPICION_SIGNS.high), 'bad');
+  } else if (p.suspicion >= PLOT.suspicion.watch && next(run.rng.plot) < 0.5) {
+    log(run, pick(run.rng.plot, p.suspicion >= PLOT.suspicion.informer ? SUSPICION_SIGNS.mid : SUSPICION_SIGNS.low), 'warn');
+  }
+  if (p.stage === 'ready' && next(run.rng.plot) < 0.5) log(run, pick(run.rng.plot, SUSPICION_SIGNS.ready), 'event');
   // A champion who has fallen or left can't strike the blow: the rising looks for another.
   if (p.champion && !run.roster.some((f) => f.id === p.champion)) p.champion = null;
   if (p.stage === 'ready' && !p.champion) p.stage = 'cause';
@@ -438,7 +458,11 @@ function postponeCoup(run) {
 function advancePlot(run) {
   const p = run.plot;
   if (p.refusals >= PLOT.refusalsToCold) return endPlot(run, 'cold');
-  if (p.stage === 'favours' && p.trust >= PLOT.cause.trust && run.prestigeLevel >= PLOT.cause.houseLevel) p.stage = 'cause';
+  if (p.stage === 'favours' && p.trust >= PLOT.cause.trust && (p.favours ?? 0) >= PLOT.cause.favours && run.week - (p.markWeek ?? 0) >= PLOT.cause.weeks
+    && run.prestigeLevel >= PLOT.cause.houseLevel) {
+    p.stage = 'cause';
+    p.causeWeek = run.week;
+  }
   if (p.stage === 'cause' && p.trust >= PLOT.ready.trust && isArmed(run) && run.roster.some((f) => f.id === p.champion)) p.stage = 'ready';
 }
 
@@ -446,13 +470,16 @@ function advancePlot(run) {
 function applyPlotEffects(run, eff, ev, out) {
   const p = run.plot;
   const f = findFighter(run, ev.f);
-  if (eff.trust) p.trust = Math.max(0, p.trust + eff.trust);
+  if (eff.trust) p.trust = clamp(p.trust + eff.trust, 0, PLOT.maxTrust);
   if (eff.suspicion) changeSuspicion(run, eff.suspicion);
-  if (eff.stage) p.stage = eff.stage;
+  if (eff.stage) {
+    p.stage = eff.stage;
+    if (eff.stage === 'favours') p.markWeek = run.week;
+  }
   if (eff.reveal) p.reveal = run.topTier;
   if (eff.hide) { p.hidden = eff.hide; out.push('a stranger sleeps in the Medbay'); }
   if (eff.crowd) p.crowdUntil = run.week + eff.crowd;
-  if (eff.pass) p.pass = true;
+  if (eff.pass) { p.pass = true; out.push('the pass is hidden in your strongbox'); }
   if (eff.usePass) p.pass = false;
   if (eff.armed) p.armed = true;
   if (eff.giveGear) {
@@ -461,7 +488,11 @@ function applyPlotEffects(run, eff, ev, out) {
       for (const slot of ['weapon', 'armor']) if (left > 0 && x.gear[slot]) { x.gear[slot] = null; left--; }
     }
   }
-  if (eff.champion && f) { p.champion = f.id; out.push(`${f.name} is with you`); }
+  if (eff.champion) {
+    const who = findFighter(run, ev[eff.champion]);
+    if (who) { p.champion = who.id; chronicle(run, who, 'Swore to strike the blow when the Emperor comes to the games.'); out.push(`${who.name} is with you`); }
+  }
+  if (eff.cool && f) bumpMorale(f, -eff.cool);
   if (eff.mark) { const o = run.arenas[run.topTier]?.opponent; if (o) o.rebel = true; }
   if (eff.contact === 'new') addContact(run, ev.name, pick(run.rng.plot, CELL_IDS), ev.id);
   if (eff.freeAsker && f) {
@@ -510,9 +541,12 @@ function betray(run) {
   const p = run.plot;
   const victims = [...run.roster.filter((f) => f.political).map((f) => f.name), ...p.freed.filter((c) => !c.caught).map((c) => c.name)];
   for (const f of run.roster.filter((x) => x.political)) {
+    chronicle(run, f, 'Named as a traitor by their own house, and executed.');
     removeFromRoster(run, f);
     run.fallen.push({ ...f, alive: false, diedWeek: run.week });
+    log(run, `${f.name} is dragged from the barracks by the Praetorians, on your word. They are executed at noon.`, 'bad');
   }
+  for (const c of p.freed.filter((x) => !x.caught)) log(run, `${c.name} is found hiding in the city, and executed.`, 'bad');
   for (const c of p.freed) c.caught = true;
   p.executed = victims;
   changeFavor(run, PLOT.betrayFavor, 'you gave the Emperor the names he wanted');
@@ -607,6 +641,7 @@ function rivalsCompete(run) {
   for (const h of run.houses) {
     if (next(r) < 0.5) h.glory += HOUSES.glory.win * h.tier;
     h.tier = houseTier(h);
+    if (h.since === run.week - 1) continue; // set during the tournament week just ended: it starts counting next month
     h.feud = Math.max(0, h.feud - 1);
     h.vengeance = Math.max(0, h.vengeance - 1);
     h.owed = Math.max(0, (h.owed ?? 0) - 1);
@@ -1003,7 +1038,7 @@ function rollEvent(run) {
 // Names for an event's text: { f, g }.
 export function eventNames(run, ev = run.event) {
   const name = (id) => findFighter(run, id)?.name;
-  return { f: name(ev?.f), g: name(ev?.g), name: ev?.name, house: ev?.house, opp: ev?.opp };
+  return { f: name(ev?.f), g: name(ev?.g), name: ev?.name, house: ev?.house, opp: ev?.opp, fOdds: ev?.fOdds, gOdds: ev?.gOdds };
 }
 
 export function eventChoiceBlocker(run, index) {
@@ -1059,13 +1094,17 @@ export function chooseEvent(run, index) {
   const e = EVENT_BY_ID[ev.id];
   const choice = e.choices[index];
   const out = [];
+  const names = eventNames(run, ev); // before the effects: a freed or executed fighter leaves the roster
   applyEventEffects(run, choice.effects, ev, out);
   if (ev.plot && plotActive(run)) {
     if (choice.refuse) run.plot.refusals += 1;
-    else if (choice.help) run.plot.refusals = 0;
+    else if (choice.help) {
+      run.plot.refusals = 0;
+      if (run.plot.stage === 'favours' && ev.id !== 'chalkMark') run.plot.favours = (run.plot.favours ?? 0) + 1;
+    }
     advancePlot(run);
   }
-  const text = `${e.title}: ${choiceLabel(choice, eventNames(run, ev))}.${out.length ? ` ${out.join(', ')}.` : ''}`;
+  const text = `${e.title}: ${choiceLabel(choice, names)}.${out.length ? ` ${out.join(', ')}.` : ''}`;
   log(run, text, 'event');
   run.event = null;
   checkLoss(run);
@@ -1640,6 +1679,7 @@ export function finishMatch(run, match) {
       house.glory = Math.max(0, house.glory - HOUSES.glory.beaten);
       if (match.result.reason === 'death') {
         house.feud = HOUSES.feudMonths;
+        house.since = run.week;
         run.graveyard = [...(run.graveyard ?? []), opp.name]; // the dead don't come back
         summary.feud = `${house.name} swears revenge: their fighters get +1 Power against you for ${HOUSES.feudMonths} months.`;
         log(run, summary.feud, 'warn');
@@ -1649,6 +1689,7 @@ export function finishMatch(run, match) {
       house.tier = houseTier(house);
       if (!fighter.alive) {
         house.vengeance = HOUSES.feudMonths;
+        house.since = run.week;
         summary.feud = `Your house wants vengeance on ${house.name}: +5% win chance against their fighters for ${HOUSES.feudMonths} months.`;
         log(run, summary.feud, 'event');
       }
@@ -1765,7 +1806,8 @@ function offerMercy(run, match, summary, fighter, opp, tier) {
   const wounds = effectiveInjuries(match.b.f);
   if (wounds < MERCY.minInjuries) return;
   const house = houseOf(run, opp);
-  const blood = Boolean(house?.feud || house?.vengeance) || wounds >= 2;
+  // The crowd smells blood once the beaten fighter's Death Gate is open (Lions, Unbreakable and Iron Will move it).
+  const blood = Boolean(house?.feud || house?.vengeance) || wounds >= deathGateAt(match.b.f, match.b.arena);
   run.mercy = { fighterId: fighter.id, opp: opp.name, house: house?.id ?? null, crowd: blood ? 'kill' : 'spare', tier, top: Boolean(summary.top), at: run.history.length - 1 };
   summary.mercy = run.mercy.crowd;
 }
@@ -1810,6 +1852,7 @@ export function resolveMercy(run, choice) {
     if (crowd === 'kill' && house) {
       house.feud = 0;
       house.owed = HOUSES.feudMonths;
+      house.since = run.week;
       out.owed = `${house.name} owes you a life: their fighters get −1 Power against you for ${HOUSES.feudMonths} months.`;
       log(run, out.owed, 'good');
     }
@@ -1829,6 +1872,7 @@ export function resolveMercy(run, choice) {
     run.graveyard = [...(run.graveyard ?? []), opp]; // the dead don't come back
     if (house && crowd !== 'kill') { // a kill the crowd demanded is the crowd's will: no feud
       house.feud = HOUSES.feudMonths;
+      house.since = run.week;
       out.feud = `${house.name} swears revenge: their fighters get +1 Power against you for ${HOUSES.feudMonths} months.`;
       log(run, out.feud, 'warn');
     }
