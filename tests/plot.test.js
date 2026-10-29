@@ -364,3 +364,41 @@ test('the Liaison card shows the prisoner\'s record; the end screen names the pl
   playGrand(won, champ.id, true);
   assert.match(endBanner(won), /The Tyrant Falls[\s\S]*Varia/);
 });
+
+test('Legacy: the plot\'s achievements stay secret until earned; the coup and the Martyr unlock a patron', async () => {
+  const { ACHIEVEMENTS, createLegacy, checkAchievements, unlockedPatrons, careerScore } = await import('../src/legacy.js');
+  const { legacyPanel } = await import('../src/ui/views.js');
+  const legacy = createLegacy();
+  assert.doesNotMatch(legacyPanel(legacy), /Sic Semper|Thirty Pieces/);
+  assert.match(legacyPanel(legacy), /\?\?\?/);
+  const { run, champ } = coupReady();
+  playGrand(run, champ.id, true);
+  const got = checkAchievements(legacy, run).map((a) => a.id);
+  assert.ok(got.includes('coup') && got.includes('chalk'));
+  assert.ok(unlockedPatrons(legacy).includes('liberator'));
+  assert.equal(unlockedPatrons(legacy).filter((p) => p === 'liberator').length, 1);
+  assert.ok(ACHIEVEMENTS.filter((a) => a.secret).length >= 4);
+  assert.ok(careerScore(run) >= 300);
+});
+
+test('the Liberator patron starts the career with a political prisoner and the thread begun', () => {
+  const run = createRun(4, { patron: 'liberator', decrees: [], classes: [] });
+  assert.ok(run.roster.some((f) => f.political));
+  assert.equal(run.plot.stage, 'mark');
+});
+
+test('the Codex\'s Rebellion section is hidden until the plot is found', async () => {
+  const { createCodex, discover, ENTRIES, SECTIONS, progress, isUnlocked, hasLore } = await import('../src/codex.js');
+  const { codexTab } = await import('../src/ui/views.js');
+  const codex = createCodex();
+  const plain = createRun(1);
+  discover(codex, plain);
+  assert.doesNotMatch(codexTab(codex, ENTRIES, SECTIONS, [], progress(codex), isUnlocked, hasLore), /The Rebellion/);
+  const { run } = withPrisoner();
+  card(run, 'chalkMark', 1);
+  discover(codex, run);
+  const html = codexTab(codex, ENTRIES, SECTIONS, [], progress(codex), isUnlocked, hasLore);
+  assert.match(html, /The Rebellion/);
+  assert.match(html, /The broken chain/);
+  assert.match(html, /The Scribe/);
+});

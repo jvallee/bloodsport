@@ -155,6 +155,7 @@ export function setupModal(legacy, choice) {
 export function legacyPanel(legacy) {
   const rows = ACHIEVEMENTS.map((a) => {
     const got = legacy.achievements.includes(a.id);
+    if (a.secret && !got) return '<li class="secret"><b>☆ ???</b>: a secret of the empire.</li>';
     return `<li class="${got ? 'got' : ''}"><b>${got ? '★' : '☆'} ${esc(a.name)}</b>: ${esc(a.desc)} <small>${esc(unlockText(a))}</small></li>`;
   }).join('');
   const past = legacy.past.map((p) => `<li>${p.won ? '👑' : '⚰'} Seed ${p.seed}: score <b>${p.score}</b>, ${p.weeks} weeks${p.endReason ? ` · ${esc(p.endReason)}` : ''}</li>`).join('');
@@ -579,6 +580,7 @@ export function codexTab(codex, entries, sections, fresh, prog, isUnlocked, hasL
   const groups = Object.entries(sections).map(([cat, title]) => {
     const list = entries.filter((e) => e.cat === cat);
     const open = list.filter((e) => isUnlocked(codex, e)).length;
+    if (list.some((e) => e.hidden) && !open) return ''; // v6: the Rebellion section appears only once something in it is found
     const items = list.map((e) => {
       if (!isUnlocked(codex, e)) return `<div class="entry locked"><b>???</b><small>Meet one in the arena to learn more.</small></div>`;
       const lore = e.lore

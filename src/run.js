@@ -653,6 +653,14 @@ function applyPatron(run) {
     run.roster.push(f);
     chronicle(run, f, p === 'veteran' ? 'A veteran sent by your patron.' : `Defected from ${f.origin}.`);
   }
+  if (p === 'liberator') { // v6: friends of a past rising send one of their own
+    const f = createFighter(rng, { id: newId(run, 'f'), takenNames: takenNames(run), classes: run.setup.classes });
+    f.political = { cell: pick(run.rng.plot, CELL_IDS) };
+    f.origin = 'Sent by friends of the rising';
+    run.roster.push(f);
+    chronicle(run, f, 'Arrived at night, with a broken chain tattooed on one wrist.');
+    joinPlot(run, f);
+  }
   log(run, `Your patron: ${PATRONS[p].name}. ${PATRONS[p].desc}`, 'event');
 }
 

@@ -66,7 +66,10 @@ test('progress counts rules and lore entries', () => {
   const c = createCodex();
   const { found, total } = progress(c);
   assert.equal(found, 0);
-  assert.equal(total, ENTRIES.filter((e) => !e.always).length + ENTRIES.filter((e) => e.lore).length);
+  // v6: hidden entries (the Rebellion) count only once found, so the total never hints at them.
+  assert.equal(total, ENTRIES.filter((e) => !e.always && !e.hidden).length + ENTRIES.filter((e) => e.lore).length);
+  c.seen.push('rebellion:mark');
+  assert.deepEqual(progress(c), { found: 1, total: total + 1 });
 });
 
 test('loading a broken or missing codex starts fresh', () => {

@@ -115,6 +115,7 @@ export const PATRONS = {
   purse: { name: "A Merchant's Purse", desc: 'Start with +10 Gold.' },
   warChest: { name: 'The War Chest', desc: 'Start with 2 War Paint and a Blessed Bandage.' },
   defector: { name: 'A Defector', desc: 'A strong fighter from a rival house joins you at the start (Power +3).' },
+  liberator: { name: 'Friends of the Rising', desc: 'Start with a political prisoner in your roster. The rebels remember your house.' }, // v6, secret
 };
 
 // Emperor's Decrees: optional harder rules for a career, after your first win. Each adds to the score.

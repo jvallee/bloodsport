@@ -16,7 +16,10 @@ export const SECTIONS = {
   building: 'Buildings',
   perk: 'Perks',
   gear: 'Gear',
+  rebellion: 'The Rebellion', // v6: hidden until its first entry is found
 };
+// Sections that stay out of sight (and out of the count) until something in them is discovered.
+export const HIDDEN_SECTIONS = ['rebellion'];
 
 const LORE = {
   'kind:human': "Earth's most stubborn export. Battleworld's portals snatch humans from every century (legionaries, pit fighters, the occasional baffled accountant), and the angriest of them thrive.",
@@ -116,6 +119,20 @@ export function gearText(g) {
 const nameOf = (cat, id) => ({ kind: KINDS, trait: TRAITS, class: CLASSES, weapon: WEAPONS, debuff: BOSS_DEBUFFS, building: BUILDINGS, perk: PERKS, gear: GEAR })[cat]?.[id]?.name
   ?? INJURIES.find((i) => i.tag === id)?.name;
 
+// v6, the hidden plot: entries only the plot can unlock. Placeholder text, for the designer's voice.
+const REBELLION = [
+  ['mark', 'The broken chain', 'The rebels\' sign, chalked on doors across the city. Copy it, and they know you have answered.'],
+  ['political', 'Political prisoners', 'Some of the Liaison\'s prisoners were locked up for what they said, not what they did. Their prison records give them away to anyone who reads closely, and they always come cheap: someone pays to place them in a house.'],
+  ['officer', 'The Officer', 'A former centurion. Freed, an officer arms your barracks for the rising without costing you any gear.'],
+  ['scribe', 'The Scribe', 'A clerk from the palace archives. Freed, a scribe sometimes sends a forged imperial pass, good for one visit from the Praetorians.'],
+  ['priest', 'The Priest', 'A priest of a forbidden god. Freed, a priest\'s blessing lifts every fighter\'s Morale each month.'],
+  ['courier', 'The Courier', 'A runner who knows every alley. Freed, a courier keeps the Praetorians looking elsewhere: suspicion falls each month.'],
+  ['suspicion', 'The Emperor\'s eye', 'Every favour to the rebels draws the palace\'s attention, and so does every prisoner and every freed contact. A Praetorian taking notes, Favor slipping for no reason, a curious guest: these are the signs. Ignore them and the Praetorians come at dawn.'],
+  ['freed', 'The freed', 'Everyone you free becomes a contact outside the Ludus. When the day comes, they will be in the crowd: each one a voice cheering your champion (+3% win chance, up to +12%).'],
+  ['usurper', 'Silbannacus', 'He took the throne with a knife and a bribed legion, and he has feared knives ever since. The rebels say a usurper can be usurped.'],
+  ['coup', 'The day of the games', 'When the barracks are armed, the rebels trust you, and your champion is ready, the Emperor will come to watch the Grand Final. If your champion wins it, the empire changes hands.'],
+];
+
 // Every entry, grouped by section. Basics are always unlocked.
 export const ENTRIES = [
   ...BASICS.map(([id, name, rules]) => ({ key: `basics:${id}`, cat: 'basics', name, rules, always: true })),
@@ -128,6 +145,7 @@ export const ENTRIES = [
   ...Object.keys(BUILDINGS).map((id) => ({ key: `building:${id}`, cat: 'building', id })),
   ...Object.keys(PERKS).map((id) => ({ key: `perk:${id}`, cat: 'perk', id })),
   ...Object.keys(GEAR).map((id) => ({ key: `gear:${id}`, cat: 'gear', id })),
+  ...REBELLION.map(([id, name, rules]) => ({ key: `rebellion:${id}`, cat: 'rebellion', name, rules, hidden: true })),
 ].map((e) => ({ ...e, name: e.name ?? nameOf(e.cat, e.id), rules: e.rules ?? ruleText(e.cat, e.id), lore: LORE[e.key] ?? null }));
 
 export const createCodex = () => ({ seen: [], lore: [], fresh: [] });
@@ -162,7 +180,22 @@ export function discover(codex, run) {
     if (boutFor(run, t).boss || oracleLevel(run) >= 2) keys.push(`debuff:${run.arenas[t].debuff}`);
   }
   for (const [id, b] of Object.entries(BUILDINGS)) if (run.buildings.some((x) => x.type === id)) keys.push(`building:${id}`);
+  keys.push(...rebellionKeys(run));
   return unlock(codex, 'seen', keys);
+}
+
+// v6: what the player has learned about the rebellion so far.
+function rebellionKeys(run) {
+  const p = run.plot;
+  if (!p) return [];
+  const keys = [];
+  if (p.trust > 0 || p.stage !== 'mark') keys.push('rebellion:mark', 'rebellion:political');
+  for (const c of [...p.cells, ...p.freed.map((x) => x.cell)]) if (p.trust > 0) keys.push(`rebellion:${c}`);
+  if (p.suspicion >= 20) keys.push('rebellion:suspicion');
+  if (p.freed.length) keys.push('rebellion:freed');
+  if (['cause', 'ready'].includes(p.stage) || ['coup', 'martyr'].includes(p.ended)) keys.push('rebellion:usurper');
+  if (p.stage === 'ready' || ['coup', 'martyr'].includes(p.ended)) keys.push('rebellion:coup');
+  return keys;
 }
 
 // After a match: injuries both fighters took, and lore for whatever you defeated.
@@ -178,7 +211,8 @@ export const isUnlocked = (codex, entry) => entry.always || codex.seen.includes(
 export const hasLore = (codex, entry) => codex.lore.includes(entry.key);
 
 export function progress(codex) {
-  const total = ENTRIES.filter((e) => !e.always).length + ENTRIES.filter((e) => e.lore).length;
+  // Hidden entries only count once found, so the total never hints at them.
+  const total = ENTRIES.filter((e) => !e.always && (!e.hidden || isUnlocked(codex, e))).length + ENTRIES.filter((e) => e.lore).length;
   const found = ENTRIES.filter((e) => !e.always && isUnlocked(codex, e)).length + ENTRIES.filter((e) => e.lore && hasLore(codex, e)).length;
   return { found, total };
 }
