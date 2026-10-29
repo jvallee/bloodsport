@@ -374,7 +374,7 @@ function addContact(run, name, cell, how) {
 // Is a plot card due this week? Raids and the coup's eve come as soon as they can; the rest wait for nextAt.
 function duePlotCard(run) {
   if (!plotActive(run) || !run.roster.length) return null;
-  const ok = (e) => e.stages.includes(run.plot.stage) && (!e.when || e.when(run)) && (e.forced || !run.plot.seen.includes(e.id));
+  const ok = (e) => e.stages.includes(run.plot.stage) && (!e.when || e.when(run)) && (e.forced || e.repeat || !run.plot.seen.includes(e.id));
   const forced = PLOT_EVENTS.find((e) => e.forced && ok(e));
   if (forced) return forced;
   if (run.week < run.plot.nextAt) return null;
@@ -417,6 +417,16 @@ function endPlot(run, how) {
   run.plot.ended = how;
 }
 
+// The coup is off for this Grand Tournament, but the rebels are still ready for the next one.
+function postponeCoup(run) {
+  const p = run.plot;
+  if (!p.coup) return;
+  p.coup = false;
+  run.arenas[GRAND_TIER].debuff = p.debuffBefore ?? run.arenas[GRAND_TIER].debuff;
+  delete p.debuffBefore;
+  p.seen = p.seen.filter((id) => id !== 'coupEve');
+}
+
 // Stages move on when the rebels trust you enough.
 function advancePlot(run) {
   const p = run.plot;
@@ -438,7 +448,12 @@ function applyPlotEffects(run, eff, ev, out) {
   if (eff.pass) p.pass = true;
   if (eff.usePass) p.pass = false;
   if (eff.armed) p.armed = true;
-  if (eff.giveGear) run.inventory.gear.splice(0, eff.giveGear);
+  if (eff.giveGear) {
+    let left = eff.giveGear - run.inventory.gear.splice(0, eff.giveGear).length;
+    for (const x of [...run.roster].sort((a, b) => a.power - b.power)) {
+      for (const slot of ['weapon', 'armor']) if (left > 0 && x.gear[slot]) { x.gear[slot] = null; left--; }
+    }
+  }
   if (eff.champion && f) { p.champion = f.id; out.push(`${f.name} is with you`); }
   if (eff.mark) { const o = run.arenas[run.topTier]?.opponent; if (o) o.rebel = true; }
   if (eff.contact === 'new') addContact(run, ev.name, pick(run.rng.plot, CELL_IDS), ev.id);
@@ -461,8 +476,10 @@ function applyPlotEffects(run, eff, ev, out) {
     log(run, `${f.name} is taken by the Praetorians and executed in the arena at noon.`, 'bad');
   }
   if (eff.cold) endPlot(run, 'cold');
+  if (eff.postpone) log(run, 'Not tonight. The rebels will wait for the next Grand Tournament.', 'event');
   if (eff.coup) {
     p.coup = true;
+    p.debuffBefore = run.arenas[run.topTier].debuff;
     run.arenas[run.topTier].debuff = 'emperorsGaze'; // the Emperor watches: no capitulating
   }
   if (eff.betray) betray(run);
@@ -495,9 +512,15 @@ function betray(run) {
   endPlot(run, 'loyalist');
 }
 
-// The Grand Final with the plot under way: the coup succeeds only if the recruited champion wins.
-function resolveCoup(run, fighter, won) {
+// The Grand Tournament with the coup under way: it succeeds only if the recruited champion wins the Final.
+// Knocked out before the Final, the champion never gets near the imperial box: the rising waits for another year.
+function resolveCoup(run, fighter, won, final) {
   const p = run.plot;
+  if (!won && !final) {
+    postponeCoup(run);
+    log(run, 'The signal is never given. The rebels melt back into the crowd, to wait for another day of games.', 'warn');
+    return;
+  }
   if (won && fighter.id === p.champion) {
     endPlot(run, 'coup');
     run.ending = 'coup';
@@ -915,6 +938,7 @@ export function advanceWeek(run) {
     log(run, `Tournament week in ${unlockedTiers(run).length > 1 ? `${unlockedTiers(run).length} arenas` : arenaName(run.topTier)}.`, 'event');
   }
   if (tournamentEnds) rivalsCompete(run);
+  if (tournamentEnds && plotActive(run) && run.plot.coup) postponeCoup(run); // the champion never fought
   checkLoss(run);
   if (run.status === 'active') {
     const recentBefore = run.recentEvents;
@@ -1683,7 +1707,7 @@ export function finishMatch(run, match) {
   run.history.push(summary);
   log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
   advanceArena(run, tier, won, arena.opponent);
-  if (tier === GRAND_TIER && plotActive(run) && run.plot.coup) resolveCoup(run, fighter, won);
+  if (tier === GRAND_TIER && plotActive(run) && run.plot.coup) resolveCoup(run, fighter, won, !bracket || bracket.round >= 2);
   offerMercy(run, match, summary, fighter, opp, tier);
   if (won && opp.rebel && plotActive(run)) rebelBeaten(run, opp, match.result.reason === 'death' ? 'kill' : run.mercy ? null : 'spare');
   return summary;

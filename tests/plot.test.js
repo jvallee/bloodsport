@@ -402,3 +402,32 @@ test('the Codex\'s Rebellion section is hidden until the plot is found', async (
   assert.match(html, /The broken chain/);
   assert.match(html, /The Scribe/);
 });
+
+test('knocked out before the Final, the coup waits for another Grand Tournament instead of failing', () => {
+  const { run, champ } = coupReady();
+  play(run, champ.id, GRAND_TIER, { winner: 'B' }); // lost the Quarter-final
+  if (run.mercy) resolveMercy(run, 'spare');
+  assert.equal(run.status, 'active');
+  assert.equal(run.plot.ended, null);
+  assert.equal(run.plot.coup, false);
+  assert.notEqual(run.arenas[GRAND_TIER].debuff, 'emperorsGaze', 'the arena rule goes back to normal');
+  assert.equal(run.plot.stage, 'ready');
+});
+
+test('"Not tonight" postpones the coup; arms and a champion keep being asked for until the Cause has them', () => {
+  const { run } = withPrisoner();
+  run.plot.stage = 'ready';
+  run.plot.champion = run.roster[0].id;
+  card(run, 'coupEve', 0);
+  assert.deepEqual([run.plot.ended, run.plot.coup ?? false], [null, false]);
+  assert.ok(PLOT_EVENT_BY_ID.armBarracks.repeat && PLOT_EVENT_BY_ID.recruitChampion.repeat);
+  // Arms can come off your weakest fighters when the storeroom is short.
+  const r2 = withPrisoner(3).run;
+  r2.plot.stage = 'cause';
+  r2.inventory.gear = ['gladius'];
+  r2.roster[0].gear.weapon = 'trident';
+  run.event = null;
+  card(r2, 'armBarracks', 1);
+  assert.equal(r2.plot.armed, true);
+  assert.equal(r2.inventory.gear.length + r2.roster.filter((f) => f.gear.weapon).length, 0);
+});

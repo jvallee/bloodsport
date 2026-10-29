@@ -6,6 +6,7 @@
 // Encounter fields (on top of the event format in src/events.js):
 //   plot: true · stages: the plot stages it can appear in · target(run, rng): { f, g, name, house, opp } or null when
 //   it can't happen now · when(run): extra condition · forced: shown as soon as it's possible (raids).
+// repeat: can come back after it has been seen (the Cause's must-haves: arms and a champion).
 // Choice flags: help (counts as helping the rebels: resets the refusal count; the rebel bot picks these),
 //   refuse (counts toward going cold), betray (the Loyalist choice), needs(run, ev): why it can't be chosen, or null.
 // Plot effects (never shown on the buttons): trust, suspicion, stage, contact ('new' or 'asker'), freeAsker,
@@ -54,6 +55,7 @@ const freshName = (run, rng) => {
 const topOpponent = (run) => run.arenas[run.topTier]?.opponent;
 const houseName = (run, f) => run.houses?.find((h) => h.id === f?.house)?.name;
 const hasContact = (run, cell) => (run.plot?.freed ?? []).some((c) => c.cell === cell && !c.caught);
+const gearCount = (run) => run.inventory.gear.length + run.roster.reduce((n, f) => n + (f.gear.weapon ? 1 : 0) + (f.gear.armor ? 1 : 0), 0);
 export const isArmed = (run) => Boolean(run.plot?.armed) || hasContact(run, 'officer');
 
 export const PLOT_EVENTS = [
@@ -162,17 +164,17 @@ export const PLOT_EVENTS = [
     ],
   },
   {
-    id: 'armBarracks', plot: true, stages: ['cause'], title: 'Steel for the cause',
+    id: 'armBarracks', plot: true, repeat: true, stages: ['cause'], title: 'Steel for the cause',
     when: (run) => !isArmed(run),
     target: asker(anyFighter),
     text: () => 'An old centurion asks for weapons from your storeroom. "When the day comes, the barracks must be armed. Two blades will do."',
     choices: [
       { label: 'Refuse', refuse: true, effects: {} },
-      { label: 'Hand over two pieces of gear', help: true, needs: (run) => (run.inventory.gear.length >= 2 ? null : 'Needs 2 pieces of gear in the storeroom.'), effects: { giveGear: 2, armed: true, suspicion: 10, trust: 1 } },
+      { label: 'Hand over two pieces of gear', help: true, needs: (run) => (gearCount(run) >= 2 ? null : 'Needs 2 pieces of gear (from the storeroom first, then off your weakest fighters).'), effects: { giveGear: 2, armed: true, suspicion: 10, trust: 1 } },
     ],
   },
   {
-    id: 'recruitChampion', plot: true, stages: ['cause'], title: 'The champion',
+    id: 'recruitChampion', plot: true, repeat: true, stages: ['cause'], title: 'The champion',
     when: (run) => !run.roster.some((f) => f.id === run.plot?.champion),
     target: (run) => (run.roster.length ? { f: [...run.roster].sort((a, b) => b.renown - a.renown || b.power - a.power)[0].id } : null),
     text: ({ f }) => `The rebels want ${f}, the most famous fighter in your house. "When the Emperor comes to the games, the crowd must see one of their own strike the blow."`,
@@ -223,7 +225,7 @@ export const PLOT_EVENTS = [
     target: (run) => (run.plot?.champion ? { f: run.plot.champion } : null),
     text: ({ f }) => `Silbannacus himself will watch the Grand Final from the imperial box. The barracks are armed. ${f} is ready. Every door in the city has a broken chain on it.`,
     choices: [
-      { label: 'Call it off', effects: { cold: true } },
+      { label: 'Not tonight', effects: { postpone: true } },
       { label: 'Tonight', help: true, effects: { coup: true } },
     ],
   },
