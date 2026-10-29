@@ -222,7 +222,7 @@ export const PLOT_EVENTS = [
   {
     id: 'coupEve', plot: true, forced: true, stages: ['ready'], title: 'Tonight the Emperor attends',
     when: (run) => run.topTier === CIRCUITS.length + 1 && Boolean(run.bouts?.[run.topTier]) && run.boutPending,
-    target: (run) => (run.plot?.champion ? { f: run.plot.champion } : null),
+    target: (run) => (run.roster.some((f) => f.id === run.plot?.champion) ? { f: run.plot.champion } : null),
     text: ({ f }) => `Silbannacus himself will watch the Grand Final from the imperial box. The barracks are armed. ${f} is ready. Every door in the city has a broken chain on it.`,
     choices: [
       { label: 'Not tonight', effects: { postpone: true } },

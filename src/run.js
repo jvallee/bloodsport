@@ -379,7 +379,10 @@ function duePlotCard(run) {
   if (forced) return forced;
   if (run.week < run.plot.nextAt) return null;
   const options = PLOT_EVENTS.filter((e) => !e.forced && ok(e));
-  return options.length ? pick(run.rng.plot, options) : null;
+  if (options.length) return pick(run.rng.plot, options);
+  // Nothing new for this stage: the rebels ask again (never the Mark or the prefect's one-time offer).
+  const again = PLOT_EVENTS.filter((e) => !e.forced && !['chalkMark', 'theOffer'].includes(e.id) && e.stages.includes(run.plot.stage) && (!e.when || e.when(run)));
+  return again.length ? pick(run.rng.plot, again) : null;
 }
 
 // After the ordinary event roll (so its dice are always drawn the same way), a due plot card takes the week's slot.
@@ -410,7 +413,11 @@ function plotMonth(run) {
   // The signs of suspicion: never a number, only what the house can see.
   if (p.suspicion >= PLOT.suspicion.cold) changeFavor(run, -1, 'the palace grows cold toward your house');
   else if (p.suspicion >= PLOT.suspicion.watch && next(run.rng.plot) < 0.5) log(run, 'A Praetorian watched training today, and wrote something down.', 'warn');
-  if (!prisoners && p.trust < PLOT.survivesAt && !['ready'].includes(p.stage)) endPlot(run, 'cold');
+  // A champion who has fallen or left can't strike the blow: the rising looks for another.
+  if (p.champion && !run.roster.some((f) => f.id === p.champion)) p.champion = null;
+  if (p.stage === 'ready' && !p.champion) p.stage = 'cause';
+  if (!prisoners && p.trust < PLOT.survivesAt && !['ready'].includes(p.stage)) return endPlot(run, 'cold');
+  advancePlot(run); // trust earned before House level 3 counts once the house gets there
 }
 
 function endPlot(run, how) {
@@ -493,6 +500,7 @@ function applyPlotEffects(run, eff, ev, out) {
 
 function removeFromRoster(run, f) {
   for (const slot of ['weapon', 'armor']) if (f.gear?.[slot]) run.inventory.gear.push(f.gear[slot]);
+  f.gear = { weapon: null, armor: null };
   run.roster = run.roster.filter((x) => x !== f);
   if (run.plot?.champion === f.id) run.plot.champion = null;
 }
@@ -516,7 +524,8 @@ function betray(run) {
 // Knocked out before the Final, the champion never gets near the imperial box: the rising waits for another year.
 function resolveCoup(run, fighter, won, final) {
   const p = run.plot;
-  if (!won && !final) {
+  // Knocked out early, or someone other than the champion lost: the signal is never given.
+  if (!won && (!final || fighter.id !== p.champion)) {
     postponeCoup(run);
     log(run, 'The signal is never given. The rebels melt back into the crowd, to wait for another day of games.', 'warn');
     return;

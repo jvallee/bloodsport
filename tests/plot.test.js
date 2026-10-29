@@ -434,3 +434,64 @@ test('"Not tonight" postpones the coup; arms and a champion keep being asked for
   assert.equal(r2.plot.armed, true);
   assert.equal(r2.inventory.gear.length + r2.roster.filter((f) => f.gear.weapon).length, 0);
 });
+
+// ---- Code review fixes ----
+
+test('review: a different fighter losing the coup Final postpones the coup; only the champion can be a Martyr', () => {
+  const { run, f } = coupReady();
+  playGrand(run, f.id, false); // the political prisoner, not the champion, loses the Final
+  assert.equal(run.status, 'active');
+  assert.equal(run.ending ?? null, null);
+  assert.equal(run.plot.ended, null);
+  assert.equal(run.plot.coup, false);
+});
+
+test('review: if the champion dies, the rising falls back to the Cause and looks for another', () => {
+  const { run, champ } = coupReady();
+  run.plot.coup = false;
+  run.roster = run.roster.filter((x) => x !== champ);
+  run.fallen.push({ ...champ, alive: false });
+  run.event = null;
+  run.boutPending = false;
+  run.bouts = null;
+  while (run.week % 4 !== 3) advanceWeek(run);
+  advanceWeek(run); // a month start
+  assert.equal(run.plot.stage, 'cause');
+  assert.equal(run.plot.champion, null);
+  assert.equal(PLOT_EVENT_BY_ID.coupEve.target({ ...run, plot: { ...run.plot, champion: champ.id } }), null, 'never a card about a dead champion');
+});
+
+test('review: trust earned before House level 3 still brings the Cause later; the thread never stalls with no cards left', () => {
+  const { run } = withPrisoner();
+  run.prestigeLevel = 2;
+  run.plot.stage = 'favours';
+  run.plot.trust = 5;
+  run.plot.seen = PLOT_EVENTS.map((e) => e.id); // every card already seen
+  run.prestigeLevel = 3;
+  run.plot.nextAt = 999; // no cards in the way: only the monthly check can move the stage
+  const week = () => { run.event = null; run.boutPending = false; advanceWeek(run); };
+  while (run.week % 4 !== 3) week();
+  week();
+  assert.equal(run.plot.stage, 'cause');
+  // With every card seen, the rebels still ask (seen cards come round again).
+  run.plot.nextAt = 0;
+  run.event = null;
+  let asked = false;
+  for (let i = 0; i < 8 && !asked; i++) {
+    run.event = null;
+    run.boutPending = false;
+    advanceWeek(run);
+    asked = Boolean(run.event?.plot);
+  }
+  assert.ok(asked);
+});
+
+test('review: executed prisoners leave their gear in the storeroom, not on their bodies', () => {
+  const { run, f } = withPrisoner();
+  f.gear.weapon = 'gladius';
+  run.plot.suspicion = 85;
+  run.event = { id: 'raid', plot: true, f: f.id };
+  chooseEvent(run, 1);
+  assert.ok(run.inventory.gear.includes('gladius'));
+  assert.equal(run.fallen.find((x) => x.id === f.id).gear.weapon, null);
+});

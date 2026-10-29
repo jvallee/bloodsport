@@ -1,6 +1,18 @@
 # Bloodsport v6: the hidden plot (design doc and implementation plan)
 
-Status: **proposal for the designer to edit.** Names, story text and numbers are placeholders. Story text especially is meant to be rewritten in the designer's voice (see section 10).
+Status: **phases A–F built** (2026-10-28). Phases G (playtests and the designer's text pass) and H (Patron Lounge) remain. Names, story text and numbers are still placeholders; story text especially is meant to be rewritten in the designer's voice (see section 10). Code: `src/plot.js` (cards, clues, cells), the "hidden plot" section of `src/run.js`, tests in `tests/plot.test.js`.
+
+**Decisions made** (designer, 2026-10-28):
+- The recommendations in section 11 were accepted.
+- **The evil road is the easy one.** The loyalist should win clearly more often than a careful player who ignores the plot. Going along with the regime is the safe way to survive. The coup is the hard, heroic road. The balance gate checks this (section 8).
+
+**Changes from the plan while building:**
+- **No save version bump.** Old saves gain `plot: null` and the plot's RNG stream as they load, like earlier additions.
+- **Knocked out before the Grand Final,** the coup is postponed to the next Grand Tournament instead of failing. Only a lost Final is the Martyr ending. The coup's eve card offers "Not tonight" (postpone), not "Call it off".
+- **Arming the barracks and recruiting the champion** keep coming back until done. The gear can come off your weakest fighters when the storeroom is short.
+- **`throwBout` became `yardBout`:** a staged loss in the practice yard (−Renown, −Morale), not a forced capitulation in a real match.
+- **Plot cards show what anyone could see happen:** a fighter leaving, an execution, a Medbay bed taken. Trust and suspicion stay hidden.
+- **Not built yet:** "scouted in every arena" at suspicion 40+, a raid catching a freed contact, and the priest's Gods' Day rites (the priest gives monthly Morale instead).
 
 ## 1. The idea in one paragraph
 
@@ -215,12 +227,17 @@ Each phase is a small set of commits, tested first, with `npm test` and `npm run
 
 ## 8. Balance and measurement
 
-- **Bots (`scripts/bots.js`):** the careful bot takes the first (cautious) choice, so it never starts the plot and v5 balance stays measurable. A new **rebel** bot variant always helps, and a **loyalist** variant betrays at the first chance.
+- **Bots (`scripts/bots.js`, `opts.plot`):**
+  - The careful bot never builds a Liaison, so it never meets the plot, and the v5 gates measure exactly what they did.
+  - `rebel`: builds the Liaison, takes political prisoners, helps at every turn, and goes ahead with the coup only when its champion has at least a 40% chance in the Final.
+  - `loyalist`: helps until the prefect's offer, then betrays.
+  - `bystander`: takes the prisoners but always refuses (used to measure what the Liaison alone is worth).
 - **New gates (`scripts/checks.js`):**
   1. **Invisible when ignored:** the careful bot's win rate with plot code on is within 1 point of the v5 baseline. The RNG isolation should make it identical.
   2. **The plot is a real gamble:** the rebel bot's normal-win rate stays within ±10 points of careful. Its coup rate falls in a target band (placeholder 10–25% of careers).
-  3. **Betrayal isn't free:** the loyalist bot gains Favor but doesn't win more careers than careful by over 5 points.
-  4. **Treason is rare but real:** 2–10% of rebel careers end in treason.
+  3. **The evil road is easier** (changed at the designer's request): the loyalist wins 5–20 points more often than careful.
+  4. **Treason stays rare:** under 10% of rebel careers.
+  - As built, gates 1 and 2 became: the careful bot is untouched by construction (it never builds the Liaison), and the coup happens in 5–25% of rebel careers.
 - **Probe:** `scripts/probes/plot-flow.js` reports which stage each rebel career reached and when, and where suspicion stood.
 
 ## 9. Playtests
