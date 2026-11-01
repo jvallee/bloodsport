@@ -13,6 +13,7 @@ export const SPEAKERS = {
   narrator: { name: "", portrait: "narrator" },
   emperor: { name: "Emperor Silbannacus", portrait: "emperor" },
   steward: { name: "Your steward", portrait: "steward" }, // a plain, neutral helper (the designer's choice)
+  rebel: { name: "A prisoner", portrait: "narrator" }, // a political prisoner: their beats carry the fighter (name and face)
 };
 
 export const SCENES = {
@@ -114,6 +115,56 @@ const RETURNS = [
 export function dueScene(run, seen = []) {
   if (run.status !== "active") return null;
   return RETURNS.find((r) => !seen.includes(r.id) && r.when(run))?.id ?? null;
+}
+
+// ---------- The rebel's confession (the designer's request, 2026-11-01) ----------
+// The first political prisoner in your house takes you aside and says plainly that there is a rising, and what they have
+// heard of you. What they say depends on your record. Every line is a PLACEHOLDER first draft for the designer.
+// Pure: reads the run, changes nothing (scenes are cosmetic, so replays don't record them).
+export function houseRecord(run) {
+  const verdicts = run.history.filter((h) => h.verdict);
+  const others = run.roster.filter((f) => !f.political);
+  return {
+    spared: verdicts.filter((h) => h.verdict === 'spare').length,
+    sparedForBlood: verdicts.filter((h) => h.verdict === 'spare' && h.mercy === 'kill').length, // mercy at a cost to you
+    killed: verdicts.filter((h) => h.verdict === 'kill').length, // thumbs down
+    released: run.released ?? 0,
+    fallen: run.fallen.length,
+    morale: others.length ? Math.round(others.reduce((n, f) => n + f.morale, 0) / others.length) : null,
+  };
+}
+export function rebelScene(run, f) {
+  const r = houseRecord(run);
+  const say = (text) => ({ speaker: "rebel", fighter: f, text });
+  const heard = [];
+  if (r.sparedForBlood) heard.push(say("You have spared lives on the sand even when the crowd bayed for blood, and the risk of it was yours. People noticed."));
+  else if (r.spared) heard.push(say(`You have shown mercy in the arena${r.spared > 1 ? ` ${r.spared} times` : ""}. The crowd forgets. We don't.`));
+  if (r.released) heard.push(say("You have bought fighters, and then set them free. Hardly any Lanista does that."));
+  if (r.killed >= 3 && !r.spared) heard.push(say(`You have turned your thumb down ${r.killed} times, and never up. They say you enjoy it. I hope they're wrong.`));
+  else if (r.killed) heard.push(say(`You have finished beaten fighters${r.killed > 1 ? ` ${r.killed} times` : ""}. I won't pretend that makes this easier to say.`));
+  if (r.morale !== null && r.morale >= 70) heard.push(say("Your fighters eat well and sleep warm. In this city, that counts for something."));
+  else if (r.morale !== null && r.morale < 40) heard.push(say("Your fighters are miserable, and miserable people talk. Be careful who hears this."));
+  if (!heard.length) heard.push(say("I don't know you yet. I'm telling you anyway, because there is no one else to tell."));
+  const kind = r.sparedForBlood || r.released || (r.spared && !r.killed) || (r.morale ?? 0) >= 70;
+  return [
+    { speaker: "narrator", text: `That night, ${f.name} asks to speak with you alone.` },
+    say("I am not what the guards wrote on my record. There is a rising against Silbannacus, and I am part of it. The broken chain you may see chalked on doors is ours."),
+    ...heard.slice(0, 2),
+    say("No one should be owned by another. Not me by you, and not you by the Emperor. We are all his slaves, Lanista. Some of us just hold keys."),
+    {
+      ...say(kind ? "I think you might be one of us, whether you know it or not. You'll hear from us. Watch the doors." : "I don't know what you are yet. But you'll hear from us. Watch the doors."),
+      replies: [
+        { label: "I'm listening.", then: [say("Good. Say nothing to anyone, and keep your eyes open.")] },
+        { label: "Why tell me?", then: [say("Because a Lanista with a ludus full of fighters is the most dangerous person in this city, if they choose to be.")] },
+        { label: "Say nothing.", then: [say("Silence. Fine. Silence keeps people alive here.")] },
+      ],
+    },
+  ];
+}
+// The fighter whose confession is due: the first political prisoner in the roster, while the plot runs.
+export function dueRebel(run, seen) {
+  if (run.status !== "active" || !run.plot || run.plot.ended || seen.includes("rebel")) return null;
+  return run.roster.find((f) => f.political) ?? null;
 }
 
 // The steward's news (playtest #8): what changed in the house that's worth a word. Pure: compare two snapshots.

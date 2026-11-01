@@ -1000,6 +1000,7 @@ export function release(run, id) {
   const f = findFighter(run, id);
   stripFighter(run, f);
   run.roster = run.roster.filter((x) => x !== f);
+  run.released = (run.released ?? 0) + 1; // the rebels hear of it (src/dialogue.js, rebelScene)
   log(run, `${f.name} is released from the Ludus. Their gear and decor return to the storeroom.`);
 }
 

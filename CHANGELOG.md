@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 5.3.0 (in progress)
 
+- **The rebel speaks:** the first political prisoner in your house takes you aside and tells you, plainly, that there is a rising against the Emperor. What they've heard of you colours it: mercy shown when the crowd wanted blood, fighters you bought and set free, how often your thumb has gone down, and how well your fighters live.
 - **Mercy the Emperor wanted:** sparing a beaten opponent earns Favour only when mercy is what's wanted. If the crowd roars for blood, or the Emperor has demanded a death this month, he gives nothing for clemency (the verdict panel says so). Sparing against the crowd still makes their house owe you a life.
 - **Feuds say how long they last:** each opponent's card and the house standings show how many months a feud, a debt of mercy or your vengeance has left (3 months, cooling by one at every fight day).
 - **The top bar** shows how much Prestige you still need for the next House level ("5 to Lv 2"), not the total.

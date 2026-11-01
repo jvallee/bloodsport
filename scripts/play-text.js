@@ -25,7 +25,7 @@ import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFesti
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
 import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
-import { SCENES, SPEAKERS, dueScene } from '../src/dialogue.js';
+import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene } from '../src/dialogue.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText, slotLabel } from '../src/codex.js';
 
 // A card choice's visible stakes. Plot cards (v6) show nothing rather than "Nothing happens" when only hidden things change.
@@ -87,7 +87,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   // (The intro's pages already print at the start, so the opening's narrator page is skipped here.)
   // Replies (your answers) play the first answer, and list the others.
   const withReplies = (beats) => beats.flatMap((b) => (b.replies ? [b, { speaker: 'narrator', text: `(You could answer: ${b.replies.map((r) => `"${r.label}"`).join(' / ')}. You say: "${b.replies[0].label}")` }, ...b.replies[0].then] : [b]));
-  const sceneText = (id) => `\n${withReplies(SCENES[id]).filter((b) => b.speaker !== 'narrator' || !b.title).map((b) => `${SPEAKERS[b.speaker].name ? `${SPEAKERS[b.speaker].name}: ` : ''}${b.title ? `[${b.title}] ` : ''}${(b.text ?? b.html).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}`).join('\n')}`;
+  const sceneText = (id, beats = SCENES[id]) => `\n${withReplies(beats).filter((b) => b.speaker !== 'narrator' || !b.title).map((b) => `${(b.fighter?.name ?? SPEAKERS[b.speaker].name) ? `${b.fighter?.name ?? SPEAKERS[b.speaker].name}: ` : ''}${b.title ? `[${b.title}] ` : ''}${(b.text ?? b.html).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}`).join('\n')}`;
   const done = []; // dismissed tutorial steps
   const oddsCache = new Map();
   let match = null;
@@ -257,6 +257,11 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (due) {
       scenesSeen.push(due);
       out.push(sceneText(due));
+    }
+    const rebel = scenesSeen.includes('opening') && dueRebel(run, scenesSeen);
+    if (rebel) {
+      scenesSeen.push('rebel');
+      out.push(sceneText('rebel', rebelScene(run, rebel)));
     }
     if (run.mercy) out.push(`\n${mercyText()}`);
     if (run.status !== 'active') {

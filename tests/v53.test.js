@@ -207,3 +207,42 @@ test('sparing when the Emperor has demanded a death earns no Favour, even if the
   run.demand = null;
   assert.equal(spareFavor(run), MERCY.spareFavor);
 });
+
+// The rebel's confession: the first political prisoner says plainly that there is a rising, coloured by your record.
+import { rebelScene, dueRebel, houseRecord } from '../src/dialogue.js';
+import { release } from '../src/run.js';
+import { dialogueModal } from '../src/ui/views.js';
+
+function withRebel() {
+  const run = createRun(4, { patron: 'liberator' }); // starts with a political prisoner
+  return { run, rebel: run.roster.find((f) => f.political) };
+}
+
+test('the first political prisoner confesses the rising, once per career', () => {
+  const { run, rebel } = withRebel();
+  assert.ok(rebel && run.plot);
+  assert.equal(dueRebel(run, []), rebel);
+  assert.equal(dueRebel(run, ['rebel']), null);
+  const beats = rebelScene(run, rebel);
+  const text = beats.map((b) => b.text).join(' ');
+  assert.match(text, /There is a rising against Silbannacus/);
+  assert.match(text, /Not me by you, and not you by the Emperor/);
+  assert.ok(beats.at(-1).replies.length >= 2);
+  assert.match(dialogueModal('rebel', beats, 1), new RegExp(rebel.name));
+  assert.equal(dueRebel(createRun(4), []), null, 'no prisoner, no confession');
+});
+
+test('what the rebel has heard depends on your record: mercy at a cost, fighters set free, kills, Morale', () => {
+  const { run, rebel } = withRebel();
+  assert.match(rebelScene(run, rebel).map((b) => b.text).join(' '), /I don't know you yet/);
+  const other = recruit(run, run.market[0].id);
+  release(run, other.id);
+  assert.equal(houseRecord(run).released, 1);
+  run.history.push({ verdict: 'spare', mercy: 'kill' }, { verdict: 'kill', mercy: 'kill' });
+  const text = rebelScene(run, rebel).map((b) => b.text).join(' ');
+  assert.match(text, /even when the crowd bayed for blood/);
+  assert.match(text, /set them free/);
+  run.history = [{ verdict: 'kill' }, { verdict: 'kill' }, { verdict: 'kill' }];
+  run.released = 0;
+  assert.match(rebelScene(run, rebel).map((b) => b.text).join(' '), /thumb down 3 times, and never up/);
+});

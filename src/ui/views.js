@@ -233,10 +233,12 @@ export function tutorialCard(step, where = 'ludus') {
 
 // A character speaking: portrait, name, and what they say (one beat). `actions` are the buttons.
 function dialogueBox(beat, actions, kind = 'scene') {
-  const who = SPEAKERS[beat.speaker] ?? SPEAKERS.narrator;
+  // A fighter who speaks (the rebel's confession) shows their own name and face.
+  const who = beat.fighter ? { name: beat.fighter.name } : SPEAKERS[beat.speaker] ?? SPEAKERS.narrator;
+  const face = beat.fighter ? portrait(beat.fighter, 72) : npcPortrait(who.portrait, 72);
   const body = beat.html ?? `<p>${esc(beat.text)}</p>`;
   return `<div class="modal dialogue ${kind}" role="dialog" aria-label="${esc(who.name || beat.title || 'Story')}"><div class="modal-body dialogue-body speaker-${beat.speaker}">
-    <div class="dialogue-speaker">${npcPortrait(who.portrait, 72)}<div>${who.name ? `<div class="dialogue-name">${esc(who.name)}</div>` : ''}${beat.title ? `<h2>${beat.title}</h2>` : ''}</div></div>
+    <div class="dialogue-speaker">${face}<div>${who.name ? `<div class="dialogue-name">${esc(who.name)}</div>` : ''}${beat.title ? `<h2>${beat.title}</h2>` : ''}</div></div>
     <div class="dialogue-text">${body}</div>
     <div class="dialogue-actions">${actions}</div>
   </div></div>`;
