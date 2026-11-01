@@ -109,3 +109,27 @@ test('betting: before Round 1 you can back your fighter at their real odds; a wi
     void playRound;
   }
 });
+
+test('the Emperor\'s demands: issued some months, judged when fight day ends; met pays, missed costs a little', async () => {
+  const { DEMAND, DEMANDS } = await import('../src/data.js');
+  const { demandMet } = await import('../src/run.js');
+  let issued = 0;
+  for (let seed = 1; seed <= 20; seed++) {
+    const run = createRun(seed);
+    const f = recruit(run, run.market[0].id);
+    for (let i = 0; i < 20 && !run.demand; i++) { run.event = null; run.mercy = null; run.boutPending = false; run.bouts = null; advanceWeek(run); }
+    if (!run.demand) continue;
+    issued++;
+    assert.ok(DEMANDS[run.demand.id]);
+    // Meet it by hand: a winning top-arena record of the right kind since the demand.
+    run.history.push({ week: run.week, top: true, won: true, bloodied: true, verdict: run.demand.id === 'kill' ? 'kill' : 'spare', tier: 1 });
+    if (run.demand.id === 'twoArenas') run.history.push({ week: run.week, won: true, tier: 2 });
+    assert.equal(demandMet(run), true, run.demand.id);
+    const favor = run.favor;
+    for (let i = 0; i < 6 && run.demand; i++) { run.event = null; run.mercy = null; if (run.boutPending) { run.boutPending = false; } advanceWeek(run); }
+    assert.equal(run.demand, null, 'judged at the end of fight day');
+    assert.ok(run.favor >= favor + DEMAND.favor - 1 || run.favor === 100);
+    void f;
+  }
+  assert.ok(issued >= 5, `${issued} careers got a demand`);
+});

@@ -13,6 +13,7 @@ import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
 import { SCENES, dueScene, newsSnapshot, stewardNews } from './dialogue.js';
+import { DEMANDS } from './data.js';
 import { fightView, DICE_TIME, revealTime, roundEndTime } from './ui/fightView.js';
 import { roundSounds, setSound, sfx } from './ui/sound.js';
 
@@ -116,6 +117,13 @@ function markSceneSeen(id) {
 // The Emperor drops in at turning points, once each per career, when nothing else is on screen.
 function checkScene() {
   if (scene || eventResult || match || setupChoice || showHelp || !scenesSeen().includes('opening')) return; // the Emperor's visits come after the opening
+  // A new demand from the Emperor (fun idea #4): he says it himself.
+  const demandKey = run.demand ? `demand-${run.demand.week}` : null;
+  if (demandKey && !scenesSeen().includes(demandKey)) {
+    markSceneSeen(demandKey);
+    scene = { id: 'demand', beat: 0, beats: [{ speaker: 'emperor', text: DEMANDS[run.demand.id].say }, { speaker: 'steward', text: `The Emperor's demand: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day. Meet it and he pays in Favour and Gold; miss it and he remembers.` }] };
+    return;
+  }
   const id = dueScene(run, scenesSeen());
   if (id) {
     markSceneSeen(id);

@@ -487,6 +487,16 @@ export const RECRUIT = { levels: [[1], [1, 2], [2], [2, 3]], perLevel: 2 };
 // more to make up for the fewer fights. The daily Emperor's Challenge is a short career on the day's seed.
 // Betting on your own fighter (fun idea #3), before Round 1. The payout is the stake × 0.9 / chance to win (the bookmaker's
 // cut), up to `maxOdds` ×; a stake can be up to `perTier` × arena tier Gold. `stakes`: the buttons offered.
+// The Emperor's demands (fun idea #4): some months he sets a goal for that month's fight day. Met: Favour and Gold × tier.
+// Missed: a little Favour. `chance` per month, from `fromWeek` on. Words are PLACEHOLDER for the designer.
+export const DEMAND = { chance: 0.5, fromWeek: 8, favor: 4, goldPerTier: 4, missFavor: -2 };
+export const DEMANDS = {
+  topWin: { goal: 'Win a match in your top arena', say: 'My guests are bored, Lanista. Give them a victory in your top arena this month.' },
+  bloodied: { goal: 'Win a Bloodied Victory (a win with 2+ injuries)', say: 'I want to see blood on a winner. Win me a bloody victory this month.' },
+  kill: { goal: 'Finish a beaten opponent (thumbs down)', say: 'The crowd grows soft. Give them a death this month.' },
+  spare: { goal: 'Spare a beaten opponent (thumbs up)', say: 'The Senate calls me cruel. Show them my clemency: spare someone in the arena this month.' },
+  twoArenas: { goal: 'Win in two different arenas on fight day', say: 'Show me the depth of your house. Win in two of my arenas this month.' },
+};
 export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] };
 export const SHORT = { purse: 1.5, prestige: 1.5 };
 export const NEMESIS = {

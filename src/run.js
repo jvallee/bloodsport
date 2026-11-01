@@ -7,14 +7,14 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, deltaRow,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt } from './fight.js';
 import { Refused } from './errors.js';
 import { estimateOdds } from './odds.js';
 import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabel } from './events.js';
-import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament } from './calendar.js';
+import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament, isWinter } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
   maxLevel, effectAt, build, upgrade,
@@ -261,6 +261,42 @@ function newOpponent(run, tier) {
   f.house = houseForArena(run, tier).id;
   arena.opponent = f;
   remember(run, f);
+}
+
+// ---------- The Emperor's demands (fun idea #4) ----------
+
+// Has this month's demand been met? Judged from the fights since it was issued.
+const DEMAND_MET = {
+  topWin: (h) => h.some((x) => x.top && x.won),
+  bloodied: (h) => h.some((x) => x.bloodied),
+  kill: (h) => h.some((x) => x.verdict === 'kill' || (x.won && x.kill)),
+  spare: (h) => h.some((x) => x.verdict === 'spare'),
+  twoArenas: (h) => new Set(h.filter((x) => x.won).map((x) => x.tier)).size >= 2,
+};
+export const demandMet = (run) => Boolean(run.demand) && DEMAND_MET[run.demand.id](run.history.filter((x) => x.week >= run.demand.week));
+
+// At a month's start, the Emperor may set a goal for that month's fight day (its own dice, so nothing else shifts).
+function issueDemand(run) {
+  if (run.demand || run.week < DEMAND.fromWeek || isWinter(run.week)) return;
+  run.rng.emperor ??= createRng(deriveSeed(run.seed, 9));
+  if (next(run.rng.emperor) >= DEMAND.chance) return;
+  const options = Object.keys(DEMANDS).filter((id) => id !== 'twoArenas' || unlockedTiers(run).length >= 2);
+  run.demand = { id: pick(run.rng.emperor, options), week: run.week };
+  log(run, `The Emperor demands: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.`, 'event');
+}
+
+// When the tournament week ends, the Emperor judges.
+function judgeDemand(run) {
+  if (!run.demand) return;
+  const tier = Math.min(run.topTier, CIRCUITS.length);
+  if (demandMet(run)) {
+    run.gold += DEMAND.goldPerTier * tier;
+    changeFavor(run, DEMAND.favor, 'the Emperor\'s demand, met');
+    log(run, `The Emperor is pleased: +${DEMAND.goldPerTier * tier} Gold from the palace.`, 'good');
+  } else {
+    changeFavor(run, DEMAND.missFavor, 'the Emperor\'s demand, unmet');
+  }
+  run.demand = null;
 }
 
 // ---------- Nemeses (fun idea #1) ----------
@@ -1070,6 +1106,7 @@ export function advanceWeek(run) {
     refreshLiaison(run);
     refreshArmourer(run);
     plotMonth(run);
+    issueDemand(run);
   }
   if (run.plot?.hidden && --run.plot.hidden <= 0) { delete run.plot.hidden; log(run, 'The stranger in the Medbay slipped away before dawn.', 'event'); }
   if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) if (!tributePaid(run)) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
@@ -1085,6 +1122,7 @@ export function advanceWeek(run) {
     log(run, `Tournament week in ${unlockedTiers(run).length > 1 ? `${unlockedTiers(run).length} arenas` : arenaName(run.topTier)}.`, 'event');
   }
   if (tournamentEnds) rivalsCompete(run);
+  if (tournamentEnds) judgeDemand(run);
   if (tournamentEnds && plotActive(run) && run.plot.coup) postponeCoup(run); // the champion never fought
   checkLoss(run);
   if (run.status === 'active') {
