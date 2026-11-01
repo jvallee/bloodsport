@@ -198,7 +198,7 @@ Each card has a title, its text, and choice labels. A choice's visible stakes ("
 | [src/plot.js:32](../src/plot.js#L32) | Telling: Refuses to salute the Imperial standard. |
 | [src/plot.js:33](../src/plot.js#L33) | Telling: Was found with a pamphlet sewn into his tunic. |
 | [src/plot.js:34](../src/plot.js#L34) | Telling: Scratched a sign on the cell wall: a broken chain. |
-| [src/plot.js:35](../src/plot.js#L35) | Telling: Arrested in the Forum on the night the Emperor's statue was defaced. |
+| [src/plot.js:35](../src/plot.js#L35) | Telling: Arrested in the forum for defecating on the Emperor's statue. |
 | [src/plot.js:36](../src/plot.js#L36) | Telling: The guards say visitors ask for them by a name that isn't on the record. |
 | [src/plot.js:39](../src/plot.js#L39) | Ambiguous: Kept apart from the other prisoners, on orders from the palace. |
 | [src/plot.js:40](../src/plot.js#L40) | Ambiguous: Can read and write, which is rare in the cells. |
@@ -525,9 +525,9 @@ The tutorial month (`GUIDE`): the steward's five steps for a new Lanista. Tags l
 
 | Where | Text |
 |---|---|
-| [src/tutorial.js:45](../src/tutorial.js#L45) | Tutorial month, step 1: Let's start with two gladiators. In the Market, look at each one's Power (the sword: wins rounds) and Speed (the arrow: strikes first), then press Recruit on two of them. |
+| [src/tutorial.js:45](../src/tutorial.js#L45) | Tutorial month, step 1: Let's start with one gladiator. In the Market, look at each one's Power (the sword: wins rounds) and Speed (the arrow: strikes first), then press Recruit on at least one of them. |
 | [src/tutorial.js:53](../src/tutorial.js#L53) | Tutorial month, step 2: Now the Ludus. Every fighter does one job a week. Give your strongest fighter +1 Power: training costs a little Gold and adds ${STRESS.train} Stress. The other can Rest for now; one Trainer Room trains one fighter at a time. |
-| [src/tutorial.js:62](../src/tutorial.js#L62) | Tutorial month, step 3: Jobs are set. Press End week and the week plays out: training, rest and healing all happen at once. |
+| [src/tutorial.js:62](../src/tutorial.js#L62) | Tutorial month, step 3: Jobs are set. Make sure at least one fighter is training: only a fighter on Train Power (+1 Power) or Train Speed (+3 Speed) gets stronger, and an untrained house falls behind fast. Then press End week and the week plays out: training, rest and healing all happen at once. |
 | [src/tutorial.js:70](../src/tutorial.js#L70) | Tutorial month, step 4: The last week of every month is fight day. Keep training, and rest a fighter whose Stress passes ${STRESS.overtrained - STRESS.train}: at ${STRESS.overtrained} they're overtrained and fight worse. When you're ready, Skip to tournament takes you straight there. |
 | [src/tutorial.js:78](../src/tutorial.js#L78) | Tutorial month, step 5: Fight day. Each fighter's line shows their odds, injury risk and the Power both sides will fight with. Sending one costs a little Prestige; winning pays it back with more. Pick your best and press Send. |
 | [src/tutorial.js:87](../src/tutorial.js#L87) | **The Trainer cap** |
