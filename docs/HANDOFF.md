@@ -1,6 +1,6 @@
 # Bloodsport: handoff for the next agent
 
-Last updated 2026-10-28. Read this file first, then `CLAUDE.md` (the project rules) and `docs/fight-rules.md` (every rule and number).
+Last updated 2026-11-01, at **version 5.2.0** (live). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
 
 ## 1. What this is
 
@@ -17,7 +17,7 @@ Last updated 2026-10-28. Read this file first, then `CLAUDE.md` (the project rul
 - **Be autonomous.** Implement worthwhile feedback without asking, then report clearly what changed and why. The user often hands over a batch of requests and goes to sleep. Finish everything, playtest, and leave a clear morning report.
 - **Goal:** make the game "very user friendly, fun, addictive and immersive". The user welcomes proactive fun ideas (end reports with a few).
 - **Commit often** with clear messages. Run `npm test` before every commit. **Never weaken, skip or delete a test.** When a deliberate rule change breaks a test, update the expected value and say so.
-- **Balance:** every balance or rules change must pass `npm run check` (9 gates). When a gate fails, sweep the values and pick from a table; don't guess.
+- **Balance:** every balance or rules change must pass `npm run check` (13 gates; it takes 5–15 minutes, so run it in the background). When a gate fails, sweep the values and pick from a table; don't guess.
 - **Docs:** record every number change in `docs/fight-rules.md`, and every player-visible change in `CHANGELOG.md` under "Unreleased" (the user likes a summary of changes between versions).
 - **Versions:**
   - A new major version is frozen into `/vN/` with a tag.
@@ -29,6 +29,9 @@ Last updated 2026-10-28. Read this file first, then `CLAUDE.md` (the project rul
   - The user is fine with lower careful win rates.
   - The user wanted death to be **more** likely.
 - **Address the user as they/them.** Their email is only for git authorship.
+- **Spelling:** British in everything players read (armour, Favour, colour, favourite). Code names stay as they are, because they're save data: `run.favor`, the gear slot `'armor'`, `egoArmour`.
+- **The user writes the story text.** Lines marked PLACEHOLDER (dialogue, demands, plot cards, nemesis epithets, policies) are first drafts for their rewrite. `docs/text-to-rewrite.md` lists every line with its file and line number (regenerate it after big edits). The user edits `src/dialogue.js` and `src/tutorial.js` directly. Check `git status` before editing those, and never overwrite their uncommitted text.
+- **When the user lists playtest notes,** fix the bugs, build the agreed features, run `npm run check`, and finish with an LLM playtest (section 6) whose findings you also fix.
 
 ## Tried and rejected: a higher training cap for veterans (v5)
 
@@ -45,33 +48,58 @@ The user asked for each level to add +1 week to that fighter's own Trainer cap. 
 
 Every fighter is limited by the cap, so any extra cap adds Power across the whole roster. The user's real complaint (a late prisoner far too strong) was fixed at the source instead: see playtest #7 below. Halving the Market's Power bonus is an untried option for keeping veterans ahead of recruits.
 
-## v6 in progress: the hidden plot (read docs/roadmap-v6.md)
+## Start here: the current state (5.2.0)
 
-Phases A–F of `docs/roadmap-v6.md` are built and pushed. Playtest #7 (blind and informed) fixes are applied (`docs/playtest-llm-7-changes.md`). All 12 gates pass (careful 41%, loyalist +13, coup 9% of rebel careers).
+Everything is committed, pushed and live. All 460 tests and all 13 gates pass.
 
-- **Code:**
-  - `src/plot.js`: cards, clues, cells and suspicion signs.
-  - The "hidden plot" section of `src/run.js`.
-  - `LIAISON`, `POLITICAL` and `PLOT` in `src/data.js`.
-  - `tests/plot.test.js`.
-- **Bots:** `opts.plot` in `scripts/bots.js` is `rebel`, `loyalist` or `bystander`.
-- **Dialogue** (`src/dialogue.js`, rendered by `dialogueModal` and `tutorialCard` in `src/ui/views.js`):
-  - The Emperor opens the career and returns at turning points (`dueScene`).
-  - The steward voices the tutorial. The designer chose a plain, neutral helper.
-  - Scenes are cosmetic. Their seen state is stored apart from the career (`bloodsport.scenes`), so replays are unaffected.
-  - Not done yet: fighters speaking in event cards. The plot's cards must not be the only ones with a speaker, or the dialogue box would give the plot away. The designer will write first-person lines for ordinary events as well.
-- **The designer's decisions:** the evil (loyalist) road is the easy one, and the coup is the hard, heroic one. Story text is placeholder for the designer to rewrite.
-- **Next:**
-  - The designer's text pass, with a voice guide first.
-  - A second blind playtest to measure discovery after the Liaison hint.
-  - Phase H, the Patron Lounge (needs its own design doc).
-  - A freeze as v6 when the designer says so.
-- **Open, noted in the playtest #7 changes doc:**
-  - Lower arenas freeze when unvisited.
-  - Preview odds without an Oracle.
-  - An injury-chance breakdown in `math` mode.
+| Gate | Value |
+|---|---|
+| Careful career wins | 35% |
+| Careful deaths per career | 0.73 |
+| Reckless deaths per career | 3.54 |
+| Loyalist wins over careful | +6 points |
+| Coups (share of rebel careers) | 11% |
+| Short careers won | 47%, in 83 weeks (full careers 109) |
 
-## 3. Current state (where I stopped)
+**What exists, by release** (details in `CHANGELOG.md`; numbers in `docs/fight-rules.md`):
+- **v6 hidden plot** (`docs/roadmap-v6.md`, phases A–F; the Patron Lounge, phase H, now exists too):
+  - Political prisoners from the Liaison and a secret thread of event cards, with rescue requests and suspicion.
+  - The coup at the Grand Tournament, and the Loyalist, Martyr and Treason endings.
+  - Code: `src/plot.js`, plus the "hidden plot" section of `src/run.js`. Tests: `tests/plot.test.js`.
+  - The designer chose that the evil (loyalist) road is the easy one.
+- **Dialogue** (`src/dialogue.js`):
+  - The Emperor's opening plays at the start of every career; he also returns at turning points and sets monthly demands.
+  - The steward voices the tutorial, including a guided "tutorial month" (`GUIDE` in `src/tutorial.js`), and gives short news notes.
+  - You reply to the Emperor at the end of the opening.
+- **5.1.0** (`docs/playtest-llm-8*.md`): Prestige for every tournament win, House levels at 12 / 30 / 60 / 110, Morale that sinks slowly, the injury rework, seasoned recruits, the Temple of Fortuna, the Exhibition Ring, mobile tap-for-help.
+- **5.1.1:** the Codex redesign (search, folding sections), the thumbs up or down layout, the result popups.
+- **5.2.0** (`tests/fun-ideas.test.js`):
+  - Nemeses (`NEMESIS`).
+  - Short careers and the daily Emperor's Challenge (`SHORT`, `dailySeed`).
+  - Betting (`BET`).
+  - The Emperor's demands (`DEMAND`).
+  - Bonds (`BOND`).
+  - The crowd's hype (`HYPE`, `hypeOf`).
+  - The Patron Lounge (`LOUNGE`).
+  - Seasoned Liaison prisoners.
+
+**Bots** (`scripts/bots.js`): `opts.plot` is `rebel`, `loyalist` or `bystander`; `opts.setup` (for example `{ short: true }`) sets the career's setup. Bots don't bet, host or use the Temple.
+
+**Open for the designer** (ask before deciding):
+- **Lower arenas you never fight in stay frozen** on the same opponent. Three playtests flagged it; the recommendation is to let them advance on their own.
+- **The old tutorial tips keep arriving** for a year after the tutorial month. Fold the important ones into the month?
+- **The Basa as cyborg centurions?** That overlaps with Androids; the alternative offered was a "Centurion" class.
+- **Renown and the mismatch jeers:** should Renown count, or the Power gap alone?
+- **The top bar's Prestige bar:** the designer saw a "UI bug" there. It looked correct (★ 7, House Lv 1, bar 7/12, "next at 12"). A clearer label was offered: `★ 7 · House Lv 1 [▬▬▬───] 5 to Lv 2`. Ask what they meant.
+- **Autoplay "not working after round 1":** never reproduced, on any build.
+- **When to freeze v6** (`/v6/` and tag `v6.0`, see section 6).
+
+**Good next steps:**
+1. An LLM playtest of 5.2.0's new features, especially short careers, the daily challenge, nemeses and the Lounge.
+2. The designer's text pass on the new placeholder lines.
+3. Fighters speaking in ordinary event cards, so that dialogue doesn't give the plot away.
+
+## 3. Earlier state (v5 notes, kept for reference)
 
 The v5 content release is live. On top of it, two batches of v5 updates were made on request.
 
