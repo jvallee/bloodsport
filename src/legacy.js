@@ -72,11 +72,18 @@ export function bestFighter(run) {
 }
 
 // Record a finished career (once).
+// The daily Emperor's Challenge (fun idea #2): everyone gets the same short career on a given day. `day` is "YYYY-MM-DD".
+export function dailySeed(day) {
+  return [...`emperor:${day}`].reduce((h, ch) => Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0, 2166136261) % 2147483647 || 1;
+}
+export const dailySetup = (day) => ({ patron: null, decrees: [], classes: [], short: true, daily: day });
+
 export function recordCareer(legacy, run) {
   if (run.status === 'active' || legacy.past.some((p) => p.seed === run.seed && p.weeks === run.week)) return null;
-  const entry = { seed: run.seed, weeks: run.week, won: run.status === 'won', score: careerScore(run), endReason: run.endReason, topTier: run.topTier };
+  const entry = { seed: run.seed, weeks: run.week, won: run.status === 'won', score: careerScore(run), endReason: run.endReason, topTier: run.topTier, short: Boolean(run.setup?.short), daily: run.setup?.daily ?? null };
   legacy.careers += 1;
   legacy.best = Math.max(legacy.best, entry.score);
+  if (entry.daily) legacy.daily = { ...(legacy.daily ?? {}), [entry.daily]: Math.max(legacy.daily?.[entry.daily] ?? 0, entry.score) };
   legacy.past = [entry, ...legacy.past].slice(0, 10);
   return entry;
 }

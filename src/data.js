@@ -483,6 +483,9 @@ export const RECRUIT = { levels: [[1], [1, 2], [2], [2, 3]], perLevel: 2 };
 // Nemeses (fun idea #1): an opponent who beats one of yours comes back, stronger and with a name for it. returnChance: per
 // new non-Boss opponent once minWeeks have passed since they were last seen; +powerPerWin per win over you (up to maxBonus).
 // Beating one pays Renown, Gold (× tier) and Favour. max: how many your house can have at once (the most recent are kept).
+// A short career (fun idea #2): each arena's circuit is Tournament → Boss (no Tournament 2), and purses and Prestige pay
+// more to make up for the fewer fights. The daily Emperor's Challenge is a short career on the day's seed.
+export const SHORT = { purse: 1.5, prestige: 1.5 };
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],

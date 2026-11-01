@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, deltaRow,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt } from './fight.js';
@@ -144,8 +144,8 @@ export function boutFor(run, tier = run.topTier) {
     name: `${c.name} · ${STAGES[s]}`, stage: s, boss: s === 2,
     buyIn: fest?.freeEntry ? 0 : pauper ? Math.max(0, run.prestige) : c.buyIn[s], fullBuyIn: c.buyIn[s], pauper: pauper && !fest?.freeEntry,
     // Lower arenas pay less, but a win always pays more than a loss (playtest #6: the Dirt Pits paid 2 either way).
-    winGold: Math.round(Math.max(Math.ceil(c.winGold[s] * ECONOMY.lowerArenaGold ** below), c.lossGold + ECONOMY.lowerWinOverLoss) * (fest?.gold ?? 1)),
-    winPrestige: Math.round(Math.max(below ? ECONOMY.lowerArenaMinPrestige : 0, Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below)) * (fest?.prestige ?? 1)),
+    winGold: Math.round(Math.max(Math.ceil(c.winGold[s] * ECONOMY.lowerArenaGold ** below), c.lossGold + ECONOMY.lowerWinOverLoss) * (fest?.gold ?? 1) * (isShort(run) ? SHORT.purse : 1)),
+    winPrestige: Math.round(Math.max(below ? ECONOMY.lowerArenaMinPrestige : 0, Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below)) * (fest?.prestige ?? 1) * (isShort(run) ? SHORT.prestige : 1)),
     festival: fest?.id ?? null,
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
     lossGold: c.lossGold, oppPower: c.oppPower[s] + (s === 2 && hasDecree(run, 'ironBosses') ? 1 : 0), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
@@ -166,7 +166,7 @@ export function upcomingBouts(run) {
     week += weeksUntilTournament(week);
     out.push({ week, weeks: week - run.week, stage: tier === GRAND_TIER ? 'Grand Tournament' : STAGES[stage], boss: stage === 2, festival: festivalOn(week)?.name ?? null });
     if (stage === 2) break;
-    stage += 1;
+    stage = isShort(run) ? 2 : stage + 1;
     week += 1;
   }
   return out;
@@ -352,6 +352,8 @@ export function matchOptions(run, f, tier = run.topTier) {
 
 // ---------- Market, Liaison, Armourer ----------
 
+// A short career (setup.short): Tournament → Boss in each arena, richer purses (SHORT).
+export const isShort = (run) => Boolean(run.setup?.short);
 export const marketPrice = (run) => circuitInfo(run).price;
 // What a fighter costs: the Liaison's own price, or the Market's plus RECRUIT.perLevel per level above 1.
 export const recruitPrice = (run, f) => (run.liaisonOffer?.id === f.id ? f.price : marketPrice(run) + RECRUIT.perLevel * ((f.level ?? 1) - 1));
@@ -744,7 +746,7 @@ export function createRun(seed = randomSeed(), setup = {}) {
   const run = {
     version: SAVE_VERSION,
     seed,
-    setup: { patron: setup.patron ?? null, decrees: [...(setup.decrees ?? [])], classes: [...(setup.classes ?? [])] },
+    setup: { patron: setup.patron ?? null, decrees: [...(setup.decrees ?? [])], classes: [...(setup.classes ?? [])], short: Boolean(setup.short), daily: setup.daily ?? null },
     gold: ECONOMY.startGold,
     prestige: ECONOMY.startPrestige,
     prestigeLevel: 1,
@@ -2079,7 +2081,7 @@ function advanceArena(run, tier, won, opp) {
     }
     newOpponent(run, tier);
   } else if (arena.stage < 2) {
-    arena.stage += 1;
+    arena.stage = isShort(run) ? 2 : arena.stage + 1; // a short career goes straight from the tournament to the Boss
     newOpponent(run, tier);
   } else if (won) {
     arena.rival = null;

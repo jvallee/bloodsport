@@ -645,3 +645,4 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .codex-locked { margin: 0 0 12px; }
 .verdict:has(.verdict-tag.with) { border-color: var(--gold); }
 .nemesis-note { margin: 6px 0 14px; }
+.setup .daily { border: 1px solid var(--gold); border-radius: 8px; padding: 8px 10px; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

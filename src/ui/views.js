@@ -124,7 +124,7 @@ export function endBanner(run, legacy = null) {
     <div>${esc(run.endReason)}</div>
     ${(run.epilogue ?? []).map((line) => `<p class="epilogue">${esc(line)}</p>`).join('')}
     ${plotAftermath(run)}
-    <div class="end-score">Score <b>${score}</b>${legacy ? ` · best ever ${Math.max(legacy.best, score)} · career ${legacy.careers}` : ''}</div>
+    <div class="end-score">${run.setup?.daily ? `⚜ The Emperor's Challenge, ${run.setup.daily} · ` : run.setup?.short ? 'Short career · ' : ''}Score <b>${score}</b>${run.setup?.daily && legacy ? ` · your best today ${Math.max(legacy.daily?.[run.setup.daily] ?? 0, score)}` : ''}${legacy ? ` · best ever ${Math.max(legacy.best, score)} · career ${legacy.careers}` : ''}</div>
     <div class="end-grid">
       <div><div class="label">The career</div>${formatDate(run.week)}<br>${wins} won, ${fought.length - wins} lost · ${kills} kill${kills === 1 ? '' : 's'}<br>Top arena: ${esc(arenaName(run.topTier))}<br>House rank: #${rank} of ${standings(run).length} · Glory ${run.glory ?? 0}</div>
       ${best ? `<div class="end-best">${portrait(best, 64)}<div><div class="label">Best fighter</div><b>${esc(best.name)}</b> (${esc(KINDS[best.kind].name)})<br>${bestWins} win${bestWins === 1 ? '' : 's'} · Renown ${best.renown}${best.titles?.length ? `<br>🏆 ${esc(best.titles.join(', '))}` : ''}${best.alive ? '' : '<br>Fell in the arena'}</div></div>` : ''}
@@ -134,6 +134,9 @@ export function endBanner(run, legacy = null) {
 }
 
 // Choosing how the next career starts (once a past career has unlocked anything).
+// Today's date as YYYY-MM-DD (local time): the daily challenge's key.
+export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
 export function setupModal(legacy, choice) {
   const patrons = unlockedPatrons(legacy);
   const patronList = [['', { name: 'No patron', desc: 'Start as the game intends.' }], ...patrons.map((p) => [p, PATRONS[p]])]
@@ -145,6 +148,11 @@ export function setupModal(legacy, choice) {
   return `<div class="modal setup" role="dialog" aria-label="A new career"><div class="modal-body">
     <button class="close" data-action="setup-cancel" aria-label="Close">×</button>
     <h2>A new career</h2>
+    <div class="label">Career length</div>
+    <label class="opt"><input type="radio" name="length" value="full" ${choice.short ? '' : 'checked'}> <b>Full career</b> <small>Each arena: Tournament 1 → Tournament 2 → Boss. A few hours.</small></label>
+    <label class="opt"><input type="radio" name="length" value="short" ${choice.short ? 'checked' : ''}> <b>Short career</b> <small>Each arena: Tournament → Boss, with richer purses. About half the time.</small></label>
+    <div class="daily"><b>⚜ The Emperor's Challenge</b> <small>Today's short career: the same seed for everyone today, no patron or decrees.${legacy.daily?.[today()] ? ` Your best today: <b>${legacy.daily[today()]}</b>.` : ''}</small>
+      <button class="btn small" data-action="daily-challenge">Take today's challenge</button></div>
     <div class="label">Patron</div>${patronList}
     <div class="label">The Emperor's Decrees</div>${decrees}
     ${classes.length ? `<p class="sub">Unlocked classes in the market: ${classes.map((c) => esc(CLASSES[c].name)).join(', ')}.</p>` : ''}

@@ -7,8 +7,8 @@ import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
-import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked } from './legacy.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
+import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked, dailySeed, dailySetup } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
@@ -261,17 +261,19 @@ const actions = {
     if (run.status === 'active' && run.week > 0 && !confirm('Abandon this career and start a new one?')) return;
     // Once a past career has unlocked something, choose a patron and decrees first.
     // The opening plays first, then the patron and decree choice, then the career (without a second opening).
-    if (unlockedPatrons(legacy).length || decreesUnlocked(legacy)) {
-      scene = { id: 'opening', beat: 0, then: 'setup' };
-      render();
-    } else {
-      newRun();
-    }
+    // Every new career offers its length and the daily challenge now (fun idea #2), so the dialog always follows.
+    scene = { id: 'opening', beat: 0, then: 'setup' };
+    render();
   },
   'start-career': () => {
     const patron = document.querySelector('input[name=patron]:checked')?.value || null;
     const decrees = [...document.querySelectorAll('input[name=decree]:checked')].map((i) => i.value);
-    newRun(null, { patron, decrees, classes: unlockedClasses(legacy) }, { opening: false });
+    const short = document.querySelector('input[name=length]:checked')?.value === 'short';
+    newRun(null, { patron, decrees, classes: unlockedClasses(legacy), short }, { opening: false });
+  },
+  'daily-challenge': () => {
+    const day = today();
+    newRun(dailySeed(day), dailySetup(day), { opening: false });
   },
   'setup-cancel': () => { setupChoice = null; },
   'replay-seed': () => newRun(run.seed, run.setup),
@@ -418,7 +420,7 @@ document.addEventListener('click', (e) => {
       alert(err.message);
     }
   });
-  if (name === 'new-run' || name === 'replay-seed' || name === 'start-career' || name === 'bug-reload') return;
+  if (name === 'new-run' || name === 'replay-seed' || name === 'start-career' || name === 'daily-challenge' || name === 'bug-reload') return;
   guard('render', () => {
     save();
     render();

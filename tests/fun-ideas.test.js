@@ -52,3 +52,32 @@ test('nemesis: they come back stronger, and beating them pays Renown, Gold and F
   assert.equal(run.nemeses.length, 0, 'beaten, and gone');
   assert.match(f.story.at(-1).text, /nemesis, Gorrak the Butcher, who had killed Ulfa/);
 });
+
+test('a short career goes straight from the tournament to the Boss, with richer purses', async () => {
+  const { SHORT, CIRCUITS } = await import('../src/data.js');
+  const { boutFor, upcomingBouts } = await import('../src/run.js');
+  const full = createRun(4);
+  const short = createRun(4, { short: true });
+  assert.equal(short.setup.short, true);
+  assert.equal(boutFor(short, 1).winGold, Math.round(boutFor(full, 1).winGold * SHORT.purse));
+  assert.deepEqual(upcomingBouts(short).map((b) => b.stage), ['Tournament 1', 'Boss Tournament']);
+  assert.equal(upcomingBouts(full).length, 3);
+  const f = recruit(short, short.market[0].id);
+  advanceToTournament(short);
+  f.power = 40;
+  play(short, f.id, 1);
+  assert.equal(short.arenas[1].stage, 2, 'one win and the Boss is next');
+  assert.ok(CIRCUITS.length);
+});
+
+test('the daily Emperor\'s Challenge: the same short career for everyone on a day, best score kept', async () => {
+  const { dailySeed, dailySetup, createLegacy, recordCareer } = await import('../src/legacy.js');
+  assert.equal(dailySeed('2026-11-01'), dailySeed('2026-11-01'));
+  assert.notEqual(dailySeed('2026-11-01'), dailySeed('2026-11-02'));
+  const run = createRun(dailySeed('2026-11-01'), dailySetup('2026-11-01'));
+  assert.deepEqual([run.setup.short, run.setup.daily, run.setup.patron], [true, '2026-11-01', null]);
+  const legacy = createLegacy();
+  run.status = 'lost';
+  recordCareer(legacy, run);
+  assert.ok(legacy.daily['2026-11-01'] >= 0);
+});
