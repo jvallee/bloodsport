@@ -180,6 +180,7 @@ export function summaryBanner(s) {
   if (s.renown) bits.push(`${plus(s.renown)} Renown`);
   if (s.favor) bits.push(`${plus(s.favor)} Favour`);
   if (s.title) bits.push(`🏆 ${s.fighter} earns ${s.titlePower > 1 ? 'the titles' : 'the title'} "${s.title}"${s.title === 'Master of the Games' ? '' : ` (+${s.titlePower ?? 1} Power)`}`);
+  if (s.nemesis) bits.push(`☠ Nemesis beaten: ${s.nemesis}`);
   if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favour, Renown, XP and Morale)`);
   if (s.kill) bits.push(`💀 A kill${s.mark ? `: ${s.fighter} earns the mark "${s.mark}"` : ''}`);
   if (s.next) bits.push(`🏟 On to the ${s.next}`);
@@ -305,6 +306,12 @@ function weekPanel(run) {
       ${run.log.length > 9 ? `<details class="more" data-key="full-log"><summary>Full house log (${run.log.length} entries)</summary>
         <ul class="log full">${[...run.log].reverse().map((l) => `<li class="${l.tone}"><small>${esc(formatDate(l.week))}</small> ${esc(l.text)}</li>`).join('')}</ul></details>` : ''}
     </section>`;
+}
+
+// A nemesis is back: what they've done to your house, and what beating them is worth.
+function nemesisNote(f) {
+  const n = f.nemesis;
+  return `<div class="warn nemesis-note">☠ <b>${esc(f.name)} ${esc(n.epithet)}</b> has beaten your house ${n.wins} time${n.wins === 1 ? '' : 's'}${n.victims.length ? ` and killed ${esc(n.victims.join(' and '))}` : ''}. They fight at +${n.bonus} Power for it. Beat them for Renown, Gold and Favour.</div>`;
 }
 
 // A three-match tournament: who waits in each round, and where your fighter is.
@@ -480,7 +487,7 @@ function arenaBlock(run, tier, oddsFor) {
       ${stakes ? `<p class="sub">${stakes}</p>` : ''}${rival}${debuffNote}
       ${bout.festival ? `<div class="festival now">🏛 <b>${esc(FESTIVAL_BY_ID[bout.festival].name)}</b>: ${esc(FESTIVAL_BY_ID[bout.festival].desc)}</div>` : ''}
       ${bracketLine(run, tier)}
-      ${fighterCard(arena.opponent, { compact: true, stress: false, opponent: { boss: boutFor(run, tier).boss }, tag: hasBracket(tier) ? `Final · ${houseTag(run, arena.opponent)}` : houseTag(run, arena.opponent) })}
+      ${arena.opponent.nemesis ? nemesisNote(arena.opponent) : ''}${fighterCard(arena.opponent, { compact: true, stress: false, opponent: { boss: boutFor(run, tier).boss }, tag: `${arena.opponent.nemesis ? `☠ Nemesis: ${esc(arena.opponent.name)} ${esc(arena.opponent.nemesis.epithet)} · ` : ''}${hasBracket(tier) ? `Final · ${houseTag(run, arena.opponent)}` : houseTag(run, arena.opponent)}` })}
       ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
       ${choice}`;
   if (bout.top) return `<div class="arena-block top"><h3>${esc(arenaName(tier))} <small>your top arena</small></h3>${body}</div>`;

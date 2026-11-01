@@ -480,6 +480,13 @@ export const NAMES = [
 export const RECRUIT = { levels: [[1], [1, 2], [2], [2, 3]], perLevel: 2 };
 // Exhibition bouts (Exhibition Ring): XP for each fighter, the winner's Renown and Gold (× top arena tier), and the loser's
 // chance of a Flesh Wound. One bout per tournament week; never deadly.
+// Nemeses (fun idea #1): an opponent who beats one of yours comes back, stronger and with a name for it. returnChance: per
+// new non-Boss opponent once minWeeks have passed since they were last seen; +powerPerWin per win over you (up to maxBonus).
+// Beating one pays Renown, Gold (× tier) and Favour. max: how many your house can have at once (the most recent are kept).
+export const NEMESIS = {
+  returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
+  epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],
+};
 export const EXHIBITION = { xpWin: 2, xpLoss: 1, renown: 1, goldPerTier: 1, woundChance: 0.15 }; // playtest #8: was XP 3/2, Gold 2 × tier (too rich every month)
 export const LIAISON = { convictPrice: 2, elitePrice: 3, elitePerTier: 2, elitePower: -1 };
 export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClue: 0.25 };

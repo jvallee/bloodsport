@@ -644,3 +644,4 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .codex .entry.fresh { border-color: var(--gold); }
 .codex-locked { margin: 0 0 12px; }
 .verdict:has(.verdict-tag.with) { border-color: var(--gold); }
+.nemesis-note { margin: 6px 0 14px; }

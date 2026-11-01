@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, deltaRow,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt } from './fight.js';
@@ -70,7 +70,7 @@ function remember(run, ...fighters) {
 // A fighter's comfort from the decor in their room.
 export const decorComfortOf = (f) => Object.entries(f.decor ?? {}).reduce((n, [k, c]) => n + (DECOR[k] ? decorComfort(DECOR[k]) * c : 0), 0);
 const takenNames = (run, extra = []) =>
-  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? [], (run.retired ?? []).map((l) => l.name));
+  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...(run.nemeses ?? []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? [], (run.retired ?? []).map((l) => l.name));
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const clampStress = (n) => clamp(n, 0, STRESS.max);
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
@@ -248,6 +248,11 @@ function newOpponent(run, tier) {
     arena.opponent = arena.rival; // a Boss who beat you comes back, stronger
     return;
   }
+  const back = returningNemesis(run, bout);
+  if (back) {
+    arena.opponent = back;
+    return;
+  }
   const f = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower, decorLevel: bout.oppDecor, takenNames: takenNames(run), classes: run.setup?.classes });
   f.speed = opponentSpeed(run, bout);
   seasonOpponent(run, f, bout);
@@ -255,6 +260,57 @@ function newOpponent(run, tier) {
   f.house = houseForArena(run, tier).id;
   arena.opponent = f;
   remember(run, f);
+}
+
+// ---------- Nemeses (fun idea #1) ----------
+
+// A nemesis may come back as a new (non-Boss) opponent, stronger for every win over your house.
+function returningNemesis(run, bout) {
+  if (bout.boss || bout.tier === GRAND_TIER || !run.nemeses?.length) return null;
+  const ready = run.nemeses.filter((n) => run.week - n.nemesis.lastSeen >= NEMESIS.minWeeks && n.nemesis.tier <= bout.tier);
+  if (!ready.length || next(run.rng.opponents) >= NEMESIS.returnChance) return null;
+  const n = [...ready].sort((a, b) => b.nemesis.wins - a.nemesis.wins)[0];
+  n.nemesis.lastSeen = run.week;
+  const bonus = Math.min(NEMESIS.maxBonus, n.nemesis.wins * NEMESIS.powerPerWin);
+  const f = { ...structuredClone(n), id: newId(run, 'o'), injuries: [], alive: true, stress: 0 };
+  f.power = Math.max(f.power, bout.oppPower) + bonus;
+  f.speed = Math.max(f.speed, opponentSpeed(run, bout));
+  f.nemesis = { ...n.nemesis, of: n.id, bonus };
+  log(run, `${n.name} ${n.nemesis.epithet} is back, in ${arenaName(bout.tier)}. They remember your house.`, 'warn');
+  return f;
+}
+
+// An opponent who beats one of yours becomes (or grows as) a nemesis.
+function recordNemesis(run, opp, tier, fighter, boss) {
+  if (boss || opp.rival) return; // a Boss who beats you already comes back (arena.rival)
+  run.nemeses ??= [];
+  const id = opp.nemesis?.of ?? opp.id;
+  let n = run.nemeses.find((x) => x.id === id);
+  if (!n) {
+    n = { ...structuredClone(opp), id, injuries: [], nemesis: { epithet: pick(run.rng.opponents, NEMESIS.epithets), wins: 0, kills: 0, victims: [], tier, lastSeen: run.week } };
+    delete n.nemesis.of;
+    run.nemeses.push(n);
+    if (run.nemeses.length > NEMESIS.max) run.nemeses.shift();
+    log(run, `${opp.name} will be remembered in your house as ${opp.name} ${n.nemesis.epithet}.`, 'warn');
+  }
+  n.nemesis.wins += 1;
+  n.nemesis.lastSeen = run.week;
+  if (!fighter.alive) {
+    n.nemesis.kills += 1;
+    n.nemesis.victims = [...n.nemesis.victims, fighter.name];
+  }
+}
+
+// Beating a nemesis: the crowd has waited for this.
+function nemesisFalls(run, opp, fighter, tier, summary) {
+  const gold = NEMESIS.goldPerTier * Math.min(tier, CIRCUITS.length);
+  run.nemeses = (run.nemeses ?? []).filter((n) => n.id !== opp.nemesis.of);
+  summary.gold += gold;
+  summary.renown += NEMESIS.renown;
+  summary.nemesis = `${opp.name} ${opp.nemesis.epithet}`;
+  changeFavor(run, NEMESIS.favor, `${opp.name} ${opp.nemesis.epithet} is beaten`);
+  chronicle(run, fighter, `Beat the house's nemesis, ${opp.name} ${opp.nemesis.epithet}${opp.nemesis.victims.length ? `, who had killed ${opp.nemesis.victims.join(' and ')}` : ''}.`);
+  log(run, `${fighter.name} beats ${opp.name} ${opp.nemesis.epithet}! +${gold} Gold, +${NEMESIS.renown} Renown. The house breathes again.`, 'good');
 }
 
 function openArena(run, tier) {
@@ -1794,6 +1850,7 @@ export function finishMatch(run, match) {
       }
     }
   }
+  if (won && opp.nemesis) nemesisFalls(run, opp, fighter, tier, summary); // before the purse is paid
   summary.favor = run.favor - favorBefore;
   summary.morale = fighter.morale - moraleBefore;
   run.gold += summary.gold;
@@ -1855,6 +1912,7 @@ export function finishMatch(run, match) {
   }
   run.history.push(summary);
   log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
+  if (!won) recordNemesis(run, opp, tier, fighter, bout.boss);
   advanceArena(run, tier, won, arena.opponent);
   if (tier === GRAND_TIER && plotActive(run) && run.plot.coup) resolveCoup(run, fighter, won, !bracket || bracket.round >= 2);
   offerMercy(run, match, summary, fighter, opp, tier);
