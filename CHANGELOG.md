@@ -2,6 +2,30 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 5.1.0 (from the designer's playthrough notes)
+
+**Learning the game**
+- **A tutorial month:** the steward walks you through your first month one step at a time (recruit two fighters, set a training job, end the week, reach fight day, send a fighter). The button to press glows, and each step is done by doing it.
+- **The steward's news:** a short note when your house unlocks new buildings, or when the Market, Liaison or Armourer has new stock.
+- **Phones and touch screens:** tap a stat, chip or badge to read its help text (there's no hover on a phone).
+- **Event results** now appear in a popup, not just in the house log.
+
+**Rules**
+- **Prestige for every tournament win** (+1 for each Quarter- and Semi-final), so losing a Final isn't a total loss. A win in a lower arena always earns at least 1 Prestige.
+- **Morale sinks slowly,** a few points a week, instead of dropping all at once. It still climbs at the old speed.
+- **Injuries reworked:** Distracted is a passing daze that doesn't count toward the Death Gate; Maimed and Senseless now count as two injuries, like Poisoned.
+- **Seasoned recruits:** in later arenas, Market fighters and prisoners of war arrive above level 1 with perks, and cost 2 Gold more per level.
+- **Masochist** can't be switched off by an injury. **Blood Faith** Orcs who die also earn the house 5 Gold per arena tier. A new perk, **Merciful**: sparing always wins the crowd over.
+
+**New buildings**
+- **Temple of Fortuna:** pay Gold to swap a fighter's level-up perk choices for three new ones.
+- **Exhibition Ring:** on tournament day, two fighters who aren't competing can spar for XP, Renown and Gold. Nobody dies in the ring.
+
+**Interface**
+- **The fight-day preview** shows the Power each side really fights with (scouting, feuds, festivals and the Challenger bonus included).
+- **Answer the Emperor:** at the end of the opening you choose your reply, and he responds.
+- **Gear** has its own fold-out on each fighter. Event choices line up in even columns. "Thrown to the beasts" makes clear the prisoner isn't one of your house.
+
 ## Unreleased (live game, after the v5 refreshes)
 
 **v6 in progress: the hidden plot** (design: `docs/roadmap-v6.md`)

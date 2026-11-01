@@ -153,7 +153,7 @@ export const RETIRE = { level: 4, prestige: 5, morale: 10 };
 // lost Final ~9. Playtest #6's "brackets pay nothing" is answered with Gold instead (purse 2 → 3).
 // A Championship also crowns every arena below it (playtest #7). cascadePower: Power for each lower Title gained that way.
 export const TITLES = { cascade: true, cascadePower: 1 };
-export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 3, prestige: 1, earlyBossLoss: 0.5 };
+export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 3, prestige: 1, prestigeTopOnly: false, earlyBossLoss: 0.5 };
 // prestige: × tier for each early win (swept: 1 took careful careers from 41% to 54%, so it's off); earlyBossLoss: share of the Boss-loss Favour for losing before the Final. // swept: -3/-2 took careful careers to 22%, -4/-3 to 28%
 
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
@@ -317,10 +317,11 @@ export const GRAND = { name: 'The Grand Tournament', oppPower: 30, buyIn: 10, wi
 // House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
 export const PRESTIGE_LEVELS = [
   { level: 1, at: 0, plots: 3, maxFighters: 4 },
-  { level: 2, at: 10, plots: 5, maxFighters: 6 },
-  { level: 3, at: 25, plots: 8, maxFighters: 12 },
-  { level: 4, at: 50, plots: 13, maxFighters: 24 },
-  { level: 5, at: 90, plots: 21, maxFighters: 48 },
+  // Playtest #8: thresholds raised (were 10 / 25 / 50 / 90) to offset the +1 Prestige for every tournament win.
+  { level: 2, at: 12, plots: 5, maxFighters: 6 },
+  { level: 3, at: 30, plots: 8, maxFighters: 12 },
+  { level: 4, at: 60, plots: 13, maxFighters: 24 },
+  { level: 5, at: 110, plots: 21, maxFighters: 48 },
 ];
 
 // cost[i] / req[i]: Gold and Prestige level to reach level i + 1 (cost[0] = build). `per` = effect per level.

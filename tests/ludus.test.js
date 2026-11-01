@@ -83,8 +83,9 @@ test('Entertainment Room relieves 15 Stress a week', () => {
   assert.equal(stressRelief(run), 15);
 });
 
-test('Prestige levels are reached at 10 / 25 / 50 / 90 and never lost', () => {
-  assert.deepEqual([0, 9, 10, 25, 50, 90, 500].map((p) => prestigeLevelFor(p)), [1, 1, 2, 3, 4, 5, 5]);
+// Playtest #8: raised from 10 / 25 / 50 / 90 to offset Prestige for every tournament win.
+test('Prestige levels are reached at 12 / 30 / 60 / 110 and never lost', () => {
+  assert.deepEqual([0, 11, 12, 30, 60, 110, 500].map((p) => prestigeLevelFor(p)), [1, 1, 2, 3, 4, 5, 5]);
   assert.equal(prestigeLevelFor(3, 4), 4);
 });
 

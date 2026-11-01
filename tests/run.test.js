@@ -614,7 +614,7 @@ test('after the Tier 4 Boss comes the Grand Tournament; winning it wins the care
 
 test('Prestige levels unlock as Prestige grows and add room plots', () => {
   const { run, f } = atBout();
-  run.prestige = 9;
+  run.prestige = 11; // one short of level 2 (12)
   const s = playBout(run, f.id);
   assert.equal(s.levelUp, 2);
   assert.deepEqual([run.prestigeLevel, plotsFree(run)], [2, 2]);

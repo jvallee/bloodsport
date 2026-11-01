@@ -1848,7 +1848,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   const kill = match.result.reason === 'death';
   const summary = {
     week: run.week, tier, name: `${bout.name} · ${round}`, boss: false, top: bout.top, won: true, reason: match.result.reason,
-    fighter: fighter.name, fighterId: fighter.id, died: false, gold: BRACKET.purse * Math.min(tier, 4), prestige: BRACKET.prestige, favor: 0,
+    fighter: fighter.name, fighterId: fighter.id, died: false, gold: BRACKET.purse * Math.min(tier, 4), prestige: BRACKET.prestigeTopOnly && !bout.top ? 0 : BRACKET.prestige, favor: 0,
     xp: XP.win, renown: 1, injuries: newInjuries, morale: 0, levels: 0, bracket: round, next, kill, house: houseOf(run, opp)?.name ?? null,
   };
   const levelBefore = fighter.level;
