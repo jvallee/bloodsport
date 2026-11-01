@@ -1,6 +1,6 @@
 // The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
 
-import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE, MERCY } from '../data.js';
+import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE, MERCY, BET } from '../data.js';
 
 const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 
@@ -137,6 +137,15 @@ function mercyPanel(m, mercy, late) {
   return `<div class="mercy${late}">${mercyChoices({ title: `${esc(mercy.opp)} lies beaten in the sand. All eyes turn to you, Lanista.`, blood, spare, kill })}</div>`;
 }
 
+// Betting on your own fighter, before Round 1 (fun idea #3). `m.betQuote` ({ odds, cap, gold }) is set by src/main.js.
+function betRow(m) {
+  if (m.bet) return `<div class="sub bet-placed">🪙 You bet ${m.bet.stake} Gold on ${esc(m.a.f.name)}: a win pays ${m.bet.payout}.</div>`;
+  const q = m.betQuote;
+  if (!q) return '';
+  const stakes = BET.stakes.filter((s) => s <= q.cap).map((s) => `<button class="btn small" data-action="bet" data-amount="${s}" ${s > q.gold ? `disabled title="Needs ${s} Gold"` : `title="Win: +${Math.floor(s * q.odds)} Gold. Lose: −${s}."`}>${s} Gold → ${Math.floor(s * q.odds)}</button>`).join('');
+  return `<div class="items-row bet-row"><span class="sub">🪙 Bet on ${esc(m.a.f.name)} at ${q.odds.toFixed(1)} to 1:</span>${stakes}</div>`;
+}
+
 // The signature move (level 3+): ready, used, or how to unlock it.
 function signatureRow(m) {
   const sig = signatureOf(m.a.f);
@@ -206,7 +215,7 @@ function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {
   if (m.round === 0) {
     // A fighter who walks in with the Death Gate open is warned before Round 1 too.
     const pre = mortalDanger(m.a) ? `<div class="alert">⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death. Capitulating is only possible between rounds.</div>` : '';
-    return `${pre}${signatureRow(m)}${itemRow}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
+    return `${pre}${signatureRow(m)}${itemRow}${betRow(m)}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
   }
   const danger = mortalDanger(m.a);
   const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.</div>` : '';

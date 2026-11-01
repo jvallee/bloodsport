@@ -5,7 +5,7 @@ import { playRound, throwTowel, useSignature } from './fight.js';
 import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom, pray, exhibition,
   assignDecor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
-  recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy,
+  recordMatchProgress, buyItem, useItem, placeBet, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy,
 } from './run.js';
 
 // A finished match is settled at once (the fight screen shows the full report). Returns the summary when it settles.
@@ -28,6 +28,7 @@ export const GAME_ACTIONS = {
   'buy-decor': ({ run }, d) => { buyDecor(run, d.item); },
   'buy-item': ({ run }, d) => { buyItem(run, d.item); },
   'use-item': ({ run, match }, d) => { useItem(run, match, d.item); },
+  bet: ({ run, match }, d) => placeBet(run, match, Number(d.amount)),
   signature: ({ match }) => { useSignature(match); },
   mercy: ({ run }, d) => { resolveMercy(run, d.choice); },
   'assign-decor': ({ run }, d) => { assignDecor(run, d.id, d.item); },

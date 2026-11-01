@@ -7,11 +7,12 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, deltaRow,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt } from './fight.js';
 import { Refused } from './errors.js';
+import { estimateOdds } from './odds.js';
 import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabel } from './events.js';
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament } from './calendar.js';
 import {
@@ -1652,6 +1653,43 @@ export function useItemBlocker(run, match, key) {
   return null;
 }
 
+// ---------- Betting on your own fighter (fun idea #3) ----------
+
+// What a bet would pay if your fighter wins: the stake at the bookmaker's odds (from the fighter's real chance to win).
+export function betOdds(run, match) {
+  const tier = match.bout?.tier ?? run.matchInfo?.tier ?? run.topTier;
+  const { win } = estimateOdds(match.a.f, match.b.f, { ...matchOptions(run, match.a.f, tier), n: 400, seed: 777 });
+  return Math.min(BET.maxOdds, BET.cut / Math.max(0.01, win));
+}
+export const betCap = (run, match) => BET.perTier * Math.min(match.bout?.tier ?? run.topTier, CIRCUITS.length);
+export function betBlocker(run, match, stake) {
+  if (!run.inMatch || !match || match.over) return 'Bets are placed during a match.';
+  if (match.round > 0) return 'Bets close when Round 1 begins.';
+  if (match.bet) return 'You have already bet on this fight.';
+  if (!(stake > 0)) return 'Choose a stake.';
+  if (stake > betCap(run, match)) return `The bookmakers take up to ${betCap(run, match)} Gold here.`;
+  if (run.gold < stake) return `Needs ${stake} Gold.`;
+  return null;
+}
+export function placeBet(run, match, stake) {
+  assertOk(betBlocker(run, match, stake));
+  const odds = betOdds(run, match);
+  run.gold -= stake;
+  match.bet = { stake, odds, payout: Math.floor(stake * odds) };
+  log(run, `You bet ${stake} Gold on ${match.a.f.name} at ${odds.toFixed(1)} to 1: a win pays ${match.bet.payout} Gold.`, 'event');
+  return match.bet;
+}
+
+// A bet is settled with the match's purse: a win pays the payout; a loss (or capitulating) loses the stake.
+function settleBet(run, match, won, summary) {
+  if (!match.bet) return;
+  summary.bet = { ...match.bet, won };
+  if (won) {
+    summary.gold += match.bet.payout;
+    log(run, `The bookmakers pay out: +${match.bet.payout} Gold on your ${match.bet.stake} Gold bet.`, 'good');
+  } else log(run, `The ${match.bet.stake} Gold bet is lost.`, 'bad');
+}
+
 // Use an item on your fighter for the next round (or, for the Crowd Bribe, for this fight).
 export function useItem(run, match, key) {
   assertOk(useItemBlocker(run, match, key));
@@ -1853,6 +1891,7 @@ export function finishMatch(run, match) {
     }
   }
   if (won && opp.nemesis) nemesisFalls(run, opp, fighter, tier, summary); // before the purse is paid
+  settleBet(run, match, won, summary);
   summary.favor = run.favor - favorBefore;
   summary.morale = fighter.morale - moraleBefore;
   run.gold += summary.gold;
@@ -1933,6 +1972,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
     xp: XP.win, renown: 1, injuries: newInjuries, morale: 0, levels: 0, bracket: round, next, kill, house: houseOf(run, opp)?.name ?? null,
   };
   const levelBefore = fighter.level;
+  settleBet(run, match, true, summary);
   run.gold += summary.gold;
   run.prestige += summary.prestige;
   fighter.renown += summary.renown;

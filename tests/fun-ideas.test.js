@@ -81,3 +81,31 @@ test('the daily Emperor\'s Challenge: the same short career for everyone on a da
   recordCareer(legacy, run);
   assert.ok(legacy.daily['2026-11-01'] >= 0);
 });
+
+test('betting: before Round 1 you can back your fighter at their real odds; a win pays, a loss doesn\'t', async () => {
+  const { placeBet, betBlocker, betOdds, betCap } = await import('../src/run.js');
+  const { BET } = await import('../src/data.js');
+  const { playRound } = await import('../src/fight.js');
+  for (const winner of ['A', 'B']) {
+    const run = createRun(2);
+    const f = recruit(run, run.market[0].id);
+    advanceToTournament(run);
+    run.gold = 30;
+    const m = startMatch(run, f.id, 1);
+    const odds = betOdds(run, m);
+    assert.ok(odds > 0 && odds <= BET.maxOdds);
+    assert.match(betBlocker(run, m, betCap(run, m) + 1), /take up to/);
+    const bet = placeBet(run, m, 5);
+    assert.equal(run.gold, 25);
+    assert.equal(bet.payout, Math.floor(5 * odds));
+    assert.match(betBlocker(run, m, 2), /already bet/);
+    m.over = true;
+    m.result = { winner, reason: 'rounds' };
+    m.round = 2;
+    const gold = run.gold;
+    const s = finishMatch(run, m);
+    assert.equal(s.bet.won, winner === 'A');
+    if (winner === 'A') assert.ok(run.gold >= gold + bet.payout, 'the payout comes with the purse');
+    void playRound;
+  }
+});
