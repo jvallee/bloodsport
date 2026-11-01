@@ -450,3 +450,6 @@ All numbers are tunables in `src/data.js` (`POLITICAL`, `PLOT`, `LIAISON`); stor
   - Careful 44%. Careful deaths 0.82, reckless deaths 3.77.
   - Balanced build best vs 2 of 4 Bosses. First Boss 68%. Tactics +7, always-Press −6. Grand +28 points harder than the first Boss.
   - Loyalist +8 over careful. Coup 15% of rebel careers. Treason 0%.
+- **After the LLM playtest #8 fixes** (decor comfort 2 + price, owed lives not renewed, Exhibition XP 2/1 and 1 Gold × tier, a daze passes on its own, odds with signature rules), all 12 gates pass.
+  - Careful 43%. Careful deaths 0.85, reckless deaths 3.95.
+  - Loyalist +7. Coup 17%. Treason 1%. Grand +21.
