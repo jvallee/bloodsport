@@ -6,7 +6,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFesti
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers,
+  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -547,7 +547,7 @@ export function marketTab(run) {
   const price = marketPrice(run);
   const recruitCard = (f, tag) => fighterCard(f, {
     stress: false, tag,
-    actions: `<div class="actions">${button(`Recruit · ${price} Gold`, 'recruit', { id: f.id }, recruitBlocker(run, f.id), 'btn primary small')}</div>`,
+    actions: `<div class="actions">${button(`Recruit · ${recruitPrice(run, f)} Gold`, 'recruit', { id: f.id }, recruitBlocker(run, f.id), 'btn primary small')}</div>`,
   });
   // Exotic Basa only ever come from the Stables, so they get their own section.
   const cards = run.market.filter((f) => f.kind !== 'basa').map((f) => recruitCard(f)).join('');
@@ -575,7 +575,7 @@ export function marketTab(run) {
   return `
     <div class="grid market">
       <div class="stack">
-        ${fold('fighters', 'Market', `<p class="sub">${price} Gold each. New fighters arrive at the start of every month, stronger as you climb the tiers. Roster: ${run.roster.length}/${rosterCap(run)}.</p>
+        ${fold('fighters', 'Market', `<p class="sub">From ${price} Gold (seasoned fighters cost more). New fighters arrive at the start of every month, stronger and more experienced as you climb the tiers. Roster: ${run.roster.length}/${rosterCap(run)}.</p>
           <div class="cards two">${cards || '<div class="empty">Sold out until next month.</div>'}</div>`, circuitInfo(run).name)}
         ${fold('stables', 'The Stables', stables)}
         ${fold('liaison', 'The Liaison', liaison)}

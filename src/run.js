@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt } from './fight.js';
@@ -288,6 +288,22 @@ export function matchOptions(run, f, tier = run.topTier) {
 // ---------- Market, Liaison, Armourer ----------
 
 export const marketPrice = (run) => circuitInfo(run).price;
+// What a fighter costs: the Liaison's own price, or the Market's plus RECRUIT.perLevel per level above 1.
+export const recruitPrice = (run, f) => (run.liaisonOffer?.id === f.id ? f.price : marketPrice(run) + RECRUIT.perLevel * ((f.level ?? 1) - 1));
+
+// A seasoned recruit: arrives at a level from RECRUIT.levels for this arena tier, with a perk chosen for each level.
+function season(run, rng, f) {
+  const level = pick(rng, RECRUIT.levels[Math.min(run.topTier, CIRCUITS.length) - 1]);
+  for (let l = 2; l <= level; l++) {
+    const pool = Object.keys(PERKS).filter((p) => (PERKS[p].repeatable || !f.perks.includes(p)) && (!PERKS[p].req || PERKS[p].req(f)));
+    const perk = pick(rng, pool);
+    f.perks.push(perk);
+    for (const [stat, n] of Object.entries(PERKS[perk].stat ?? {})) f[stat] += n;
+    if (PERKS[perk].stat?.power) f.perkPower = (f.perkPower ?? 0) + PERKS[perk].stat.power;
+  }
+  Object.assign(f, { level, xp: level > 1 ? XP.levels[level - 2] : 0 });
+  return f;
+}
 
 // The Stables bring exotic Basa to market (each month, and straight away when built).
 function addStablesOffers(run) {
@@ -295,7 +311,7 @@ function addStablesOffers(run) {
   const n = lv ? effectAt('stables', lv) : 0;
   const have = run.market.filter((f) => f.kind === 'basa').length;
   for (let i = have; i < n; i++) {
-    run.market.push(createFighter(run.rng.market, { id: newId(run, 'f'), kind: 'basa', bonusPower: circuitInfo(run).marketPower, takenNames: takenNames(run), classes: run.setup?.classes }));
+    run.market.push(season(run, run.rng.market, createFighter(run.rng.market, { id: newId(run, 'f'), kind: 'basa', bonusPower: circuitInfo(run).marketPower, takenNames: takenNames(run), classes: run.setup?.classes })));
   }
 }
 
@@ -303,7 +319,7 @@ function refreshMarket(run) {
   const rng = run.rng.market;
   const bonus = circuitInfo(run).marketPower;
   const market = [];
-  const make = (kind) => createFighter(rng, { id: newId(run, 'f'), kind, bonusPower: bonus, takenNames: takenNames({ ...run, market: [] }, market), classes: run.setup?.classes });
+  const make = (kind) => season(run, rng, createFighter(rng, { id: newId(run, 'f'), kind, bonusPower: bonus, takenNames: takenNames({ ...run, market: [] }, market), classes: run.setup?.classes }));
   for (let i = 0; i < ECONOMY.marketSize - 1; i++) market.push(make());
   market.splice(int(rng, 0, market.length), 0, make('orc'));
   run.market = market;
@@ -328,7 +344,8 @@ function refreshLiaison(run) {
   f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
   f.stress = elite ? 30 : 40;
   f.morale = elite ? 40 : 30;
-  f.price = elite ? LIAISON.elitePrice + LIAISON.elitePerTier * Math.min(run.topTier, CIRCUITS.length) : LIAISON.convictPrice;
+  if (elite) season(run, run.rng.market, f); // a prisoner of war is a seasoned soldier
+  f.price = elite ? LIAISON.elitePrice + LIAISON.elitePerTier * Math.min(run.topTier, CIRCUITS.length) + RECRUIT.perLevel * (f.level - 1) : LIAISON.convictPrice;
   f.origin = elite ? 'Prisoner of war' : 'Condemned convict';
   markPolitical(run, f);
   run.liaisonOffer = f;
@@ -774,7 +791,7 @@ export function recruitBlocker(run, id) {
   const fromLiaison = run.liaisonOffer?.id === id;
   if (!fromLiaison && !run.market.some((f) => f.id === id)) return 'That fighter is not for sale.';
   if (run.roster.length >= rosterCap(run)) return `Your quarters are full (${rosterCap(run)} fighters). Build or upgrade Fighter Quarters.`;
-  const price = fromLiaison ? run.liaisonOffer.price : marketPrice(run);
+  const price = fromLiaison ? run.liaisonOffer.price : recruitPrice(run, run.market.find((f) => f.id === id));
   if (run.gold < price) return `Needs ${price} Gold.`;
   return null;
 }
@@ -789,7 +806,7 @@ export function recruit(run, id) {
   } else {
     fighter = run.market.find((f) => f.id === id);
     run.market = run.market.filter((f) => f !== fighter);
-    run.gold -= marketPrice(run);
+    run.gold -= recruitPrice(run, fighter);
   }
   delete fighter.price;
   run.roster.push(fighter);

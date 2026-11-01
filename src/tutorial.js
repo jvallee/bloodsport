@@ -22,7 +22,7 @@ export const INTRO = [
     title: "How you lose",
     body: `<p>The Emperor watches you through <b>Imperial Favour</b>. Losing a Boss in your top arena, forfeiting, and failing to pay his <b>yearly tribute</b> all cost Favour. <b>At 0 Favour you're executed.</b></p>
       <p>You also fall if every gladiator is dead and you can't afford another, or if your miserable gladiators revolt.</p>
-      <p>Your fighters are mortal. One injury is survivable; with <b>two injuries, losing a round can kill them</b>. Between rounds you can always <b>capitulate</b> to save a fighter, at the cost of the match.</p>`,
+      <p>Your fighters are mortal. One injury is usually survivable; with <b>two injuries, losing a round can kill them</b> (the worst wounds, like Poisoned or Maimed, count as two). Between rounds you can always <b>capitulate</b> to save a fighter, at the cost of the match.</p>`,
   },
   {
     title: "Power, Speed and luck",

@@ -29,12 +29,13 @@ export function deltaRow(delta) {
 export const INJURY_ROLL = { perInjury: 25, perPowerGap: 5 }; // v5: was 20 (the user asked for more deaths)
 
 export const INJURIES = [
-  { tier: 1, min: 1, max: 25, tag: 'distracted', name: 'Distracted', weight: 1, desc: 'Disables 1 random trait or class ability for the rest of the match.' },
+  // Playtest #8: Distracted is a passing daze (it doesn't count toward the Death Gate); Maimed and Senseless count as two, like Poisoned.
+  { tier: 1, min: 1, max: 25, tag: 'distracted', name: 'Distracted', weight: 0, desc: 'A passing daze: disables 1 random trait or class ability for the rest of the match. Doesn\'t count toward the Death Gate.' },
   { tier: 2, min: 26, max: 45, tag: 'fleshWound', name: 'Flesh Wound', weight: 1, desc: '−10% chance to injure the opponent.' },
   { tier: 3, min: 46, max: 60, tag: 'concussed', name: 'Concussed', weight: 1, desc: 'Always strikes second.' },
   { tier: 4, min: 61, max: 74, tag: 'poisoned', name: 'Poisoned', weight: 2, desc: 'Counts as two injuries.' },
-  { tier: 5, min: 75, max: 84, tag: 'maimed', name: 'Maimed', weight: 1, desc: 'Disables 1 random trait or ability per effective injury for the rest of the match.' },
-  { tier: 6, min: 85, max: 92, tag: 'senseless', name: 'Senseless', weight: 1, desc: '+10% chance to be injured per effective injury.' },
+  { tier: 5, min: 75, max: 84, tag: 'maimed', name: 'Maimed', weight: 2, desc: 'Counts as two injuries. Disables 1 random trait or ability per effective injury for the rest of the match.' },
+  { tier: 6, min: 85, max: 92, tag: 'senseless', name: 'Senseless', weight: 2, desc: 'Counts as two injuries. +10% chance to be injured per effective injury.' },
   { tier: 7, min: 93, max: 99, tag: 'blinded', name: 'Blinded', weight: 1, desc: '−2 Power; disables First Volley, Bow and Gun.' },
   { tier: 8, min: 100, max: Infinity, tag: 'death', name: 'Immediate Death', weight: 0, desc: 'Dies in the arena.' },
 ];
@@ -461,6 +462,9 @@ export const NAMES = [
 // if none has been offered yet (so every career gets a chance at the plot). priceCut: they come cheap (someone paid).
 // The Liaison's monthly prisoner (playtest #7). A convict: Market-strength, wounded, cheap. A prisoner of war (Lv 2): the
 // top arena's Power + elitePower, priced elitePrice + elitePerTier × tier. Political prisoners come cheaper still.
+// Seasoned recruits (playtest #8: "people in the Market don't need to be level 1 later"). levels: the levels a Market
+// fighter (or a prisoner of war) can arrive at in each arena tier; perLevel: Gold added to their price per level above 1.
+export const RECRUIT = { levels: [[1], [1, 2], [2], [2, 3]], perLevel: 2 };
 export const LIAISON = { convictPrice: 2, elitePrice: 3, elitePerTier: 2, elitePower: -1 };
 export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClue: 0.25 };
 // The thread. gap: weeks between plot cards. cause/ready: trust needed for each stage (cause also needs this House level).

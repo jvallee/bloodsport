@@ -85,3 +85,22 @@ test('an event choice\'s result shows in a popup', () => {
   assert.match(html, /<li class="good">Imperial Favour \+2\.<\/li>/);
   assert.match(html, /data-action="result-close"/);
 });
+
+test('seasoned recruits: later arenas sell fighters above level 1, with their perks, for more Gold', async () => {
+  const { RECRUIT, PERKS: P } = await import('../src/data.js');
+  const { marketPrice, recruitPrice, advanceWeek } = await import('../src/run.js');
+  const run = createRun(5);
+  assert.ok(run.market.every((f) => f.level === 1), 'the Dirt Pits sell rookies');
+  for (const t of [2, 3, 4]) run.arenas[t] = { ...structuredClone(run.arenas[1]), tier: t, stage: 0, conquered: t < 4 };
+  run.topTier = 4;
+  const before = run.market.map((f) => f.id).join();
+  for (let i = 0; i < 8 && run.market.map((f) => f.id).join() === before; i++) { run.event = null; run.boutPending = false; run.bouts = null; advanceWeek(run); } // to the next restock
+  const seasoned = run.market.filter((f) => f.level > 1);
+  assert.ok(seasoned.length, 'the Imperial Market has seasoned fighters');
+  for (const f of run.market) {
+    assert.ok(RECRUIT.levels[3].includes(f.level), `level ${f.level}`);
+    assert.equal(f.perks.length, f.level - 1, 'a perk for each level');
+    assert.ok(f.perks.every((p) => P[p]));
+    assert.equal(recruitPrice(run, f), marketPrice(run) + RECRUIT.perLevel * (f.level - 1));
+  }
+});

@@ -11,8 +11,10 @@ test('estimated win chance tracks the Power difference', () => {
   assert.ok(strong.win > 0.9 && weak.win < 0.1);
 });
 
-test('death risk is zero for healthy fighters who are not outmatched for long', () => {
-  assert.equal(estimateOdds(blank({ power: 9 }), blank()).death, 0);
+// It was never exactly zero (a severe first wound can open the Death Gate); since Maimed and Senseless weigh 2
+// (playtest #8) it's about 0.5% for a strong, healthy favourite.
+test('death risk is tiny for healthy fighters who are not outmatched, and real for a wounded underdog', () => {
+  assert.ok(estimateOdds(blank({ power: 9 }), blank(), { n: 4000 }).death < 0.01);
   assert.ok(estimateOdds(blank({ power: 2, injuries: injuries('poisoned') }), blank({ power: 9 })).death > 0.1);
 });
 

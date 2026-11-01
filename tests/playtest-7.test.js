@@ -26,10 +26,11 @@ test('a prisoner of war arrives fight-ready, but the Power above their natural P
   assert.equal(f.origin, 'Prisoner of war');
   const natural = KINDS[f.kind].basePower + CIRCUITS[3].marketPower;
   assert.ok(f.power > natural + 5, 'still a strong fighter on arrival');
-  assert.equal(f.trainedPower, f.power - natural);
+  // Playtest #8: a prisoner of war may arrive seasoned, with perks; Power from perks isn't training.
+  assert.equal(f.trainedPower, f.power - natural - (f.perkPower ?? 0));
   assert.equal(f.trained, f.trainedPower);
   // So a prisoner can't train far past a home-grown fighter: at most the Trainer cap in total.
-  assert.ok(f.power <= natural + Math.max(f.trained, trainCap(run)));
+  assert.ok(f.power <= natural + (f.perkPower ?? 0) + Math.max(f.trained, trainCap(run)));
 });
 
 test('a Championship also crowns the fighter in every arena below it, +1 Power for each new Title', async () => {

@@ -41,8 +41,10 @@ test('injury tier boundaries match the injury table', () => {
   for (const [score, tag] of cases) assert.equal(injuryForScore(score).tag, tag, `score ${score}`);
 });
 
-test('only Poisoned weighs 2 among non-fatal injuries', () => {
-  for (const i of INJURIES.filter((x) => x.tag !== 'death')) assert.equal(i.weight, i.tag === 'poisoned' ? 2 : 1);
+// Playtest #8 (deliberate change): Distracted is a passing daze (0); Poisoned, Maimed and Senseless weigh 2.
+test('injury weights toward the Death Gate: Distracted 0; Poisoned, Maimed and Senseless 2; the rest 1', () => {
+  const heavy = ['poisoned', 'maimed', 'senseless'];
+  for (const i of INJURIES.filter((x) => x.tag !== 'death')) assert.equal(i.weight, i.tag === 'distracted' ? 0 : heavy.includes(i.tag) ? 2 : 1, i.tag);
 });
 
 test('every kind trait is defined and Orc starts at Power 6', () => {

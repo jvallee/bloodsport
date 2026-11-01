@@ -11,7 +11,7 @@ import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
-  equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom,
+  equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom, recruitPrice,
   buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, resolveMercy,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
@@ -95,7 +95,7 @@ function carefulWeek(run, opts) {
   const offers = [...run.market, ...(run.liaisonOffer ? [run.liaisonOffer] : [])].sort((a, b) => (opts.plot ? Number(Boolean(b.political)) - Number(Boolean(a.political)) : 0) || b.power - a.power);
   for (const f of offers) {
     if (run.roster.length >= (f.political && opts.plot ? rosterCap(run) : want)) continue;
-    const price = f === run.liaisonOffer ? f.price : marketPrice(run);
+    const price = recruitPrice(run, f);
     if (run.gold - price >= 4 && !recruitBlocker(run, f.id)) recruit(run, f.id);
   }
 
