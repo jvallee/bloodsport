@@ -1,12 +1,12 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY } from '../data.js';
+import { RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, prayPrice, prayBlocker, exhibitionBlocker,
+  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, prayPrice, prayBlocker, exhibitionBlocker,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -378,7 +378,7 @@ function roomPanel(run, f) {
   }).join('');
   const room = `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown})${f.mood ? `, mood ${f.mood.n > 0 ? '+' : ''}${f.mood.n} for ${f.mood.weeks} more week${f.mood.weeks === 1 ? '' : 's'}` : ''}.</div>
     <ul class="room-facts"><li>Quarters level ${maxLevel(run, 'quarters')}: +${MORALE.perQuartersLevel * maxLevel(run, 'quarters')} comfort; fits ${maxLevel(run, 'quarters')} of each decor item.</li>
-    <li>Decor in the room: ${decorCount(f)} item${decorCount(f) === 1 ? '' : 's'} (+${MORALE.perDecor * decorCount(f)} comfort).</li>
+    <li>Decor in the room: ${decorCount(f)} item${decorCount(f) === 1 ? '' : 's'} (+${decorComfortOf(f)} comfort).</li>
     ${maxLevel(run, 'entertainment') ? `<li>Entertainment Room: +${MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment')} comfort.</li>` : ''}
     <li>Fame: Renown ${f.renown} sets expectations at ${expects}.</li></ul>`;
   // Two tabs: the room (Morale) and its decor. Gear has its own fold-out (gearPanel).
@@ -472,7 +472,7 @@ function arenaBlock(run, tier, oddsFor) {
     ? `<div class="row">${bout.boss ? button(`Forfeit (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour)`, 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
     : '';
   const buyIn = bout.pauper ? `Buy-in ${bout.buyIn} Prestige <i>(normally ${bout.fullBuyIn}: the Dirt Pits take whatever Prestige you have)</i>` : `Buy-in ${bout.buyIn} Prestige`;
-  const body = `<p class="sub"><b>${esc(bout.name)}</b> · ${buyIn} · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
+  const body = `<p class="sub"><b>${esc(bout.name)}</b> · ${buyIn} · Win: +${bout.winGold} Gold <small title="Famous fighters draw a bigger purse: +1 Gold per ${RENOWN.goldPer} Renown">(+ fame)</small>, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
       ${stakes ? `<p class="sub">${stakes}</p>` : ''}${rival}${debuffNote}
       ${bout.festival ? `<div class="festival now">🏛 <b>${esc(FESTIVAL_BY_ID[bout.festival].name)}</b>: ${esc(FESTIVAL_BY_ID[bout.festival].desc)}</div>` : ''}
       ${bracketLine(run, tier)}
@@ -578,7 +578,7 @@ export function marketTab(run) {
   const liaison = offer
     ? fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, notes: offer.record?.length ? `<div class="record"><div class="label">Prison record</div>${offer.record.map((c) => `<div>“${esc(c)}”</div>`).join('')}</div>` : '', actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })
     : maxLevel(run, 'liaison') ? '<p class="sub">No prisoner on offer this month.</p>' : `<p class="sub">Build a Liaison${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for a cheap monthly prisoner.</p>`;
-  const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small> <span class="chip small good" title="Each decor item in a fighter's room adds ${MORALE.perDecor} comfort: their Morale drifts ${MORALE.perDecor} points higher.">+${MORALE.perDecor} comfort</span>${d.calm ? ` <span class="chip small" title="Lowers Stress each week">−${d.calm} Stress/wk</span>` : ''}<br><small>${esc(d.effect)}</small></div>
+  const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small> <span class="chip small good" title="This item adds ${decorComfort(d)} comfort to the room it's in: that fighter's Morale drifts ${decorComfort(d)} points higher.">+${decorComfort(d)} comfort</span>${d.calm ? ` <span class="chip small" title="Lowers Stress each week">−${d.calm} Stress/wk</span>` : ''}<br><small>${esc(d.effect)}</small></div>
     ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`).join('');
   const armourer = maxLevel(run, 'armourer')
     ? run.armourerStock.length
@@ -608,7 +608,7 @@ export function marketTab(run) {
           ${run.plot?.pass && !run.plot.ended ? '<div class="label">In the strongbox</div><div class="chips"><span class="chip" title="A pass bearing the Emperor\'s seal. Good for one visit from the Praetorians.">📜 Forged imperial pass</span></div>' : ''}`)}
         ${fold('apothecary', 'Apothecary', `<p class="sub">Single-use items for a fight. Use them before Round 1 or between rounds: one of each kind per fight.</p>${Object.entries(CONSUMABLES).map(([k, c]) => `<div class="shop-row"><div><b>${esc(c.name)}</b> · ${c.price} Gold <small>(${run.inventory.items?.[k] ?? 0} in storeroom)</small><br><small>${esc(c.desc)}</small></div>
           ${button('Buy', 'buy-item', { item: k }, buyItemBlocker(run, k), 'btn small primary')}</div>`).join('')}`)}
-        ${fold('decor', 'Decor merchant', `<p class="sub">Every item adds +${MORALE.perDecor} comfort to the fighter whose room it's in: their Morale drifts that much higher. Each room fits up to ${maxLevel(run, 'quarters')} of each item (your best Fighter Quarters level).</p>${decorShop}`)}
+        ${fold('decor', 'Decor merchant', `<p class="sub">Every item adds comfort to the fighter whose room it's in (finer pieces add more): their Morale drifts that much higher. Each room fits up to ${maxLevel(run, 'quarters')} of each item (your best Fighter Quarters level).</p>${decorShop}`)}
         ${fold('armourer', 'The Armourer', `${maxLevel(run, 'armourer') ? '<p class="sub">Buy gear here. Sell your spare gear back from the Storeroom above, for half its price.</p>' : ''}${armourer}`)}
       </div>
     </div>`;

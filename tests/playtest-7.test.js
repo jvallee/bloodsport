@@ -73,10 +73,12 @@ test('the Market shows the Stables\' Basa in their own section, and upgrading th
 
 test('Market sections fold away, and the Decor merchant shows each item\'s comfort', async () => {
   const { marketTab } = await import('../src/ui/views.js');
-  const { MORALE } = await import('../src/data.js');
+  const { DECOR, decorComfort } = await import('../src/data.js');
   const html = marketTab(createRun(1));
   for (const key of ['fighters', 'stables', 'liaison', 'storeroom', 'apothecary', 'decor', 'armourer']) assert.match(html, new RegExp(`<details class="panel fold" data-key="market-${key}" open>`));
-  assert.match(html, new RegExp(`\\+${MORALE.perDecor} comfort`));
+  // Playtest #8: each item shows its own comfort, scaled by price.
+  for (const d of Object.values(DECOR)) assert.match(html, new RegExp(`${d.name}</b>[^]*?\\+${decorComfort(d)} comfort`));
+  assert.ok(decorComfort(DECOR.bird) < decorComfort(DECOR.lionCage));
 });
 
 test('the fight screen shows the tournament bracket: this match, then who is up next', async () => {

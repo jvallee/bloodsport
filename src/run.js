@@ -5,7 +5,7 @@
 
 import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
-  ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
+  decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
   SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, deltaRow,
 } from './data.js';
@@ -61,6 +61,14 @@ const allOpponents = (run) => [
   ...Object.values(run.arenas).flatMap((a) => [a.opponent, a.rival]),
   ...Object.values(run.brackets ?? {}).flatMap((b) => b.foes),
 ].filter(Boolean);
+// No name comes back soon as someone else: every fighter the game makes (opponents, bracket foes, the Market, the Liaison)
+// goes on this list (playtest #8: only arena opponents did, so "Skarn" was three different fighters in three months).
+export const NAME_MEMORY = 90;
+function remember(run, ...fighters) {
+  run.recentNames = [...(run.recentNames ?? []), ...fighters.map((f) => f.name)].slice(-NAME_MEMORY);
+}
+// A fighter's comfort from the decor in their room.
+export const decorComfortOf = (f) => Object.entries(f.decor ?? {}).reduce((n, [k, c]) => n + (DECOR[k] ? decorComfort(DECOR[k]) * c : 0), 0);
 const takenNames = (run, extra = []) =>
   [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? [], (run.retired ?? []).map((l) => l.name));
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
@@ -188,6 +196,7 @@ function bracketFor(run, tier) {
       f.house = houseForArena(run, tier).id;
       foes.push(f);
     }
+    remember(run, ...foes);
     run.brackets[tier] = { foes, round: 0, fighterId: null, buyIn: 0 };
   }
   return run.brackets[tier];
@@ -245,7 +254,7 @@ function newOpponent(run, tier) {
   // Every opponent fights for a rival house; the Grand Tournament's champion is the leading rival's.
   f.house = houseForArena(run, tier).id;
   arena.opponent = f;
-  run.recentNames = [...(run.recentNames ?? []), f.name].slice(-60); // no name comes back soon as someone else
+  remember(run, f);
 }
 
 function openArena(run, tier) {
@@ -324,6 +333,7 @@ function refreshMarket(run) {
   market.splice(int(rng, 0, market.length), 0, make('orc'));
   run.market = market;
   addStablesOffers(run);
+  remember(run, ...run.market);
 }
 
 // Liaison: Lv 1 offers a cheap weak convict with a Flesh Wound; Lv 2 a strong POW with a Concussion.
@@ -349,6 +359,7 @@ function refreshLiaison(run) {
   f.origin = elite ? 'Prisoner of war' : 'Condemned convict';
   markPolitical(run, f);
   run.liaisonOffer = f;
+  remember(run, f);
 }
 
 // ---------- v6: the hidden plot (docs/roadmap-v6.md; cards in src/plot.js) ----------
@@ -889,7 +900,7 @@ export const decorCount = (f) => Object.values(f.decor).reduce((s, n) => s + n, 
 
 // Where a fighter's Morale is heading: comfort (rooms, decor, entertainment) minus what their fame makes them expect.
 export function moraleTarget(run, f) {
-  const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + MORALE.perDecor * decorCount(f) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
+  const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + decorComfortOf(f) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
   const expects = Math.min(MORALE.maxExpectation, MORALE.expectationPerRenown * f.renown);
   const mood = f.mood?.n ?? 0; // an event's lasting effect (src/events.js)
   return { target: clamp(MORALE.base + comfort - expects + mood, 0, 100), comfort, expects, mood };
@@ -957,6 +968,15 @@ export function advanceWeek(run) {
       }
     } else if (f.job === 'rest') {
       f.stress = clampStress(f.stress + STRESS.rest);
+    }
+    // A daze (Distracted, weight 0) passes on its own, whatever the job (playtest #8: it waited for the Medbay).
+    if (f.job !== 'medbay') {
+      for (const inj of f.injuries.filter((i) => !i.weight)) inj.weeksLeft -= 1;
+      const cleared = f.injuries.filter((i) => !i.weight && i.weeksLeft <= 0);
+      if (cleared.length) {
+        f.injuries = f.injuries.filter((i) => !cleared.includes(i));
+        log(run, `${f.name} shakes off the daze.`, 'good');
+      }
     }
     // The Entertainment Room, plus calming decor (Birds, Fire Braziers) in their quarters.
     const calm = Object.entries(f.decor).reduce((n, [k, count]) => n + (DECOR[k].calm ?? 0) * count, 0);
@@ -1105,7 +1125,7 @@ function applyEventEffects(run, eff, ev, out) {
   if (eff.chance) {
     const p = typeof eff.chance.p === 'function' ? eff.chance.p(run, ev) : eff.chance.p;
     const won = next(ev.plot ? run.rng.plot : run.rng.events) < p;
-    out.push(won ? 'It went well' : 'It went badly');
+    out.push(won ? 'it went well' : 'it went badly');
     applyEventEffects(run, won ? eff.chance.win : eff.chance.lose, ev, out);
   }
 }
@@ -1927,7 +1947,7 @@ export function resolveMercy(run, choice) {
     }
     log(run, `Thumbs up: ${fighter.name} spares ${opp}.${out.favor ? ' The Emperor approves of clemency.' : ''}`, 'good');
     // Against a call for blood, mercy is remembered: their house owes you a life.
-    if (crowd === 'kill' && house) {
+    if (crowd === 'kill' && house && !(house.owed > 0)) { // a life owed isn't renewed while it's still being paid (playtest #8)
       house.feud = 0;
       house.owed = HOUSES.feudMonths;
       house.since = run.week;

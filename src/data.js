@@ -229,6 +229,8 @@ export const WEAPONS = {
 
 // Decor only helps specific builds (for now). `helps` says whether a fighter gets anything from it.
 // Every decor item adds comfort (Morale). Birds and Fire Braziers also calm (−Stress a week) and help specific builds in combat.
+// Comfort per item scales with its price (playtest #8: every item gave +5, so a 1-Gold Bird was the best Morale buy).
+export const decorComfort = (d) => 2 + d.price;
 export const DECOR = {
   bird: { price: 1, calm: 5, name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale and −5 Stress a week. Ornitharius fighters also get +5% injure chance per Bird once injured (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
   fireBrazier: { price: 1, calm: 5, name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale and −5 Stress a week. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
@@ -448,7 +450,7 @@ export const MATCHUPS = [
 export const NAMES = [
   'Aurelia', 'Brutus', 'Cassia', 'Drusus', 'Flamma', 'Gaius', 'Hilarus', 'Ixa', 'Juno', 'Krell',
   'Livia', 'Marcus', 'Nyx', 'Octavia', 'Priscus', 'Quintus', 'Rusta', 'Spiculus', 'Tigris', 'Ursa',
-  'Varro', 'Vex', 'Xanthe', 'Zorak', 'Carpophorus', 'Verus', 'Thraxa', 'Sol-9', 'Unit Kappa', 'Grosh',
+  'Verres', 'Vex', 'Xanthe', 'Zorak', 'Carpophorus', 'Verus', 'Thraxa', 'Sol-9', 'Unit Kappa', 'Grosh',
   'Aelia', 'Bellona', 'Crixus', 'Decima', 'Eppia', 'Fulvia', 'Gannicus', 'Hector', 'Iulia', 'Kaeso',
   'Lucilla', 'Mevia', 'Naevius', 'Oenomaus', 'Pugnax', 'Rufa', 'Sabina', 'Tetraites', 'Ulfa', 'Vibia',
   'Agron', 'Barca', 'Cato', 'Duma', 'Ennia', 'Felix', 'Glabra', 'Hostus', 'Ilithya', 'Kroth',
@@ -458,6 +460,13 @@ export const NAMES = [
   'Kastra', 'Lepida', 'Maximus', 'Nonia', 'Orbilia', 'Pollux', 'Quarta', 'Remus', 'Scaeva', 'Tullia',
   'Urgulania', 'Valens', 'Gorrak', 'Hessa', 'Mordra', 'Skarn', 'Thessaly', 'Vael', 'Ysolde', 'Zarek',
   'Unit Theta', 'Unit Omega', 'Sol-4', 'Ferrum', 'Calyx', 'Nyssa', 'Ruun', 'Ghast', 'Lirien', 'Corvax',
+  // Playtest #8: 60 more, so names don't come round again so soon.
+  'Albia', 'Bassus', 'Caelia', 'Dentatus', 'Egnatia', 'Fabius', 'Gratia', 'Herennius', 'Iunia', 'Lentulus',
+  'Marcia', 'Novius', 'Opimia', 'Pertinax', 'Rutila', 'Servius', 'Tertia', 'Varus', 'Vipsania', 'Aemilius',
+  'Bragga', 'Drogga', 'Hruk', 'Kulgra', 'Murr', 'Rakka', 'Sorg', 'Thokk', 'Urza', 'Vrask',
+  'Aeris', 'Caelan', 'Ithil', 'Liora', 'Maelis', 'Nimue', 'Sylvar', 'Thalen', 'Vaelin', 'Ysra',
+  'Unit Lambda', 'Unit Zeta', 'Unit Rho', 'Sol-2', 'Sol-7', 'Cobalt', 'Gearwright', 'Tessel', 'Vanta', 'Axiom',
+  'Morwen', 'Sanguis', 'Vesper', 'Nocturne', 'Draven', 'Ilsa', 'Corvina', 'Hesper', 'Lucan', 'Sabra',
 ];
 
 // ---- v6: the hidden plot (docs/roadmap-v6.md). Placeholder numbers; record changes in docs/fight-rules.md ----
@@ -471,7 +480,7 @@ export const NAMES = [
 export const RECRUIT = { levels: [[1], [1, 2], [2], [2, 3]], perLevel: 2 };
 // Exhibition bouts (Exhibition Ring): XP for each fighter, the winner's Renown and Gold (× top arena tier), and the loser's
 // chance of a Flesh Wound. One bout per tournament week; never deadly.
-export const EXHIBITION = { xpWin: 3, xpLoss: 2, renown: 1, goldPerTier: 2, woundChance: 0.15 };
+export const EXHIBITION = { xpWin: 2, xpLoss: 1, renown: 1, goldPerTier: 1, woundChance: 0.15 }; // playtest #8: was XP 3/2, Gold 2 × tier (too rich every month)
 export const LIAISON = { convictPrice: 2, elitePrice: 3, elitePerTier: 2, elitePower: -1 };
 export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClue: 0.25 };
 // The thread. gap: weeks between plot cards. cause/ready: trust needed for each stage (cause also needs this House level).

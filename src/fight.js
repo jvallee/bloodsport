@@ -17,7 +17,8 @@ const countInjury = (f, tag) => f.injuries.filter((i) => i.tag === tag && !i.sup
 export const hasPerk = (f, perk) => Boolean(f.perks?.includes(perk));
 // Injuries at which losing a round can kill (Unbreakable holds out one longer).
 // Unbreakable and Iron Will each hold it off one injury longer; lions in the arena bring it one closer.
-export const deathGateAt = (f, arena = null) => 2 + (f.kindTrait === 'unbreakable' ? 1 : 0) + (f.perks?.includes('ironWill') ? 1 : 0) - (arena === 'lions' ? 1 : 0);
+// `disabled`: a combatant's switched-off slots; a disabled Unbreakable no longer holds the gate open longer (playtest #8).
+export const deathGateAt = (f, arena = null, disabled = []) => 2 + (f.kindTrait === 'unbreakable' && !disabled.includes('kind') ? 1 : 0) + (f.perks?.includes('ironWill') ? 1 : 0) - (arena === 'lions' ? 1 : 0);
 // A fighter's style for matchups: their weapon if a Fighter, otherwise their class.
 export const styleId = (f) => (f.cls === 'fighter' ? f.weapon : f.cls);
 // The matchups that favour c against opp (data.js MATCHUPS).
@@ -319,7 +320,7 @@ function inflictInjury(m, X, Y, r) {
   const prior = effectiveInjuries(Y.f);
   const advantage = Math.max(0, clampDelta(r.power[X.side].total - r.power[Y.side].total));
   const cleave = weaponActive(X, 'axe', r.round) ? 15 : 0; // Axe: wounds land harder
-  const sev = injurySeverity(d100(m.rng) + cleave, prior, advantage, r.winner === Y.side, deathGateAt(Y.f, Y.arena));
+  const sev = injurySeverity(d100(m.rng) + cleave, prior, advantage, r.winner === Y.side, deathGateAt(Y.f, Y.arena, Y.disabled));
   const result = { ...sev, tag: sev.injury.tag, name: sev.injury.name, advantage, prior };
   delete result.injury;
   if (result.tag === 'death') {
@@ -474,6 +475,7 @@ export function signatureBlocker(m) {
   const sig = signatureOf(m.a.f);
   if (!sig) return SIGNATURES[m.a.f.cls] ? `Signature moves unlock at level ${SIGNATURE.level}.` : 'This fighter has no signature move.';
   if (m.a.sigRound) return `${sig.name} has already been used this fight.`;
+  if (m.a.disabled.includes('class')) return `${sig.name} needs the class ability, and it's disabled this match.`;
   return null;
 }
 
@@ -587,7 +589,7 @@ export function deathRisk(m, stance = 'steady', n = 400) {
 }
 
 export const canThrowTowel = (m) => !m.over && m.round >= 1 && m.debuff !== 'emperorsGaze';
-export const mortalDanger = (c) => c.f.alive && effectiveInjuries(c.f) >= deathGateAt(c.f, c.arena);
+export const mortalDanger = (c) => c.f.alive && effectiveInjuries(c.f) >= deathGateAt(c.f, c.arena, c.disabled);
 
 export function throwTowel(m) {
   if (!canThrowTowel(m)) throw new Error('You can only capitulate between rounds.');

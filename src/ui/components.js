@@ -152,7 +152,7 @@ function gearSummary(g) {
 function moraleChip(f, info = null) {
   const state = f.morale >= MORALE.inspired ? ['inspired', 'Inspired: +5% win chance'] : f.morale < MORALE.mutinous ? ['mutinous', 'Mutinous: refuses to fight'] : f.morale < MORALE.restless ? ['restless', "Discontented: won't train"] : ['content', 'Content'];
   const why = info
-    ? ` Heading to ${info.target}: base ${MORALE.base}, comfort +${info.comfort} (Quarters +${MORALE.perQuartersLevel} a level, each decor item +${MORALE.perDecor}, Entertainment Room +${MORALE.perEntertainmentLevel} a level), fame expects −${info.expects} (${MORALE.expectationPerRenown} per Renown).`
+    ? ` Heading to ${info.target}: base ${MORALE.base}, comfort +${info.comfort} (Quarters +${MORALE.perQuartersLevel} a level, each decor item +3 to +7 by price, Entertainment Room +${MORALE.perEntertainmentLevel} a level), fame expects −${info.expects} (${MORALE.expectationPerRenown} per Renown).`
     : ' Comfort (Quarters, decor, Entertainment Room) raises it; fame raises expectations.';
   const sliding = info && f.morale >= MORALE.restless && info.target < MORALE.restless;
   return `<span class="morale ${state[0]}${sliding ? ' sliding' : ''}" title="Morale ${f.morale}/100. ${state[1]}.${why}${sliding ? ' Sliding towards Discontented: more comfort needed.' : ''}">☺ ${f.morale}${info && info.target !== f.morale ? ` → ${info.target}` : ''} <small>${sliding ? '⚠ Discontented soon' : state[1].split(':')[0]}</small></span>`;

@@ -151,3 +151,50 @@ test('dialogue replies: you answer the Emperor, and his answer to your choice pl
   assert.doesNotMatch(html, /scene-next/, 'you must answer');
   for (const r of SCENES.opening[at].replies) assert.ok(r.then.length && r.then.every((b) => b.speaker && b.text));
 });
+
+// ---- Playtest #8 (LLM) fixes ----
+
+test('playtest: a disabled Unbreakable no longer holds the Death Gate open longer', async () => {
+  const { deathGateAt } = await import('../src/fight.js');
+  const f = { kindTrait: 'unbreakable', perks: [] };
+  assert.equal(deathGateAt(f), 3);
+  assert.equal(deathGateAt(f, null, ['kind']), 2);
+});
+
+test('playtest: a signature can\'t be spent while the class ability is disabled', async () => {
+  const { signatureBlocker } = await import('../src/fight.js');
+  const m = createMatch({ a: blank({ id: 'a', cls: 'ashHungry', level: 3 }), b: blank({ id: 'b' }), rng: createRng(1) });
+  assert.equal(signatureBlocker(m), null);
+  m.a.disabled.push('class');
+  assert.match(signatureBlocker(m), /disabled/);
+});
+
+test('playtest: a daze (Distracted) passes on its own in a week, whatever the job', async () => {
+  const { advanceWeek } = await import('../src/run.js');
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  f.injuries = [{ tag: 'distracted', weight: 0, weeksLeft: 1 }];
+  run.boutPending = false;
+  advanceWeek(run);
+  assert.equal(f.injuries.length, 0);
+});
+
+test('playtest: sparing doesn\'t renew a life a house still owes you', () => {
+  const run = createRun(2);
+  const f = recruit(run, run.market[0].id);
+  const h = run.houses[0];
+  h.owed = 1;
+  run.mercy = { fighterId: f.id, opp: 'X', house: h.id, crowd: 'kill', tier: 1, top: true, at: 0 };
+  run.history.push({});
+  resolveMercy(run, 'spare');
+  assert.equal(h.owed, 1);
+});
+
+test('playtest: every generated fighter\'s name is remembered, and no fighter shares a house\'s name', async () => {
+  const { NAMES, HOUSES } = await import('../src/data.js');
+  const run = createRun(3);
+  for (const f of run.market) assert.ok(run.recentNames.includes(f.name), f.name);
+  const houses = (HOUSES.list ?? Object.values(HOUSES).find(Array.isArray)).map((h) => h.name.replace(/^House /, ''));
+  assert.deepEqual(NAMES.filter((n) => houses.includes(n)), []);
+  assert.equal(new Set(NAMES).size, NAMES.length);
+});

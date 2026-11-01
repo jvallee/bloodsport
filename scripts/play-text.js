@@ -6,7 +6,7 @@
 
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
-import { STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
+import { RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
@@ -15,7 +15,7 @@ import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
-  matchOptions, pray, exhibition,
+  matchOptions, pray, exhibition, recruitPrice,
   bossLossFavor,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo } from '../src/ludus.js';
@@ -128,7 +128,8 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   function abilities(f) {
     const trait = f.kindTrait ? `${TRAITS[f.kindTrait].name}: ${TRAITS[f.kindTrait].desc}` : null;
     const desc = f.cls === 'fighter' ? WEAPONS[f.weapon].desc : CLASSES[f.cls]?.desc;
-    return [trait, f.cls ? `${classAbility(f)}: ${desc}` : null].filter(Boolean).join(' | ');
+    const perks = f.perks?.length ? `Perks: ${f.perks.map((p) => PERKS[p].name).join(', ')}` : null;
+    return [trait, f.cls ? `${classAbility(f)}: ${desc}` : null, perks].filter(Boolean).join(' | ');
   }
 
   function extras(f) {
@@ -154,7 +155,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const lines = [
       `[${f.id}] ${identity(f)} (XP ${f.xp}${nextXp ? `/${nextXp}` : ', max level'})`,
       `     Power ${effectivePower(f)} (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')}) · Speed ${effectiveSpeed(f)}${effectiveSpeed(f) !== f.speed ? ` (${f.speed} + ${effectiveSpeed(f) - f.speed} gear)` : ''} · Stress ${f.stress}${f.stress >= STRESS.overtrained ? ' OVERTRAINED' : ''} · Morale ${f.morale} ${moraleState(f).label} (heading to ${target}: comfort +${moraleTarget(run, f).comfort}, fame expects −${moraleTarget(run, f).expects}${f.morale >= MORALE.restless && target < MORALE.restless ? '; WILL TURN DISCONTENTED and stop training: more comfort needed' : ''}) · Renown ${f.renown}`,
-      `     Job: ${f.job} · trained ${f.trained}/${trainCap(run)} · Injuries: ${injuriesText(f)} · Death Gate ${Math.min(gate, deathGateAt(f))}/${deathGateAt(f)}${gate >= deathGateAt(f) ? ' OPEN' : ''}`,
+      `     Job: ${f.job} · trained ${f.trained}/${trainCap(run)} · Injuries: ${injuriesText(f)} · Death Gate ${gate}/${deathGateAt(f)}${gate >= deathGateAt(f) ? ' OPEN' : ''}`,
       ...(f.humor ? [`     Humor: ${HUMORS[f.humor].name} (${HUMORS[f.humor].desc})`] : []),
       ...((f.scars?.length || f.augments?.length) ? [`     Scars: ${(f.scars ?? []).map((sc) => `${SCARS[sc.id].name}${sc.vs ? ` vs ${sc.vs}` : ''}`).join(', ') || 'none'} · Augments: ${(f.augments ?? []).map((k) => AUGMENTS[k].name).join(', ') || 'none'}`] : []),
       `     ${abilities(f)}`,
@@ -179,7 +180,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     const state = run.status === 'active' ? run.bouts?.[tier] : null;
     const name = state === 'done' ? `${arenaName(tier)} · settled this week · next month: ${bout.name.split(' · ')[1] ?? bout.name}` : `${bout.name}${state ? ' · OPEN this week' : ''}`;
     const lines = [`${name} · tier ${tier}${bout.top ? ' (your top arena)' : ' (lower arena)'}`];
-    lines.push(`     Buy-in ${bout.buyIn} Prestige · Win: +${bout.winGold} Gold, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold`);
+    lines.push(`     Buy-in ${bout.buyIn} Prestige · Win: +${bout.winGold} Gold (+1 per ${RENOWN.goldPer} Renown of your fighter), +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold`);
     const stakes = arenaStakes(run, tier);
     // The long lower-arena rules print once per screen; later lower arenas point back to them.
     if (stakes) lines.push(!bout.top && tier !== GRAND_TIER && lowerShown++ ? '     Lower arena: same rules as above.' : `     ${stakes}`);
@@ -280,11 +281,11 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   }
 
   function marketView() {
-    const out = [`-- Market · ${circuitInfo(run).name} · ${marketPrice(run)} Gold each · roster ${run.roster.length}/${rosterCap(run)} --`];
+    const out = [`-- Market · ${circuitInfo(run).name} · from ${marketPrice(run)} Gold (seasoned fighters cost more) · roster ${run.roster.length}/${rosterCap(run)} --`];
     out.push('New fighters arrive at the start of every month, stronger as you climb the tiers.');
     for (const f of run.market) {
       const why = recruitBlocker(run, f.id);
-      out.push(`[${f.id}] ${identity(f)} · Power ${f.power} · Speed ${f.speed}${why ? ` · can't recruit: ${why}` : ''}\n     ${abilities(f)}`);
+      out.push(`[${f.id}] ${identity(f)} · ${recruitPrice(run, f)} Gold · Power ${f.power} · Speed ${f.speed}${why ? ` · can't recruit: ${why}` : ''}\n     ${abilities(f)}`);
     }
     if (!run.market.length) out.push('Sold out until next month.');
     const offer = run.liaisonOffer;
@@ -608,7 +609,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     },
     kill: () => {
       const v = resolveMercy(run, 'kill');
-      return `Thumbs down. +${v.renown} Renown${v.mark ? `, earns the mark ${v.mark}` : ''}.${v.feud ? ` ${v.feud}` : ''}${v.crowd === 'kill' ? ' The crowd roars its approval.' : ''}\n\n${look()}`;
+      return `Thumbs down. +${v.renown} Renown${v.morale ? `, +${v.morale} Morale` : ''}${v.mark ? `, earns the mark ${v.mark}` : ''}.${v.feud ? ` ${v.feud}` : ''}${v.crowd === 'kill' ? ' The crowd roars its approval.' : ''}\n\n${look()}`;
     },
     houses: () => [`-- The houses (Glory: a win is worth its arena tier, ×3 for a Boss; year-end purse ${HOUSES.yearPurse.map((g) => g * dateOf(run.week).year).join('/')} Gold by place) --`, ...standings(run).map((h, i) => `  ${i + 1}. ${h.name}${h.you ? ' (you)' : ''} · ${arenaName(Math.min(h.tier, 4))} · Glory ${h.glory}${h.feud ? ` · feud ${h.feud} months` : ''}${h.vengeance ? ` · vengeance ${h.vengeance} months` : ''}`)].join('\n'),
     withdraw: ([tier]) => {

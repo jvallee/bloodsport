@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR, TRIBUTE, CONSUMABLES, BLOODIED, DECOR, LIAISON, POLITICAL } from '../src/data.js';
+import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR, TRIBUTE, CONSUMABLES, BLOODIED, DECOR, LIAISON, POLITICAL, decorComfort } from '../src/data.js';
 import { autoPlay } from '../src/fight.js';
 import { build, rosterCap, plotsFree } from '../src/ludus.js';
 import {
@@ -240,7 +240,8 @@ test('Morale drifts toward comfort minus expectations', () => {
   assert.equal(moraleTarget(run, f).target, MORALE.base + MORALE.perQuartersLevel);
   f.decor.trophy = 1;
   f.renown = 10;
-  assert.equal(moraleTarget(run, f).target, MORALE.base + MORALE.perQuartersLevel + MORALE.perDecor - 20);
+  // Playtest #8: comfort scales with the item's price (a Trophy Rack, 2 Gold, gives 4).
+  assert.equal(moraleTarget(run, f).target, MORALE.base + MORALE.perQuartersLevel + decorComfort(DECOR.trophy) - 20);
   f.morale = 90;
   advanceWeek(run);
   // Playtest: Morale sinks slowly (a few points a week) but climbs quickly.
