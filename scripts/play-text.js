@@ -18,9 +18,9 @@ import {
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
-  bossLossFavor,
+  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice,
 } from '../src/run.js';
-import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo } from '../src/ludus.js';
+import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
@@ -53,6 +53,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   job <id> <rest|trainPower|trainSpeed|medbay>
   perk <id> <perk>              choose a level-up perk
   pray <id>                     Temple of Fortuna: pay Gold for three new perk choices
+  raise <id>                    Unnatural Temple of Vulcan: raise a fighter killed in the arena as a Revenant (see \`market\`)
   spar <id> <id>                Exhibition Ring (fight day): two free fighters spar for XP, Renown and Gold
   surgeon <id> <injury#>        Emergency Surgeon: heal one injury now (injury# from 0)
   buy-decor <${Object.keys(DECOR).join('|')}>
@@ -297,6 +298,15 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     out.push(offer
       ? `\nLiaison (${offer.origin}, ${offer.price} Gold): [${offer.id}] ${identity(offer)} · Power ${offer.power} · Speed ${offer.speed} · Stress ${offer.stress} · Morale ${offer.morale} · Injuries: ${injuriesText(offer)}\n     ${abilities(offer)}${offer.record?.length ? `\n     Prison record: ${offer.record.map((c) => `"${c}"`).join(' ')}` : ''}`
       : maxLevel(run, 'liaison') ? '\nLiaison: no prisoner on offer this month.' : `\nLiaison: build one${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for a cheap monthly prisoner.`);
+    const lv = maxLevel(run, 'vulcan');
+    out.push(!lv
+      ? `\nUnnatural Temple of Vulcan: build it${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} to raise fighters killed in the arena as Revenants.`
+      : `\nUnnatural Temple of Vulcan (\`raise <id>\`, ${reanimatePrice(run)} Gold; bodies keep ${plural(effectAt('vulcan', lv), 'week')}${lv < 2 ? '; Revenants come back with 1 less Power' : ''}; their Morale holds at 50):`);
+    for (const f of raisable(run)) {
+      const why = reanimateBlocker(run, f.id);
+      out.push(`  [${f.id}] ${identity(f)} · Power ${f.power} · fell ${plural(run.week - f.diedWeek, 'week')} ago${why ? ` · can't raise: ${why}` : ''}`);
+    }
+    if (lv && !raisable(run).length) out.push('  No bodies to raise.');
     out.push('\nDecor merchant:');
     for (const [k, d] of Object.entries(DECOR)) out.push(`  ${k} · ${d.name} · ${d.price} Gold (${run.inventory.decor[k]} in storeroom): ${d.effect}`);
     out.push('\nApothecary (single-use fight items, `buy-item <item>`; use one between rounds with `use <item>`):');
@@ -481,6 +491,11 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       need([id, job].filter(Boolean), 2, 'job <id> <rest|trainPower|trainSpeed|medbay>');
       setJob(run, id, job);
       return `${run.roster.find((f) => f.id === id).name}'s job: ${job}.`;
+    },
+    raise: ([id]) => {
+      need([id].filter(Boolean), 1, 'raise <id>');
+      const f = reanimate(run, id);
+      return `${f.name} rises from the forge as a Revenant [${f.id}]: ${TRAITS[f.kindTrait].name} (${TRAITS[f.kindTrait].desc}) Power ${f.power}.`;
     },
     pray: ([id]) => {
       pray(run, id);
