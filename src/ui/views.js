@@ -6,7 +6,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFesti
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice,
+  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, prayPrice, prayBlocker, exhibitionBlocker,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -239,6 +239,11 @@ export function resultModal(title, lines) {
 
 // A scene from src/dialogue.js, one beat at a time.
 export function dialogueModal(scene, beats, index) {
+  // A beat with replies: you answer in your own words (each reply's lines play next).
+  if (beats[index].replies) {
+    const replies = beats[index].replies.map((r, i) => `<button class="btn reply" data-action="scene-reply" data-index="${i}">${esc(r.label)}</button>`).join('');
+    return dialogueBox(beats[index], `<span class="dialogue-you">You:</span><span class="row replies">${replies}</span>`);
+  }
   const last = index >= beats.length - 1;
   const dots = beats.length > 1 ? `<span class="dots">${beats.map((_, i) => `<i class="${i === index ? 'on' : ''}"></i>`).join('')}</span>` : '';
   const actions = `${dots}<span class="row">${last ? '' : '<button class="link" data-action="scene-skip">Skip</button>'}
@@ -347,7 +352,8 @@ function perkChooser(run, f) {
   if (!f.pendingPerks.length) return '';
   const offer = f.pendingPerks[0].map((p) => `<button class="perk-opt" data-action="perk" data-id="${f.id}" data-perk="${p}" ${perkBlocker(run, f.id, p) ? 'disabled' : ''}>
     <b>${esc(PERKS[p].name)}${PERKS[p].repeatable ? ' <small class="stacks">(stacks: can be taken again)</small>' : ''}${f.perks.includes(p) ? ` <small class="stacks">you have ×${f.perks.filter((x) => x === p).length}</small>` : ''}</b><small>${esc(PERKS[p].desc)}</small></button>`).join('');
-  return `<div class="perk-choice"><div class="label">⭐ Level ${f.level - f.pendingPerks.length + 1}! Choose a perk:</div><div class="perk-list">${offer}</div></div>`;
+  const temple = maxLevel(run, 'temple') ? `<div class="row">${buttonWhy(`🏛 Pray to Fortuna for three new choices (${prayPrice(run)} Gold)`, 'pray', { id: f.id }, prayBlocker(run, f.id), 'btn small')}</div>` : '';
+  return `<div class="perk-choice"><div class="label">⭐ Level ${f.level - f.pendingPerks.length + 1}! Choose a perk:</div><div class="perk-list">${offer}</div>${temple}</div>`;
 }
 
 function roomPanel(run, f) {
@@ -486,8 +492,21 @@ function boutPanel(run, oddsFor) {
       <h2>${run.bouts ? 'Fight day' : 'Next bouts'}</h2>
       ${when}
       ${tiers.map((t) => arenaBlock(run, t, oddsFor)).join('')}
+      ${exhibitionBlock(run)}
       ${oracleNote}
     </section>`;
+}
+
+// The Exhibition Ring on fight day: pick a fighter's sparring partner from a dropdown (it runs the bout).
+function exhibitionBlock(run) {
+  if (!maxLevel(run, 'exhibition') || !run.bouts) return '';
+  if (run.exhibitionWeek === run.week) return '<div class="arena-block"><h3>⚔ Exhibition Ring</h3><p class="sub">✔ This week\'s exhibition is over.</p></div>';
+  const rows = run.roster.map((f) => {
+    const partners = run.roster.filter((g) => g !== f && !exhibitionBlocker(run, f.id, g.id));
+    if (!partners.length) return '';
+    return `<div class="row tight"><b>${esc(f.name)}</b> <select class="gear-select" data-change="exhibition" data-id="${f.id}" aria-label="Exhibition partner for ${esc(f.name)}"><option value="">Spar against…</option>${partners.map((g) => `<option value="${g.id}">${esc(g.name)} (Power ${effectivePower(g)})</option>`).join('')}</select></div>`;
+  }).join('');
+  return `<div class="arena-block"><h3>⚔ Exhibition Ring</h3><p class="sub">Two fighters who aren't competing this week can put on a bout for the crowd: XP for both, Renown and Gold for the winner. Nobody dies in the ring, though the loser may take a Flesh Wound.</p>${rows || '<p class="sub">No two fighters are free and fit to spar.</p>'}</div>`;
 }
 
 export function ludusTab(run, oddsFor) {

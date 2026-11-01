@@ -597,3 +597,6 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 @keyframes tut-pulse { 50% { box-shadow: 0 0 0 2px var(--gold), 0 0 4px rgba(217, 180, 90, 0.2); } }
 @media (prefers-reduced-motion: reduce) { .tut-focus { animation: none; } }
 .steward-note { align-items: center; justify-content: flex-start; padding: 8px 12px; }
+.dialogue-you { color: var(--muted); font-size: 13px; }
+.replies { gap: 8px; flex-wrap: wrap; }
+.btn.reply { font-style: italic; }

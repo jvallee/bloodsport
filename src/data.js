@@ -332,6 +332,9 @@ export const BUILDINGS = {
   medbay: { name: 'Medbay', dept: 'medical', icon: 'cross', cost: [8, 8, 14], req: [1, 2, 4], per: [1, 2, 3], effect: (n) => `Treats ${n} fighter${n > 1 ? 's' : ''} at a time`, extra: (lv) => (lv >= 2 ? 'Heals 2 weeks of injury per week' : 'Heals 1 week of injury per week') },
   oracle: { unique: true, name: 'Oracle', dept: 'scouting', icon: 'eye', cost: [8, 12], req: [2, 3], per: [1, 2], effect: (n) => (n >= 2 ? 'Exact odds and next Boss debuff' : 'Odds to the nearest 10%') },
   armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16, 24], req: [2, 3, 4], per: [5, 6, 8], effect: (n) => `Sells ${n} pieces of gear each month, and buys your spare gear back at half price`, extra: (lv) => (lv >= 3 ? 'Stocks Imperial (tier 3) gear' : lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
+  // Playtest #8: pray for different perk choices; and exhibition bouts between your own fighters on tournament day.
+  temple: { unique: true, name: 'Temple of Fortuna', dept: 'training', icon: 'temple', cost: [8, 12], req: [2, 3], per: [3, 1], effect: (n) => `Pray for a fighter's level-up perks: ${n} Gold for three new choices` },
+  exhibition: { unique: true, name: 'Exhibition Ring', dept: 'training', icon: 'swords', cost: [10], req: [2], per: [1], effect: () => 'On tournament day, two fighters who aren\'t competing can fight an exhibition bout: XP for both, Renown and Gold for the winner, and no risk of death' },
   stables: { unique: true, name: 'Stables', dept: 'scouting', icon: 'paw', cost: [9, 14], req: [2, 3], per: [1, 2], effect: (n) => `${n} exotic Basa fighter${n === 1 ? '' : 's'} in the Market each month` },
   liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly cheap condemned convict'), note: () => 'Read their prison records: not every prisoner is what the guards say.' },
 };
@@ -465,6 +468,9 @@ export const NAMES = [
 // Seasoned recruits (playtest #8: "people in the Market don't need to be level 1 later"). levels: the levels a Market
 // fighter (or a prisoner of war) can arrive at in each arena tier; perLevel: Gold added to their price per level above 1.
 export const RECRUIT = { levels: [[1], [1, 2], [2], [2, 3]], perLevel: 2 };
+// Exhibition bouts (Exhibition Ring): XP for each fighter, the winner's Renown and Gold (× top arena tier), and the loser's
+// chance of a Flesh Wound. One bout per tournament week; never deadly.
+export const EXHIBITION = { xpWin: 3, xpLoss: 2, renown: 1, goldPerTier: 2, woundChance: 0.15 };
 export const LIAISON = { convictPrice: 2, elitePrice: 3, elitePerTier: 2, elitePower: -1 };
 export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClue: 0.25 };
 // The thread. gap: weeks between plot cards. cause/ready: trust needed for each stage (cause also needs this House level).

@@ -3,7 +3,7 @@
 
 import { playRound, throwTowel, useSignature } from './fight.js';
 import {
-  boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom,
+  boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom, pray, exhibition,
   assignDecor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
   recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy,
 } from './run.js';
@@ -38,6 +38,8 @@ export const GAME_ACTIONS = {
   unequip: ({ run }, d) => { unequip(run, d.id, d.slot); },
   'unequip-all': ({ run }) => { unequipAll(run); },
   perk: ({ run }, d) => { choosePerk(run, d.id, d.perk); },
+  pray: ({ run }, d) => { pray(run, d.id); },
+  exhibition: ({ run }, d) => exhibition(run, d.id, d.index),
   surgeon: ({ run }, d) => { surgeon(run, d.id, Number(d.index)); },
   build: ({ run }, d) => { buildRoom(run, d.type); },
   upgrade: ({ run }, d) => { upgradeRoom(run, d.id); },

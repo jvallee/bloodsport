@@ -43,6 +43,12 @@ export const SCENES = {
     {
       speaker: "emperor",
       text: "I took this throne with a knife. I know exactly what a person will do to keep breathing. Show me.",
+      // Your answer (playtest #8: response dialogue). PLACEHOLDER lines; flavour only, nothing in the career changes.
+      replies: [
+        { label: "I will.", then: [{ speaker: "emperor", text: "Good. Confidence is cheap, Lanista. Let us see what it buys." }] },
+        { label: "Send me home.", then: [{ speaker: "emperor", text: "Home? Battleworld does not return what it takes. This is home now." }] },
+        { label: "Say nothing.", then: [{ speaker: "emperor", text: "Silence. Wise, or terrified. Either will do." }] },
+      ],
     },
     // PLACEHOLDER: the steward, plain and neutral, takes over as your guide.
     {

@@ -15,7 +15,7 @@ import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
-  matchOptions,
+  matchOptions, pray, exhibition,
   bossLossFavor,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo } from '../src/ludus.js';
@@ -50,6 +50,8 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   recruit <id> | release <id>
   job <id> <rest|trainPower|trainSpeed|medbay>
   perk <id> <perk>              choose a level-up perk
+  pray <id>                     Temple of Fortuna: pay Gold for three new perk choices
+  spar <id> <id>                Exhibition Ring (fight day): two free fighters spar for XP, Renown and Gold
   surgeon <id> <injury#>        Emergency Surgeon: heal one injury now (injury# from 0)
   buy-decor <${Object.keys(DECOR).join('|')}>
   buy-item <${Object.keys(CONSUMABLES).join('|')}>   single-use fight items
@@ -78,7 +80,9 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   // Dialogue scenes (src/dialogue.js), as text: the opening once, then the Emperor's visits as they come due.
   const scenesSeen = [];
   // (The intro's pages already print at the start, so the opening's narrator page is skipped here.)
-  const sceneText = (id) => `\n${SCENES[id].filter((b) => b.speaker !== 'narrator').map((b) => `${SPEAKERS[b.speaker].name ? `${SPEAKERS[b.speaker].name}: ` : ''}${b.title ? `[${b.title}] ` : ''}${(b.text ?? b.html).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}`).join('\n')}`;
+  // Replies (your answers) play the first answer, and list the others.
+  const withReplies = (beats) => beats.flatMap((b) => (b.replies ? [b, { speaker: 'narrator', text: `(You could answer: ${b.replies.map((r) => `"${r.label}"`).join(' / ')}. You say: "${b.replies[0].label}")` }, ...b.replies[0].then] : [b]));
+  const sceneText = (id) => `\n${withReplies(SCENES[id]).filter((b) => b.speaker !== 'narrator' || !b.title).map((b) => `${SPEAKERS[b.speaker].name ? `${SPEAKERS[b.speaker].name}: ` : ''}${b.title ? `[${b.title}] ` : ''}${(b.text ?? b.html).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}`).join('\n')}`;
   const done = []; // dismissed tutorial steps
   const oddsCache = new Map();
   let match = null;
@@ -471,6 +475,15 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       need([id, job].filter(Boolean), 2, 'job <id> <rest|trainPower|trainSpeed|medbay>');
       setJob(run, id, job);
       return `${run.roster.find((f) => f.id === id).name}'s job: ${job}.`;
+    },
+    pray: ([id]) => {
+      pray(run, id);
+      const f = run.roster.find((x) => x.id === id);
+      return `Fortuna answers. ${f.name}'s new choices: ${f.pendingPerks[0].map((p) => `${p} (${PERKS[p].name})`).join(', ')}.`;
+    },
+    spar: ([a, b]) => {
+      const r = exhibition(run, a, b);
+      return `Exhibition: ${r.winner} beats ${r.loser}. +${r.gold} Gold${r.wound ? `; ${r.loser} takes a Flesh Wound` : ''}.`;
     },
     perk: ([id, perk]) => {
       need([id, perk].filter(Boolean), 2, 'perk <id> <perk>');

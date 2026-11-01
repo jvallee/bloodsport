@@ -104,3 +104,50 @@ test('seasoned recruits: later arenas sell fighters above level 1, with their pe
     assert.equal(recruitPrice(run, f), marketPrice(run) + RECRUIT.perLevel * (f.level - 1));
   }
 });
+
+test('the Temple of Fortuna swaps a waiting perk choice for three new ones, for Gold', async () => {
+  const { pray, prayBlocker, prayPrice } = await import('../src/run.js');
+  const run = createRun(6);
+  const f = recruit(run, run.market[0].id);
+  f.pendingPerks = [['mighty', 'swift', 'killer']];
+  assert.equal(prayBlocker(run, f.id), 'Build the Temple of Fortuna first.');
+  run.buildings.push({ id: 'bt', type: 'temple', level: 1 });
+  run.gold = 20;
+  const offers = new Set();
+  for (let i = 0; i < 4; i++) { pray(run, f.id); offers.add(f.pendingPerks[0].join()); }
+  assert.equal(run.gold, 20 - 4 * prayPrice(run));
+  assert.ok(offers.size > 1, 'new choices');
+  assert.equal(f.pendingPerks.length, 1);
+  f.pendingPerks = [];
+  assert.equal(prayBlocker(run, f.id), 'No perk choice to pray over.');
+});
+
+test('the Exhibition Ring: two free fighters spar on tournament day for XP, Renown and Gold, never to the death', async () => {
+  const { exhibition, exhibitionBlocker } = await import('../src/run.js');
+  const run = createRun(7);
+  const [a, b] = [recruit(run, run.market[0].id), recruit(run, run.market[0].id)];
+  run.buildings.push({ id: 'be', type: 'exhibition', level: 1 });
+  assert.equal(exhibitionBlocker(run, a.id, b.id), 'Exhibitions happen on tournament day.');
+  advanceToTournament(run);
+  for (const f of [a, b]) f.injuries = [];
+  const gold = run.gold;
+  const xp = a.xp + b.xp;
+  const r = exhibition(run, a.id, b.id);
+  assert.ok(run.gold > gold);
+  assert.ok(a.xp + b.xp > xp);
+  assert.ok(a.alive && b.alive);
+  assert.ok([a.name, b.name].includes(r.winner));
+  assert.equal(exhibitionBlocker(run, a.id, b.id), 'The ring has had its bout this week.');
+});
+
+test('dialogue replies: you answer the Emperor, and his answer to your choice plays next', async () => {
+  const { SCENES } = await import('../src/dialogue.js');
+  const { dialogueModal } = await import('../src/ui/views.js');
+  const at = SCENES.opening.findIndex((b) => b.replies);
+  assert.ok(at > 0);
+  const html = dialogueModal('opening', SCENES.opening, at);
+  assert.match(html, /You:/);
+  assert.equal((html.match(/data-action="scene-reply"/g) ?? []).length, SCENES.opening[at].replies.length);
+  assert.doesNotMatch(html, /scene-next/, 'you must answer');
+  for (const r of SCENES.opening[at].replies) assert.ok(r.then.length && r.then.every((b) => b.speaker && b.text));
+});

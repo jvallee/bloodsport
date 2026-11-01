@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt } from './fight.js';
@@ -1229,6 +1229,60 @@ export function choosePerk(run, id, perk) {
   for (const [stat, n] of Object.entries(PERKS[perk].stat ?? {})) f[stat] += n;
   if (PERKS[perk].stat?.power) f.perkPower = (f.perkPower ?? 0) + PERKS[perk].stat.power;
   log(run, `${f.name} learns ${PERKS[perk].name}.`, 'good');
+}
+
+// The Temple of Fortuna: pay to swap a fighter's waiting perk choices for three new ones.
+export const prayPrice = (run) => effectAt('temple', maxLevel(run, 'temple'));
+export function prayBlocker(run, id) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!maxLevel(run, 'temple')) return 'Build the Temple of Fortuna first.';
+  const f = findFighter(run, id);
+  if (!f?.pendingPerks.length) return 'No perk choice to pray over.';
+  if (run.gold < prayPrice(run)) return `Needs ${prayPrice(run)} Gold.`;
+  return null;
+}
+export function pray(run, id) {
+  assertOk(prayBlocker(run, id));
+  const f = findFighter(run, id);
+  run.gold -= prayPrice(run);
+  f.pendingPerks[0] = perkOffer(run, f);
+  log(run, `You burn incense to Fortuna for ${f.name}. New paths open: ${f.pendingPerks[0].map((p) => PERKS[p].name).join(', ')}.`, 'event');
+}
+
+// The Exhibition Ring: on tournament day, two of your fighters who aren't competing fight each other for the crowd.
+export function exhibitionBlocker(run, id, otherId) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!maxLevel(run, 'exhibition')) return 'Build the Exhibition Ring first.';
+  if (!run.bouts) return 'Exhibitions happen on tournament day.';
+  if (run.exhibitionWeek === run.week) return 'The ring has had its bout this week.';
+  const [a, b] = [findFighter(run, id), findFighter(run, otherId)];
+  if (!a || !b || a === b) return 'Choose two different fighters.';
+  for (const f of [a, b]) {
+    if (foughtThisWeek(run).includes(f.id)) return `${f.name} already fought this week.`;
+    if (f.injuries.some((i) => i.weight > 0)) return `${f.name} is injured.`;
+    if (f.morale < MORALE.mutinous) return `${f.name} is mutinous and refuses to fight.`;
+  }
+  return null;
+}
+export function exhibition(run, id, otherId) {
+  assertOk(exhibitionBlocker(run, id, otherId));
+  const [a, b] = [findFighter(run, id), findFighter(run, otherId)];
+  const r = run.rng.fight;
+  // One quick bout by the Power table; nobody dies in an exhibition.
+  const delta = clamp(effectivePower(a) - effectivePower(b), -10, 10);
+  const [winner, loser] = next(r) * 100000 < deltaRow(delta).win ? [a, b] : [b, a];
+  const gold = EXHIBITION.goldPerTier * Math.min(run.topTier, CIRCUITS.length);
+  run.exhibitionWeek = run.week;
+  run.gold += gold;
+  winner.renown += EXHIBITION.renown;
+  gainXp(run, winner, EXHIBITION.xpWin);
+  gainXp(run, loser, EXHIBITION.xpLoss);
+  const wound = next(r) < EXHIBITION.woundChance;
+  if (wound) loser.injuries.push({ tag: 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS.fleshWound });
+  log(run, `Exhibition: ${winner.name} beats ${loser.name} in the ring. +${gold} Gold from the crowd${wound ? `; ${loser.name} takes a Flesh Wound` : ''}.`, 'good');
+  return { winner: winner.name, loser: loser.name, gold, wound };
 }
 
 // ---------- Inventory: decor and gear ----------

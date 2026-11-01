@@ -122,6 +122,8 @@ function checkScene() {
     scene = { id, beat: 0 };
   }
 }
+// A scene's beats, with any reply you chose spliced in.
+const sceneBeats = () => scene.beats ?? SCENES[scene.id];
 function closeScene() {
   const then = scene?.then;
   if (scene?.id === 'opening') { prefs.introSeen = true; savePrefs(); markSceneSeen('opening'); }
@@ -148,7 +150,7 @@ function render() {
   else body = ludusTab(run, oddsFor);
   checkScene();
   const guide = guideStep();
-  const modal = setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, SCENES[scene.id], scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
+  const modal = setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
@@ -286,7 +288,14 @@ const actions = {
   'tutorial-done': (d) => { prefs.tutorial.push(d.step); savePrefs(); },
   'tutorial-skip': () => { prefs.tutorial = [...GUIDE, ...STEPS, ...FIGHT_STEPS].map((s) => s.id); savePrefs(); },
   'tutorial-replay': () => { prefs.tutorial = []; showHelp = false; savePrefs(); },
-  'scene-next': () => { if (scene && scene.beat < SCENES[scene.id].length - 1) scene.beat += 1; else closeScene(); },
+  'scene-next': () => { if (scene && scene.beat < sceneBeats().length - 1) scene.beat += 1; else closeScene(); },
+  'scene-reply': (d) => { // your answer: its lines play next
+    const beats = sceneBeats();
+    const reply = beats[scene.beat].replies?.[Number(d.index)];
+    if (!reply) return;
+    scene.beats = [...beats.slice(0, scene.beat), { ...beats[scene.beat], replies: null }, ...reply.then, ...beats.slice(scene.beat + 1)];
+    scene.beat += 1;
+  },
   'scene-skip': () => closeScene(),
   'result-close': () => { eventResult = null; },
   'intro-replay': () => { scene = { id: 'opening', beat: 0 }; showHelp = false; },
@@ -446,7 +455,10 @@ document.addEventListener('change', (e) => {
   guard('action', () => {
     try {
       lastAction = [name, data];
+      const mark = run.log.length;
       act(name, data);
+      // An exhibition bout's result pops up, like an event's.
+      if (name === 'exhibition') eventResult = { title: 'Exhibition Ring', lines: run.log.slice(mark).map((l) => ({ tone: l.tone, text: l.text.replace(/^Exhibition: /, '') })) };
     } catch (err) {
       if (err.name !== 'Refused') throw err;
       alert(err.message);
@@ -487,8 +499,8 @@ document.addEventListener('keydown', (e) => {
     if ([' ', 'Enter', 'Escape'].includes(e.key)) { e.preventDefault(); eventResult = null; render(); }
     return;
   }
-  if (scene) { // a character is talking: Space or Enter goes on
-    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); actions['scene-next'](); render(); }
+  if (scene) { // a character is talking: Space or Enter goes on (unless you're asked to answer)
+    if ((e.key === ' ' || e.key === 'Enter') && !sceneBeats()[scene.beat].replies) { e.preventDefault(); actions['scene-next'](); render(); }
     return;
   }
   if (e.key === ' ' || e.key === 'Enter') {
