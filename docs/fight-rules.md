@@ -481,7 +481,19 @@ Numbers are tunables in `src/data.js`; the words are placeholders for the design
 ## 5.3.0
 
 - **Lower arenas move on without you:** at the end of a tournament week, every arena below your top one whose bout nobody from your house fought advances as if it had been fought: Tournament 1 → Tournament 2 → Boss (a short career goes straight to the Boss), each with a new opponent; after the Boss, a new circuit with a new arena rule. A nemesis who was waiting there isn't lost: they stay remembered and can return later. (Playtests #7 blind, #8 and #8b: the Dirt Pits sat on one opponent for 13 months.)
-- **Basa** are an ordinary kind (5.3.0, the designer's request): they appear in the Market and as opponents, 1 kind in 6. Base Power and traits are unchanged (see "Basa balance" below for the measurement). The Stables are removed.
+- **Basa** are an ordinary kind (5.3.0, the designer's request): they appear in the Market and as opponents, 1 kind in 6. The Stables are removed. **Base Power 6 → 5**, measured with `scripts/probes/kind-value.js` (1,500 matches per trait × class against random Power-5 opponents; a Lion Cage still gives them +1):
+
+  | Kind | Win rate at equal Power | At its base Power |
+  |---|---|---|
+  | Human (5) | 51.2% | 50.7% |
+  | Android (5) | 53.2% | 53.1% |
+  | Elf (5) | 51.8% | 51.7% |
+  | Orc (6) | 50.0% | 57.7% |
+  | Vampire (5) | 51.0% | 51.1% |
+  | Basa (was 6) | 52.4% | 60.6% |
+  | Revenant (5) | 54.0% | 54.0% (Grave Chill 58%, Cinder Heart 55%, Deathless 50%) |
+
+  The Orc keeps 6: its traits are the weakest at equal Power. A Basa at 6 would have been the best fighter in the Market for its price.
 - **The Unnatural Temple of Vulcan** (`BUILDINGS.vulcan`, `REANIMATE`; replaces the Stables, and old saves' Stables become it at the same level): unique, Medical, Prestige level 2 / 3, 10 / 16 Gold. Raises a fighter killed in the arena (not one executed in the plot) as a **Revenant**, up to 4 / 12 weeks after death, for 6 + 4 × top-arena tier Gold (10 / 14 / 18 / 22).
   - Keeps name, class, weapon, humor, level, XP, perks, titles, kills, Renown, scars and augments; gets a new id, no injuries, Stress 0, job Rest; loses any bond and the political flag. Level 1: −1 Power; level 2: no loss.
   - The death still counts (it stays in `run.fallen`, marked `raised`). A body can't be raised twice, and a Revenant who dies stays dead.

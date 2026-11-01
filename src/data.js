@@ -175,7 +175,9 @@ export const KINDS = {
   elf: { name: 'Elf', basePower: 5, traits: ['firebug', 'footwork', 'egoArmour', 'elvenEyes'] },
   orc: { name: 'Orc', basePower: 6, traits: ['bloodFaith', 'unbreakable', 'bloodlust'] },
   vampire: { name: 'Vampire', basePower: 5, traits: ['bloodDrinker', 'nightborn', 'mesmerize'] },
-  basa: { name: 'Basa', basePower: 6, traits: ['thickHide', 'pounce', 'rampage'] }, // 5.3.0: in the Market like everyone (was only from the Stables)
+  // 5.3.0: in the Market like everyone (was only from the Stables), at base Power 5 (was 6): their traits are already among the
+  // best (scripts/probes/kind-value.js: 52% at equal Power; at 6 they won 61% against a Power-5 field, the Orc 58%).
+  basa: { name: 'Basa', basePower: 5, traits: ['thickHide', 'pounce', 'rampage'] },
   // Exotic: never in the Market. A fighter killed in the arena, raised by the Unnatural Temple of Vulcan (REANIMATE).
   revenant: { name: 'Revenant', basePower: 5, traits: ['deathless', 'graveChill', 'cinderHeart'], exotic: true },
 };

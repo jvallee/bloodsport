@@ -10,7 +10,7 @@ What changed from version to version, newest first. Each frozen version can stil
   - Each Revenant has one of three new traits: **Deathless** (the Death Gate opens one injury later), **Grave Chill** (the opponent has −5% win chance every round) or **Cinder Heart** (+1 Power in Rounds 2 and 3).
   - The same body can't be raised twice, and the Praetorians burn the bodies of anyone executed.
   - Bodies waiting to be raised are in the Market tab, and your steward tells you when one arrives.
-- **Basa are in the Market** like every other kind, and you'll meet them in the arena too. The Stables are gone.
+- **Basa are in the Market** like every other kind, and you'll meet them in the arena too. The Stables are gone. To keep them fair at Market prices, a Basa's natural Power is 5 (was 6); a Lion Cage in their room still adds +1.
 - **Lower arenas move on without you.** If nobody from your house fights in one of your old arenas on fight day, its tournament goes ahead anyway: the circuit moves to its next stage with a new opponent. (They used to wait for you, on the same opponent, for months.)
 
 ## 5.2.0 (more fun)
