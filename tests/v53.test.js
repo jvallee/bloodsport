@@ -246,3 +246,35 @@ test('what the rebel has heard depends on your record: mercy at a cost, fighters
   run.released = 0;
   assert.match(rebelScene(run, rebel).map((b) => b.text).join(' '), /thumb down 3 times, and never up/);
 });
+
+// ---------- Playtest #9 fixes ----------
+import { skipBout, skipBlocker, forfeitBout, placeBet, betBlocker } from '../src/run.js';
+import { SHORT, PRESTIGE_LEVELS } from '../src/data.js';
+
+test('an Emperor\'s demand issued at the start of a month lasts until that month\'s fight day ends (playtest #9: judged at once)', () => {
+  let seen = 0;
+  for (let seed = 1; seed <= 12; seed++) {
+    const run = createRun(seed);
+    recruit(run, run.market[0].id);
+    for (let week = 0; week < 60 && !run.demand && run.status === 'active'; week++) {
+      run.event = null;
+      if (run.boutPending) (skipBlocker(run) ? forfeitBout : skipBout)(run);
+      if (run.status === 'active') advanceWeek(run);
+    }
+    if (!run.demand) continue;
+    seen++;
+    const issued = run.demand.week;
+    assert.equal(run.log.some((l) => l.week >= issued && /demand, unmet/.test(l.text)), false, 'not judged the moment it is issued');
+    while (!run.boutPending) { run.event = null; advanceWeek(run); }
+    assert.ok(run.demand, 'still standing on fight day');
+  }
+  assert.ok(seen >= 3, `${seen} careers got a demand`);
+});
+
+test('a short career starts at the House level its head start of Prestige earns', () => {
+  const run = createRun(1, { short: true });
+  const lv = PRESTIGE_LEVELS.filter((l) => run.prestige >= l.at).at(-1).level;
+  assert.ok(run.prestige >= 5 + SHORT.startPrestige);
+  assert.equal(run.prestigeLevel, lv);
+  assert.ok(lv >= 2);
+});

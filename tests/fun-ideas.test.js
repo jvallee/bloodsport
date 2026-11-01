@@ -126,8 +126,10 @@ test('the Emperor\'s demands: issued some months, judged when fight day ends; me
     if (run.demand.id === 'twoArenas') run.history.push({ week: run.week, won: true, tier: 2 });
     assert.equal(demandMet(run), true, run.demand.id);
     const favor = run.favor;
-    for (let i = 0; i < 6 && run.demand; i++) { run.event = null; run.mercy = null; if (run.boutPending) { run.boutPending = false; } advanceWeek(run); }
-    assert.equal(run.demand, null, 'judged at the end of fight day');
+    const week = run.demand.week;
+    for (let i = 0; i < 6 && run.demand?.week === week; i++) { run.event = null; run.mercy = null; if (run.boutPending) { run.boutPending = false; } advanceWeek(run); }
+    // Playtest #9: judged before the new month starts, so the next month may already bring a new demand.
+    assert.notEqual(run.demand?.week, week, 'judged at the end of fight day');
     assert.ok(run.favor >= favor + DEMAND.favor - 1 || run.favor === 100);
     void f;
   }

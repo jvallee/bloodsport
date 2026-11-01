@@ -854,7 +854,7 @@ export function createRun(seed = randomSeed(), setup = {}) {
     setup: { patron: setup.patron ?? null, decrees: [...(setup.decrees ?? [])], classes: [...(setup.classes ?? [])], short: Boolean(setup.short), daily: setup.daily ?? null },
     gold: ECONOMY.startGold + (setup.short ? SHORT.startGold : 0),
     prestige: ECONOMY.startPrestige + (setup.short ? SHORT.startPrestige : 0),
-    prestigeLevel: 1,
+    prestigeLevel: prestigeLevelFor(ECONOMY.startPrestige + (setup.short ? SHORT.startPrestige : 0), 1), // a short career's head start is House level 2 (playtest #9)
     favor: FAVOR.start,
     week: 0,
     topTier: 1,
@@ -1173,6 +1173,8 @@ export function advanceWeek(run) {
   // A lower arena nobody from your house fought in moves on without you: someone else fought its bout (three playtests
   // found the Dirt Pits stuck on one opponent for a year).
   if (run.bouts) for (const tier of unlockedTiers(run)) if (tier < run.topTier && run.bouts[tier] === 'open') arenaMovesOn(run, tier);
+  // The month's demand is judged now, before a new month can issue the next one (playtest #9: it was issued and judged at once).
+  if (tournamentEnds) judgeDemand(run);
   run.bouts = null;
   run.brackets = {};
   run.week += 1;
@@ -1198,7 +1200,6 @@ export function advanceWeek(run) {
     log(run, `Tournament week in ${unlockedTiers(run).length > 1 ? `${unlockedTiers(run).length} arenas` : arenaName(run.topTier)}.`, 'event');
   }
   if (tournamentEnds) rivalsCompete(run);
-  if (tournamentEnds) judgeDemand(run);
   if (tournamentEnds) bondOverFightDay(run);
   if (tournamentEnds && plotActive(run) && run.plot.coup) postponeCoup(run); // the champion never fought
   checkLoss(run);
