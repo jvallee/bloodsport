@@ -278,3 +278,21 @@ test('a short career starts at the House level its head start of Prestige earns'
   assert.equal(run.prestigeLevel, lv);
   assert.ok(lv >= 2);
 });
+
+test('a bet that could win nothing is refused; a winning bet returns more than its stake (playtest #9)', async () => {
+  const { betOdds, betPayout } = await import('../src/run.js');
+  const run = createRun(2);
+  const f = recruit(run, run.market[0].id);
+  run.gold = 100;
+  f.power = 40; // a sure thing: odds below 1
+  advanceToTournament(run);
+  const m = startMatch(run, f.id);
+  assert.ok(betOdds(run, m) < 1);
+  assert.match(betBlocker(run, m, 2), /would win nothing/);
+  m.b.f.power = 40; // an even fight
+  const odds = betOdds(run, m);
+  const stake = [2, 5, 10].find((s) => betPayout(s, odds) > s);
+  assert.equal(betBlocker(run, m, stake), null);
+  const bet = placeBet(run, m, stake);
+  assert.ok(bet.payout > stake);
+});

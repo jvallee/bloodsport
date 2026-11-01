@@ -555,7 +555,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       need([amount].filter(Boolean), 1, 'bet <gold>');
       if (!match) throw new Error('Bets are placed during a match, before Round 1.');
       const b = placeBet(run, match, Number(amount));
-      return `You bet ${b.stake} Gold on ${match.a.f.name} at ${b.odds.toFixed(1)} to 1: a win pays ${b.payout} Gold.`;
+      return `You bet ${b.stake} Gold on ${match.a.f.name} at ×${b.odds.toFixed(2)}: a win returns ${b.payout} Gold (+${b.payout - b.stake}).`;
     },
     host: () => {
       const gain = host(run);

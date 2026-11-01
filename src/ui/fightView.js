@@ -117,7 +117,7 @@ function report(s) {
     s.bloodFaith ? row('Blood Faith', 'buy-in refunded', 'good') : '',
     s.nemesis ? row('Nemesis', `☠ ${esc(s.nemesis)} is beaten`, 'good') : '',
     s.hype ? row('Crowd hype', `📣 ${s.hype.hype}${s.hype.renown ? `: +${s.hype.renown} Renown` : ''}${s.hype.gold ? `, +${s.hype.gold} Gold` : ''}`, s.hype.renown ? 'good' : '') : '',
-    s.bet ? row('Your bet', s.bet.won ? `🪙 won: +${s.bet.payout} Gold on ${s.bet.stake}` : `🪙 lost: ${s.bet.stake} Gold`, s.bet.won ? 'good' : 'bad') : '',
+    s.bet ? row('Your bet', s.bet.won ? `🪙 won: ${s.bet.payout} Gold back on ${s.bet.stake} (+${s.bet.payout - s.bet.stake} profit)` : `🪙 lost: ${s.bet.stake} Gold`, s.bet.won ? 'good' : 'bad') : '',
     s.bribed ? row('Crowd Bribe', 'the crowd forgave the capitulation', 'good') : '',
     s.verdict === 'spare' ? row('Verdict', '👍 Spared: the Emperor approves', 'good') : '',
     s.verdict === 'kill' ? row('Verdict', `👎 Killed${s.mark ? ` · 💀 earned the mark ${esc(s.mark)}` : ''}`, 'bad') : '',
@@ -150,11 +150,11 @@ function hypeMeter(m, hold) {
 
 // Betting on your own fighter, before Round 1 (fun idea #3). `m.betQuote` ({ odds, cap, gold }) is set by src/main.js.
 function betRow(m) {
-  if (m.bet) return `<div class="sub bet-placed">🪙 You bet ${m.bet.stake} Gold on ${esc(m.a.f.name)}: a win pays ${m.bet.payout}.</div>`;
+  if (m.bet) return `<div class="sub bet-placed">🪙 You bet ${m.bet.stake} Gold on ${esc(m.a.f.name)}: a win returns ${m.bet.payout} (+${m.bet.payout - m.bet.stake}).</div>`;
   const q = m.betQuote;
   if (!q) return '';
-  const stakes = BET.stakes.filter((s) => s <= q.cap).map((s) => `<button class="btn small" data-action="bet" data-amount="${s}" ${s > q.gold ? `disabled title="Needs ${s} Gold"` : `title="Win: +${Math.floor(s * q.odds)} Gold. Lose: −${s}."`}>${s} Gold → ${Math.floor(s * q.odds)}</button>`).join('');
-  return `<div class="items-row bet-row"><span class="sub">🪙 Bet on ${esc(m.a.f.name)} at ${q.odds.toFixed(1)} to 1:</span>${stakes}</div>`;
+  const stakes = BET.stakes.filter((s) => s <= q.cap).map((s) => `<button class="btn small" data-action="bet" data-amount="${s}" ${s > q.gold ? `disabled title="Needs ${s} Gold"` : Math.floor(s * q.odds) <= s ? `disabled title="At these odds a ${s} Gold bet would win nothing"` : `title="Win: ${Math.floor(s * q.odds)} Gold back (+${Math.floor(s * q.odds) - s}). Lose: −${s}."`}>${s} Gold → ${Math.floor(s * q.odds)}</button>`).join('');
+  return `<div class="items-row bet-row"><span class="sub">🪙 Bet on ${esc(m.a.f.name)} at ×${q.odds.toFixed(2)} (a win returns your stake × ${q.odds.toFixed(2)}):</span>${stakes}</div>`;
 }
 
 // The signature move (level 3+): ready, used, or how to unlock it.

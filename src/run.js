@@ -1823,14 +1823,19 @@ export function betBlocker(run, match, stake) {
   if (!(stake > 0)) return 'Choose a stake.';
   if (stake > betCap(run, match)) return `The bookmakers take up to ${betCap(run, match)} Gold here.`;
   if (run.gold < stake) return `Needs ${stake} Gold.`;
+  // Playtest #9: small bets on a favourite returned only the stake. A bet that can't win anything isn't taken.
+  const odds = betOdds(run, match);
+  if (betPayout(stake, odds) <= stake) return `At ×${odds.toFixed(2)} a ${stake} Gold bet would win nothing: the bookmakers won't take it. Stake more, or keep your Gold.`;
   return null;
 }
+// What a winning bet returns, stake included (rounded down: the bookmaker keeps the change).
+export const betPayout = (stake, odds) => Math.floor(stake * odds);
 export function placeBet(run, match, stake) {
   assertOk(betBlocker(run, match, stake));
   const odds = betOdds(run, match);
   run.gold -= stake;
-  match.bet = { stake, odds, payout: Math.floor(stake * odds) };
-  log(run, `You bet ${stake} Gold on ${match.a.f.name} at ${odds.toFixed(1)} to 1: a win pays ${match.bet.payout} Gold.`, 'event');
+  match.bet = { stake, odds, payout: betPayout(stake, odds) };
+  log(run, `You bet ${stake} Gold on ${match.a.f.name} at ×${odds.toFixed(2)}: a win returns ${match.bet.payout} Gold (+${match.bet.payout - stake}).`, 'event');
   return match.bet;
 }
 
@@ -1851,7 +1856,7 @@ function settleBet(run, match, won, summary) {
   summary.bet = { ...match.bet, won };
   if (won) {
     summary.gold += match.bet.payout;
-    log(run, `The bookmakers pay out: +${match.bet.payout} Gold on your ${match.bet.stake} Gold bet.`, 'good');
+    log(run, `The bookmakers pay out ${match.bet.payout} Gold on your ${match.bet.stake} Gold bet: +${match.bet.payout - match.bet.stake} profit.`, 'good');
   } else log(run, `The ${match.bet.stake} Gold bet is lost.`, 'bad');
 }
 
