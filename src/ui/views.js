@@ -7,7 +7,7 @@ import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker,
-  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy,
+  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf,
 } from '../run.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel, effectAt,
@@ -116,7 +116,7 @@ export function endBanner(run, legacy = null) {
   const wins = fought.filter((h) => h.won).length;
   const score = careerScore(run);
   const best = bestFighter(run);
-  const bestWins = best ? run.history.filter((h) => h.won && h.fighterId === best.id).length : 0;
+  const bestWins = best ? winsOf(run, best) : 0;
   const rank = standings(run).findIndex((h) => h.you) + 1;
   const kills = [...run.roster, ...run.fallen].reduce((n, f) => n + (f.kills ?? 0), 0);
   return `<div class="banner end ${won ? 'win' : 'loss'}">
@@ -450,7 +450,7 @@ function rosterPanel(run) {
       <h2>Your gladiators <small>${run.roster.length}/${rosterCap(run)}</small></h2>
       ${unequipAllBlocker(run) === null ? `<div class="row">${button('Unequip all gear', 'unequip-all', {}, null, 'btn small')}<small class="sub">Puts every fighter's gear back in the storeroom, ready to hand out afresh.</small></div>` : ''}
       <div class="cards">${cards || '<div class="empty">No gladiators yet. Recruit some in the <button class="link" data-action="tab" data-tab="market">Market</button>.</div>'}</div>
-      ${run.fallen.length ? `<p class="sub fallen">⚰ Fallen: ${run.fallen.map((f) => esc(f.name)).join(', ')}</p>` : ''}
+      ${run.fallen.length ? `<p class="sub fallen">⚰ Fallen: ${run.fallen.map((f) => `${esc(f.name)}${f.raised ? ' <small>(risen as a Revenant)</small>' : ''}`).join(', ')}</p>` : ''}
     </section>`;
 }
 
@@ -773,7 +773,8 @@ function mercyCard(run) {
   const f = run.roster.find((x) => x.id === m.fighterId);
   const blood = m.crowd === 'kill';
   const favor = spareFavorWhy(run) ?? `+${spareFavor(run)} Favour`;
-  const spare = blood ? [favor, 'Their house will owe you a life (−1 Power against you)'] : [favor, `+${MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`];
+  const owes = owedLeft(run);
+  const spare = blood ? [favor, owes ? `Their house already owes you a life (${owes} month${owes === 1 ? '' : 's'} left): no new debt` : 'Their house will owe you a life (−1 Power against you)'] : [favor, `+${MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`];
   const kill = blood ? [`+${MERCY.killRenown + MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`, 'A kill toward the kill marks'] : [`+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy)`, 'A kill toward the kill marks', ...(m.house ? ['Their house will swear a feud'] : [])];
   return `<section class="panel event-card mercy-card"><div class="event-faces">${f ? portrait(f, 56) : ''}</div><div class="event-body">
     <div class="label">The crowd waits</div><h2>${esc(m.opp)}'s fate</h2>

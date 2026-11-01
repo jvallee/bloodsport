@@ -4,6 +4,14 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 5.3.0 (in progress)
 
+- **Fixes from playtest #9:**
+  - A **Flesh Wound heals on Rest** too, at half the Medbay's speed, so a light wound no longer waits months for a bed.
+  - When an old arena **moves on without you**, the house log says so, and who you'll meet next.
+  - The thumbs-up choice says when their house **already owes you a life** (a debt isn't renewed while it runs).
+  - **Revenants** keep their record: the Ludus marks them "risen" among the fallen, and their wins from before death still count.
+  - **Grave Chill** names whose trait it is in the round-by-round math.
+  - A Boss's stakes say its Title goes to a fighter who isn't the arena's Champion yet.
+  - Event results start with a capital letter, and a wound reads "is wounded: Flesh Wound".
 - **Betting, honestly priced:** odds read as a multiplier ("×1.25: a win returns your stake × 1.25"), and every bet line says what it returns and the profit. A bet too small to win anything at its odds isn't taken (small bets on a clear favourite used to return only the stake).
 - **The Emperor's demands work:** a demand now lasts until that month's fight day. (It was judged the moment it was issued, so every demand failed and the Emperor never spoke.)
 - **Short careers** start at House level 2, as their head start of Prestige promised.

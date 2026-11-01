@@ -39,7 +39,7 @@ export function arenaStakes(run, tier) {
   }
   if (!bout.boss) return '';
   if (tier === GRAND_TIER) return `Win: the career. Lose: ${bossLossFavor(tier, run)} Favour and try again next month.`;
-  return `Win: a Title (+1 Power), +${FAVOR.bossWin} Favour and the next arena. Lose: ${bossLossFavor(tier, run)} Favour. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour.`;
+  return `Win: the arena's Title (+1 Power) for a fighter who isn't its Champion yet, +${FAVOR.bossWin} Favour and the next arena. Lose: ${bossLossFavor(tier, run)} Favour. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour.`;
 }
 
 // The Power and Speed each side brings to the next round (everything included: gear, Titles,

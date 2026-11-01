@@ -1,7 +1,7 @@
 // Legacy (roadmap v3, phase D): what carries over between careers. Achievements unlock patrons (starting options),
 // legacy classes in the market, and the Emperor's Decrees (harder rules). Stored apart from the career save, like the Codex. Pure.
 
-import { standings, effectivePower } from './run.js';
+import { standings, effectivePower, winsOf } from './run.js';
 import { PATRONS, DECREES } from './data.js';
 
 export { PATRONS, DECREES };
@@ -67,7 +67,7 @@ export function careerScore(run) {
 
 // The career's best fighter: most wins, then Renown.
 export function bestFighter(run) {
-  const wins = (f) => run.history.filter((h) => h.won && h.fighterId === f.id).length;
+  const wins = (f) => winsOf(run, f);
   return [...allFighters(run)].sort((a, b) => wins(b) - wins(a) || b.renown - a.renown || effectivePower(b) - effectivePower(a))[0] ?? null;
 }
 

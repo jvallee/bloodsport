@@ -18,7 +18,7 @@ import {
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
-  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy,
+  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
@@ -140,7 +140,6 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   function extras(f) {
     const bits = [];
     if (f.titles.length) bits.push(`Titles: ${f.titles.join(', ')} (+1 Power each)`);
-    if (f.perks.length) bits.push(`Perks: ${f.perks.map((p) => PERKS[p].name).join(', ')}`);
     const gear = ['weapon', 'armor'].filter((s) => f.gear[s]).map((s) => `${GEAR[f.gear[s]].name} (${gearText(GEAR[f.gear[s]])})`);
     if (gear.length) bits.push(`Gear: ${gear.join('; ')}`);
     const decor = Object.entries(f.decor).filter(([, n]) => n).map(([k, n]) => `${DECOR[k].name} ×${n}${DECOR[k].helps(f) ? '' : ' (comfort only)'}`);
@@ -150,7 +149,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   }
 
   const injuriesText = (f) => (f.injuries.length
-    ? f.injuries.map((i, n) => `#${n} ${injuryName(i.tag)}${i.weight > 1 ? ` ×${i.weight}` : ''}${i.weeksLeft ? ` (${i.weeksLeft}w to heal)` : ''}`).join(', ')
+    ? f.injuries.map((i, n) => `#${n} ${injuryName(i.tag)}${i.weight > 1 ? ` ×${i.weight}` : ''}${i.weeksLeft ? ` (${Math.ceil(i.weeksLeft)}w to heal${i.tag === 'fleshWound' ? ' in the Medbay, twice that on Rest' : ''})` : ''}`).join(', ')
     : 'none');
 
   function fighterBlock(f) {
@@ -176,7 +175,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   function opponentBlock(f, boss = false) {
     const bits = [`Power ${effectivePower(f)}${effectivePower(f) !== f.power ? ` (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')})` : ''}`, `Speed ${effectiveSpeed(f)}`, ...(opponentHasSignature(f, boss) ? [`Signature: ${SIGNATURES[f.cls].name} (${SIGNATURES[f.cls].desc} Used when behind, or in Round 3)`] : []), `Renown ${f.renown}`, ...(f.humor ? [`${HUMORS[f.humor].name}: ${HUMORS[f.humor].tell}`] : []), ...extras(f)];
     const house = houseOf(run, f);
-    return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ' (FEUD: +1 Power against you)' : ''}${house.owed ? ' (OWES YOU A LIFE: −1 Power against you)' : ''}${house.vengeance ? ' (your VENGEANCE: +5% win chance)' : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}${f.nemesis ? ` · NEMESIS ${f.nemesis.epithet} (beat your house ${f.nemesis.wins}×${f.nemesis.victims.length ? `, killed ${f.nemesis.victims.join(' and ')}` : ''}; +${f.nemesis.bonus} Power)` : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
+    return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ` (FEUD: +1 Power against you, ${plural(house.feud, 'month')} left)` : ''}${house.owed ? ` (OWES YOU A LIFE: −1 Power against you, ${plural(house.owed, 'month')} left)` : ''}${house.vengeance ? ` (your VENGEANCE: +5% win chance, ${plural(house.vengeance, 'month')} left)` : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}${f.nemesis ? ` · NEMESIS ${f.nemesis.epithet} (beat your house ${f.nemesis.wins}×${f.nemesis.victims.length ? `, killed ${f.nemesis.victims.join(' and ')}` : ''}; +${f.nemesis.bonus} Power)` : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
   }
 
   function arenaBlock(tier) {
@@ -241,7 +240,8 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     const v = run.mercy;
     const blood = v.crowd === 'kill';
     const favor = spareFavorWhy(run) ?? `+${spareFavor(run)} Favour`;
-    const spare = blood ? `${favor}; their house will owe you a life (−1 Power against you for ${HOUSES.feudMonths} months)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale`;
+    const owes = owedLeft(run);
+    const spare = blood ? `${favor}; ${owes ? `their house already owes you a life (${owes} months left): no new debt` : `their house will owe you a life (−1 Power against you for ${HOUSES.feudMonths} months)`}` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale`;
     const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${v.house ? '; their house swears a feud (+1 Power against you)' : ''}`;
     return `*** THUMBS UP OR DOWN: ${v.opp} lies beaten. ${blood ? 'The crowd roars for blood!' : 'The crowd chants for mercy.'} ***\n`
       + `  \`spare\`: ${spare}\n  \`kill\`: ${kill}\n  Nothing else can happen until you decide.`;
@@ -276,7 +276,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     }
     out.push(`\n-- Your gladiators ${run.roster.length}/${rosterCap(run)} · training costs ${trainCost(run)} Gold a week --`);
     out.push(run.roster.length ? run.roster.map(fighterBlock).join('\n') : '(none: `market` to see who is for sale)');
-    if (run.fallen.length) out.push(`Fallen: ${run.fallen.map((f) => f.name).join(', ')}`);
+    if (run.fallen.length) out.push(`Fallen: ${run.fallen.map((f) => `${f.name}${f.raised ? ' (risen as a Revenant)' : ''}`).join(', ')}`);
     out.push(`\n-- ${run.bouts ? 'Fight day' : 'Next bouts'} --`);
     out.push(unlockedTiers(run).sort((a, b) => b - a).map(arenaBlock).join('\n'));
     if (!oracleLevel(run)) out.push('(Build an Oracle to see exact percentages.)');

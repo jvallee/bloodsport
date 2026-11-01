@@ -1136,6 +1136,15 @@ export function advanceWeek(run) {
       }
     } else if (f.job === 'rest') {
       f.stress = clampStress(f.stress + STRESS.rest);
+      // A Flesh Wound heals on Rest too, at half speed (playtest #9: a light wound waited months for a Medbay bed).
+      const light = f.injuries.find((i) => i.tag === 'fleshWound' && i.weeksLeft !== undefined);
+      if (light) {
+        light.weeksLeft -= 0.5;
+        if (light.weeksLeft <= 0) {
+          f.injuries = f.injuries.filter((i) => i !== light);
+          log(run, `${f.name}'s Flesh Wound has healed with rest.`, 'good');
+        }
+      }
     }
     // A daze (Distracted, weight 0) passes on its own, whatever the job (playtest #8: it waited for the Medbay).
     if (f.job !== 'medbay') {
@@ -1288,7 +1297,7 @@ function applyEventEffects(run, eff, ev, out) {
     for (const f of targets(eff.injury.to)) {
       const inj = INJURY_BY_TAG[eff.injury.tag];
       f.injuries.push({ tag: inj.tag, weight: inj.weight, weeksLeft: HEAL_WEEKS[inj.tag] });
-      out.push(`${f.name} is ${inj.name}`);
+      out.push(`${f.name} is wounded: ${inj.name}`); // playtest #9: "is Flesh Wound"
     }
   }
   if (eff.heal) {
@@ -1323,7 +1332,8 @@ export function chooseEvent(run, index) {
     }
     advancePlot(run);
   }
-  const text = `${e.title}: ${choiceLabel(choice, names)}.${out.length ? ` ${out.join(', ')}.` : ''}`;
+  const what = out.join(', ');
+  const text = `${e.title}: ${choiceLabel(choice, names)}.${out.length ? ` ${what[0].toUpperCase()}${what.slice(1)}.` : ''}`; // a sentence starts with a capital (playtest #9)
   log(run, text, 'event');
   run.event = null;
   checkLoss(run);
@@ -1736,7 +1746,7 @@ export function retire(run, id) {
   run.roster = run.roster.filter((x) => x !== f);
   run.prestige += RETIRE.prestige;
   for (const x of run.roster) bumpMorale(x, RETIRE.morale);
-  const legend = { name: f.name, kind: f.kind, humor: f.humor, id: f.id, cls: f.cls, titles: f.titles, kills: f.kills ?? 0, renown: f.renown, level: f.level, wins: run.history.filter((h) => h.won && h.fighterId === f.id).length, story: f.story, seed: run.seed };
+  const legend = { name: f.name, kind: f.kind, humor: f.humor, id: f.id, cls: f.cls, titles: f.titles, kills: f.kills ?? 0, renown: f.renown, level: f.level, wins: winsOf(run, f), story: f.story, seed: run.seed };
   run.retired = [...(run.retired ?? []), legend];
   log(run, `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good');
   return legend;
@@ -1744,6 +1754,8 @@ export function retire(run, id) {
 
 // ---------- Tournaments ----------
 
+// A fighter's wins, a Revenant's from before their death included.
+export const winsOf = (run, f) => run.history.filter((h) => h.won && h.fighterId && [f.id, f.revenantOf].includes(h.fighterId)).length;
 export const foughtThisWeek = (run) => run.history.filter((h) => h.week === run.week && h.fighterId).map((h) => h.fighterId);
 
 export function fightBlocker(run, id, tier = run.topTier) {
@@ -2072,7 +2084,7 @@ export function finishMatch(run, match) {
 
   // The chronicle, scars and a eulogy.
   if (won) {
-    if (!run.history.some((h) => h.won && h.fighterId === fighter.id)) chronicle(run, fighter, `First win, in ${bout.name}.`);
+    if (!run.history.some((h) => h.won && [fighter.id, fighter.revenantOf].includes(h.fighterId))) chronicle(run, fighter, `First win, in ${bout.name}.`); // a Revenant's old wins count
     if (summary.kill && fighter.kills === 1) chronicle(run, fighter, `First kill: ${opp.name}${house ? ` of ${house.name}` : ''}.`);
     if (summary.title) chronicle(run, fighter, `Became ${summary.title}.`);
     if (summary.mark) chronicle(run, fighter, `Earned the mark ${summary.mark}.`);
@@ -2097,7 +2109,7 @@ export function finishMatch(run, match) {
   }
   if (!fighter.alive) {
     chronicle(run, fighter, `Fell in ${bout.name}, killed by ${opp.name}.`);
-    const fWins = run.history.filter((h) => h.won && h.fighterId === fighter.id).length;
+    const fWins = winsOf(run, fighter);
     summary.eulogy = `Here lies ${fighter.name}: ${fWins} win${fWins === 1 ? '' : 's'}${fighter.kills ? `, ${fighter.kills} kill${fighter.kills === 1 ? '' : 's'}` : ''}${fighter.titles.length ? `, ${fighter.titles.join(', ')}` : ''}.`;
     stripFighter(run, fighter);
     run.roster = run.roster.filter((f) => f !== fighter);
@@ -2196,6 +2208,9 @@ export function spareFavorWhy(run, mercy = run.mercy) {
   if (run.demand?.id === 'kill') return 'no Favour: the Emperor demanded a death this month';
   return 'no Favour in a lower arena';
 }
+
+// Months a house that's being spared already owes you (a debt isn't renewed while it runs), or 0.
+export const owedLeft = (run, mercy = run.mercy) => run.houses?.find((h) => h.id === mercy?.house)?.owed ?? 0;
 
 export function mercyBlocker(run, choice) {
   if (!run.mercy) return 'There is no beaten opponent waiting on your verdict.';
@@ -2337,10 +2352,12 @@ function advanceArena(run, tier, won, opp) {
 // An unvisited lower arena's tournament goes ahead without you: the next stage, with a new opponent (after its Boss, a new circuit).
 function arenaMovesOn(run, tier) {
   const arena = run.arenas[tier];
+  const held = STAGES[arena.stage];
   if (arena.stage < 2) {
     arena.stage = isShort(run) ? 2 : arena.stage + 1;
     newOpponent(run, tier);
   } else restartCircuit(run, tier);
+  log(run, `${arenaName(tier)} held its ${held} without your house. Next month: ${STAGES[arena.stage]}, against ${arena.opponent.name}.`); // playtest #9: it moved on silently
 }
 
 function checkLoss(run) {

@@ -151,8 +151,8 @@ test('Revenant traits: Deathless holds the Death Gate one injury longer, Grave C
   assert.equal(deathGateAt(blank({ kind: 'revenant', kindTrait: 'deathless' })), 3);
   assert.equal(deathGateAt(blank({ kind: 'revenant', kindTrait: 'deathless' }), null, ['kind']), 2);
   const [G, X] = pair({ kind: 'revenant', kindTrait: 'graveChill' }, {});
-  assert.ok(computePhase2(X, G, 1).win.some((x) => x.source === 'Grave Chill' && x.value === -5000));
-  assert.ok(!computePhase2(G, X, 1).win.some((x) => x.source === 'Grave Chill'));
+  assert.ok(computePhase2(X, G, 1).win.some((x) => /^Grave Chill/.test(x.source) && x.value === -5000));
+  assert.ok(!computePhase2(G, X, 1).win.some((x) => /^Grave Chill/.test(x.source)));
   const [C, Y] = pair({ kind: 'revenant', kindTrait: 'cinderHeart' }, {});
   assert.equal(computePower(C, Y, 1).total, 5);
   assert.equal(computePower(C, Y, 2).total, 6);
@@ -295,4 +295,15 @@ test('a bet that could win nothing is refused; a winning bet returns more than i
   assert.equal(betBlocker(run, m, stake), null);
   const bet = placeBet(run, m, stake);
   assert.ok(bet.payout > stake);
+});
+
+test('a Flesh Wound heals on Rest at half speed, without a Medbay bed (playtest #9)', () => {
+  const run = createRun(2);
+  const f = recruit(run, run.market[0].id);
+  f.injuries.push({ tag: 'fleshWound', weight: 1, weeksLeft: 1 }, { tag: 'concussed', weight: 1, weeksLeft: 2 });
+  f.job = 'rest';
+  advanceWeek(run);
+  assert.equal(f.injuries.length, 2, 'half healed after one week');
+  advanceWeek(run);
+  assert.deepEqual(f.injuries.map((i) => i.tag), ['concussed'], 'healed after two; a worse wound still needs the Medbay');
 });

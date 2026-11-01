@@ -136,7 +136,8 @@ function mercyPanel(m, mercy, late) {
   const why = mercy.favorWhy !== undefined ? mercy.favorWhy : mercy.top === false ? 'no Favour in a lower arena' : blood ? 'no Favour: the Emperor wanted blood too' : null;
   const favor = why ?? `+${MERCY.spareFavor} Favour`;
   const house = m.house ? esc(m.house.name) : 'their house';
-  const spare = blood ? [favor, `${m.house ? m.house.name : 'Their house'} will owe you a life (−1 Power against you)`] : [favor, `+${MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`];
+  const debt = mercy.owedLeft ? `${m.house ? m.house.name : 'Their house'} already owes you a life (${mercy.owedLeft} month${mercy.owedLeft === 1 ? '' : 's'} left): no new debt` : `${m.house ? m.house.name : 'Their house'} will owe you a life (−1 Power against you)`;
+  const spare = blood ? [favor, debt] : [favor, `+${MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`];
   const kill = blood ? [`+${MERCY.killRenown + MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`, 'A kill toward the kill marks'] : [`+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy)`, 'A kill toward the kill marks', ...(m.house ? [`${m.house.name} will swear a feud`] : [])];
   void house;
   return `<div class="mercy${late}">${mercyChoices({ title: `${esc(mercy.opp)} lies beaten in the sand. All eyes turn to you, Lanista.`, blood, spare, kill })}</div>`;

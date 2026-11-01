@@ -218,7 +218,7 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (classActive(c, 'ornitharius', round) && eff >= 1 && decorOf(c, 'bird')) enemy.push({ source: 'Birds of Prey', value: 5000 * decorOf(c, 'bird') });
   if (kindActive(c, 'hateful', round)) enemy.push({ source: 'Hateful', value: 10000 });
   if (kindActive(c, 'mesmerize', round) && round === 1) win.push({ source: 'Mesmerize', value: 5000 });
-  if (kindActive(opp, 'graveChill', round)) win.push({ source: 'Grave Chill', value: -5000 });
+  if (kindActive(opp, 'graveChill', round)) win.push({ source: `Grave Chill (${opp.f.name})`, value: -5000 }); // the opponent's trait: named, so it doesn't read as this fighter's own
   if (kindActive(c, 'thickHide', round)) self.push({ source: 'Thick Hide', value: -10000, armor: true });
   if (classActive(c, 'ashHungry', round) && c.ash) enemy.push({ source: 'Ash Stacks', value: 5000 * c.ash });
   if (classActive(c, 'bloodBearer', round)) win.push({ source: 'Off-Hand', value: 5000 });

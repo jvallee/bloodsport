@@ -89,9 +89,9 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
   const abilityDesc = f.cls === 'fighter' ? WEAPONS[f.weapon].desc : CLASSES[f.cls]?.desc;
   const injuries = f.injuries.map((i, n) => {
     const def = INJURY_BY_TAG[i.tag];
-    const weeks = i.weeksLeft ? ` · ${i.weeksLeft}w` : '';
+    const weeks = i.weeksLeft ? ` · ${Math.ceil(i.weeksLeft)}w` : '';
     const held = fresh && n >= f.injuries.length - fresh ? ` late" style="animation-delay:${freshAt}s` : '';
-    return `<span class="chip injury${held}" title="${esc(def.desc)}${i.weeksLeft ? ` Heals in ${i.weeksLeft} Medbay week(s).` : ''}">${ICON.injury}${def.name}${i.weight > 1 ? ' ×' + i.weight : ''}${weeks}</span>`;
+    return `<span class="chip injury${held}" title="${esc(def.desc)}${i.weeksLeft ? ` Heals in ${Math.ceil(i.weeksLeft)} Medbay week(s)${i.tag === 'fleshWound' ? ', or twice that on Rest' : ''}.` : ''}">${ICON.injury}${def.name}${i.weight > 1 ? ' ×' + i.weight : ''}${weeks}</span>`;
   }).join('');
   const decor = Object.entries(f.decor).filter(([, n]) => n > 0)
     .map(([k, n]) => `<span class="chip decor" title="${esc(DECOR[k].effect)}">${DECOR[k].name} ×${n}</span>`).join('');

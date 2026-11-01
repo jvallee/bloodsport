@@ -504,3 +504,4 @@ Numbers are tunables in `src/data.js`; the words are placeholders for the design
 - **Betting (playtest #9):** a win returns floor(stake × odds) Gold, stake included; a stake whose return wouldn't exceed it is refused. Odds are shown as ×odds. (Unchanged: odds = 0.9 / win chance, up to ×5.)
 - **Demands (playtest #9):** judged when fight day ends, before the new month can issue the next one (issuing came first, so each demand was judged against no fights and failed).
 - **Short careers** start at the House level their starting Prestige (17) earns: level 2.
+- **Flesh Wounds on Rest (playtest #9, #8):** a fighter on Rest heals a Flesh Wound at half speed (0.5 week of healing per week), so 2 weeks of Rest heal a fresh one. Worse wounds still need the Medbay.
