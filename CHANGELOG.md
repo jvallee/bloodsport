@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 5.3.0 (in progress)
+
+- **Lower arenas move on without you.** If nobody from your house fights in one of your old arenas on fight day, its tournament goes ahead anyway: the circuit moves to its next stage with a new opponent. (They used to wait for you, on the same opponent, for months.)
+
 ## 5.2.0 (more fun)
 
 - **Nemeses:** an opponent who beats one of your fighters is remembered with a name for it ("Gorrak the Butcher"). Every few months they come back to your arenas, stronger for every win over your house. Beat them for Renown, Gold and Favour.

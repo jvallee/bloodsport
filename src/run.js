@@ -1182,6 +1182,9 @@ export function advanceWeek(run) {
 
   // Scouting fades for anyone who sat out the top arena this tournament week.
   if (run.bouts) for (const f of run.roster) if (f.foughtTopWeek !== run.week) f.topStreak = 0;
+  // A lower arena nobody from your house fought in moves on without you: someone else fought its bout (three playtests
+  // found the Dirt Pits stuck on one opponent for a year).
+  if (run.bouts) for (const tier of unlockedTiers(run)) if (tier < run.topTier && run.bouts[tier] === 'open') arenaMovesOn(run, tier);
   run.bouts = null;
   run.brackets = {};
   run.week += 1;
@@ -2282,6 +2285,15 @@ function advanceArena(run, tier, won, opp) {
     restartCircuit(run, tier);
   }
   checkLoss(run);
+}
+
+// An unvisited lower arena's tournament goes ahead without you: the next stage, with a new opponent (after its Boss, a new circuit).
+function arenaMovesOn(run, tier) {
+  const arena = run.arenas[tier];
+  if (arena.stage < 2) {
+    arena.stage = isShort(run) ? 2 : arena.stage + 1;
+    newOpponent(run, tier);
+  } else restartCircuit(run, tier);
 }
 
 function checkLoss(run) {

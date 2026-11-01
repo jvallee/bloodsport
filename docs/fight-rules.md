@@ -477,3 +477,7 @@ Numbers are tunables in `src/data.js`; the words are placeholders for the design
   - Careful 35%, careful deaths 0.73, reckless deaths 3.54. Balanced build 2/4. First Boss 67%. Tactics +7, always-Press −6. Grand +14.
   - Loyalist +6. Coup 11%. Treason 0%.
   - Short careers: 47% won in 83 weeks (full careers 109).
+
+## 5.3.0
+
+- **Lower arenas move on without you:** at the end of a tournament week, every arena below your top one whose bout nobody from your house fought advances as if it had been fought: Tournament 1 → Tournament 2 → Boss (a short career goes straight to the Boss), each with a new opponent; after the Boss, a new circuit with a new arena rule. A nemesis who was waiting there isn't lost: they stay remembered and can return later. (Playtests #7 blind, #8 and #8b: the Dirt Pits sat on one opponent for 13 months.)

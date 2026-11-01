@@ -500,7 +500,7 @@ function arenaBlock(run, tier, oddsFor) {
       ${bracketLine(run, tier)}
       ${arena.opponent.nemesis ? nemesisNote(arena.opponent) : ''}${fighterCard(arena.opponent, { compact: true, stress: false, opponent: { boss: boutFor(run, tier).boss }, tag: `${arena.opponent.nemesis ? `☠ Nemesis: ${esc(arena.opponent.name)} ${esc(arena.opponent.nemesis.epithet)} · ` : ''}${hasBracket(tier) ? `Final · ${houseTag(run, arena.opponent)}` : houseTag(run, arena.opponent)}` })}
       ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
-      ${choice}`;
+      ${choice}${!bout.top && state === 'open' ? '<p class="sub">If nobody from your house fights here this week, the tournament goes ahead without you and the arena moves on.</p>' : ''}`;
   if (bout.top) return `<div class="arena-block top"><h3>${esc(arenaName(tier))} <small>your top arena</small></h3>${body}</div>`;
   return `<details class="arena-block" data-key="arena-${tier}"${state === 'open' ? ' open' : ''}><summary><b>${esc(arenaName(tier))}</b> <small>${state === 'open' ? 'open this week' : state === 'done' ? 'settled' : 'lower arena'}</small></summary>${body}</details>`;
 }
