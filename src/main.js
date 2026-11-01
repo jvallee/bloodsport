@@ -1,7 +1,7 @@
 // App state, saving, coach tips and event wiring. Game rules live in run.js / fight.js; markup in src/ui/.
 
 import { mortalDanger, canThrowTowel, suggestTactic } from './fight.js';
-import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betOdds, betCap } from './run.js';
+import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betOdds, betCap, spareFavorWhy } from './run.js';
 import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
@@ -198,7 +198,7 @@ function renderFight() {
   if (match.round === 0 && !match.over && !match.bet && !match.betQuote) match.betQuote = { odds: betOdds(run, match), cap: betCap(run, match) };
   if (match.betQuote) match.betQuote.gold = run.gold;
   const nextBlocker = match.summary?.next ? fightBlocker(run, match.a.f.id, match.bout.tier) : null;
-  fightEl.innerHTML = fightView(match, ui, match.bout, tutorialCard(fightTutorial(), 'fight'), run.inventory.items, nextBlocker, run.mercy, bracketView(run, match.bout.tier));
+  fightEl.innerHTML = fightView(match, ui, match.bout, tutorialCard(fightTutorial(), 'fight'), run.inventory.items, nextBlocker, run.mercy && { ...run.mercy, favorWhy: spareFavorWhy(run) }, bracketView(run, match.bout.tier));
   const feed = document.getElementById('feed');
   if (feed) feed.scrollTop = feed.scrollHeight;
 }

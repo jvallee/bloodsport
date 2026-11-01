@@ -32,7 +32,7 @@ export const CLUES = {
     'Refuses to salute the Imperial standard.',
     'Was found with a pamphlet sewn into his tunic.',
     'Scratched a sign on the cell wall: a broken chain.',
-    'Arrested in the Forum on the night the Emperor\'s statue was defaced.',
+    'Arrested in the forum for defecating on the Emperor\'s statue.', // the designer's line (2026-11-01)
     'The guards say visitors ask for them by a name that isn\'t on the record.',
   ],
   ambiguous: [

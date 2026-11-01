@@ -172,3 +172,38 @@ test('a save with the Stables loads with the Temple of Vulcan in its place, at t
   const back = deserialize(serialize(run));
   assert.deepEqual(back.buildings.find((b) => b.id === 'b99'), { id: 'b99', type: 'vulcan', level: 2 });
 });
+
+// ---------- The designer's notes (2026-11-01) ----------
+import { MERCY } from '../src/data.js';
+import { spareFavor } from '../src/run.js';
+
+function wonWounded(seed = 1) {
+  const run = createRun(seed);
+  const f = recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  const m = startMatch(run, f.id);
+  m.b.f.injuries.push({ tag: 'fleshWound', weight: 1 });
+  Object.assign(m, { over: true, result: { winner: 'A', reason: 'rounds' } });
+  finishMatch(run, m);
+  return { run, f };
+}
+
+test('sparing when the crowd calls for blood earns no Favour: the Emperor wanted a death too', () => {
+  const { run } = wonWounded();
+  run.mercy.crowd = 'kill';
+  assert.equal(spareFavor(run), 0);
+  const favor = run.favor;
+  const out = resolveMercy(run, 'spare');
+  assert.equal(run.favor, favor);
+  assert.equal(out.favor, 0);
+  assert.doesNotMatch(run.log.at(-2).text + run.log.at(-1).text, /approves/);
+});
+
+test('sparing when the Emperor has demanded a death earns no Favour, even if the crowd wanted mercy', () => {
+  const { run } = wonWounded();
+  run.mercy.crowd = 'spare';
+  run.demand = { id: 'kill', week: run.week };
+  assert.equal(spareFavor(run), 0);
+  run.demand = null;
+  assert.equal(spareFavor(run), MERCY.spareFavor);
+});

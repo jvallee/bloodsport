@@ -31,8 +31,7 @@ test('a scripted text career prints cleanly: intro, shops, jobs, a fight, the Co
 test('the tutorial month is printed by the command that moves it on, and `ok` can\'t skip a step', () => {
   const s = createSession(7, { oddsSamples: 20 });
   s.intro();
-  s.exec(`recruit ${s.run.market[0].id}`);
-  const out = s.exec(`recruit ${s.run.market[0].id}`);
+  const out = s.exec(`recruit ${s.run.market[0].id}`); // one recruit moves the tutorial on (the designer's change, 2026-11-01)
   assert.match(out, /Your steward \(tutorial month\)[\s\S]*\+1 Power/);
   assert.match(s.exec('ok'), /The steward is waiting for you to do it/);
   assert.match(s.exec('skip-tutorial'), /Tutorial skipped/);

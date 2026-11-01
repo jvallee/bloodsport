@@ -18,7 +18,7 @@ import {
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
-  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice,
+  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
@@ -240,7 +240,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   function mercyText() {
     const v = run.mercy;
     const blood = v.crowd === 'kill';
-    const favor = v.top === false ? 'no Favour (lower arena)' : `+${MERCY.spareFavor} Favour`;
+    const favor = spareFavorWhy(run) ?? `+${spareFavor(run)} Favour`;
     const spare = blood ? `${favor}; their house will owe you a life (−1 Power against you for ${HOUSES.feudMonths} months)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale`;
     const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${v.house ? '; their house swears a feud (+1 Power against you)' : ''}`;
     return `*** THUMBS UP OR DOWN: ${v.opp} lies beaten. ${blood ? 'The crowd roars for blood!' : 'The crowd chants for mercy.'} ***\n`

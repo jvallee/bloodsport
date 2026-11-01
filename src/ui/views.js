@@ -7,7 +7,7 @@ import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker,
-  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker,
+  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy,
 } from '../run.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel, effectAt,
@@ -59,7 +59,7 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
       <h1>BLOODSPORT</h1>
       <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
       <div class="stat prestige" title="${esc(prestigeTip(run))}">${ICON.prestige}<b>${run.prestige}</b>
-        <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>next at ${next.at}</small>` : ''}</span></div>
+        <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${Math.max(0, next.at - run.prestige)} to Lv ${next.level}</small>` : ''}</span></div>
       <div class="favor${low ? ' low' : ''}" title="Imperial Favour: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
         <span>Favour</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
       ${tributeStat(run)}
@@ -345,7 +345,12 @@ const findName = (run, id) => run.roster.find((f) => f.id === id)?.name ?? '';
 // "Opponent · House Varro", in the house's colour.
 export function houseTag(run, f) {
   const h = houseOf(run, f);
-  return h ? `Opponent · <span style="color:${esc(h.color)}">${esc(h.name)}</span>` : 'Opponent';
+  if (!h) return 'Opponent';
+  // How long a grudge has left (playtest: "how long do feuds last?"): each one cools by a month at every fight day.
+  const left = (n) => `${n} month${n === 1 ? '' : 's'} left`;
+  const grudge = h.feud ? ` · ⚔ feud: +1 Power against you, ${left(h.feud)}` : h.owed ? ` · owes you a life: −1 Power against you, ${left(h.owed)}` : '';
+  const vengeance = h.vengeance ? ` · vengeance: +5% win chance for you, ${left(h.vengeance)}` : '';
+  return `Opponent · <span style="color:${esc(h.color)}">${esc(h.name)}</span>${grudge}${vengeance}`;
 }
 
 // The rival houses and your place among them.
@@ -360,9 +365,9 @@ function friendsOutside(run) {
 export function standingsTable(run) {
   if (!run.houses) return '';
   const rows = standings(run).map((h, i) => {
-    const notes = [h.feud ? `<span class="feud" title="You killed one of theirs: their fighters get +1 Power against you">feud ${h.feud}</span>` : '',
-      h.owed ? `<span class="vengeance" title="You spared one of theirs when the crowd wanted blood: their fighters get −1 Power against you">owes you ${h.owed}</span>` : '',
-      h.vengeance ? `<span class="vengeance" title="They killed one of yours: your fighters get +5% win chance against them">vengeance ${h.vengeance}</span>` : ''].join('');
+    const notes = [h.feud ? `<span class="feud" title="You killed one of theirs: their fighters get +1 Power against you">⚔ feud · ${h.feud} month${h.feud === 1 ? '' : 's'} left</span>` : '',
+      h.owed ? `<span class="vengeance" title="You spared one of theirs when the crowd wanted blood: their fighters get −1 Power against you">owes you a life · ${h.owed} month${h.owed === 1 ? '' : 's'} left</span>` : '',
+      h.vengeance ? `<span class="vengeance" title="They killed one of yours: your fighters get +5% win chance against them">vengeance · ${h.vengeance} month${h.vengeance === 1 ? '' : 's'} left</span>` : ''].join('');
     return `<tr class="${h.you ? 'you' : ''}"><td>${i + 1}</td><td><span class="house-dot" style="background:${esc(h.color)}"></span>${esc(h.name)}${h.motto ? `<small title="${esc(h.motto)}"> ❝</small>` : ''} ${notes}</td><td>${esc(arenaName(Math.min(h.tier, 4)).replace('The ', ''))}</td><td><b>${h.glory}</b></td></tr>`;
   }).join('');
   return `<h3 class="mini" title="Glory: a win is worth its arena tier (three times that for a Boss); rivals fight their own bouts every tournament week">The houses</h3>
@@ -765,7 +770,7 @@ function mercyCard(run) {
   const m = run.mercy;
   const f = run.roster.find((x) => x.id === m.fighterId);
   const blood = m.crowd === 'kill';
-  const favor = m.top === false ? 'no Favour in a lower arena' : `+${MERCY.spareFavor} Favour`;
+  const favor = spareFavorWhy(run) ?? `+${spareFavor(run)} Favour`;
   const spare = blood ? [favor, 'Their house will owe you a life (−1 Power against you)'] : [favor, `+${MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`];
   const kill = blood ? [`+${MERCY.killRenown + MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`, 'A kill toward the kill marks'] : [`+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy)`, 'A kill toward the kill marks', ...(m.house ? ['Their house will swear a feud'] : [])];
   return `<section class="panel event-card mercy-card"><div class="event-faces">${f ? portrait(f, 56) : ''}</div><div class="event-body">

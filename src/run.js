@@ -2175,6 +2175,21 @@ function offerMercy(run, match, summary, fighter, opp, tier) {
   summary.mercy = run.mercy.crowd;
 }
 
+// The Favour a spare earns now. Only your top arena counts (or any arena under the Edict of Mercy), and only when mercy is
+// what's wanted: the Emperor approves of clemency the crowd asks for, not of sparing a fighter the crowd, or he, wanted dead
+// (the designer's note, 2026-11-01: "why does the Emperor approve when you spare when instructed to kill?").
+export function spareFavor(run, mercy = run.mercy) {
+  if (!mercy || mercy.crowd === 'kill' || run.demand?.id === 'kill') return 0;
+  return mercy.top !== false || hasPolicy(run, 'edictOfMercy') ? MERCY.spareFavor : 0;
+}
+// Why a spare earns no Favour (for the verdict panels), or null when it does.
+export function spareFavorWhy(run, mercy = run.mercy) {
+  if (spareFavor(run, mercy)) return null;
+  if (mercy?.crowd === 'kill') return 'no Favour: the Emperor wanted blood too';
+  if (run.demand?.id === 'kill') return 'no Favour: the Emperor demanded a death this month';
+  return 'no Favour in a lower arena';
+}
+
 export function mercyBlocker(run, choice) {
   if (!run.mercy) return 'There is no beaten opponent waiting on your verdict.';
   if (!['spare', 'kill'].includes(choice)) return 'Thumbs up (spare) or thumbs down (kill).';
@@ -2195,7 +2210,9 @@ function rebelBeaten(run, opp, verdict) {
 
 export function resolveMercy(run, choice) {
   assertOk(mercyBlocker(run, choice));
-  const { fighterId, opp, house: houseId, crowd, at, top = true, rebel = false } = run.mercy;
+  const { fighterId, opp, house: houseId, crowd, at, rebel = false } = run.mercy;
+  const top = run.mercy.top ?? true;
+  const favorFor = spareFavor(run);
   if (rebel && plotActive(run)) rebelBeaten(run, { name: opp }, choice);
   // v6: sparing against the crowd's call for blood in your top arena draws the palace's eye.
   if (choice === 'spare' && crowd === 'kill' && top && plotActive(run)) changeSuspicion(run, 5);
@@ -2204,13 +2221,12 @@ export function resolveMercy(run, choice) {
   const house = run.houses?.find((h) => h.id === houseId) ?? null;
   const out = { verdict: choice, crowd, favor: 0, renown: 0, morale: 0, kill: false, mark: null, feud: null, owed: null };
   if (choice === 'spare') {
-    // Only your top arena affects Favour (the same rule as wins).
-    if (top || hasPolicy(run, 'edictOfMercy')) {
+    if (favorFor) {
       const before = run.favor;
-      changeFavor(run, MERCY.spareFavor, `spared ${opp}`);
+      changeFavor(run, favorFor, `spared ${opp}`);
       out.favor = run.favor - before;
     }
-    log(run, `Thumbs up: ${fighter.name} spares ${opp}.${out.favor ? ' The Emperor approves of clemency.' : ''}`, 'good');
+    log(run, `Thumbs up: ${fighter.name} spares ${opp}.${out.favor ? ' The Emperor approves of clemency.' : crowd === 'kill' && top ? ' In the imperial box, the Emperor\'s thumb stays down.' : ''}`, 'good');
     // Against a call for blood, mercy is remembered: their house owes you a life.
     if (crowd === 'kill' && house && !(house.owed > 0)) { // a life owed isn't renewed while it's still being paid (playtest #8)
       house.feud = 0;

@@ -13,16 +13,13 @@ test('the intro explains the world, winning, losing and the core stats', () => {
 });
 
 // Playtest #8: the first month is a guided tutorial (GUIDE); each step is done when its goal is met.
-test('the tutorial month walks a new career in order: recruit two → a training job → end the week → fight day → send', () => {
+test('the tutorial month walks a new career in order: recruit one → a training job → end the week → fight day → send', () => {
   const run = createRun(1);
   const done = [];
   const step = () => nextStep(GUIDE, done, run);
   const advance = () => { while (step()?.goal(run)) done.push(step().id); };
   assert.equal(step().id, 'recruit');
-  recruit(run, run.market[0].id);
-  advance();
-  assert.equal(step().id, 'recruit', 'two fighters, not one');
-  recruit(run, run.market[0].id);
+  recruit(run, run.market[0].id); // the designer's change (2026-11-01): one fighter is enough to start (was two)
   advance();
   assert.equal(step().id, 'jobs');
   setJob(run, run.roster[0].id, 'trainPower');

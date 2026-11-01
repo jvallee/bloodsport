@@ -38,11 +38,11 @@ export const INTRO = [
 export const GUIDE = [
   {
     id: "recruit",
-    when: (r) => r.roster.length < 2 && r.week === 0,
-    goal: (r) => r.roster.length >= 2,
+    when: (r) => r.roster.length < 1 && r.week === 0,
+    goal: (r) => r.roster.length >= 1,
     tab: "market",
     focus: '[data-action="recruit"]',
-    text: "Let's start with two gladiators. In the Market, look at each one's <b>Power</b> (the sword: wins rounds) and <b>Speed</b> (the arrow: strikes first), then press <b>Recruit</b> on two of them.",
+    text: "Let's start with one gladiator. In the Market, look at each one's <b>Power</b> (the sword: wins rounds) and <b>Speed</b> (the arrow: strikes first), then press <b>Recruit</b> on at least one of them.",
   },
   {
     id: "jobs",
@@ -50,7 +50,7 @@ export const GUIDE = [
     goal: (r) => r.roster.some((f) => f.job === "trainPower" || f.job === "trainSpeed"),
     tab: "ludus",
     focus: '[data-action="job"][data-job="trainPower"]',
-    text: `Now the Ludus. Every fighter does one job a week. Give your strongest fighter <b>+1 Power</b>: training costs a little Gold and adds ${STRESS.train} Stress. The other can <b>Rest</b> for now; one Trainer Room trains one fighter at a time.`,
+    text: `Now the Ludus. Every fighter does one job a week. Give your strongest fighter <b>+1 Power</b>: training costs a little Gold and adds ${STRESS.train} Stress. Anyone else can <b>Rest</b> for now; one Trainer Room trains one fighter at a time.`,
   },
   {
     id: "endweek",
@@ -58,7 +58,8 @@ export const GUIDE = [
     goal: (r) => r.week > 0,
     tab: "ludus",
     focus: '[data-action="advance"]',
-    text: "Jobs are set. Press <b>End week</b> and the week plays out: training, rest and healing all happen at once.",
+    // Designer's note (2026-11-01): make it explicit that someone must be training. PLACEHOLDER wording.
+    text: "Jobs are set. Make sure at least one fighter is training: only a fighter on <b>Train Power</b> (+1 Power) or <b>Train Speed</b> (+3 Speed) gets stronger, and an untrained house falls behind fast. Then press <b>End week</b> and the week plays out: training, rest and healing all happen at once.",
   },
   {
     id: "tofight",

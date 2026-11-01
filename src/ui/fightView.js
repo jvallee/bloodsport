@@ -132,7 +132,9 @@ function report(s) {
 // Thumbs up or down: the beaten opponent's fate, with what the crowd wants.
 function mercyPanel(m, mercy, late) {
   const blood = mercy.crowd === 'kill';
-  const favor = mercy.top === false ? 'no Favour in a lower arena' : `+${MERCY.spareFavor} Favour`;
+  // `favorWhy` (from spareFavorWhy) says why a spare earns no Favour; without it, the old rule (top arena, a mercy chant).
+  const why = mercy.favorWhy !== undefined ? mercy.favorWhy : mercy.top === false ? 'no Favour in a lower arena' : blood ? 'no Favour: the Emperor wanted blood too' : null;
+  const favor = why ?? `+${MERCY.spareFavor} Favour`;
   const house = m.house ? esc(m.house.name) : 'their house';
   const spare = blood ? [favor, `${m.house ? m.house.name : 'Their house'} will owe you a life (−1 Power against you)`] : [favor, `+${MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`];
   const kill = blood ? [`+${MERCY.killRenown + MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`, 'A kill toward the kill marks'] : [`+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy)`, 'A kill toward the kill marks', ...(m.house ? [`${m.house.name} will swear a feud`] : [])];
