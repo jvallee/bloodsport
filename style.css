@@ -571,3 +571,13 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .dialogue-actions .dots i.on { background: var(--gold); }
 .dialogue.tutorial { background: rgba(0, 0, 0, 0.45); }
 .tip.tutorial .portrait { flex-shrink: 0; }
+
+/* Event choices line up as equal columns (playtest: 'The prefect's offer' was ragged). */
+.event-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: start; }
+.event-choice { max-width: none; }
+.event-choice .btn { width: 100%; text-align: center; }
+
+.result-lines { list-style: none; padding: 0; margin: 0; }
+.result-lines li { padding: 3px 0; }
+.result-lines li.good { color: var(--good, #8fc98f); }
+.result-lines li.bad { color: var(--bad, #e07a6a); }

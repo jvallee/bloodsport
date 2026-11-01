@@ -301,10 +301,12 @@ export function injurySeverity(roll, priorInjuries, opponentAdvantage, defenderW
   return { roll, raw, score, canDie, injury: injuryForScore(score) };
 }
 
-function disableRandom(c, n, rng) {
+// `fromInjury`: a Masochist's trait feeds on wounds, so an injury can never switch it off (playtest).
+function disableRandom(c, n, rng, fromInjury = false) {
   const out = [];
   for (let i = 0; i < n; i++) {
-    const open = ['kind', 'class'].filter((s) => (s === 'kind' ? c.f.kindTrait : c.f.cls) && !c.disabled.includes(s));
+    const open = ['kind', 'class'].filter((s) => (s === 'kind' ? c.f.kindTrait : c.f.cls) && !c.disabled.includes(s)
+      && !(fromInjury && s === 'kind' && c.f.kindTrait === 'masochist'));
     if (!open.length) break;
     const slot = pick(rng, open);
     c.disabled.push(slot);
@@ -338,10 +340,10 @@ function inflictInjury(m, X, Y, r) {
   Y.f.injuries.push({ tag: result.tag, weight });
   result.weight = weight;
   if (result.tag === 'distracted') {
-    result.disabled = disableRandom(Y, 1, m.rng);
+    result.disabled = disableRandom(Y, 1, m.rng, true);
     Y.distracted = [...(Y.distracted ?? []), ...result.disabled]; // Smelling Salts can restore these
   }
-  if (result.tag === 'maimed') result.disabled = disableRandom(Y, effectiveInjuries(Y.f), m.rng);
+  if (result.tag === 'maimed') result.disabled = disableRandom(Y, effectiveInjuries(Y.f), m.rng, true);
   return result;
 }
 

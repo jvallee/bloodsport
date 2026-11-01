@@ -7,7 +7,7 @@ import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
@@ -38,6 +38,8 @@ let prefs = { tutorial: [], showMath: false, introSeen: false, sound: true };
 let codex = loadCodex(null);
 let codexShownNew = []; // entries highlighted as new while the Codex tab is open
 let scene = null; // the dialogue scene showing: { id, beat } (src/dialogue.js)
+let eventResult = null; // after an event card's choice: { title, lines } shown in a popup
+let logMark = 0; // the house log's length before an event choice
 let legacy = loadLegacy(null);
 let achieved = []; // achievements earned this week, shown as notices
 let setupChoice = null; // the New career dialog: { patron, decrees } while it's open
@@ -102,7 +104,7 @@ function markSceneSeen(id) {
 }
 // The Emperor drops in at turning points, once each per career, when nothing else is on screen.
 function checkScene() {
-  if (scene || match || setupChoice || showHelp || !scenesSeen().includes('opening')) return; // the Emperor's visits come after the opening
+  if (scene || eventResult || match || setupChoice || showHelp || !scenesSeen().includes('opening')) return; // the Emperor's visits come after the opening
   const id = dueScene(run, scenesSeen());
   if (id) {
     markSceneSeen(id);
@@ -134,7 +136,7 @@ function render() {
   else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore) + legacyPanel(legacy);
   else body = ludusTab(run, oddsFor);
   checkScene();
-  const modal = setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, SCENES[scene.id], scene.beat) : showHelp ? helpModal() : tutorialCard(tutorialStep());
+  const modal = setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, SCENES[scene.id], scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
@@ -272,6 +274,7 @@ const actions = {
   'tutorial-replay': () => { prefs.tutorial = []; showHelp = false; savePrefs(); },
   'scene-next': () => { if (scene && scene.beat < SCENES[scene.id].length - 1) scene.beat += 1; else closeScene(); },
   'scene-skip': () => closeScene(),
+  'result-close': () => { eventResult = null; },
   'intro-replay': () => { scene = { id: 'opening', beat: 0 }; showHelp = false; },
   'dismiss-summary': (d) => {
     summaries = summaries.filter((s) => `${s.week}-${s.tier}-${s.fighterId}` !== d.key);
@@ -328,6 +331,7 @@ const actions = {
 
 // Game actions: the page's extras around each one (confirmations, animation, tabs).
 const before = {
+  'event-choice': () => { logMark = run.log.length; return true; },
   release: () => confirm('Release this fighter for good?'),
   retire: () => confirm('Retire this fighter to the Hall of Champions? They leave your roster for good.'),
   forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favour than losing the fight.'),
@@ -347,7 +351,12 @@ const after = {
     ui.animateRound = match?.round ?? 0;
     if (match?.rounds.length) roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath) });
   },
-  'event-choice': () => { sfx.event(); },
+  'event-choice': () => {
+    sfx.event();
+    // Show everything the choice changed, from the house log (the first line is "Title: choice. Effects.").
+    const lines = run.log.slice(logMark);
+    if (lines.length) eventResult = { title: lines[0].text.split(':')[0], lines: lines.map((l, i) => ({ tone: l.tone, text: i ? l.text : l.text.slice(l.text.indexOf(':') + 1).trim() })) };
+  },
   mercy: () => { sfx.cheer(0); },
   withdraw: () => {
     match = null; // the withdrawal is settled: leave the fight screen
@@ -436,6 +445,10 @@ document.addEventListener('keydown', (e) => {
     showHelp = false;
     if (scene) closeScene();
     render();
+    return;
+  }
+  if (eventResult) { // the result popup: any of Space, Enter or Escape closes it
+    if ([' ', 'Enter', 'Escape'].includes(e.key)) { e.preventDefault(); eventResult = null; render(); }
     return;
   }
   if (scene) { // a character is talking: Space or Enter goes on

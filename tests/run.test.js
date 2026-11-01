@@ -243,7 +243,11 @@ test('Morale drifts toward comfort minus expectations', () => {
   assert.equal(moraleTarget(run, f).target, MORALE.base + MORALE.perQuartersLevel + MORALE.perDecor - 20);
   f.morale = 90;
   advanceWeek(run);
-  assert.equal(f.morale, 80, 'drifts 10 per week');
+  // Playtest: Morale sinks slowly (a few points a week) but climbs quickly.
+  assert.equal(f.morale, 90 - MORALE.driftDown, `sinks ${MORALE.driftDown} per week`);
+  f.morale = 0;
+  advanceWeek(run);
+  assert.equal(f.morale, MORALE.drift, `climbs ${MORALE.drift} per week`);
 });
 
 test('Morale states: Inspired 80+, Discontented below 40, Mutinous below 20', () => {

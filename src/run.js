@@ -137,7 +137,7 @@ export function boutFor(run, tier = run.topTier) {
     buyIn: fest?.freeEntry ? 0 : pauper ? Math.max(0, run.prestige) : c.buyIn[s], fullBuyIn: c.buyIn[s], pauper: pauper && !fest?.freeEntry,
     // Lower arenas pay less, but a win always pays more than a loss (playtest #6: the Dirt Pits paid 2 either way).
     winGold: Math.round(Math.max(Math.ceil(c.winGold[s] * ECONOMY.lowerArenaGold ** below), c.lossGold + ECONOMY.lowerWinOverLoss) * (fest?.gold ?? 1)),
-    winPrestige: Math.round(Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below) * (fest?.prestige ?? 1)),
+    winPrestige: Math.round(Math.max(below ? ECONOMY.lowerArenaMinPrestige : 0, Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below)) * (fest?.prestige ?? 1)),
     festival: fest?.id ?? null,
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
     lossGold: c.lossGold, oppPower: c.oppPower[s] + (s === 2 && hasDecree(run, 'ironBosses') ? 1 : 0), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
@@ -946,7 +946,8 @@ export function advanceWeek(run) {
     f.stress = clampStress(f.stress - relief - calm);
     // Morale drifts toward what their room and fame warrant.
     const { target } = moraleTarget(run, f);
-    f.morale = f.morale < target ? Math.min(target, f.morale + MORALE.drift) : Math.max(target, f.morale - MORALE.drift);
+    // Morale climbs quickly but sinks slowly, a few points a week (playtest: Discontent arrived all at once).
+    f.morale = f.morale < target ? Math.min(target, f.morale + MORALE.drift) : Math.max(target, f.morale - MORALE.driftDown);
     if (f.mood && --f.mood.weeks <= 0) delete f.mood;
     // Don't leave a job that will fail next week: switch now, visibly.
     if (isTraining(f.job)) {
@@ -1667,6 +1668,7 @@ export function finishMatch(run, match) {
     if (match.result.reason === 'towel' && !bribed) summary.renown = RENOWN.towel;
     if (!fighter.alive && kindActive(match.a, 'bloodFaith', match.round)) {
       summary.bloodFaith = true;
+      summary.gold += ECONOMY.bloodFaithGold * Math.min(tier, CIRCUITS.length); // the clan honours the sacrifice
       summary.prestige += bout.buyIn;
     }
     // Losing a Boss bracket before its Final costs half (you never reached the Boss).
@@ -1882,7 +1884,7 @@ export function resolveMercy(run, choice) {
       log(run, out.feud, 'warn');
     }
   }
-  if (choice === crowd) {
+  if (choice === crowd || (choice === 'spare' && fighter.perks.includes('merciful'))) {
     out.renown += MERCY.crowdRenown;
     out.morale = MERCY.crowdMorale;
     bumpMorale(fighter, MERCY.crowdMorale);

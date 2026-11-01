@@ -148,7 +148,7 @@ export const PLOT_EVENTS = [
     id: 'freeCondemned', plot: true, stages: ['cause', 'ready'], title: 'Thrown to the beasts',
     when: (run) => Boolean(run.bouts),
     target: (run, rng) => (run.roster.length ? { f: pick(rng, run.roster).id, name: freshName(run, rng) } : null),
-    text: ({ f, name }) => `${f} has gone pale. "They're throwing ${name} to the beasts at the games today, for sedition. You have the Emperor's ear, and a key to every gate in the arena."`,
+    text: ({ f, name }) => `${f}, one of your gladiators, has gone pale. "There's a prisoner in the arena cells called ${name}. Not one of this house, but one of us. They're throwing ${name} to the beasts at today's games, for sedition. You have the Emperor's ear, and a key to every gate in the arena."`,
     choices: [
       { label: 'Do nothing', refuse: true, effects: { morale: { to: 'f', n: -20 } } },
       { label: `Plead for clemency (−${PLOT.clemencyFavor} Favour)`, help: true, effects: { favor: -PLOT.clemencyFavor, contact: 'new', trust: 2 } },

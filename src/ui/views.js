@@ -6,7 +6,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFesti
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions,
+  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -231,6 +231,12 @@ function dialogueBox(beat, actions, kind = 'scene') {
   </div></div>`;
 }
 
+// What just happened, after an event card's choice (playtest: the result only went to the house log).
+export function resultModal(title, lines) {
+  const html = `<ul class="result-lines">${lines.map((l) => `<li class="${l.tone}">${esc(l.text)}</li>`).join('')}</ul>`;
+  return dialogueBox({ speaker: 'narrator', title: esc(title), html }, '<span></span><button class="btn primary" data-action="result-close" autofocus>Continue</button>', 'result');
+}
+
 // A scene from src/dialogue.js, one beat at a time.
 export function dialogueModal(scene, beats, index) {
   const last = index >= beats.length - 1;
@@ -369,11 +375,11 @@ function roomPanel(run, f) {
     <li>Decor in the room: ${decorCount(f)} item${decorCount(f) === 1 ? '' : 's'} (+${MORALE.perDecor * decorCount(f)} comfort).</li>
     ${maxLevel(run, 'entertainment') ? `<li>Entertainment Room: +${MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment')} comfort.</li>` : ''}
     <li>Fame: Renown ${f.renown} sets expectations at ${expects}.</li></ul>`;
-  // Three tabs: the room (Morale), its decor, and gear.
-  const tab = roomTabs[f.id] ?? 'decor';
-  const tabs = [['room', 'Room'], ['decor', 'Decor'], ['gear', 'Gear']].map(([k, label]) => `<button class="seg${tab === k ? ' on' : ''}" data-action="room-tab" data-id="${f.id}" data-tab="${k}" aria-pressed="${tab === k}">${label}</button>`).join('');
-  const body = tab === 'room' ? room : tab === 'gear' ? `<div class="label">Gear (from the storeroom)</div>${gear}` : `<div class="decor-list">${decor}</div>`;
-  return `<div class="segs room-tabs" role="tablist">${tabs}</div><div class="room-body">${body}</div>`;
+  // Two tabs: the room (Morale) and its decor. Gear has its own fold-out (gearPanel).
+  const tab = roomTabs[f.id] === 'room' ? 'room' : 'decor';
+  const tabs = [['room', 'Room'], ['decor', 'Decor']].map(([k, label]) => `<button class="seg${tab === k ? ' on' : ''}" data-action="room-tab" data-id="${f.id}" data-tab="${k}" aria-pressed="${tab === k}">${label}</button>`).join('');
+  const body = tab === 'room' ? room : `<div class="decor-list">${decor}</div>`;
+  return { room: `<div class="segs room-tabs" role="tablist">${tabs}</div><div class="room-body">${body}</div>`, gear: `<div class="label">Gear (from the storeroom)</div>${gear}` };
 }
 
 // Which tab each fighter's room panel shows (page state only; set by src/main.js).
@@ -392,7 +398,8 @@ function rosterPanel(run) {
       <div class="segs">${jobs}</div>
       ${f.injuries.length > 1 ? `<div class="treat"><span class="label">Medbay treats first:</span> <select class="treat-select" data-change="treat-first" data-id="${f.id}" aria-label="Which injury the Medbay treats first">${f.injuries.map((inj, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${esc(INJURY_BY_TAG[inj.tag].name)} (${inj.weeksLeft} week${inj.weeksLeft === 1 ? '' : 's'})</option>`).join('')}</select></div>` : ''}
       ${f.job === 'rest' && jobBlocker(run, f.id, 'trainPower') && jobBlocker(run, f.id, 'trainSpeed') ? `<div class="why-not">Can't train this week: ${esc(jobBlocker(run, f.id, 'trainPower'))}</div>` : ''}
-      <details class="more" data-key="room-${f.id}"><summary>Room, decor &amp; gear${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f)}</details>
+      <details class="more" data-key="room-${f.id}"><summary>Room &amp; decor${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f).room}</details>
+      <details class="more" data-key="gear-${f.id}"><summary>Gear${f.gear.weapon || f.gear.armor ? ` <small>(${[f.gear.weapon, f.gear.armor].filter(Boolean).map((k) => esc(GEAR[k].name)).join(', ')})</small>` : run.inventory.gear.length ? ' <small>(spare gear in the storeroom)</small>' : ''}</summary>${roomPanel(run, f).gear}</details>
       ${f.story?.length ? `<details class="more" data-key="story-${f.id}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
       <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, cyborg surgery, retire, release</summary>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
@@ -422,6 +429,7 @@ function oddsRow(run, f, tier, oddsFor) {
     <div class="who"><b>${esc(f.name)}</b> ${warn.length ? `<span class="warn">${warn.join(' · ')}</span>` : ''}</div>
     <div class="o ${tone}" title="Chance to win ${hasBracket(tier) ? `the next match (against ${esc(opponentFor(run, tier).name)})` : 'the whole match (best of 3)'}, not one round">${hasBracket(tier) ? `Next (${esc(opponentFor(run, tier).name)})` : 'Match'}: ${odds.win}${pct(odds.winPct)}</div>
     ${hasBracket(tier) && run.bouts?.[tier] === 'open' ? bracketOdds(run, f, tier, oddsFor, pct) : ''}
+    <div class="o" title="Round 1 Power with everything that applies before tactics: scouting, the Challenger bonus, feuds, festivals, decor and gear">Power ${fightPowers(run, f, tier).mine} vs ${fightPowers(run, f, tier).theirs}</div>
     <div class="o" title="Chance of picking up at least one injury">Injury: ${odds.injury}${pct(odds.injuryPct)}</div>
     <div class="o ${odds.death === 'None' || odds.death === 'Low' ? '' : 'bad'}" title="Chance of dying if you never capitulate">Death: ${odds.death}${pct(odds.deathPct)}</div>
     ${run.bouts?.[tier] === 'open' ? buttonWhy(bracketOf(run, tier)?.fighterId === f.id && bracketOf(run, tier).round > 0 ? `Fight the ${bracketRound(run, tier)}` : `Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id, tier }, fightBlocker(run, f.id, tier), 'btn primary small') : ''}
@@ -573,7 +581,7 @@ export function marketTab(run) {
         ${fold('liaison', 'The Liaison', liaison)}
       </div>
       <div class="stack">
-        ${fold('storeroom', 'The Storeroom', `<p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room, decor &amp; gear" panel. A fallen fighter's things come back here.</p>
+        ${fold('storeroom', 'The Storeroom', `<p class="sub">Everything here belongs to the house. Hand it out from each fighter's "Room &amp; decor" and "Gear" panels. A fallen fighter's things come back here.</p>
           <div class="label">Gear <small>(sells for half price)</small></div><div>${stored}</div>
           <div class="row">${button('Unequip all fighters', 'unequip-all', {}, unequipAllBlocker(run), 'btn small')}<small class="sub">Returns every fighter's weapon and armour here, to hand out afresh.</small></div>
           <div class="label">Decor</div><div class="chips">${storedDecor}</div>

@@ -278,10 +278,9 @@ test('gear is equipped from a dropdown that says what each item does', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
   run.inventory.gear = ['gladius', 'leatherVest'];
-  assert.doesNotMatch(ludusTab(run, fakeOdds), /gear-select/, 'gear sits behind its own tab');
-  roomTabs[f.id] = 'gear';
+  // Playtest: gear has its own fold-out, apart from the room and its decor.
   const html = ludusTab(run, fakeOdds);
-  assert.match(html, /data-action="room-tab" data-id="[^"]+" data-tab="gear" aria-pressed="true"/);
+  assert.match(html, new RegExp(`<details class="more" data-key="gear-${f.id}"><summary>Gear <small>\\(spare gear in the storeroom\\)</small></summary>`));
   assert.match(html, new RegExp(`<select class="gear-select equip" data-change="equip" data-id="${f.id}"`));
   assert.match(html, /<option value="0">Gladius: \+1 Power\.<\/option>/);
   assert.match(html, /<option value="1">Leather Vest: −5% chance to be injured \(armour\)\.<\/option>/);

@@ -47,7 +47,7 @@ export function injuryForScore(score) {
 
 export const TRAITS = {
   hateful: { name: 'Hateful', desc: '+10% chance to injure the opponent.' },
-  masochist: { name: 'Masochist', desc: '+1 Power per effective injury.' },
+  masochist: { name: 'Masochist', desc: '+1 Power per effective injury. Injuries never switch this trait off.' },
   quantumAnalyzer: { name: 'Quantum Analyzer', desc: 'Each round lost gives +1 Power for the rest of the match.' },
   alloyedSkin: { name: 'Alloyed Skin', desc: 'Armour: −10% chance to be injured.' },
   perpetualMotion: { name: 'Perpetual Motion Machine', desc: 'After winning a round: +10% win chance and +5% chance to be injured next round.' },
@@ -55,7 +55,7 @@ export const TRAITS = {
   footwork: { name: 'Footwork', desc: 'Strikes first automatically when faster than the opponent.' },
   egoArmour: { name: 'Ego Armour', desc: 'While uninjured: +5% win chance and armour −10% chance to be injured.' },
   elvenEyes: { name: 'Elven Eyes', desc: 'When an injury check against this fighter misses by 50%+, makes a free 15% counter-injury check.' },
-  bloodFaith: { name: 'Blood Faith', desc: 'If this fighter dies in a match, the Prestige buy-in is refunded.' },
+  bloodFaith: { name: 'Blood Faith', desc: 'If this fighter dies in a match, the Prestige buy-in is refunded, and their clan pays the house 5 Gold per arena tier.' },
   underdog: { name: 'Underdog', desc: '+2 Power when the opponent has 2 or more Power more.' },
   unbreakable: { name: 'Unbreakable', desc: 'The Death Gate opens at 3 injuries instead of 2.' },
   bloodlust: { name: 'Bloodlust', desc: '+1 Power once the opponent is injured.' },
@@ -152,7 +152,7 @@ export const RETIRE = { level: 4, prestige: 5, morale: 10 };
 // lost Final ~9. Playtest #6's "brackets pay nothing" is answered with Gold instead (purse 2 → 3).
 // A Championship also crowns every arena below it (playtest #7). cascadePower: Power for each lower Title gained that way.
 export const TITLES = { cascade: true, cascadePower: 1 };
-export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 3, prestige: 0, earlyBossLoss: 0.5 };
+export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 3, prestige: 1, earlyBossLoss: 0.5 };
 // prestige: × tier for each early win (swept: 1 took careful careers from 41% to 54%, so it's off); earlyBossLoss: share of the Boss-loss Favour for losing before the Final. // swept: -3/-2 took careful careers to 22%, -4/-3 to 28%
 
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
@@ -251,6 +251,8 @@ export const ECONOMY = {
   skipGold: 2, // reward for skipping Tournament 1 or 2
   skipStressRelief: 20,
   lowerArenaPrestige: 0.5, // Prestige from a win shrinks by half for each tier below your top arena
+  bloodFaithGold: 5, // an Orc with Blood Faith who dies in a match: their clan pays this × arena tier in Gold
+  lowerArenaMinPrestige: 1, // ...but a win there always earns at least this much (playtest: a win that earned nothing felt like a loss)
   lowerArenaGold: 0.5, // and so does the purse (v5 economy pass: late careers were drowning in Gold from the lower arenas)
   lowerWinOverLoss: 2, // ...but a lower-arena win always pays at least the loss stipend + this
   crushingGap: 3, // a win with this much more Power than the opponent is a "crushing" win
@@ -360,6 +362,7 @@ export const PERKS = {
   closer: { name: 'Closer', desc: '+5% win chance in Round 3.' },
   ironConstitution: { name: 'Iron Constitution', desc: 'Training adds 10 less Stress.' },
   crowdPleaser: { name: 'Crowd Pleaser', desc: '+1 extra Renown for every win.' },
+  merciful: { name: 'Merciful', desc: 'Sparing an opponent always wins the crowd over: the Renown and Morale bonus, even when they called for blood.' },
   survivor: { name: 'Survivor', desc: 'Once injured: −10% chance to be injured; −20% at 2+ injuries.', req: (f) => f.level >= 3, reqText: 'Level 3+' },
   duelist: { name: 'Duelist', desc: '+5% win chance and +5% chance to injure.', req: (f) => f.power >= 9 && f.speed >= 7, reqText: 'Power 9+ and Speed 7+' },
   tactician: { name: 'Tactician', desc: 'Striking first is worth +15% instead of +10%.', req: (f) => f.speed >= 9 && f.power >= 8, reqText: 'Speed 9+ and Power 8+' },
@@ -375,7 +378,7 @@ export const BLOODIED = { renown: 2, xp: 2, morale: 5 };
 // Renown (fame) and Morale. Comfort raises Morale; expectations grow with Renown.
 export const RENOWN = { win: 2, bossWin: 3, upset: 1, towel: -1, goldPer: 5 }; // +1 Gold per 5 Renown on wins
 export const MORALE = {
-  start: 60, drift: 10, base: 40, perQuartersLevel: 10, perDecor: 5, perEntertainmentLevel: 10, expectationPerRenown: 2, maxExpectation: 60,
+  start: 60, drift: 10, driftDown: 3, base: 40, perQuartersLevel: 10, perDecor: 5, perEntertainmentLevel: 10, expectationPerRenown: 2, maxExpectation: 60,
   win: 10, loss: -5, towel: -5, allyDeath: -10, crowdJeers: -10,
   inspired: 80, restless: 40, mutinous: 20, inspiredWin: 5000,
 };
