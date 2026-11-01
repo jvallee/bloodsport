@@ -18,9 +18,10 @@ const SKIN = {
   android: ['#a9b4bf', '#c2c8cf', '#8e99a4'],
   vampire: ['#e8e4ec', '#d9d2e0', '#cfc9d8'],
   basa: ['#9a6b3a', '#7d5530', '#b08050'],
+  revenant: ['#9aa394', '#8a9188', '#a7a398'], // 5.3.0: grave-grey, raised by the Temple of Vulcan
 };
 const HAIR = ['#1f1612', '#3a2618', '#6b4426', '#a8742f', '#d8c08a', '#8b2b22', '#cfcfcf'];
-const BG = { human: '#3a2a20', elf: '#26332a', orc: '#2f2a1d', android: '#22283a', vampire: '#2a1a2a', basa: '#2e2414' };
+const BG = { human: '#3a2a20', elf: '#26332a', orc: '#2f2a1d', android: '#22283a', vampire: '#2a1a2a', basa: '#2e2414', revenant: '#1e1a16' };
 
 // Brows and mouth by humor: Choleric scowls, Sanguine grins, Melancholic frowns, Phlegmatic is unreadable.
 const FACE = {
@@ -78,6 +79,8 @@ export function portrait(f, size = 48) {
     parts.push(`<path d="${face.mouth}" stroke="#5a2a22" stroke-width="2" stroke-linecap="round" fill="none"/>`);
     if (kind === 'orc') parts.push('<path d="M25 47 L24 41 L27 46Z M39 47 L40 41 L37 46Z" fill="#f2ead2"/>');
     if (kind === 'vampire') parts.push('<path d="M28 47 L29 51 L30 47Z M34 47 L35 51 L36 47Z" fill="#fff"/><circle cx="24" cy="32" r="1.7" fill="#c0362c"/><circle cx="40" cy="32" r="1.7" fill="#c0362c"/>');
+    // A Revenant: a brass plate over half the jaw, stitches across the brow, and forge-fire in the eyes.
+    if (kind === 'revenant') parts.push('<path d="M32 38 L48 34 Q48 50 32 53Z" fill="#b5883a" opacity="0.92"/><circle cx="41" cy="44" r="1.2" fill="#6b4a1e"/><circle cx="36" cy="49" r="1.2" fill="#6b4a1e"/><path d="M19 21 L45 21 M22 19 L22 23 M28 19 L28 23 M34 19 L34 23 M40 19 L40 23" stroke="#3a2e28" stroke-width="1.2"/><circle cx="24" cy="32" r="1.9" fill="#ff8a2a"/><circle cx="40" cy="32" r="1.9" fill="#ff8a2a"/>');
     if (kind === 'basa') parts.push('<path d="M14 22 L10 8 L22 16Z M50 22 L54 8 L42 16Z" fill="#5a3d20"/><path d="M26 40 L32 44 L38 40" stroke="#2a1d16" stroke-width="2" fill="none"/>');
   }
   parts.push(classGear(f));

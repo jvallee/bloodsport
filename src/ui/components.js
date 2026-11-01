@@ -152,7 +152,9 @@ function gearSummary(g) {
 // before a fighter turns Discontented (and stops training).
 function moraleChip(f, info = null) {
   const state = f.morale >= MORALE.inspired ? ['inspired', 'Inspired: +5% win chance'] : f.morale < MORALE.mutinous ? ['mutinous', 'Mutinous: refuses to fight'] : f.morale < MORALE.restless ? ['restless', "Discontented: won't train"] : ['content', 'Content'];
-  const why = info
+  const why = info?.revenant
+    ? ` A Revenant feels nothing: Morale settles at ${info.target} whatever the room.`
+    : info
     ? ` Heading to ${info.target}: base ${MORALE.base}, comfort +${info.comfort} (Quarters +${MORALE.perQuartersLevel} a level, each decor item +3 to +7 by price, Entertainment Room +${MORALE.perEntertainmentLevel} a level), fame expects −${info.expects} (${MORALE.expectationPerRenown} per Renown).`
     : ' Comfort (Quarters, decor, Entertainment Room) raises it; fame raises expectations.';
   const sliding = info && f.morale >= MORALE.restless && info.target < MORALE.restless;

@@ -386,7 +386,7 @@ function roomPanel(run, f) {
       ${button('− Take back', 'remove-decor', { id: f.id, item: k }, removeDecorBlocker(run, f.id, k))}</div>
       <small>${helps ? '✦ ' : ''}${esc(d.effect)}</small></div>`;
   }).join('');
-  const { target, comfort, expects } = moraleTarget(run, f);
+  const { target, comfort, expects, revenant } = moraleTarget(run, f);
   const gear = ['weapon', 'armor'].map((slot) => {
     const cur = f.gear[slot];
     // A dropdown of the storeroom's gear for this slot, each with what it does.
@@ -398,7 +398,7 @@ function roomPanel(run, f) {
     return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armour'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot), 'btn small unequip')}` : '<small>empty</small>'}
       ${picker ? `<div class="row tight">${picker}</div>` : ''}</div>`;
   }).join('');
-  const room = `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown})${f.mood ? `, mood ${f.mood.n > 0 ? '+' : ''}${f.mood.n} for ${f.mood.weeks} more week${f.mood.weeks === 1 ? '' : 's'}` : ''}.</div>
+  const room = revenant ? `<div class="label">A Revenant feels nothing: Morale settles at <b>${target}</b> whatever the room. Decor here does nothing for them, except what it does in a fight.</div>` : `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown})${f.mood ? `, mood ${f.mood.n > 0 ? '+' : ''}${f.mood.n} for ${f.mood.weeks} more week${f.mood.weeks === 1 ? '' : 's'}` : ''}.</div>
     <ul class="room-facts"><li>Quarters level ${maxLevel(run, 'quarters')}: +${MORALE.perQuartersLevel * maxLevel(run, 'quarters')} comfort; fits ${maxLevel(run, 'quarters')} of each decor item.</li>
     <li>Decor in the room: ${decorCount(f)} item${decorCount(f) === 1 ? '' : 's'} (+${decorComfortOf(f)} comfort).</li>
     ${maxLevel(run, 'entertainment') ? `<li>Entertainment Room: +${MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment')} comfort.</li>` : ''}
