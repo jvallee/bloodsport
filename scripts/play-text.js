@@ -1,12 +1,14 @@
 // Text interface to a Bloodsport career: drives the pure modules in src/ with no DOM, one command per line.
-// Usage: node scripts/play-text.js [--seed N] [--last N] < commands.txt
+// Usage: node scripts/play-text.js [--seed N] [--short] [--daily YYYY-MM-DD] [--last N] < commands.txt
+//   --short   a short career (Tournament → Boss in each arena). --daily DAY: that day's Emperor's Challenge.
 //   --seed N  career seed (default 1). Careers replay exactly, so a player can append commands and re-run.
 //   --last N  print only the output of the last N commands (earlier ones still run, unrendered).
 // Type `help` for the command list.
 
 import { createInterface } from 'node:readline';
+import { dailySeed, dailySetup } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
+import { LOUNGE, DEMANDS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
@@ -15,7 +17,7 @@ import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
-  matchOptions, pray, exhibition, recruitPrice,
+  matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
   bossLossFavor,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo } from '../src/ludus.js';
@@ -58,6 +60,8 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   signature                     during a fight (level 3+): unleash your fighter's signature move next round, once per fight
   spare | kill                  thumbs up or down: decide a beaten, wounded opponent's fate after a win
   use <item>                    during a fight, before Round 1 or between rounds: one of each kind per fight
+  bet <gold>                    during a fight, before Round 1: back your fighter at their real odds
+  lounge / host / enact <id>    the Patron Lounge: see policies, host the Senate (Influence), pass a policy
   place <id> <item> | remove <id> <item>      put decor in a fighter's room, or take it back
   buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armour> | sell-gear <storeroom#> (half price)
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).join(', ')}
@@ -74,8 +78,8 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   math                          toggle the round-by-round math in fight narration
   end-week | to-tournament      run one week of jobs, or keep ending weeks until the next tournament`;
 
-export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
-  const run = createRun(seed);
+export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) {
+  const run = createRun(seed, setup);
   const codex = createCodex();
   // Dialogue scenes (src/dialogue.js), as text: the opening once, then the Emperor's visits as they come due.
   const scenesSeen = [];
@@ -171,7 +175,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   function opponentBlock(f, boss = false) {
     const bits = [`Power ${effectivePower(f)}${effectivePower(f) !== f.power ? ` (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')})` : ''}`, `Speed ${effectiveSpeed(f)}`, ...(opponentHasSignature(f, boss) ? [`Signature: ${SIGNATURES[f.cls].name} (${SIGNATURES[f.cls].desc} Used when behind, or in Round 3)`] : []), `Renown ${f.renown}`, ...(f.humor ? [`${HUMORS[f.humor].name}: ${HUMORS[f.humor].tell}`] : []), ...extras(f)];
     const house = houseOf(run, f);
-    return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ' (FEUD: +1 Power against you)' : ''}${house.owed ? ' (OWES YOU A LIFE: −1 Power against you)' : ''}${house.vengeance ? ' (your VENGEANCE: +5% win chance)' : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
+    return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ' (FEUD: +1 Power against you)' : ''}${house.owed ? ' (OWES YOU A LIFE: −1 Power against you)' : ''}${house.vengeance ? ' (your VENGEANCE: +5% win chance)' : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}${f.nemesis ? ` · NEMESIS ${f.nemesis.epithet} (beat your house ${f.nemesis.wins}×${f.nemesis.victims.length ? `, killed ${f.nemesis.victims.join(' and ')}` : ''}; +${f.nemesis.bonus} Power)` : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
   }
 
   function arenaBlock(tier) {
@@ -247,6 +251,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     if (match) return fightStatus();
     lowerShown = 0;
     const out = [header()];
+    if (run.demand) out.push(`\n⚜ THE EMPEROR DEMANDS: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.${demandMet(run) ? ' (done)' : ''}`);
     const due = scenesSeen.includes('opening') ? dueScene(run, scenesSeen) : 'opening';
     if (due) {
       scenesSeen.push(due);
@@ -526,6 +531,27 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       buyItem(run, item);
       return `Bought ${CONSUMABLES[item].name}. You have ${run.inventory.items[item]}. ${CONSUMABLES[item].desc}`;
     },
+    bet: ([amount]) => {
+      need([amount].filter(Boolean), 1, 'bet <gold>');
+      if (!match) throw new Error('Bets are placed during a match, before Round 1.');
+      const b = placeBet(run, match, Number(amount));
+      return `You bet ${b.stake} Gold on ${match.a.f.name} at ${b.odds.toFixed(1)} to 1: a win pays ${b.payout} Gold.`;
+    },
+    host: () => {
+      const gain = host(run);
+      return `The Senate dines with you: +${gain} Influence (now ${run.influence}).`;
+    },
+    enact: ([id]) => {
+      need([id].filter(Boolean), 1, 'enact <policy>');
+      enact(run, id);
+      return `${LOUNGE.policies[id].name} is in force for ${LOUNGE.weeks} weeks: ${LOUNGE.policies[id].desc}`;
+    },
+    lounge: () => {
+      if (!maxLevel(run, 'lounge')) return 'Build the Patron Lounge (Prestige level 3) to host the Senate and pass policies.';
+      return [`-- Patron Lounge · Influence ${run.influence ?? 0} · host for ${hostPrice(run)} Gold${hostBlocker(run) ? ` (can't now: ${hostBlocker(run)})` : ''} --`,
+        ...activePolicies(run).map((p) => `IN FORCE: ${LOUNGE.policies[p.id].name} (${p.until - run.week} weeks left)`),
+        ...Object.entries(LOUNGE.policies).map(([id, p]) => `  ${id} · ${p.name} · ${p.cost} Influence · ${p.lean}: ${p.desc}${enactBlocker(run, id) ? ` (can't: ${enactBlocker(run, id)})` : ''}`)].join('\n');
+    },
     use: ([item]) => {
       need([item].filter(Boolean), 1, 'use <item>');
       if (!match) throw new Error('Items are used during a match, before Round 1 or between rounds.');
@@ -692,7 +718,9 @@ async function main() {
     const i = argv.indexOf(name);
     return i >= 0 ? Number(argv[i + 1]) : fallback;
   };
-  const session = createSession(opt('--seed', 1));
+  const dailyAt = argv.indexOf('--daily');
+  const day = dailyAt >= 0 ? argv[dailyAt + 1] : null;
+  const session = day ? createSession(dailySeed(day), { setup: dailySetup(day) }) : createSession(opt('--seed', 1), { setup: { short: argv.includes('--short') } });
   const last = opt('--last', Infinity);
   const lines = [];
   for await (const line of createInterface({ input: process.stdin })) {
