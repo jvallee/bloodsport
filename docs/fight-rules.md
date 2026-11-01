@@ -434,3 +434,19 @@ All numbers are tunables in `src/data.js` (`POLITICAL`, `PLOT`, `LIAISON`); stor
   - Careful 41%, careful deaths 0.54, reckless deaths 3.28. Balanced build 2/4, first Boss 71%, tactics +8, always-Press −7, Grand +26 points harder.
   - Loyalist wins 13 points more than careful (54%).
   - Rebel careers: 9% coup, 27% ordinary wins, 0% treason. Raids are rare when suspicion is managed.
+
+## Playtest #8 changes (5.1.0, from the designer's playthrough notes)
+
+- **Prestige for every tournament win:** +1 per bracket Quarter- or Semi-final win (`BRACKET.prestige`). A lower-arena win earns at least 1 (`ECONOMY.lowerArenaMinPrestige`).
+- **House levels** at 12 / 30 / 60 / 110 Prestige (were 10 / 25 / 50 / 90), to offset that.
+  - Swept with 150 careful careers each. Per-win Prestige alone: 52% (32% without it).
+  - Raised thresholds: 41%. Per-win only in the top arena: 49%. Bracket buy-ins +2: 42% (rejected: it cancels the gain, so a lost Final costs as much as before).
+- **Morale** climbs 10 a week and sinks 3 (`MORALE.driftDown`; it sank 10).
+- **Injuries:** Distracted weighs 0 (a passing daze); Maimed and Senseless weigh 2, like Poisoned. Death risk about doubles (an even fight 0.18% → 0.52%). On its own this makes careers harder: 65% → 52% careful.
+- **Seasoned recruits:** Market fighters and prisoners of war arrive at levels `RECRUIT.levels` = [1], [1, 2], [2], [2, 3] by tier, with a perk per level, at +2 Gold per level.
+- **New buildings:** Temple of Fortuna (perk reroll: 3 Gold, then 1) and Exhibition Ring (`EXHIBITION`: XP 3 / 2, the winner +1 Renown and 2 Gold × tier, the loser 15% Flesh Wound, never deadly).
+- **Smaller rules:** Blood Faith pays 5 Gold × tier. Merciful perk. Masochist immune to injury switch-off.
+- **Gates** (300 careers): all 12 pass.
+  - Careful 44%. Careful deaths 0.82, reckless deaths 3.77.
+  - Balanced build best vs 2 of 4 Bosses. First Boss 68%. Tactics +7, always-Press −6. Grand +28 points harder than the first Boss.
+  - Loyalist +8 over careful. Coup 15% of rebel careers. Treason 0%.
