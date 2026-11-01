@@ -2,6 +2,19 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 5.2.0 (more fun)
+
+- **Nemeses:** an opponent who beats one of your fighters is remembered with a name for it ("Gorrak the Butcher"). Every few months they come back to your arenas, stronger for every win over your house. Beat them for Renown, Gold and Favour.
+- **Short careers and the daily Emperor's Challenge:**
+  - A short career goes straight from each arena's tournament to its Boss, with richer purses.
+  - The Emperor's Challenge is a short career on the day's seed: the same for everyone that day. Your best score for the day is kept.
+- **Betting:** before Round 1, bet Gold on your own fighter at their real odds. Underdogs pay more.
+- **The Emperor's demands:** some months the Emperor tells you, in person, what he wants on fight day. Do it for Favour and Gold; miss it and he remembers.
+- **Bonds:** fighters who spar in the Exhibition Ring, or both win on the same fight day, become friends. They're happier together, a veteran teaches a rookie, and a death brings grief.
+- **The crowd's hype:** a meter on the fight screen fills with upsets, wounds, kills and comebacks. It pays out in Renown, and in Gold on a win.
+- **The Patron Lounge:** host the Senate each month for Influence, and pass policies: bigger purses, mercy that pays everywhere, lower tribute, lions for the Bosses, and more. Some please the Emperor; some don't.
+- **The Liaison's prisoners** (convicts too) arrive seasoned, above level 1, in later arenas.
+
 ## 5.1.1 (interface polish)
 
 - **The Codex, redesigned:** search, jump links, and sections that fold away. Basics and anything new start open. Locked entries are counted ("3 still to discover") instead of shown as rows of "???".

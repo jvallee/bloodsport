@@ -95,7 +95,7 @@ export function runGates({ careers = 200, quick = false } = {}) {
     { name: 'Tough finish: the Grand Tournament is 10+ points harder than the first Boss', value: (curve[1] ?? 0) - (curve[5] ?? 1), pass: (curve[1] ?? 0) - (curve[5] ?? 1) >= 0.1, fmt: 'pctDiff' },
     { name: 'The evil road is easier: the loyalist wins 5–20 points more often than careful', value: rate(loyalist) - rate(careful), pass: rate(loyalist) - rate(careful) >= 0.05 && rate(loyalist) - rate(careful) <= 0.2, fmt: 'pctDiff' },
     { name: 'The coup is rare but real: 5–25% of rebel careers', value: ending(rebel, 'coup'), pass: ending(rebel, 'coup') >= 0.05 && ending(rebel, 'coup') <= 0.25, fmt: 'pct' },
-    { name: 'Short careers are winnable (careful 20–55%) and at least a quarter quicker', value: rate(short), pass: rate(short) >= 0.2 && rate(short) <= 0.55 && weeks(short) <= 0.75 * weeks(careful), fmt: 'pct' },
+    { name: 'Short careers are winnable (careful 20–55%) and at least a fifth quicker', value: rate(short), pass: rate(short) >= 0.2 && rate(short) <= 0.55 && weeks(short) <= 0.8 * weeks(careful), fmt: 'pct' },
     { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
   ];
   return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, short };

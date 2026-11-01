@@ -522,7 +522,9 @@ export const DEMANDS = {
   twoArenas: { goal: 'Win in two different arenas on fight day', say: 'Show me the depth of your house. Win in two of my arenas this month.' },
 };
 export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] };
-export const SHORT = { purse: 1.5, prestige: 1.5 };
+// Swept (100 short careers each): ×1.5 purses 13% won; ×2 purses and ×2.5 Prestige 49% (92 weeks); a head start (+20 Gold, House
+// level 2) 30%; both 44% in 82 weeks (full careers 109); ×2 training 99% (too easy). `train` must keep Power whole.
+export const SHORT = { purse: 2, prestige: 2.5, startGold: 20, startPrestige: 12, train: 1 };
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],

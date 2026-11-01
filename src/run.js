@@ -867,8 +867,8 @@ export function createRun(seed = randomSeed(), setup = {}) {
     version: SAVE_VERSION,
     seed,
     setup: { patron: setup.patron ?? null, decrees: [...(setup.decrees ?? [])], classes: [...(setup.classes ?? [])], short: Boolean(setup.short), daily: setup.daily ?? null },
-    gold: ECONOMY.startGold,
-    prestige: ECONOMY.startPrestige,
+    gold: ECONOMY.startGold + (setup.short ? SHORT.startGold : 0),
+    prestige: ECONOMY.startPrestige + (setup.short ? SHORT.startPrestige : 0),
     prestigeLevel: 1,
     favor: FAVOR.start,
     week: 0,
@@ -1121,12 +1121,13 @@ export function advanceWeek(run) {
     if (isTraining(f.job)) {
       const cost = trainCost(run);
       const stat = f.job === 'trainPower' ? 'power' : 'speed';
-      f[stat] += TRAIN_GAIN[stat];
+      const gain = Math.round(TRAIN_GAIN[stat] * (isShort(run) ? SHORT.train : 1)); // whole points only
+      f[stat] += gain;
       f.trained += 1;
-      if (stat === 'power') f.trainedPower = (f.trainedPower ?? 0) + TRAIN_GAIN.power;
+      if (stat === 'power') f.trainedPower = (f.trainedPower ?? 0) + gain;
       run.gold -= cost;
       f.stress = clampStress(f.stress + STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0));
-      log(run, `${f.name} trains: +${TRAIN_GAIN[stat]} ${stat === 'power' ? 'Power' : 'Speed'}.`, 'good');
+      log(run, `${f.name} trains: +${gain} ${stat === 'power' ? 'Power' : 'Speed'}.`, 'good');
     }
     if (f.job === 'medbay') {
       let heal = healRate(run);

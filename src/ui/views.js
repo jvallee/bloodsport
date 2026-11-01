@@ -150,7 +150,7 @@ export function setupModal(legacy, choice) {
     <h2>A new career</h2>
     <div class="label">Career length</div>
     <label class="opt"><input type="radio" name="length" value="full" ${choice.short ? '' : 'checked'}> <b>Full career</b> <small>Each arena: Tournament 1 → Tournament 2 → Boss. A few hours.</small></label>
-    <label class="opt"><input type="radio" name="length" value="short" ${choice.short ? 'checked' : ''}> <b>Short career</b> <small>Each arena: Tournament → Boss, with richer purses. About half the time.</small></label>
+    <label class="opt"><input type="radio" name="length" value="short" ${choice.short ? 'checked' : ''}> <b>Short career</b> <small>Each arena: Tournament → Boss, with richer purses and a head start. Quicker to the Grand.</small></label>
     <div class="daily"><b>⚜ The Emperor's Challenge</b> <small>Today's short career: the same seed for everyone today, no patron or decrees.${legacy.daily?.[today()] ? ` Your best today: <b>${legacy.daily[today()]}</b>.` : ''}</small>
       <button class="btn small" data-action="daily-challenge">Take today's challenge</button></div>
     <div class="label">Patron</div>${patronList}
