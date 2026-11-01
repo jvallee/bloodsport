@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick, createRng } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG, HYPE } from './data.js';
 import { Refused } from './errors.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
@@ -589,6 +589,19 @@ export function deathRisk(m, stance = 'steady', n = 400) {
 }
 
 export const canThrowTowel = (m) => !m.over && m.round >= 1 && m.debuff !== 'emperorsGaze';
+// The crowd's hype (fun idea #6): the drama of a match so far, for your fighter (side A). Pure: read from the rounds.
+export function hypeOf(m) {
+  let h = 0;
+  for (const r of m.rounds ?? []) { // (a reload's stand-in match has no rounds)
+    if (r.winner === 'A' && r.win?.chance < 40000) h += HYPE.upset; // won a round they were expected to lose
+    for (const c of r.checks ?? []) if (c.attacker === 'A' && c.injury) h += c.injury.tag === 'death' ? HYPE.kill : HYPE.wound;
+    if (r.signatures?.some((x) => x.side === 'A')) h += HYPE.signature;
+    if (r.stances?.A === 'press') h += HYPE.press;
+  }
+  if (m.over && m.result?.winner === 'A' && m.rounds?.[0]?.winner === 'B') h += HYPE.comeback;
+  return Math.min(HYPE.max, h);
+}
+
 export const mortalDanger = (c) => c.f.alive && effectiveInjuries(c.f) >= deathGateAt(c.f, c.arena, c.disabled);
 
 export function throwTowel(m) {

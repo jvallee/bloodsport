@@ -6,7 +6,7 @@ const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 
 // What this side actually brings to the coming round (everything applied), so the card never misleads.
 const statLine = (stats, side) => `<div class="round-stats" title="Power and Speed in Round ${stats.round}, with gear, Titles, items, injuries, Scouted, Challenger and arena rules applied">Round ${stats.round}: <b>Power ${stats[side].power}</b> · <b>Speed ${stats[side].speed}</b></div>`;
-import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf } from '../fight.js';
+import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf, hypeOf } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, fighterCard, mercyChoices } from './components.js';
 import { roundStats } from '../explain.js';
@@ -115,6 +115,9 @@ function report(s) {
     s.title ? row(s.titlePower > 1 ? 'Titles' : 'Title', `🏆 ${esc(s.title)}${s.title === 'Master of the Games' ? '' : ` (+${s.titlePower ?? 1} Power)`}`, 'good') : '',
     s.champion ? row('The crowd', 'boos a champion back in the pits', 'bad') : s.crushing ? row('The crowd', 'jeers the mismatch', 'bad') : '',
     s.bloodFaith ? row('Blood Faith', 'buy-in refunded', 'good') : '',
+    s.nemesis ? row('Nemesis', `☠ ${esc(s.nemesis)} is beaten`, 'good') : '',
+    s.hype ? row('Crowd hype', `📣 ${s.hype.hype}${s.hype.renown ? `: +${s.hype.renown} Renown` : ''}${s.hype.gold ? `, +${s.hype.gold} Gold` : ''}`, s.hype.renown ? 'good' : '') : '',
+    s.bet ? row('Your bet', s.bet.won ? `🪙 won: +${s.bet.payout} Gold on ${s.bet.stake}` : `🪙 lost: ${s.bet.stake} Gold`, s.bet.won ? 'good' : 'bad') : '',
     s.bribed ? row('Crowd Bribe', 'the crowd forgave the capitulation', 'good') : '',
     s.verdict === 'spare' ? row('Verdict', '👍 Spared: the Emperor approves', 'good') : '',
     s.verdict === 'kill' ? row('Verdict', `👎 Killed${s.mark ? ` · 💀 earned the mark ${esc(s.mark)}` : ''}`, 'bad') : '',
@@ -135,6 +138,12 @@ function mercyPanel(m, mercy, late) {
   const kill = blood ? [`+${MERCY.killRenown + MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`, 'A kill toward the kill marks'] : [`+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy)`, 'A kill toward the kill marks', ...(m.house ? [`${m.house.name} will swear a feud`] : [])];
   void house;
   return `<div class="mercy${late}">${mercyChoices({ title: `${esc(mercy.opp)} lies beaten in the sand. All eyes turn to you, Lanista.`, blood, spare, kill })}</div>`;
+}
+
+// The crowd's hype (fun idea #6): fills on upsets, wounds, kills and comebacks; held back until the round is revealed.
+function hypeMeter(m, hold) {
+  const h = hypeOf(m);
+  return `<div class="hype${hold}" title="The crowd's hype: upsets, wounds, kills, signature moves and comebacks fill it. At the end it pays Renown (and Gold, on a win).">📣 <span class="hypebar"><span style="width:${h}%"></span></span> <small>${h}</small></div>`;
 }
 
 // Betting on your own fighter, before Round 1 (fun idea #3). `m.betQuote` ({ odds, cap, gold }) is set by src/main.js.
@@ -274,6 +283,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
         <div class="center">
           <div class="gauge-labels"><span>You're stronger</span><span>Power Delta ${last ? signed(delta) : '0'}</span><span>They're stronger</span></div>
           <div class="gauge" title="Leans towards the stronger side: yours on the left, theirs on the right"><div class="needle" style="left:${((10 - delta) / 20) * 100}%"></div></div>
+          ${hypeMeter(m, hold(reveal))}
           ${last ? initiativeRoll(m, last, animate) : ''}
           ${last ? tacticLine(m, last) : ''}
           ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span>${animate ? `<span class="suspense" style="--from:${reveal - SUSPENSE}s;--reveal:${reveal}s">Steel meets steel…</span>` : ''}</div>${roundBanner(m, last, reveal)}` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}

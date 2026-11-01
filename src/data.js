@@ -492,6 +492,9 @@ export const RECRUIT = { levels: [[1], [1, 2], [2], [2, 3]], perLevel: 2 };
 // Bonds between fighters (fun idea #5): formed by sparring in the Exhibition Ring, or by both winning on the same fight
 // day. A bond adds comfort while the partner is in the house; a partner `mentorGap`+ levels higher teaches the other
 // `mentorXp` XP a week; a partner's death leaves the survivor grieving (`grief` Morale for MOOD_WEEKS).
+// The crowd's hype (fun idea #6): drama fills a meter during a fight (0–100), paid out at the end. A win earns Renown
+// (1 per `renownPer`) and Gold (tier × 1 per `goldPer`); a loss earns Renown (1 per `lossRenownPer`) for a fight they loved.
+export const HYPE = { upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 5, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
 export const BOND = { comfort: 8, mentorGap: 3, mentorXp: 1, grief: -20 };
 export const DEMAND = { chance: 0.5, fromWeek: 8, favor: 4, goldPerTier: 4, missFavor: -2 };
 export const DEMANDS = {

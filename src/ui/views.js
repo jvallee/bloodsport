@@ -189,6 +189,8 @@ export function summaryBanner(s) {
   if (s.favor) bits.push(`${plus(s.favor)} Favour`);
   if (s.title) bits.push(`🏆 ${s.fighter} earns ${s.titlePower > 1 ? 'the titles' : 'the title'} "${s.title}"${s.title === 'Master of the Games' ? '' : ` (+${s.titlePower ?? 1} Power)`}`);
   if (s.nemesis) bits.push(`☠ Nemesis beaten: ${s.nemesis}`);
+  if (s.hype?.renown || s.hype?.gold) bits.push(`📣 Crowd hype ${s.hype.hype}`);
+  if (s.bet) bits.push(s.bet.won ? `🪙 Bet won: +${s.bet.payout} Gold` : `🪙 Bet lost: ${s.bet.stake} Gold`);
   if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favour, Renown, XP and Morale)`);
   if (s.kill) bits.push(`💀 A kill${s.mark ? `: ${s.fighter} earns the mark "${s.mark}"` : ''}`);
   if (s.next) bits.push(`🏟 On to the ${s.next}`);

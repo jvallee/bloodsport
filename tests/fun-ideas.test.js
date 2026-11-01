@@ -162,3 +162,25 @@ test('bonds: sparring partners bond; a bond is comfort, a mentor teaches, and a 
   assert.equal(b.bond, undefined);
   assert.ok(b.mood.n <= BOND.grief);
 });
+
+test('the crowd\'s hype: upsets, wounds, kills, signatures, Press and comebacks fill it; it pays out at the end', async () => {
+  const { hypeOf } = await import('../src/fight.js');
+  const { HYPE } = await import('../src/data.js');
+  const m = { over: true, result: { winner: 'A' }, rounds: [
+    { winner: 'B', win: { chance: 50000 }, checks: [], stances: { A: 'steady' } },
+    { winner: 'A', win: { chance: 30000 }, checks: [{ attacker: 'A', injury: { tag: 'fleshWound' } }], signatures: [{ side: 'A' }], stances: { A: 'press' } },
+    { winner: 'A', win: { chance: 60000 }, checks: [], stances: { A: 'steady' } },
+  ] };
+  assert.equal(hypeOf(m), HYPE.upset + HYPE.wound + HYPE.signature + HYPE.press + HYPE.comeback);
+  assert.equal(hypeOf({ rounds: [] }), 0);
+  assert.equal(hypeOf({}), 0, 'a reload\'s stand-in match');
+  // Paid with the purse.
+  const run = createRun(3);
+  const f = recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  const match = startMatch(run, f.id, 1);
+  Object.assign(match, { over: true, result: { winner: 'A', reason: 'rounds' }, round: 3, rounds: m.rounds });
+  const s = finishMatch(run, match);
+  assert.equal(s.hype.hype, hypeOf(m));
+  assert.equal(s.hype.renown, Math.floor(s.hype.hype / HYPE.renownPer));
+});

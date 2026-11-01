@@ -7,10 +7,10 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, deltaRow,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
-import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt } from './fight.js';
+import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt, hypeOf } from './fight.js';
 import { Refused } from './errors.js';
 import { estimateOdds } from './odds.js';
 import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabel } from './events.js';
@@ -1757,6 +1757,17 @@ export function placeBet(run, match, stake) {
   return match.bet;
 }
 
+// The crowd's hype pays out with the purse (fun idea #6).
+function payHype(run, match, won, tier, summary) {
+  const hype = hypeOf(match);
+  if (!hype) return;
+  const renown = Math.floor(hype / (won ? HYPE.renownPer : HYPE.lossRenownPer));
+  const gold = won ? Math.floor(hype / HYPE.goldPer) * Math.min(tier, CIRCUITS.length) : 0;
+  summary.hype = { hype, renown, gold };
+  summary.renown += renown;
+  summary.gold += gold;
+}
+
 // A bet is settled with the match's purse: a win pays the payout; a loss (or capitulating) loses the stake.
 function settleBet(run, match, won, summary) {
   if (!match.bet) return;
@@ -1969,6 +1980,7 @@ export function finishMatch(run, match) {
   }
   if (won && opp.nemesis) nemesisFalls(run, opp, fighter, tier, summary); // before the purse is paid
   settleBet(run, match, won, summary);
+  payHype(run, match, won, tier, summary);
   summary.favor = run.favor - favorBefore;
   summary.morale = fighter.morale - moraleBefore;
   run.gold += summary.gold;
