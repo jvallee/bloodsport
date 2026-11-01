@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, deltaRow,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt } from './fight.js';
@@ -261,6 +261,42 @@ function newOpponent(run, tier) {
   f.house = houseForArena(run, tier).id;
   arena.opponent = f;
   remember(run, f);
+}
+
+// ---------- Bonds between fighters (fun idea #5) ----------
+
+export const bondmate = (run, f) => (f.bond ? run.roster.find((x) => x.id === f.bond.id) ?? null : null);
+// Two fighters without a bond become bonded (one bond each).
+function formBond(run, a, b) {
+  if (a.bond || b.bond || a === b) return;
+  a.bond = { id: b.id, name: b.name, since: run.week };
+  b.bond = { id: a.id, name: a.name, since: run.week };
+  for (const [x, y] of [[a, b], [b, a]]) chronicle(run, x, `Bonded with ${y.name}.`);
+  log(run, `${a.name} and ${b.name} have become fast friends: each is happier while the other is in the house.`, 'good');
+}
+// Two fighters who both won on the same fight day may bond.
+function bondOverFightDay(run) {
+  const winners = [...new Set(run.history.filter((h) => h.week === run.week - 1 && h.won && !h.died).map((h) => h.fighterId))]
+    .map((id) => run.roster.find((f) => f.id === id)).filter((f) => f && !f.bond);
+  if (winners.length >= 2) formBond(run, winners[0], winners[1]);
+}
+// Each week: a mentor teaches; a bond whose partner has gone ends (in grief, if they died).
+function tendBonds(run) {
+  for (const f of run.roster) {
+    if (!f.bond) continue;
+    const mate = bondmate(run, f);
+    if (mate) {
+      if (mate.level - f.level >= BOND.mentorGap) gainXp(run, f, BOND.mentorXp);
+      continue;
+    }
+    const dead = run.fallen.some((x) => x.id === f.bond.id);
+    if (dead) {
+      f.mood = { n: (f.mood?.n ?? 0) + BOND.grief, weeks: MOOD_WEEKS };
+      chronicle(run, f, `Grieved for ${f.bond.name}.`);
+      log(run, `${f.name} grieves for ${f.bond.name}.`, 'bad');
+    }
+    delete f.bond;
+  }
 }
 
 // ---------- The Emperor's demands (fun idea #4) ----------
@@ -996,7 +1032,7 @@ export const decorCount = (f) => Object.values(f.decor).reduce((s, n) => s + n, 
 
 // Where a fighter's Morale is heading: comfort (rooms, decor, entertainment) minus what their fame makes them expect.
 export function moraleTarget(run, f) {
-  const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + decorComfortOf(f) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
+  const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + decorComfortOf(f) + (bondmate(run, f) ? BOND.comfort : 0) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
   const expects = Math.min(MORALE.maxExpectation, MORALE.expectationPerRenown * f.renown);
   const mood = f.mood?.n ?? 0; // an event's lasting effect (src/events.js)
   return { target: clamp(MORALE.base + comfort - expects + mood, 0, 100), comfort, expects, mood };
@@ -1090,6 +1126,7 @@ export function advanceWeek(run) {
     if (f.stress >= STRESS.overtrained) log(run, `${f.name} is overtrained (Stress ${f.stress}). Rest them before a fight.`, 'warn');
     if (f.morale < MORALE.mutinous) log(run, `${f.name} is mutinous and refuses to fight.`, 'bad');
   }
+  tendBonds(run);
   // A house in despair revolts.
   const avg = run.roster.length ? run.roster.reduce((s, f) => s + f.morale, 0) / run.roster.length : 100;
   run.revoltWeeks = avg < REVOLT.morale ? run.revoltWeeks + 1 : 0;
@@ -1123,6 +1160,7 @@ export function advanceWeek(run) {
   }
   if (tournamentEnds) rivalsCompete(run);
   if (tournamentEnds) judgeDemand(run);
+  if (tournamentEnds) bondOverFightDay(run);
   if (tournamentEnds && plotActive(run) && run.plot.coup) postponeCoup(run); // the champion never fought
   checkLoss(run);
   if (run.status === 'active') {
@@ -1399,6 +1437,7 @@ export function exhibition(run, id, otherId) {
   gainXp(run, loser, EXHIBITION.xpLoss);
   const wound = next(r) < EXHIBITION.woundChance;
   if (wound) loser.injuries.push({ tag: 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS.fleshWound });
+  formBond(run, a, b);
   log(run, `Exhibition: ${winner.name} beats ${loser.name} in the ring. +${gold} Gold from the crowd${wound ? `; ${loser.name} takes a Flesh Wound` : ''}.`, 'good');
   return { winner: winner.name, loser: loser.name, gold, wound };
 }

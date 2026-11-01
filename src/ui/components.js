@@ -107,6 +107,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
   const winsBy = Object.entries(f.arenaWins ?? {}).filter(([, n]) => n > 0);
   const totalWins = winsBy.reduce((n, [, w]) => n + w, 0) + ((f.titles ?? []).includes('Master of the Games') ? 1 : 0);
   const wins = totalWins ? `<span class="chip wins" title="Wins by arena: ${esc(winsBy.map(([t, n]) => `${CIRCUITS[t - 1]?.name ?? 'Grand Tournament'}: ${n}`).join(' · '))}">🏅 ${totalWins} win${totalWins === 1 ? '' : 's'}</span>` : '';
+  const bond = f.bond ? `<span class="chip bond" title="Bonded with ${esc(f.bond.name)}: +8 comfort while both are in the house. A partner 3+ levels higher teaches 1 XP a week. If one dies, the other grieves.">🤝 ${esc(f.bond.name)}</span>` : '';
   const kills = f.kills ? `<span class="chip kills" title="Opponents killed in the arena. ${KILL_MARKS.map((k) => `${k.at} kills: ${k.name} (${k.desc})`).join(' ')}">💀 ${f.kills}</span>` : '';
   return `
     <article class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
@@ -123,7 +124,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
         ${f.cls ? `<span class="chip ability${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
         ${signatureChip(f, opponent)}
         ${f.humor ? `<span class="chip humor" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
-        ${wins}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
+        ${wins}${bond}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
       </div>
       ${compact ? '' : `<div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div>`}
       ${f.notice ? `<div class="notice">⚠ ${esc(f.notice)}</div>` : ''}

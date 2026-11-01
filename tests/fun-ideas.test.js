@@ -133,3 +133,32 @@ test('the Emperor\'s demands: issued some months, judged when fight day ends; me
   }
   assert.ok(issued >= 5, `${issued} careers got a demand`);
 });
+
+test('bonds: sparring partners bond; a bond is comfort, a mentor teaches, and a partner\'s death brings grief', async () => {
+  const { exhibition, moraleTarget, bondmate, advanceWeek: week } = await import('../src/run.js');
+  const { BOND } = await import('../src/data.js');
+  const run = createRun(7);
+  const [a, b] = [recruit(run, run.market[0].id), recruit(run, run.market[0].id)];
+  run.buildings.push({ id: 'be', type: 'exhibition', level: 1 });
+  advanceToTournament(run);
+  for (const f of [a, b]) f.injuries = [];
+  const before = moraleTarget(run, a).comfort;
+  exhibition(run, a.id, b.id);
+  assert.equal(bondmate(run, a), b);
+  assert.equal(moraleTarget(run, a).comfort, before + BOND.comfort, 'a bond is comfort');
+  // A mentor teaches.
+  a.level = 5;
+  b.level = 1;
+  const xp = b.xp;
+  run.boutPending = false;
+  run.mercy = null;
+  week(run);
+  assert.ok(b.xp > xp, 'the junior learns');
+  // A partner's death: grief, and the bond ends.
+  run.roster = run.roster.filter((x) => x !== a);
+  run.fallen.push({ ...a, alive: false });
+  run.event = null;
+  week(run);
+  assert.equal(b.bond, undefined);
+  assert.ok(b.mood.n <= BOND.grief);
+});

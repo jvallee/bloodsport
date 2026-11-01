@@ -489,6 +489,10 @@ export const RECRUIT = { levels: [[1], [1, 2], [2], [2, 3]], perLevel: 2 };
 // cut), up to `maxOdds` ×; a stake can be up to `perTier` × arena tier Gold. `stakes`: the buttons offered.
 // The Emperor's demands (fun idea #4): some months he sets a goal for that month's fight day. Met: Favour and Gold × tier.
 // Missed: a little Favour. `chance` per month, from `fromWeek` on. Words are PLACEHOLDER for the designer.
+// Bonds between fighters (fun idea #5): formed by sparring in the Exhibition Ring, or by both winning on the same fight
+// day. A bond adds comfort while the partner is in the house; a partner `mentorGap`+ levels higher teaches the other
+// `mentorXp` XP a week; a partner's death leaves the survivor grieving (`grief` Morale for MOOD_WEEKS).
+export const BOND = { comfort: 8, mentorGap: 3, mentorXp: 1, grief: -20 };
 export const DEMAND = { chance: 0.5, fromWeek: 8, favor: 4, goldPerTier: 4, missFavor: -2 };
 export const DEMANDS = {
   topWin: { goal: 'Win a match in your top arena', say: 'My guests are bored, Lanista. Give them a victory in your top arena this month.' },
