@@ -80,6 +80,9 @@ export function runGates({ careers = 200, quick = false } = {}) {
   const rebel = Array.from({ length: plotN }, (_, i) => playCareer(1000 + i, 'careful', { plot: 'rebel' }));
   const loyalist = Array.from({ length: plotN }, (_, i) => playCareer(1000 + i, 'careful', { plot: 'loyalist' }));
   const ending = (rs, e) => rs.filter((r) => r.run.ending === e).length / rs.length;
+  // Short careers (fun idea #2): winnable, and quicker than a full one.
+  const short = Array.from({ length: plotN }, (_, i) => playCareer(1000 + i, 'careful', { setup: { short: true } }));
+  const weeks = (rs) => avg(rs.map((r) => r.weeks));
   const gates = [
     { name: 'Careful career win rate is 20–45%', value: rate(careful), pass: rate(careful) >= 0.2 && rate(careful) <= 0.45, fmt: 'pct' },
     { name: 'Careful wins at least as often as reckless', value: rate(careful) - rate(reckless), pass: rate(careful) >= rate(reckless), fmt: 'pctDiff' },
@@ -92,7 +95,8 @@ export function runGates({ careers = 200, quick = false } = {}) {
     { name: 'Tough finish: the Grand Tournament is 10+ points harder than the first Boss', value: (curve[1] ?? 0) - (curve[5] ?? 1), pass: (curve[1] ?? 0) - (curve[5] ?? 1) >= 0.1, fmt: 'pctDiff' },
     { name: 'The evil road is easier: the loyalist wins 5–20 points more often than careful', value: rate(loyalist) - rate(careful), pass: rate(loyalist) - rate(careful) >= 0.05 && rate(loyalist) - rate(careful) <= 0.2, fmt: 'pctDiff' },
     { name: 'The coup is rare but real: 5–25% of rebel careers', value: ending(rebel, 'coup'), pass: ending(rebel, 'coup') >= 0.05 && ending(rebel, 'coup') <= 0.25, fmt: 'pct' },
+    { name: 'Short careers are winnable (careful 20–55%) and at least a quarter quicker', value: rate(short), pass: rate(short) >= 0.2 && rate(short) <= 0.55 && weeks(short) <= 0.75 * weeks(careful), fmt: 'pct' },
     { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
   ];
-  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist };
+  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, short };
 }

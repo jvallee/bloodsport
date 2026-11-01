@@ -254,8 +254,9 @@ function plotOrder(run, side) {
 }
 
 // `onWeek(run)`: optional, called at every step (for economy and other probes).
+// `opts.setup`: the career's setup (e.g. { short: true } for a short career).
 export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxWeeks = 400, onWeek = null, ...opts } = {}) {
-  const run = createRun(seed);
+  const run = createRun(seed, opts.setup ?? {});
   let bouts = 0;
   while (run.status === 'active' && run.week < maxWeeks) {
     onWeek?.(run);

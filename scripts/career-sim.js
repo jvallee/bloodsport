@@ -9,7 +9,7 @@ const N = Number(args.find((a) => /^\d+$/.test(a))) || 200;
 const pct = (x) => `${(x * 100).toFixed(0)}%`;
 const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
-const { gates, careful, reckless, split, rebel, loyalist } = runGates({ careers: N });
+const { gates, careful, reckless, split, rebel, loyalist, short } = runGates({ careers: N });
 
 for (const [name, results] of [['CAREFUL', careful], ['RECKLESS', reckless]]) {
   const wins = results.filter((r) => r.won);
@@ -38,6 +38,7 @@ const fmt = (g) => ({ pct: pct(g.value), pctDiff: `${g.value >= 0 ? '+' : ''}${(
 // v6: how the plot's careers end.
 const endings = (rs) => Object.entries(rs.reduce((o, r) => ({ ...o, [r.run.ending ?? (r.won ? 'won' : 'lost')]: (o[r.run.ending ?? (r.won ? 'won' : 'lost')] ?? 0) + 1 }), {})).map(([k, n]) => `${k} ${Math.round((100 * n) / rs.length)}%`).join(', ');
 console.log(`\nThe hidden plot (${rebel.length} careers each)\n  Rebel     ${endings(rebel)}\n  Loyalist  ${endings(loyalist)}`);
+console.log(`\nShort careers (${short.length}): won ${Math.round(100 * short.filter((r) => r.won).length / short.length)}%, ${Math.round(short.reduce((n, r) => n + r.weeks, 0) / short.length)} weeks on average (full careers: ${Math.round(careful.reduce((n, r) => n + r.weeks, 0) / careful.length)})`);
 console.log('\nGates');
 for (const g of gates) console.log(`  ${g.pass ? 'PASS' : 'FAIL'}  ${g.name}: ${fmt(g)}`);
 if (check && gates.some((g) => !g.pass)) {
