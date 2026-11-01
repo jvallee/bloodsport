@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, deltaRow,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt, hypeOf } from './fight.js';
@@ -114,6 +114,8 @@ export function crownChampion(f, tier) {
 // Harsh Judges (a decree) makes every Boss loss cost 5 more.
 export const bossLossFavor = (tier, run = null) => FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1] - (hasDecree(run, 'harshJudges') ? 5 : 0);
 export const hasDecree = (run, id) => Boolean(run?.setup?.decrees?.includes(id));
+// A Patron Lounge policy in force (fun idea #7).
+export const hasPolicy = (run, id) => Boolean(run?.policies?.some((p) => p.id === id && p.until > run.week));
 
 // ---------- Arenas and bouts ----------
 
@@ -145,11 +147,11 @@ export function boutFor(run, tier = run.topTier) {
     name: `${c.name} · ${STAGES[s]}`, stage: s, boss: s === 2,
     buyIn: fest?.freeEntry ? 0 : pauper ? Math.max(0, run.prestige) : c.buyIn[s], fullBuyIn: c.buyIn[s], pauper: pauper && !fest?.freeEntry,
     // Lower arenas pay less, but a win always pays more than a loss (playtest #6: the Dirt Pits paid 2 either way).
-    winGold: Math.round(Math.max(Math.ceil(c.winGold[s] * ECONOMY.lowerArenaGold ** below), c.lossGold + ECONOMY.lowerWinOverLoss) * (fest?.gold ?? 1) * (isShort(run) ? SHORT.purse : 1)),
-    winPrestige: Math.round(Math.max(below ? ECONOMY.lowerArenaMinPrestige : 0, Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below)) * (fest?.prestige ?? 1) * (isShort(run) ? SHORT.prestige : 1)),
+    winGold: Math.round(Math.max(Math.ceil(c.winGold[s] * ECONOMY.lowerArenaGold ** below), c.lossGold + ECONOMY.lowerWinOverLoss) * (fest?.gold ?? 1) * (isShort(run) ? SHORT.purse : 1) * (hasPolicy(run, 'breadAndCircuses') ? 1.25 : 1)),
+    winPrestige: Math.round(Math.max(below ? ECONOMY.lowerArenaMinPrestige : 0, Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below)) * (fest?.prestige ?? 1) * (isShort(run) ? SHORT.prestige : 1) * (s === 2 && hasPolicy(run, 'unleashLions') ? 2 : 1)),
     festival: fest?.id ?? null,
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
-    lossGold: c.lossGold, oppPower: c.oppPower[s] + (s === 2 && hasDecree(run, 'ironBosses') ? 1 : 0), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
+    lossGold: c.lossGold, oppPower: c.oppPower[s] + (s === 2 && hasDecree(run, 'ironBosses') ? 1 : 0) + (s === 2 && hasPolicy(run, 'unleashLions') ? 1 : 0), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
     conquered: arena.conquered,
   };
 }
@@ -261,6 +263,50 @@ function newOpponent(run, tier) {
   f.house = houseForArena(run, tier).id;
   arena.opponent = f;
   remember(run, f);
+}
+
+// ---------- The Patron Lounge (fun idea #7) ----------
+
+const monthOf = (week) => `${dateOf(week).year}-${dateOf(week).month}`;
+export const hostPrice = (run) => LOUNGE.hostGold * Math.min(run.topTier, CIRCUITS.length);
+export function hostBlocker(run) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!maxLevel(run, 'lounge')) return 'Build the Patron Lounge first.';
+  if (run.hostedMonth === monthOf(run.week)) return 'You have hosted the Senate this month.';
+  if (run.gold < hostPrice(run)) return `Needs ${hostPrice(run)} Gold.`;
+  return null;
+}
+export function host(run) {
+  assertOk(hostBlocker(run));
+  const star = [...run.roster].sort((a, b) => b.renown - a.renown)[0];
+  const gain = Math.min(LOUNGE.maxInfluence, 1 + Math.floor((star?.renown ?? 0) / LOUNGE.renownPer));
+  run.gold -= hostPrice(run);
+  run.influence = (run.influence ?? 0) + gain;
+  run.hostedMonth = monthOf(run.week);
+  log(run, `Senators dine at your table${star ? ` and admire ${star.name}` : ''}. +${gain} Influence (now ${run.influence}).`, 'event');
+  return gain;
+}
+export const activePolicies = (run) => (run.policies ?? []).filter((p) => p.until > run.week);
+export function enactBlocker(run, id) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const p = LOUNGE.policies[id];
+  if (!p) return 'Unknown policy.';
+  if (!maxLevel(run, 'lounge')) return 'Build the Patron Lounge first.';
+  if (hasPolicy(run, id)) return `${p.name} is already in force.`;
+  if (activePolicies(run).length >= effectAt('lounge', maxLevel(run, 'lounge'))) return 'Your Lounge can keep no more policies in force (upgrade it, or wait for one to lapse).';
+  if ((run.influence ?? 0) < p.cost) return `Needs ${p.cost} Influence (you have ${run.influence ?? 0}).`;
+  return null;
+}
+export function enact(run, id) {
+  assertOk(enactBlocker(run, id));
+  const p = LOUNGE.policies[id];
+  run.influence -= p.cost;
+  run.policies = [...activePolicies(run), { id, until: run.week + LOUNGE.weeks }];
+  log(run, `The Senate passes ${p.name}: ${p.desc}`, 'event');
+  if (plotActive(run)) changeSuspicion(run, p.lean === 'loyalist' ? LOUNGE.loyalistSuspicion : p.lean === 'reformist' ? LOUNGE.reformistSuspicion : 0);
+  if (id === 'purgePrisons' && run.liaisonOffer?.political) run.liaisonOffer = null; // the cells are emptied
 }
 
 // ---------- Bonds between fighters (fun idea #5) ----------
@@ -502,7 +548,8 @@ function refreshLiaison(run) {
 export function markPolitical(run, f) {
   const r = run.rng.plot;
   const year = dateOf(run.week).year;
-  const political = next(r) < POLITICAL.chance || (year >= POLITICAL.guaranteeYear && !run.politicalOffered);
+  const chance = hasPolicy(run, 'purgePrisons') ? 0 : POLITICAL.chance * (hasPolicy(run, 'amnesty') ? 2 : 1);
+  const political = next(r) < chance || (!hasPolicy(run, 'purgePrisons') && year >= POLITICAL.guaranteeYear && !run.politicalOffered);
   const clues = [];
   if (political) {
     run.politicalOffered = true;
@@ -1032,7 +1079,7 @@ export const decorCount = (f) => Object.values(f.decor).reduce((s, n) => s + n, 
 
 // Where a fighter's Morale is heading: comfort (rooms, decor, entertainment) minus what their fame makes them expect.
 export function moraleTarget(run, f) {
-  const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + decorComfortOf(f) + (bondmate(run, f) ? BOND.comfort : 0) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
+  const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + decorComfortOf(f) + (bondmate(run, f) ? BOND.comfort : 0) + (hasPolicy(run, 'grainToLudus') ? 5 : 0) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
   const expects = Math.min(MORALE.maxExpectation, MORALE.expectationPerRenown * f.renown);
   const mood = f.mood?.n ?? 0; // an event's lasting effect (src/events.js)
   return { target: clamp(MORALE.base + comfort - expects + mood, 0, 100), comfort, expects, mood };
@@ -1294,7 +1341,7 @@ export function chooseEvent(run, index) {
 
 // The year whose tribute comes next: in winter this year's is already settled, so it's next year's.
 const tributeYear = (run) => dateOf(run.week).year + (dateOf(run.week).winter ? 1 : 0);
-export const tributeDue = (run) => Math.round(TRIBUTE.perYear * tributeYear(run) * (hasDecree(run, 'greedyEmperor') ? 1.5 : 1));
+export const tributeDue = (run) => Math.round(TRIBUTE.perYear * tributeYear(run) * (hasDecree(run, 'greedyEmperor') ? 1.5 : 1) * (hasPolicy(run, 'lowerTribute') ? 0.7 : 1));
 export const tributePaid = (run) => run.tributePaid === tributeYear(run);
 
 export function payTributeBlocker(run) {
@@ -1326,7 +1373,7 @@ function payYearPurse(run) {
 
 function collectTribute(run) {
   const year = dateOf(run.week).year;
-  const due = Math.round(TRIBUTE.perYear * year * (hasDecree(run, 'greedyEmperor') ? 1.5 : 1));
+  const due = Math.round(TRIBUTE.perYear * year * (hasDecree(run, 'greedyEmperor') ? 1.5 : 1) * (hasPolicy(run, 'lowerTribute') ? 0.7 : 1));
   if (run.tributePaid === year) {
     log(run, 'The Emperor\'s collectors find your tribute already paid.', 'event');
   } else if (run.gold >= due) {
@@ -2130,7 +2177,7 @@ export function resolveMercy(run, choice) {
   const out = { verdict: choice, crowd, favor: 0, renown: 0, morale: 0, kill: false, mark: null, feud: null, owed: null };
   if (choice === 'spare') {
     // Only your top arena affects Favour (the same rule as wins).
-    if (top) {
+    if (top || hasPolicy(run, 'edictOfMercy')) {
       const before = run.favor;
       changeFavor(run, MERCY.spareFavor, `spared ${opp}`);
       out.favor = run.favor - before;

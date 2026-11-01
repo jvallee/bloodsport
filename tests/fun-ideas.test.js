@@ -184,3 +184,29 @@ test('the crowd\'s hype: upsets, wounds, kills, signatures, Press and comebacks 
   assert.equal(s.hype.hype, hypeOf(m));
   assert.equal(s.hype.renown, Math.floor(s.hype.hype / HYPE.renownPer));
 });
+
+test('the Patron Lounge: host the Senate monthly for Influence, and spend it on policies that change the rules', async () => {
+  const { host, hostBlocker, enact, enactBlocker, hasPolicy, boutFor, tributeDue } = await import('../src/run.js');
+  const { LOUNGE } = await import('../src/data.js');
+  const { estateTab } = await import('../src/ui/views.js');
+  const run = createRun(5);
+  const f = recruit(run, run.market[0].id);
+  f.renown = 25;
+  assert.equal(hostBlocker(run), 'Build the Patron Lounge first.');
+  run.buildings.push({ id: 'bl', type: 'lounge', level: 1 });
+  run.gold = 100;
+  assert.equal(host(run), 3, '1 + 2 for a famous star');
+  assert.match(hostBlocker(run), /this month/);
+  const purse = boutFor(run, 1).winGold;
+  const tribute = tributeDue(run);
+  enact(run, 'breadAndCircuses');
+  assert.ok(hasPolicy(run, 'breadAndCircuses'));
+  assert.equal(boutFor(run, 1).winGold, Math.round(purse * 1.25));
+  assert.match(enactBlocker(run, 'lowerTribute'), /no more policies|Influence/);
+  run.week += LOUNGE.weeks;
+  assert.equal(hasPolicy(run, 'breadAndCircuses'), false, 'policies lapse');
+  run.influence = 10;
+  enact(run, 'lowerTribute');
+  assert.ok(tributeDue(run) < tribute || tributeDue(run) === Math.round(tribute * 0.7));
+  assert.match(estateTab(run), /The Patron Lounge/);
+});

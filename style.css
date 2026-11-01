@@ -651,3 +651,5 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .hype { display: flex; align-items: center; gap: 6px; justify-content: center; margin: 6px 0; font-size: 13px; }
 .hypebar { display: inline-block; width: 140px; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
 .hypebar > span { display: block; height: 100%; background: linear-gradient(90deg, #d9b45a, #e0603c); }
+.lean-loyalist { color: #d6a3dc; } .lean-reformist { color: var(--good, #8fc98f); } .lean-neutral { color: var(--muted); }
+.panel.lounge { margin-top: 14px; }

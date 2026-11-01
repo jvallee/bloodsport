@@ -337,6 +337,8 @@ export const BUILDINGS = {
   armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16, 24], req: [2, 3, 4], per: [5, 6, 8], effect: (n) => `Sells ${n} pieces of gear each month, and buys your spare gear back at half price`, extra: (lv) => (lv >= 3 ? 'Stocks Imperial (tier 3) gear' : lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
   // Playtest #8: pray for different perk choices; and exhibition bouts between your own fighters on tournament day.
   temple: { unique: true, name: 'Temple of Fortuna', dept: 'training', icon: 'temple', cost: [8, 12], req: [2, 3], per: [3, 1], effect: (n) => `Pray for a fighter's level-up perks: ${n} Gold for three new choices` },
+  // Fun idea #7: host the Senate for Influence, and spend it on policies.
+  lounge: { unique: true, name: 'Patron Lounge', dept: 'scouting', icon: 'goblet', cost: [12, 18], req: [3, 4], per: [1, 2], effect: (n) => `Host the Senate once a month for Influence; up to ${n} polic${n > 1 ? 'ies' : 'y'} in force at a time` },
   exhibition: { unique: true, name: 'Exhibition Ring', dept: 'training', icon: 'swords', cost: [10], req: [2], per: [1], effect: () => 'On tournament day, two fighters who aren\'t competing can fight an exhibition bout: XP for both, Renown and Gold for the winner, and no risk of death' },
   stables: { unique: true, name: 'Stables', dept: 'scouting', icon: 'paw', cost: [9, 14], req: [2, 3], per: [1, 2], effect: (n) => `${n} exotic Basa fighter${n === 1 ? '' : 's'} in the Market each month` },
   liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly cheap condemned convict'), note: () => 'Read their prison records: not every prisoner is what the guards say.' },
@@ -494,6 +496,21 @@ export const RECRUIT = { levels: [[1], [1, 2], [2], [2, 3]], perLevel: 2 };
 // `mentorXp` XP a week; a partner's death leaves the survivor grieving (`grief` Morale for MOOD_WEEKS).
 // The crowd's hype (fun idea #6): drama fills a meter during a fight (0–100), paid out at the end. A win earns Renown
 // (1 per `renownPer`) and Gold (tier × 1 per `goldPer`); a loss earns Renown (1 per `lossRenownPer`) for a fight they loved.
+// The Patron Lounge (fun idea #7). Hosting costs hostGold × tier, once a month; it earns 1 Influence, plus 1 for every
+// `renownPer` Renown of your most famous fighter (up to `maxInfluence`). Policies last `weeks`. A loyalist policy calms
+// the Emperor's suspicion (v6 plot); a reformist one draws his eye. Words are PLACEHOLDER for the designer.
+export const LOUNGE = {
+  hostGold: 3, renownPer: 10, maxInfluence: 3, weeks: 16, loyalistSuspicion: -10, reformistSuspicion: 5,
+  policies: {
+    breadAndCircuses: { name: 'Bread and Circuses', cost: 3, lean: 'loyalist', desc: 'Every purse pays 25% more.' },
+    edictOfMercy: { name: 'Edict of Mercy', cost: 2, lean: 'reformist', desc: 'Sparing a beaten opponent earns Favour in every arena, not just your top one.' },
+    lowerTribute: { name: 'Lower the Tribute', cost: 4, lean: 'reformist', desc: 'This year\'s tribute is 30% lower.' },
+    unleashLions: { name: 'Unleash the Lions', cost: 3, lean: 'loyalist', desc: 'Bosses fight with +1 Power, but beating one pays double Prestige.' },
+    grainToLudus: { name: 'Grain to the Ludus', cost: 2, lean: 'neutral', desc: '+5 comfort for every fighter.' },
+    purgePrisons: { name: 'Purge the Prisons', cost: 2, lean: 'loyalist', desc: 'No political prisoners are offered while it lasts.' },
+    amnesty: { name: 'Amnesty', cost: 2, lean: 'reformist', desc: 'Political prisoners are twice as common while it lasts.' },
+  },
+};
 export const HYPE = { upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 5, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
 export const BOND = { comfort: 8, mentorGap: 3, mentorXp: 1, grief: -20 };
 export const DEMAND = { chance: 0.5, fromWeek: 8, favor: 4, goldPerTier: 4, missFavor: -2 };

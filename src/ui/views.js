@@ -1,12 +1,12 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY } from '../data.js';
+import { LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, prayPrice, prayBlocker, exhibitionBlocker,
+  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker,
   isChampionOf, buyItemBlocker,
 } from '../run.js';
 import {
@@ -576,7 +576,21 @@ export function estateTab(run) {
         <div class="roof"></div>
         <div class="rooms">${built.map((b) => buildingCard(run, b)).join('')}${Array.from({ length: free }, () => emptyPlot(run)).join('')}${locked}</div>
       </div>
-    </section>`;
+    </section>${loungePanel(run)}`;
+}
+
+// The Patron Lounge (fun idea #7): host the Senate for Influence, and spend it on policies.
+function loungePanel(run) {
+  if (!maxLevel(run, 'lounge')) return '';
+  const active = activePolicies(run).map((p) => `<li><b>${esc(LOUNGE.policies[p.id].name)}</b>: ${esc(LOUNGE.policies[p.id].desc)} <small>(${p.until - run.week} weeks left)</small></li>`).join('');
+  const lean = { loyalist: 'Loyalist', reformist: 'Reformist', neutral: 'Neutral' };
+  const policies = Object.entries(LOUNGE.policies).map(([id, p]) => `<div class="shop-row"><div><b>${esc(p.name)}</b> · ${p.cost} Influence <small class="lean-${p.lean}">${lean[p.lean]}</small><br><small>${esc(p.desc)}</small></div>
+    ${button('Enact', 'enact', { policy: id }, enactBlocker(run, id), 'btn small primary')}</div>`).join('');
+  return `<section class="panel lounge"><h2>🍷 The Patron Lounge <small>Influence ${run.influence ?? 0}</small></h2>
+    <p class="sub">Once a month, host the Senate. Your most famous fighter draws the guests: the more Renown, the more Influence. Spend it on policies that last ${LOUNGE.weeks} weeks.</p>
+    <div class="row">${buttonWhy(`Host the Senate (${hostPrice(run)} Gold)`, 'host', {}, hostBlocker(run), 'btn primary')}</div>
+    ${active ? `<div class="label">In force</div><ul>${active}</ul>` : ''}
+    <div class="label">Policies</div>${policies}</section>`;
 }
 
 // ---------- Market tab: fighters, decor, Armourer, storeroom ----------
