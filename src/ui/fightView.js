@@ -8,7 +8,7 @@ const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 const statLine = (stats, side) => `<div class="round-stats" title="Power and Speed in Round ${stats.round}, with gear, Titles, items, injuries, Scouted, Challenger and arena rules applied">Round ${stats.round}: <b>Power ${stats[side].power}</b> · <b>Speed ${stats[side].speed}</b></div>`;
 import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
-import { esc, fighterCard } from './components.js';
+import { esc, fighterCard, mercyChoices } from './components.js';
 import { roundStats } from '../explain.js';
 
 function tagPills(r) {
@@ -131,16 +131,10 @@ function mercyPanel(m, mercy, late) {
   const blood = mercy.crowd === 'kill';
   const favor = mercy.top === false ? 'no Favour in a lower arena' : `+${MERCY.spareFavor} Favour`;
   const house = m.house ? esc(m.house.name) : 'their house';
-  const spare = blood ? `${favor}; ${house} will owe you a life (−1 Power against you)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale (the crowd agrees)`;
-  const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill (the crowd agrees)` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${m.house ? `; ${house} will swear a feud` : ''}`;
-  return `<div class="mercy${late}">
-    <div class="mercy-title">${esc(mercy.opp)} lies beaten in the sand. All eyes turn to you, Lanista.</div>
-    <div class="mercy-crowd ${blood ? 'blood' : 'mercy'}">${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'}</div>
-    <div class="row">
-      <button class="btn big good" data-action="mercy" data-choice="spare" title="Spare them: ${spare}.">👍 Spare them <small>${spare}</small></button>
-      <button class="btn big danger" data-action="mercy" data-choice="kill" title="Finish them: ${kill}.">👎 Finish them <small>${kill}</small></button>
-    </div>
-  </div>`;
+  const spare = blood ? [favor, `${m.house ? m.house.name : 'Their house'} will owe you a life (−1 Power against you)`] : [favor, `+${MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`];
+  const kill = blood ? [`+${MERCY.killRenown + MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`, 'A kill toward the kill marks'] : [`+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy)`, 'A kill toward the kill marks', ...(m.house ? [`${m.house.name} will swear a feud`] : [])];
+  void house;
+  return `<div class="mercy${late}">${mercyChoices({ title: `${esc(mercy.opp)} lies beaten in the sand. All eyes turn to you, Lanista.`, blood, spare, kill })}</div>`;
 }
 
 // The signature move (level 3+): ready, used, or how to unlock it.

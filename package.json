@@ -11,5 +11,5 @@
     "sweep": "node scripts/sweep.js",
     "replay": "node scripts/replay.js"
   },
-  "version": "5.1.0"
+  "version": "5.1.1"
 }

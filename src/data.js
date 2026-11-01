@@ -139,7 +139,7 @@ export const SEVERE = ['concussed', 'poisoned', 'maimed', 'senseless', 'blinded'
 // Cyborg surgery (Medbay Lv 2+): replace a Maimed limb or Blinded eye. The crowd distrusts machines.
 export const AUGMENTS = {
   arm: { name: 'Cyborg Arm', from: 'maimed', desc: '+1 Power. Replaces a Maimed limb.', power: 1 },
-  eye: { name: 'Cyborg Eye', from: 'blinded', desc: '+1 Power, and can never be Blinded again. Replaces a Blinded eye.', power: 1 },
+  eye: { name: 'Cyborg Eye', from: 'blinded', desc: 'Replaces a Blinded eye. +1 Power in every fight, and a blow that would Blind becomes only a Flesh Wound.', power: 1 },
 };
 export const SURGERY = { cost: 10, perTier: 4, renown: -1, medbay: 2 }; // playtest #3: was 15 + 5/tier and −2 Renown, never worth it
 

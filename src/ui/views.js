@@ -15,7 +15,7 @@ import {
 import { describeOdds } from '../odds.js';
 import { fighterWarnings, arenaStakes } from '../explain.js';
 import { gearText, slotLabel } from '../codex.js';
-import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON } from './components.js';
+import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON, mercyChoices } from './components.js';
 import { portrait, npcPortrait } from './portrait.js';
 import { SPEAKERS, tipSpeaker } from '../dialogue.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../events.js';
@@ -59,7 +59,7 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
       <h1>BLOODSPORT</h1>
       <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
       <div class="stat prestige" title="${esc(prestigeTip(run))}">${ICON.prestige}<b>${run.prestige}</b>
-        <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${next.at}</small>` : ''}</span></div>
+        <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>next at ${next.at}</small>` : ''}</span></div>
       <div class="favor${low ? ' low' : ''}" title="Imperial Favour: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
         <span>Favour</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
       ${tributeStat(run)}
@@ -233,7 +233,11 @@ function dialogueBox(beat, actions, kind = 'scene') {
 
 // What just happened, after an event card's choice (playtest: the result only went to the house log).
 export function resultModal(title, lines) {
-  const html = `<ul class="result-lines">${lines.map((l) => `<li class="${l.tone}">${esc(l.text)}</li>`).join('')}</ul>`;
+  // A gamble's outcome leads, in large type (playtest: "It went badly" was buried mid-sentence).
+  const text = lines.map((l) => l.text).join(' ');
+  const outcome = /it went well/i.test(text) ? '<div class="outcome good">✔ It went well</div>' : /it went badly/i.test(text) ? '<div class="outcome bad">✘ It went badly</div>' : '';
+  lines = lines.map((l) => ({ ...l, text: l.text.replace(/,? ?[Ii]t went (well|badly),? ?/, ' ').replace(/\s+\./, '.').replace(/\s{2,}/g, ' ').trim() }));
+  const html = `${outcome}<ul class="result-lines">${lines.map((l) => `<li class="${l.tone}">${esc(l.text)}</li>`).join('')}</ul>`;
   return dialogueBox({ speaker: 'narrator', title: esc(title), html }, '<span></span><button class="btn primary" data-action="result-close" autofocus>Continue</button>', 'result');
 }
 
@@ -639,22 +643,45 @@ export function helpModal() {
 
 // ---------- Codex tab ----------
 
+// The Codex (playtest #8 redesign): search, jump links, and sections that fold away. Basics and any section with new
+// entries start open; the player's own opening and closing is remembered (data-key). Locked entries collapse into one line.
+const CODEX_INTRO = {
+  basics: 'How the game works: start here.',
+  kind: 'The peoples of Battleworld, and what each is good at.',
+  trait: 'Every fighter has one trait from their kind.',
+  class: 'Fighting styles, each with an ability and a signature move.',
+  weapon: 'What a Fighter-class gladiator\'s weapon of choice does.',
+  injury: 'Wounds, and what they do in a fight.',
+  debuff: 'Rules some Boss arenas fight under.',
+  building: 'What each room in your Estate does.',
+  perk: 'Choices a fighter can learn when they level up.',
+  gear: 'Weapons and armour from the Armourer and the arena.',
+  rebellion: 'What you have learned of the rising.',
+};
 export function codexTab(codex, entries, sections, fresh, prog, isUnlocked, hasLore) {
   const groups = Object.entries(sections).map(([cat, title]) => {
     const list = entries.filter((e) => e.cat === cat);
-    const open = list.filter((e) => isUnlocked(codex, e)).length;
-    if (list.some((e) => e.hidden) && !open) return ''; // v6: the Rebellion section appears only once something in it is found
-    const items = list.map((e) => {
-      if (!isUnlocked(codex, e)) return `<div class="entry locked"><b>???</b><small>Meet one in the arena to learn more.</small></div>`;
+    const open = list.filter((e) => isUnlocked(codex, e));
+    if (list.some((e) => e.hidden) && !open.length) return null; // v6: the Rebellion section appears only once something in it is found
+    const newHere = open.filter((e) => fresh.includes(e.key)).length;
+    const items = open.map((e) => {
       const lore = e.lore
         ? hasLore(codex, e) ? `<p class="lore">${esc(e.lore)}</p>` : '<p class="lore locked">🔒 Lore: defeat one in the arena to learn its story.</p>'
         : '';
-      return `<div class="entry${fresh.includes(e.key) ? ' fresh' : ''}"><b>${esc(e.name)}${fresh.includes(e.key) ? ' <span class="new">new</span>' : ''}</b><p>${esc(e.rules)}</p>${lore}</div>`;
+      return `<article class="entry${fresh.includes(e.key) ? ' fresh' : ''}" data-search="${esc(`${e.name} ${e.rules} ${e.lore ?? ''}`.toLowerCase())}"><h4>${esc(e.name)}${fresh.includes(e.key) ? ' <span class="new">new</span>' : ''}</h4><p>${esc(e.rules)}</p>${lore}</article>`;
     }).join('');
-    return `<section class="codex-group"><h3>${title} <small>${cat === 'basics' ? '' : `${open}/${list.length}`}</small></h3><div class="entries">${items}</div></section>`;
-  }).join('');
+    const locked = list.length - open.length;
+    const count = cat === 'basics' ? '' : `<small>${open.length}/${list.length}</small>`;
+    return { cat, title, html: `<details class="codex-group" id="codex-${cat}" data-key="codex-${cat}"${cat === 'basics' || newHere ? ' open' : ''}>
+      <summary><h3>${title}</h3> ${count}${newHere ? ` <span class="new">${newHere} new</span>` : ''}<span class="codex-sub">${esc(CODEX_INTRO[cat] ?? '')}</span></summary>
+      <div class="entries">${items}</div>${locked ? `<p class="sub codex-locked">🔒 ${locked} still to discover. Meet them in the arena or the Market to learn more.</p>` : ''}
+    </details>` };
+  }).filter(Boolean);
+  const jump = groups.map((g) => `<a class="chip" href="#codex-${g.cat}" data-codex-jump="${g.cat}">${g.title}</a>`).join('');
   return `<section class="panel codex"><h2>The Codex <small>${prog.found}/${prog.total} discovered · carries over between careers</small></h2>
-    <p class="sub">Entries unlock the first time you see something. Defeat a Kind, Class or weapon in the arena to unlock its lore.</p>${groups}</section>`;
+    <div class="codex-tools"><input type="search" id="codex-search" placeholder="Search the Codex (e.g. Death Gate, Orc, Speed)" aria-label="Search the Codex"><div class="chips codex-jump">${jump}</div></div>
+    <p class="sub codex-empty" hidden>Nothing in your Codex matches that yet.</p>
+    ${groups.map((g) => g.html).join('')}</section>`;
 }
 
 export { XP };
@@ -705,14 +732,11 @@ function mercyCard(run) {
   const f = run.roster.find((x) => x.id === m.fighterId);
   const blood = m.crowd === 'kill';
   const favor = m.top === false ? 'no Favour in a lower arena' : `+${MERCY.spareFavor} Favour`;
-  const spare = blood ? `${favor}; their house will owe you a life` : `${favor}, +${MERCY.crowdRenown} Renown and +${MERCY.crowdMorale} Morale (the crowd agrees)`;
-  const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale and a kill (the crowd agrees)` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy) and a kill${m.house ? '; their house swears a feud' : ''}`;
+  const spare = blood ? [favor, 'Their house will owe you a life (−1 Power against you)'] : [favor, `+${MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`];
+  const kill = blood ? [`+${MERCY.killRenown + MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`, 'A kill toward the kill marks'] : [`+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy)`, 'A kill toward the kill marks', ...(m.house ? ['Their house will swear a feud'] : [])];
   return `<section class="panel event-card mercy-card"><div class="event-faces">${f ? portrait(f, 56) : ''}</div><div class="event-body">
-    <div class="label">The crowd waits</div><h2>${esc(m.opp)}'s fate</h2><p>${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}. ${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'}</p>
-    <div class="row event-choices">
-      <div class="event-choice"><button class="btn" data-action="mercy" data-choice="spare">👍 Spare them</button><small>${spare}</small></div>
-      <div class="event-choice"><button class="btn danger" data-action="mercy" data-choice="kill">👎 Finish them</button><small>${kill}</small></div>
-    </div></div></section>`;
+    <div class="label">The crowd waits</div><h2>${esc(m.opp)}'s fate</h2>
+    ${mercyChoices({ title: `${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}.`, blood, spare, kill })}</div></section>`;
 }
 
 // A choice's visible stakes; a plot card (v6) shows nothing rather than "Nothing happens" when only hidden things change.

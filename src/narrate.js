@@ -70,7 +70,7 @@ export function narrateRound(m, r) {
       add('death', `${def} is slain! (severity ${severity})`);
       continue;
     }
-    let text = `${def} suffers ${inj.name} (severity ${severity}).`;
+    let text = `${def} suffers ${inj.name} (severity ${severity}).${inj.deflected ? ` The ${inj.deflected} turned a blinding blow into a Flesh Wound.` : ''}`;
     if (inj.doubled) text += ' The arena rule makes it count double.';
     if (inj.disabled?.length) text += ` Disabled: ${inj.disabled.map((s) => slotName(fighter(c.defender), s)).join(', ')}.`;
     add('injury', text);
@@ -136,7 +136,7 @@ export function narrateStory(m, r) {
       add('death', `${att} lands a killing blow. ${def} falls and does not rise.`);
       continue;
     }
-    let text = `${att} lands a brutal blow: ${def} is ${INJURY_STORY[inj.tag]}.`;
+    let text = inj.deflected ? `${att} goes for the eyes, but ${def}'s ${inj.deflected} turns the blow: only a Flesh Wound.` : `${att} lands a brutal blow: ${def} is ${INJURY_STORY[inj.tag]}.`;
     if (inj.doubled) text += ' First blood counts double!';
     if (inj.disabled?.length) text += ` ${def} loses ${inj.disabled.map((s) => slotName((c.defender === 'A' ? m.a : m.b).f, s)).join(' and ')} for this match.`;
     add('injury', text);

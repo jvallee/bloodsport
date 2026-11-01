@@ -473,6 +473,32 @@ document.addEventListener('change', (e) => {
 // The bug report box keeps what the tester types across re-renders.
 document.addEventListener('input', (e) => {
   if (e.target.id === 'bug-notes') bugNotes = e.target.value;
+  if (e.target.id === 'codex-search') filterCodex(e.target.value);
+});
+
+// The Codex search filters in place (no re-render, so the box keeps its focus): matching entries show, and sections
+// with a match open.
+function filterCodex(query) {
+  const q = query.trim().toLowerCase();
+  let any = false;
+  for (const group of app.querySelectorAll('.codex-group')) {
+    let hits = 0;
+    for (const entry of group.querySelectorAll('.entry')) {
+      const show = !q || entry.dataset.search.includes(q);
+      entry.hidden = !show;
+      if (show) hits++;
+    }
+    group.hidden = Boolean(q) && !hits;
+    if (q && hits) group.open = true;
+    any ||= hits > 0;
+  }
+  const empty = app.querySelector('.codex-empty');
+  if (empty) empty.hidden = !q || any;
+}
+// Jump links open the section they point to.
+document.addEventListener('click', (e) => {
+  const jump = e.target.closest?.('[data-codex-jump]');
+  if (jump) { const g = document.getElementById(`codex-${jump.dataset.codexJump}`); if (g) g.open = true; }
 });
 
 document.addEventListener('toggle', (e) => {

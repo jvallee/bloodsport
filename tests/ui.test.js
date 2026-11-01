@@ -78,13 +78,20 @@ test('intro pages and tutorial cards render cleanly', () => {
   assert.equal(tutorialCard(null), '');
 });
 
-test('the Codex shows locked entries as ??? and opened ones with rules', () => {
+// Playtest #8 redesign: locked entries are counted in one line per section (they were a wall of ??? boxes); sections
+// fold away, with search and jump links.
+test('the Codex counts locked entries per section, shows opened ones with rules, and has search and fold-out sections', () => {
   const c = createCodex();
   const html = codexTab(c, ENTRIES, SECTIONS, [], progress(c), isUnlocked, hasLore);
-  assert.match(html, /\?\?\?/);
+  assert.match(html, /still to discover/);
   assert.match(html, /The Death Gate/);
+  assert.match(html, /id="codex-search"/);
+  assert.match(html, /<details class="codex-group" id="codex-basics" data-key="codex-basics" open>/);
+  assert.match(html, /<details class="codex-group" id="codex-kind" data-key="codex-kind">/, 'sections with nothing new start folded');
   c.seen.push('kind:orc');
-  assert.match(codexTab(c, ENTRIES, SECTIONS, ['kind:orc'], progress(c), isUnlocked, hasLore), /Orc <span class="new">new/);
+  const opened = codexTab(c, ENTRIES, SECTIONS, ['kind:orc'], progress(c), isUnlocked, hasLore);
+  assert.match(opened, /Orc <span class="new">new/);
+  assert.match(opened, /id="codex-kind" data-key="codex-kind" open>/, 'a section with something new starts open');
 });
 
 test('the week panel warns about tribute in the last month, in red when you are short', () => {

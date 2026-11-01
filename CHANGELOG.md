@@ -2,6 +2,15 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 5.1.1 (interface polish)
+
+- **The Codex, redesigned:** search, jump links, and sections that fold away. Basics and anything new start open. Locked entries are counted ("3 still to discover") instead of shown as rows of "???".
+- **Thumbs up or down:** the crowd's wish is shown first, then Spare and Finish side by side, each with exactly what it does and whether it goes with or against the crowd.
+- **Gamble results lead with the outcome** ("✔ It went well" / "✘ It went badly") in the result popup.
+- **The Cyborg Eye says what it does:** +1 Power in every fight, and a blinding blow becomes a Flesh Wound (the fight story now says so when it happens).
+- **The top bar** reads "Lv 1 · next at 12" (it looked like Prestige jumping from 1 to 12).
+- **Fight day:** the opponent's card has room below the Withdraw button.
+
 ## 5.1.0 (from the designer's playthrough notes)
 
 **Learning the game**

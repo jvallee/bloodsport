@@ -166,3 +166,19 @@ function gearBonus(f) {
   const guard = items.reduce((n, g) => n + (g.guard ?? 0), 0);
   return [injure ? `+${injure / 1000}% to injure` : '', guard ? `−${guard / 1000}% to be injured (armour)` : ''].filter(Boolean).join(', ');
 }
+
+// Thumbs up or down (playtest #8: "more aligned, and tell the crowd's suggestion apart from your choices"): the crowd's
+// wish as a banner, then the two choices in equal columns, each with exactly what it does, marked with or against the crowd.
+export function mercyChoices({ title, blood, spare, kill }) {
+  const col = (choice, label, cls, effects) => {
+    const withCrowd = (choice === 'kill') === blood;
+    return `<div class="verdict ${cls}"><div class="verdict-tag ${withCrowd ? 'with' : 'against'}">${withCrowd ? 'The crowd\'s choice' : 'Against the crowd'}</div>
+      <button class="btn big ${cls === 'spare' ? 'good' : 'danger'}" data-action="mercy" data-choice="${choice}">${label}</button>
+      <ul class="verdict-effects">${effects.map((e) => `<li>${esc(e)}</li>`).join('')}</ul></div>`;
+  };
+  return `<div class="mercy-box">
+    <div class="mercy-title">${title}</div>
+    <div class="crowd-wish ${blood ? 'blood' : 'mercy'}"><span class="label">The crowd wants</span> ${blood ? '👎 Blood' : '👍 Mercy'}</div>
+    <div class="verdicts">${col('spare', '👍 Spare them', 'spare', spare)}${col('kill', '👎 Finish them', 'kill', kill)}</div>
+  </div>`;
+}

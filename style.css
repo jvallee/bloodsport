@@ -600,3 +600,47 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .dialogue-you { color: var(--muted); font-size: 13px; }
 .replies { gap: 8px; flex-wrap: wrap; }
 .btn.reply { font-style: italic; }
+
+/* Fight day: room between the bracket's Withdraw button and the opponent's card tag */
+.arena-block .bracket + .card, .arena-block .bracket ~ .card { margin-top: 20px; }
+.bracket .btn.danger { margin-bottom: 6px; }
+/* A gamble's result leads the popup */
+.outcome { font-size: 18px; font-weight: 700; margin: 0 0 8px; }
+.outcome.good { color: var(--good, #8fc98f); }
+.outcome.bad { color: var(--bad, #e07a6a); }
+
+/* Thumbs up or down: the crowd's wish, then two aligned choices */
+.mercy-box { text-align: left; }
+.crowd-wish { display: inline-flex; gap: 8px; align-items: baseline; padding: 4px 12px; border-radius: 99px; font-weight: 700; margin: 6px 0 12px; border: 1px dashed currentColor; }
+.crowd-wish .label { font-weight: 400; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.crowd-wish.blood { color: #f1b3ad; }
+.crowd-wish.mercy { color: var(--good, #8fc98f); }
+.verdicts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: stretch; }
+@media (max-width: 520px) { .verdicts { grid-template-columns: 1fr; } }
+.verdict { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--panel); }
+.verdict .btn { width: 100%; }
+.verdict-tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.verdict-tag.with { color: var(--gold); }
+.verdict-tag.against { color: var(--muted); }
+.verdict-effects { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+.mercy .mercy-title { text-align: center; }
+
+/* The Codex (playtest #8 redesign) */
+.codex-tools { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; position: sticky; top: 0; background: var(--panel); padding: 6px 0; z-index: 2; }
+#codex-search { width: 100%; max-width: 480px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; }
+.codex-jump .chip { text-decoration: none; cursor: pointer; }
+.codex-group { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; background: var(--panel-2); }
+.codex-group > summary { cursor: pointer; list-style: none; padding: 10px 0; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.codex-group > summary::-webkit-details-marker { display: none; }
+.codex-group > summary h3 { margin: 0; font-size: 16px; color: var(--gold); }
+.codex-group > summary h3::before { content: '▸ '; }
+.codex-group[open] > summary h3::before { content: '▾ '; }
+.codex-sub { flex-basis: 100%; color: var(--muted); font-size: 13px; }
+.codex .entries { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; padding-bottom: 12px; }
+.codex .entry { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--panel); }
+.codex .entry h4 { margin: 0 0 4px; font-size: 15px; }
+.codex .entry p { margin: 0 0 6px; line-height: 1.45; font-size: 14px; }
+.codex .entry .lore { font-style: italic; color: var(--muted); font-size: 13px; }
+.codex .entry.fresh { border-color: var(--gold); }
+.codex-locked { margin: 0 0 12px; }
+.verdict:has(.verdict-tag.with) { border-color: var(--gold); }
