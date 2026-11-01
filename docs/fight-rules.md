@@ -453,3 +453,27 @@ All numbers are tunables in `src/data.js` (`POLITICAL`, `PLOT`, `LIAISON`); stor
 - **After the LLM playtest #8 fixes** (decor comfort 2 + price, owed lives not renewed, Exhibition XP 2/1 and 1 Gold × tier, a daze passes on its own, odds with signature rules), all 12 gates pass.
   - Careful 43%. Careful deaths 0.85, reckless deaths 3.95.
   - Loyalist +7. Coup 17%. Treason 1%. Grand +21.
+
+## 5.2.0: the fun ideas
+
+Numbers are tunables in `src/data.js`; the words are placeholders for the designer.
+
+- **Nemeses (`NEMESIS`):** an opponent who beats one of yours (not a Boss) is remembered with an epithet.
+  - Once 8 weeks have passed since they were last seen, each new non-Boss opponent has a 35% chance to be a returning nemesis, with +1 Power per win over you (up to +3).
+  - Beating one pays 3 Renown, 5 Gold × tier and 3 Favour. A house keeps at most 3.
+- **Short careers (`SHORT`):** Tournament → Boss in each arena. Purses ×2, Prestige ×2.5, and a head start (+20 Gold, 12 Prestige).
+  - Swept with 100 careers each: ×1.5 purses only 13% won; ×2 training 99%.
+- **The daily Emperor's Challenge:** a short career on `dailySeed(day)`, with no patron or decrees. The best score per day is kept in Legacy.
+- **Betting (`BET`):** before Round 1. Payout = stake × 0.9 / win chance (up to 5×). Stake up to 10 × tier.
+- **The Emperor's demands (`DEMAND`, `DEMANDS`):** 50% of months from week 8, outside winter. Met: +4 Favour and 4 Gold × tier. Missed: −2 Favour. They use their own RNG stream (`rng.emperor`).
+- **Bonds (`BOND`):** formed by an exhibition bout, or by two fighters who both win on one fight day.
+  - +8 comfort while together. A partner 3+ levels higher teaches 1 XP a week. A death brings −20 Morale for 4 weeks.
+- **The crowd's hype (`HYPE`):** upset round +25, wound +15, kill +40, comeback +20, signature +10, Press +5 (up to 100).
+  - A win pays 1 Renown per 35 hype and tier Gold per 50. A loss pays 1 Renown per 50.
+- **The Patron Lounge (`LOUNGE`):** hosting costs 3 Gold × tier, once a month, and earns 1 Influence + 1 per 10 Renown of your star (up to 3).
+  - Policies last 16 weeks (1 at a time, 2 at Lounge level 2). Loyalist policies −10 suspicion; reformist +5.
+- **The Liaison:** convicts are seasoned too (`RECRUIT.levels`).
+- **Gates** (300 careers, plus 150 each for the plot bots and short careers): all 13 pass.
+  - Careful 35%, careful deaths 0.73, reckless deaths 3.54. Balanced build 2/4. First Boss 67%. Tactics +7, always-Press −6. Grand +14.
+  - Loyalist +6. Coup 11%. Treason 0%.
+  - Short careers: 47% won in 83 weeks (full careers 109).
