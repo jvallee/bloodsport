@@ -198,3 +198,23 @@ test('playtest: every generated fighter\'s name is remembered, and no fighter sh
   assert.deepEqual(NAMES.filter((n) => houses.includes(n)), []);
   assert.equal(new Set(NAMES).size, NAMES.length);
 });
+
+test('the Liaison\'s prisoners, convicts too, arrive seasoned in later arenas, priced by level', async () => {
+  const { RECRUIT, LIAISON } = await import('../src/data.js');
+  const { advanceWeek } = await import('../src/run.js');
+  let seasoned = 0;
+  for (let seed = 1; seed <= 12; seed++) {
+    const run = createRun(seed);
+    for (const t of [2, 3, 4]) run.arenas[t] = { ...structuredClone(run.arenas[1]), tier: t, stage: 0, conquered: t < 4 };
+    run.topTier = 4;
+    run.prestigeLevel = 2;
+    run.buildings.push({ id: 'bl', type: 'liaison', level: 1 });
+    for (let i = 0; i < 6 && !run.liaisonOffer; i++) { run.event = null; run.boutPending = false; run.bouts = null; advanceWeek(run); }
+    const f = run.liaisonOffer;
+    assert.ok(RECRUIT.levels[3].includes(f.level));
+    assert.equal(f.perks.length, f.level - 1);
+    assert.ok(f.price >= LIAISON.convictPrice + RECRUIT.perLevel * (f.level - 1) - 2, 'priced by level (political ones a little cheaper)');
+    if (f.level > 1) seasoned++;
+  }
+  assert.equal(seasoned, 12, 'the Imperial Liaison never sells a level 1');
+});

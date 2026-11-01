@@ -354,8 +354,9 @@ function refreshLiaison(run) {
   f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
   f.stress = elite ? 30 : 40;
   f.morale = elite ? 40 : 30;
-  if (elite) season(run, run.rng.market, f); // a prisoner of war is a seasoned soldier
-  f.price = elite ? LIAISON.elitePrice + LIAISON.elitePerTier * Math.min(run.topTier, CIRCUITS.length) + RECRUIT.perLevel * (f.level - 1) : LIAISON.convictPrice;
+  // Prisoners arrive seasoned in later arenas, like the Market's fighters (playtest #8: the Liaison only sold level 1s).
+  season(run, run.rng.market, f);
+  f.price = (elite ? LIAISON.elitePrice + LIAISON.elitePerTier * Math.min(run.topTier, CIRCUITS.length) : LIAISON.convictPrice) + RECRUIT.perLevel * (f.level - 1);
   f.origin = elite ? 'Prisoner of war' : 'Condemned convict';
   markPolitical(run, f);
   run.liaisonOffer = f;
