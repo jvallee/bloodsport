@@ -4,6 +4,13 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 5.3.0 (in progress)
 
+- **The Unnatural Temple of Vulcan** takes the Stables' place in the Estate (Prestige level 2, 10 Gold; a career that had the Stables gets the Temple at the same level). Its priests can raise a fighter who was killed in the arena as a **Revenant**, up to 4 weeks after their death (12 weeks at level 2), for 10 Gold (+4 for each arena above the Dirt Pits).
+  - A Revenant keeps their name, class, weapon, level, perks, titles and kills. At level 1 the Temple brings them back with 1 less Power; at level 2, at full strength.
+  - Revenants feel nothing: their Morale settles at 50 whatever the room. They're never Inspired, and never Discontented.
+  - Each Revenant has one of three new traits: **Deathless** (the Death Gate opens one injury later), **Grave Chill** (the opponent has −5% win chance every round) or **Cinder Heart** (+1 Power in Rounds 2 and 3).
+  - The same body can't be raised twice, and the Praetorians burn the bodies of anyone executed.
+  - Bodies waiting to be raised are in the Market tab, and your steward tells you when one arrives.
+- **Basa are in the Market** like every other kind, and you'll meet them in the arena too. The Stables are gone.
 - **Lower arenas move on without you.** If nobody from your house fights in one of your old arenas on fight day, its tournament goes ahead anyway: the circuit moves to its next stage with a new opponent. (They used to wait for you, on the same opponent, for months.)
 
 ## 5.2.0 (more fun)

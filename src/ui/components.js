@@ -22,7 +22,7 @@ export const ICON = {
 };
 
 export const BUILDING_ICON = {
-  bed: '🛏', lyre: '🎭', dumbbell: '🏋', cross: '⚕', eye: '👁', chain: '⛓', anvil: '⚒', paw: '🐾', temple: '🏛', swords: '⚔', goblet: '🍷',
+  bed: '🛏', lyre: '🎭', dumbbell: '🏋', cross: '⚕', eye: '👁', chain: '⛓', anvil: '⚒', paw: '🐾', temple: '🏛', swords: '⚔', goblet: '🍷', forge: '🔥',
 };
 
 export function button(label, action, data = {}, blocker = null, cls = 'btn small') {

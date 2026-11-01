@@ -1,18 +1,21 @@
 // Career-playing bots for balance checks (scripts/career-sim.js) and invariant tests.
 // careful: rests and heals, builds for training and Morale, equips gear, picks perks, uses every arena,
 //          skips bad matchups and throws in the towel when a fighter is in danger.
+// careful also bets on clear favourites, hosts the Senate and passes policies once it has a Patron Lounge, and raises a
+//          freshly fallen fighter at the Unnatural Temple of Vulcan (building it then, if it must).
 // reckless: trains one star nonstop, heals only with the Surgeon, fights only the top arena, always Presses, never towels.
 
-import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES } from '../src/data.js';
+import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
 import { coupBonus } from '../src/plot.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic, effectiveInjuries, signatureBlocker, useSignature } from '../src/fight.js';
-import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap } from '../src/ludus.js';
+import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap, plotsFree } from '../src/ludus.js';
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom, recruitPrice,
   buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, resolveMercy,
+  betOdds, betCap, betBlocker, placeBet, hostBlocker, host, enactBlocker, enact, raisable, reanimateBlocker, reanimate,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
 
@@ -48,6 +51,36 @@ function spend(run, reserve, opts = {}) {
   tryUp('entertainment');
   tryUp('armourer');
   if (run.roster.length >= rosterCap(run)) tryBuild('quarters');
+  // The Patron Lounge (5.2.0) comes last, and only while a plot is to spare for more Fighter Quarters.
+  if (opts.lounge !== false && plotsFree(run) > 1) tryBuild('lounge');
+}
+
+// The Unnatural Temple of Vulcan (5.3.0): when a fighter has just died in the arena, build the Temple if need be and raise them.
+function raiseTheDead(run, opts) {
+  if (opts.vulcan === false) return;
+  const fresh = run.fallen.filter((f) => f.arena && !f.raised && f.kind !== 'revenant' && run.week - f.diedWeek <= BUILDINGS.vulcan.per[0]);
+  if (!fresh.length) return;
+  if (!buildBlocker(run, 'vulcan') && run.gold - BUILDINGS.vulcan.cost[0] >= 15) buildRoom(run, 'vulcan');
+  for (const f of [...raisable(run)].sort((a, b) => b.power - a.power)) if (!reanimateBlocker(run, f.id) && run.gold >= 20) reanimate(run, f.id);
+}
+
+// The Patron Lounge: host the Senate whenever Gold allows, and keep the most useful policy in force.
+// The order: richer purses, comfort, mercy that pays everywhere, a lower tribute. A rebel wants the prisoners an Amnesty brings.
+const POLICY_ORDER = ['breadAndCircuses', 'grainToLudus', 'edictOfMercy', 'lowerTribute'];
+function useLounge(run, opts) {
+  if (opts.lounge === false) return;
+  if (!hostBlocker(run) && run.gold - LOUNGE.hostGold * 4 >= 8) host(run);
+  const order = opts.plot === 'rebel' ? ['amnesty', ...POLICY_ORDER] : POLICY_ORDER;
+  for (const id of order) if (!enactBlocker(run, id)) enact(run, id);
+}
+
+// Betting: before Round 1, the careful bot backs a fighter it thinks is a clear favourite, with Gold it can spare.
+// The bookmaker's odds come from a plain simulation; the bot's tactics, items and signature move are its edge.
+function maybeBet(run, m) {
+  const p = BET.cut / betOdds(run, m);
+  if (p < 0.6) return;
+  const stake = [...BET.stakes].reverse().find((x) => x <= betCap(run, m) && run.gold - x >= 10);
+  if (stake && !betBlocker(run, m, stake)) placeBet(run, m, stake);
 }
 
 function equipAll(run, reserve) {
@@ -88,6 +121,8 @@ function carefulWeek(run, opts) {
   else for (const b of run.buildings) if (b.type === 'trainer' && !upgradeBlocker(run, b.id)) upgrade(run, b.id);
   if (opts.gear !== false) equipAll(run, 4);
   if (opts.morale !== false) keepHappy(run);
+  useLounge(run, opts);
+  raiseTheDead(run, opts);
 
   // Roster: enough fighters to cover every arena, plus a spare.
   const want = Math.min(rosterCap(run), unlockedTiers(run).length + 2);
@@ -124,21 +159,22 @@ function carefulWeek(run, opts) {
 // `tactic`: 'smart' reads the opponent's humor (as auto-play does); anything else is used every round.
 // Plays a tournament: one match, or a whole bracket (Silver and up). A careful bot withdraws a fighter at the
 // Death Gate between bracket matches (unless it's the top arena's Boss); the reckless one always fights on.
-function playMatch(run, f, tier, towel, items = false, tactic = 'smart') {
-  let summary = playOneMatch(run, f, tier, towel, items, tactic);
+function playMatch(run, f, tier, towel, items = false, tactic = 'smart', bet = false) {
+  let summary = playOneMatch(run, f, tier, towel, items, tactic, bet);
   while (summary.next && run.status === 'active') {
     pickPerks(run);
     const bout = boutFor(run, tier);
     const fighter = run.roster.find((x) => x.id === f.id);
     if (towel && effectiveInjuries(fighter) >= 2 && !(bout.top && bout.boss)) return withdraw(run, tier);
-    summary = playOneMatch(run, fighter, tier, towel, items, tactic);
+    summary = playOneMatch(run, fighter, tier, towel, items, tactic, bet);
   }
   return summary;
 }
 
-function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart') {
+function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart', bet = false) {
   const bout = boutFor(run, tier);
   const m = startMatch(run, f.id, tier);
+  if (bet) maybeBet(run, m);
   if (!signatureBlocker(m)) useSignature(m); // both bots open with their signature move
   while (!m.over) {
     playRound(m, { stance: tactic === 'smart' ? suggestTactic(m) : tactic });
@@ -188,9 +224,9 @@ function carefulBouts(run, n, opts) {
   if (!best || (best.o.win < 0.35 && !bout.boss && opts.skip !== false)) {
     if (!skipBlocker(run)) skipBout(run);
     else if (!best) forfeitBout(run);
-    else playMatch(run, best.f, top, opts.towel !== false, opts.items !== false);
+    else playMatch(run, best.f, top, opts.towel !== false, opts.items !== false, 'smart', opts.bet !== false);
   } else {
-    playMatch(run, best.f, top, opts.towel !== false, opts.items !== false);
+    playMatch(run, best.f, top, opts.towel !== false, opts.items !== false, 'smart', opts.bet !== false);
   }
   if (run.status !== 'active' || opts.lowerArenas === false) return;
   // Lower arenas: send free fighters where the fight is winnable but not a crushing mismatch.
@@ -203,7 +239,7 @@ function carefulBouts(run, n, opts) {
       const o = odds(f, tier);
       if (o.win >= 0.5 && o.death < 0.02 && (!pickF || o.win > pickF.win)) pickF = { f, win: o.win };
     }
-    if (pickF) playMatch(run, pickF.f, tier, opts.towel !== false, opts.items !== false);
+    if (pickF) playMatch(run, pickF.f, tier, opts.towel !== false, opts.items !== false, 'smart', opts.bet !== false);
     if (run.status !== 'active') return;
   }
 }

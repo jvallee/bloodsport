@@ -6,7 +6,7 @@
 
 import { INTRO } from "./tutorial.js";
 import { FAVOR, BUILDINGS } from "./data.js";
-import { GRAND_TIER } from "./run.js";
+import { GRAND_TIER, raisable } from "./run.js";
 import { WEEKS_PER_YEAR } from "./calendar.js";
 
 export const SPEAKERS = {
@@ -123,6 +123,7 @@ export function newsSnapshot(run) {
     market: run.market.map((f) => f.id).join(),
     liaison: run.liaisonOffer?.id ?? null,
     armourer: run.armourerStock.join(),
+    bodies: raisable(run).map((f) => f.id).join(),
   };
 }
 export function stewardNews(before, after, run) {
@@ -132,10 +133,12 @@ export function stewardNews(before, after, run) {
     news.push(`Your house has reached level ${after.level}. ${opened.length ? `New in the Estate: ${opened.join(', ')}.` : 'There are new plots to build on in the Estate.'}`);
   }
   if (after.market !== before.market && run.market.length && after.market.split(',').some((id) => !before.market.split(',').includes(id))) {
-    news.push(`New gladiators have arrived in the Market${run.market.some((f) => f.kind === 'basa') ? ', and the Stables have Basa' : ''}.`);
+    news.push('New gladiators have arrived in the Market.');
   }
   if (after.liaison && after.liaison !== before.liaison) news.push('The Liaison has a new prisoner on offer.');
   if (after.armourer && after.armourer !== before.armourer && run.armourerStock.length) news.push('The Armourer has new stock.');
+  // PLACEHOLDER (5.3.0): a body the Temple of Vulcan could raise.
+  for (const f of raisable(run).filter((x) => !(before.bodies ?? '').split(',').includes(x.id))) news.push(`The priests of Vulcan have taken ${f.name}'s body. They can raise them as a Revenant, for a price (the Market tab).`);
   return news;
 }
 

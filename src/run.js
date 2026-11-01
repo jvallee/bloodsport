@@ -5,9 +5,9 @@
 
 import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
-  decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
+  decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, deltaRow,
+  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt, hypeOf } from './fight.js';
@@ -22,7 +22,7 @@ import {
 
 export const SAVE_VERSION = 3;
 export const GRAND_TIER = CIRCUITS.length + 1;
-const KIND_IDS = Object.keys(KINDS).filter((k) => !KINDS[k].exotic); // exotic kinds (Basa) come from the Stables
+const KIND_IDS = Object.keys(KINDS).filter((k) => !KINDS[k].exotic); // exotic kinds (Revenants) are never bought or met
 const CLASS_IDS = Object.keys(CLASSES).filter((c) => !CLASSES[c].legacy); // legacy classes join via run.setup.classes
 const WEAPON_IDS = Object.keys(WEAPONS);
 const DEBUFF_IDS = Object.keys(BOSS_DEBUFFS);
@@ -491,16 +491,6 @@ function season(run, rng, f) {
   return f;
 }
 
-// The Stables bring exotic Basa to market (each month, and straight away when built).
-function addStablesOffers(run) {
-  const lv = maxLevel(run, 'stables');
-  const n = lv ? effectAt('stables', lv) : 0;
-  const have = run.market.filter((f) => f.kind === 'basa').length;
-  for (let i = have; i < n; i++) {
-    run.market.push(season(run, run.rng.market, createFighter(run.rng.market, { id: newId(run, 'f'), kind: 'basa', bonusPower: circuitInfo(run).marketPower, takenNames: takenNames(run), classes: run.setup?.classes })));
-  }
-}
-
 function refreshMarket(run) {
   const rng = run.rng.market;
   const bonus = circuitInfo(run).marketPower;
@@ -509,7 +499,6 @@ function refreshMarket(run) {
   for (let i = 0; i < ECONOMY.marketSize - 1; i++) market.push(make());
   market.splice(int(rng, 0, market.length), 0, make('orc'));
   run.market = market;
-  addStablesOffers(run);
   remember(run, ...run.market);
 }
 
@@ -808,15 +797,11 @@ export function buildRoom(run, type) {
   const b = build(run, type);
   if (type === 'armourer') refreshArmourer(run);
   if (type === 'liaison') refreshLiaison(run);
-  if (type === 'stables') addStablesOffers(run);
   return b;
 }
 
-// Upgrade a room; a bigger Stables brings its extra Basa straight away too.
 export function upgradeRoom(run, id) {
-  const b = upgrade(run, id);
-  if (b.type === 'stables') addStablesOffers(run);
-  return b;
+  return upgrade(run, id);
 }
 
 // ---------- Career setup ----------
@@ -1078,7 +1063,9 @@ function switchToRest(run, f, reason) {
 export const decorCount = (f) => Object.values(f.decor).reduce((s, n) => s + n, 0);
 
 // Where a fighter's Morale is heading: comfort (rooms, decor, entertainment) minus what their fame makes them expect.
+// A Revenant feels nothing: their Morale heads for REANIMATE.morale whatever the room.
 export function moraleTarget(run, f) {
+  if (f.kind === 'revenant') return { target: REANIMATE.morale, comfort: 0, expects: 0, mood: 0, revenant: true };
   const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + decorComfortOf(f) + (bondmate(run, f) ? BOND.comfort : 0) + (hasPolicy(run, 'grainToLudus') ? 5 : 0) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
   const expects = Math.min(MORALE.maxExpectation, MORALE.expectationPerRenown * f.renown);
   const mood = f.mood?.n ?? 0; // an event's lasting effect (src/events.js)
@@ -1455,6 +1442,43 @@ export function pray(run, id) {
   run.gold -= prayPrice(run);
   f.pendingPerks[0] = perkOffer(run, f);
   log(run, `You burn incense to Fortuna for ${f.name}. New paths open: ${f.pendingPerks[0].map((p) => PERKS[p].name).join(', ')}.`, 'event');
+}
+
+// ---------- The Unnatural Temple of Vulcan (5.3.0): raising the dead ----------
+
+export const reanimatePrice = (run) => REANIMATE.price + REANIMATE.perTier * Math.min(run.topTier, CIRCUITS.length);
+// The fallen the Temple could raise now: killed in the arena (not executed), recently enough, and never raised before.
+export const raisable = (run) => !maxLevel(run, 'vulcan') ? [] : run.fallen.filter((f) => f.arena && !f.raised && f.kind !== 'revenant' && run.week - f.diedWeek <= effectAt('vulcan', maxLevel(run, 'vulcan')));
+export function reanimateBlocker(run, id) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!maxLevel(run, 'vulcan')) return 'Build the Unnatural Temple of Vulcan first.';
+  const f = run.fallen.find((x) => x.id === id);
+  if (!f) return 'No such fallen fighter.';
+  if (!f.arena) return `${f.name} was executed; the Praetorians burned the body.`;
+  if (f.raised || f.kind === 'revenant') return 'Vulcan cannot kindle the same body twice.';
+  const keeps = effectAt('vulcan', maxLevel(run, 'vulcan'));
+  if (run.week - f.diedWeek > keeps) return `${f.name} has been dead too long (a body keeps ${keeps} weeks${maxLevel(run, 'vulcan') < BUILDINGS.vulcan.per.length ? '; a bigger Temple keeps them longer' : ''}).`;
+  if (run.roster.length >= rosterCap(run)) return `Your quarters are full (${rosterCap(run)} fighters).`;
+  if (run.gold < reanimatePrice(run)) return `Needs ${reanimatePrice(run)} Gold.`;
+  return null;
+}
+export function reanimate(run, id) {
+  assertOk(reanimateBlocker(run, id));
+  const body = run.fallen.find((x) => x.id === id);
+  body.raised = true;
+  run.gold -= reanimatePrice(run);
+  const f = structuredClone(body);
+  for (const key of ['diedWeek', 'arena', 'raised', 'bond', 'political', 'record', 'mood', 'nemesisOf']) delete f[key];
+  const lost = maxLevel(run, 'vulcan') >= 2 ? 0 : REANIMATE.power;
+  Object.assign(f, {
+    id: newId(run, 'f'), kind: 'revenant', kindTrait: pick(run.rng.growth, KINDS.revenant.traits), alive: true, injuries: [],
+    stress: 0, job: 'rest', morale: REANIMATE.morale, topStreak: 0, pendingPerks: [], revenantOf: body.id, power: body.power + lost,
+  });
+  run.roster.push(f);
+  chronicle(run, f, `Raised from the dead in the Unnatural Temple of Vulcan, ${run.week - body.diedWeek} week${run.week - body.diedWeek === 1 ? '' : 's'} after falling. ${TRAITS[f.kindTrait].name}.`);
+  log(run, `The priests of Vulcan work through the night. ${f.name} walks out of the forge: a Revenant, brass where the wounds were${lost ? `, and a little weaker (${lost} Power)` : ''}.`, 'event');
+  return f;
 }
 
 // The Exhibition Ring: on tournament day, two of your fighters who aren't competing fight each other for the crowd.
@@ -2070,7 +2094,7 @@ export function finishMatch(run, match) {
     summary.eulogy = `Here lies ${fighter.name}: ${fWins} win${fWins === 1 ? '' : 's'}${fighter.kills ? `, ${fighter.kills} kill${fighter.kills === 1 ? '' : 's'}` : ''}${fighter.titles.length ? `, ${fighter.titles.join(', ')}` : ''}.`;
     stripFighter(run, fighter);
     run.roster = run.roster.filter((f) => f !== fighter);
-    run.fallen.push({ ...fighter, diedWeek: run.week });
+    run.fallen.push({ ...fighter, diedWeek: run.week, arena: true }); // a body the Temple of Vulcan could raise
     for (const f of run.roster) bumpMorale(f, MORALE.allyDeath);
     log(run, `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad');
   } else {
@@ -2363,6 +2387,7 @@ export function deserialize(text) {
     run.glory = 0;
   }
   run.inventory.decor = { ...emptyDecor(), ...run.inventory.decor }; // saves from before new decor
+  for (const b of run.buildings) if (b.type === 'stables') b.type = 'vulcan'; // 5.3.0: the Temple of Vulcan takes the Stables' place
   for (const f of run.roster) f.decor = { ...emptyDecor(), ...f.decor };
   for (const f of [...run.roster, ...run.market, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : [])]) f.humor ??= humorFor(f);
   // Careers from before action recording: start recording now, from a snapshot of this point.

@@ -147,14 +147,16 @@ test('Lions in the Arena open the Death Gate one injury earlier; the Emperor\'s 
   assert.ok(m);
 });
 
-test('the Stables bring exotic Basa to the Market; Basa never appear otherwise', () => {
-  for (let seed = 1; seed <= 40; seed++) assert.ok(!createRun(seed).market.some((f) => f.kind === 'basa'));
+// 5.3.0 (the designer's request): the Stables are gone, and Basa come to the Market like any other kind.
+test('Basa come to the Market like any kind; the Stables are gone (5.3.0)', () => {
+  let basa = 0;
+  for (let seed = 1; seed <= 40; seed++) basa += createRun(seed).market.filter((f) => f.kind === 'basa').length;
+  assert.ok(basa >= 5, `only ${basa} Basa in 40 markets`);
+  assert.ok(createFighter(createRng(1), { kind: 'basa' }).kindTrait);
   const run = createRun(3);
   run.prestigeLevel = 2;
   run.gold = 100;
-  buildRoom(run, 'stables');
-  assert.equal(run.market.filter((f) => f.kind === 'basa').length, 1);
-  assert.ok(createFighter(createRng(1), { kind: 'basa' }).kindTrait);
+  assert.throws(() => buildRoom(run, 'stables'), /Unknown building/);
 });
 
 test('a Lion Cage gives a Basa +1 Power', () => {

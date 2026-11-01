@@ -67,6 +67,10 @@ export const TRAITS = {
   thickHide: { name: 'Thick Hide', desc: 'Armour: −10% chance to be injured.' },
   pounce: { name: 'Pounce', desc: '+3 Speed in Round 1.' },
   rampage: { name: 'Rampage', desc: 'Each round won gives +1 Power for the rest of the match.' },
+  // 5.3.0: Revenants, raised by the Unnatural Temple of Vulcan.
+  deathless: { name: 'Deathless', desc: 'Already died once: the Death Gate opens one injury later.' },
+  graveChill: { name: 'Grave Chill', desc: 'The opponent has −5% win chance every round: nobody wants to fight the dead.' },
+  cinderHeart: { name: 'Cinder Heart', desc: '+1 Power in Rounds 2 and 3: the forge-fire inside wakes slowly.' },
 };
 
 // Tactics: chosen before each round. Press beats Feint, Feint beats Guard, Guard beats Press (+10% win chance to the counter).
@@ -171,8 +175,9 @@ export const KINDS = {
   elf: { name: 'Elf', basePower: 5, traits: ['firebug', 'footwork', 'egoArmour', 'elvenEyes'] },
   orc: { name: 'Orc', basePower: 6, traits: ['bloodFaith', 'unbreakable', 'bloodlust'] },
   vampire: { name: 'Vampire', basePower: 5, traits: ['bloodDrinker', 'nightborn', 'mesmerize'] },
-  // Exotic: only from the Stables.
-  basa: { name: 'Basa', basePower: 6, traits: ['thickHide', 'pounce', 'rampage'], exotic: true },
+  basa: { name: 'Basa', basePower: 6, traits: ['thickHide', 'pounce', 'rampage'] }, // 5.3.0: in the Market like everyone (was only from the Stables)
+  // Exotic: never in the Market. A fighter killed in the arena, raised by the Unnatural Temple of Vulcan (REANIMATE).
+  revenant: { name: 'Revenant', basePower: 5, traits: ['deathless', 'graveChill', 'cinderHeart'], exotic: true },
 };
 
 export const CLASSES = {
@@ -340,7 +345,8 @@ export const BUILDINGS = {
   // Fun idea #7: host the Senate for Influence, and spend it on policies.
   lounge: { unique: true, name: 'Patron Lounge', dept: 'scouting', icon: 'goblet', cost: [12, 18], req: [3, 4], per: [1, 2], effect: (n) => `Host the Senate once a month for Influence; up to ${n} polic${n > 1 ? 'ies' : 'y'} in force at a time` },
   exhibition: { unique: true, name: 'Exhibition Ring', dept: 'training', icon: 'swords', cost: [10], req: [2], per: [1], effect: () => 'On tournament day, two fighters who aren\'t competing can fight an exhibition bout: XP for both, Renown and Gold for the winner, and no risk of death' },
-  stables: { unique: true, name: 'Stables', dept: 'scouting', icon: 'paw', cost: [9, 14], req: [2, 3], per: [1, 2], effect: (n) => `${n} exotic Basa fighter${n === 1 ? '' : 's'} in the Market each month` },
+  // 5.3.0: replaces the Stables (a save with Stables gets this at the same level). Name and words are PLACEHOLDER for the designer.
+  vulcan: { unique: true, name: 'Unnatural Temple of Vulcan', dept: 'medical', icon: 'forge', cost: [10, 16], req: [2, 3], per: [4, 12], effect: (n) => `Raises a fighter killed in the arena as a Revenant, up to ${n} weeks after their death`, extra: (lv) => (lv >= 2 ? 'Revenants come back with all their strength' : 'Revenants come back with 1 less Power') },
   liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly cheap condemned convict'), note: () => 'Read their prison records: not every prisoner is what the guards say.' },
 };
 
@@ -511,6 +517,12 @@ export const LOUNGE = {
     amnesty: { name: 'Amnesty', cost: 2, lean: 'reformist', desc: 'Political prisoners are twice as common while it lasts.' },
   },
 };
+// The Unnatural Temple of Vulcan (5.3.0): the smith-god's forbidden rite rebuilds a fighter killed in the arena, in brass and
+// stitched flesh. Price: price + perTier × your top arena's tier, in Gold. bodyWeeks: the Temple's level sets how long a body
+// keeps (BUILDINGS.vulcan.per). power: what a level-1 Temple's rite costs them. A Revenant keeps their name, class, weapon,
+// level, perks, titles and kills; they get a Revenant trait instead of their old one, and they feel nothing: Morale holds at
+// `morale` whatever the room (never Inspired, never Discontented). The same body can't be raised twice.
+export const REANIMATE = { price: 6, perTier: 4, power: -1, morale: 50 };
 export const HYPE = { upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 5, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
 export const BOND = { comfort: 8, mentorGap: 3, mentorXp: 1, grief: -20 };
 export const DEMAND = { chance: 0.5, fromWeek: 8, favor: 4, goldPerTier: 4, missFavor: -2 };

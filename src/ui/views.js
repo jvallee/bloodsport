@@ -1,13 +1,13 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
-import { LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY } from '../data.js';
+import { REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker,
-  isChampionOf, buyItemBlocker,
+  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker,
 } from '../run.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel, effectAt,
@@ -604,12 +604,14 @@ export function marketTab(run) {
     stress: false, tag,
     actions: `<div class="actions">${button(`Recruit · ${recruitPrice(run, f)} Gold`, 'recruit', { id: f.id }, recruitBlocker(run, f.id), 'btn primary small')}</div>`,
   });
-  // Exotic Basa only ever come from the Stables, so they get their own section.
-  const cards = run.market.filter((f) => f.kind !== 'basa').map((f) => recruitCard(f)).join('');
-  const basa = run.market.filter((f) => f.kind === 'basa').map((f) => recruitCard(f, 'From the Stables')).join('');
-  const stables = maxLevel(run, 'stables')
-    ? basa ? `<p class="sub">Exotic Basa fighters, ${effectAt('stables', maxLevel(run, 'stables'))} a month. Basa hit hard from the start (natural Power ${KINDS.basa.basePower}), and a Lion Cage in their room gives +1 Power.</p><div class="cards two">${basa}</div>` : '<p class="sub">No Basa left this month. New ones arrive at the start of next month.</p>'
-    : `<p class="sub">Build the Stables${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for exotic Basa fighters each month.</p>`;
+  const cards = run.market.map((f) => recruitCard(f)).join('');
+  // The Unnatural Temple of Vulcan (5.3.0): raise a fighter killed in the arena as a Revenant.
+  const vulcanLv = maxLevel(run, 'vulcan');
+  const bodies = vulcanLv ? raisable(run) : [];
+  const vulcan = !vulcanLv
+    ? `<p class="sub">Build the Unnatural Temple of Vulcan${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} to raise fighters killed in the arena as Revenants.</p>`
+    : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death, for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p>
+      ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary small')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`;
   const offer = run.liaisonOffer;
   const liaison = offer
     ? fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, notes: offer.record?.length ? `<div class="record"><div class="label">Prison record</div>${offer.record.map((c) => `<div>“${esc(c)}”</div>`).join('')}</div>` : '', actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })
@@ -632,7 +634,7 @@ export function marketTab(run) {
       <div class="stack">
         ${fold('fighters', 'Market', `<p class="sub">From ${price} Gold (seasoned fighters cost more). New fighters arrive at the start of every month, stronger and more experienced as you climb the tiers. Roster: ${run.roster.length}/${rosterCap(run)}.</p>
           <div class="cards two">${cards || '<div class="empty">Sold out until next month.</div>'}</div>`, circuitInfo(run).name)}
-        ${fold('stables', 'The Stables', stables)}
+        ${fold('vulcan', 'The Unnatural Temple of Vulcan', vulcan)}
         ${fold('liaison', 'The Liaison', liaison)}
       </div>
       <div class="stack">

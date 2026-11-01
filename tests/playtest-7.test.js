@@ -57,25 +57,25 @@ test('Unequip all returns every fighter\'s gear to the storeroom', async () => {
   assert.deepEqual([...run.inventory.gear].sort(), ['gladius', 'leatherVest', 'trident']);
 });
 
-test('the Market shows the Stables\' Basa in their own section, and upgrading the Stables brings the second Basa at once', async () => {
-  const { buildRoom, upgradeRoom } = await import('../src/run.js');
+// 5.3.0: the Stables' Market section became the Unnatural Temple of Vulcan's (the designer's request).
+test('the Market shows the Temple of Vulcan: how to build it, then the bodies it can raise', async () => {
+  const { buildRoom } = await import('../src/run.js');
   const { marketTab } = await import('../src/ui/views.js');
   const run = createRun(3);
-  assert.match(marketTab(run), /Build the Stables/);
+  assert.match(marketTab(run), /Build the Unnatural Temple of Vulcan/);
   run.prestigeLevel = 3;
   run.gold = 100;
-  const b = buildRoom(run, 'stables');
-  assert.match(marketTab(run), /From the Stables/);
-  assert.equal(run.market.filter((f) => f.kind === 'basa').length, 1);
-  upgradeRoom(run, b.id);
-  assert.equal(run.market.filter((f) => f.kind === 'basa').length, 2);
+  buildRoom(run, 'vulcan');
+  assert.match(marketTab(run), /No bodies to raise/);
+  run.fallen.push({ ...run.market[0], id: 'dead', name: 'Corvax', diedWeek: run.week, arena: true, alive: false });
+  assert.match(marketTab(run), /Corvax[^]*Raise as a Revenant/);
 });
 
 test('Market sections fold away, and the Decor merchant shows each item\'s comfort', async () => {
   const { marketTab } = await import('../src/ui/views.js');
   const { DECOR, decorComfort } = await import('../src/data.js');
   const html = marketTab(createRun(1));
-  for (const key of ['fighters', 'stables', 'liaison', 'storeroom', 'apothecary', 'decor', 'armourer']) assert.match(html, new RegExp(`<details class="panel fold" data-key="market-${key}" open>`));
+  for (const key of ['fighters', 'vulcan', 'liaison', 'storeroom', 'apothecary', 'decor', 'armourer']) assert.match(html, new RegExp(`<details class="panel fold" data-key="market-${key}" open>`));
   // Playtest #8: each item shows its own comfort, scaled by price.
   for (const d of Object.values(DECOR)) assert.match(html, new RegExp(`${d.name}</b>[^]*?\\+${decorComfort(d)} comfort`));
   assert.ok(decorComfort(DECOR.bird) < decorComfort(DECOR.lionCage));

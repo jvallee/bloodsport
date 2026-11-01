@@ -18,7 +18,7 @@ export const hasPerk = (f, perk) => Boolean(f.perks?.includes(perk));
 // Injuries at which losing a round can kill (Unbreakable holds out one longer).
 // Unbreakable and Iron Will each hold it off one injury longer; lions in the arena bring it one closer.
 // `disabled`: a combatant's switched-off slots; a disabled Unbreakable no longer holds the gate open longer (playtest #8).
-export const deathGateAt = (f, arena = null, disabled = []) => 2 + (f.kindTrait === 'unbreakable' && !disabled.includes('kind') ? 1 : 0) + (f.perks?.includes('ironWill') ? 1 : 0) - (arena === 'lions' ? 1 : 0);
+export const deathGateAt = (f, arena = null, disabled = []) => 2 + (['unbreakable', 'deathless'].includes(f.kindTrait) && !disabled.includes('kind') ? 1 : 0) + (f.perks?.includes('ironWill') ? 1 : 0) - (arena === 'lions' ? 1 : 0);
 // A fighter's style for matchups: their weapon if a Fighter, otherwise their class.
 export const styleId = (f) => (f.cls === 'fighter' ? f.weapon : f.cls);
 // The matchups that favour c against opp (data.js MATCHUPS).
@@ -188,6 +188,7 @@ export function computePower(c, opp, round, raw = false) {
   if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
   if (kindActive(c, 'nightborn', round) && round === 3) mods.push({ source: 'Nightborn', value: 1 });
   if (kindActive(c, 'rampage', round) && c.rampage) mods.push({ source: 'Rampage', value: c.rampage });
+  if (kindActive(c, 'cinderHeart', round) && round >= 2) mods.push({ source: 'Cinder Heart', value: 1 });
   if (classActive(c, 'ashHungry', round) && c.ash) mods.push({ source: 'Ash Stacks', value: c.ash });
   if (f.kind === 'basa' && decorOf(c, 'lionCage')) mods.push({ source: 'Lion Cage', value: 1 });
   if (humorOf(c)?.power?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).power[round] });
@@ -217,6 +218,7 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (classActive(c, 'ornitharius', round) && eff >= 1 && decorOf(c, 'bird')) enemy.push({ source: 'Birds of Prey', value: 5000 * decorOf(c, 'bird') });
   if (kindActive(c, 'hateful', round)) enemy.push({ source: 'Hateful', value: 10000 });
   if (kindActive(c, 'mesmerize', round) && round === 1) win.push({ source: 'Mesmerize', value: 5000 });
+  if (kindActive(opp, 'graveChill', round)) win.push({ source: 'Grave Chill', value: -5000 });
   if (kindActive(c, 'thickHide', round)) self.push({ source: 'Thick Hide', value: -10000, armor: true });
   if (classActive(c, 'ashHungry', round) && c.ash) enemy.push({ source: 'Ash Stacks', value: 5000 * c.ash });
   if (classActive(c, 'bloodBearer', round)) win.push({ source: 'Off-Hand', value: 5000 });

@@ -2,6 +2,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRun, recruit, advanceToTournament, advanceWeek, startMatch, finishMatch, choosePerk, resolveMercy } from '../src/run.js';
+import { createRng } from '../src/rng.js';
+import { KINDS, REANIMATE, BUILDINGS } from '../src/data.js';
+import { createMatch, computePower, computePhase2, deathGateAt } from '../src/fight.js';
+import { buildRoom, upgradeRoom, reanimate, reanimateBlocker, reanimatePrice, raisable, moraleTarget, serialize, deserialize } from '../src/run.js';
+import { GAME_ACTIONS } from '../src/game.js';
+import { blank } from './helpers.js';
 
 export const play = (run, id, tier, { winner = 'A', reason = 'rounds', alive = true } = {}) => {
   for (const x of run.roster) while (x.pendingPerks.length) choosePerk(run, x.id, x.pendingPerks[0][0]);
@@ -58,4 +64,111 @@ test('a lower arena you fight in moves on as before, once', () => {
   play(run, g.id, 1);
   advanceWeek(run);
   assert.equal(run.arenas[1].stage, (stage + 1) % 3);
+});
+
+// ---------- The Unnatural Temple of Vulcan and Revenants ----------
+
+// A career at House level 3 with a Temple, and a fighter who has just died in the Dirt Pits.
+function withBody({ level = 1 } = {}) {
+  const run = createRun(5);
+  run.prestigeLevel = 3;
+  run.gold = 200;
+  const temple = buildRoom(run, 'vulcan');
+  if (level >= 2) upgradeRoom(run, temple.id);
+  const f = recruit(run, run.market[0].id);
+  Object.assign(f, { level: 3, perks: ['killer', 'thickSkin'], titles: ['Champion of the Dirt Pits'], kills: 2, power: 12, renown: 9 });
+  advanceToTournament(run);
+  play(run, f.id, 1, { winner: 'B', reason: 'death', alive: false });
+  return { run, body: run.fallen.find((x) => x.id === f.id) };
+}
+
+test('a fighter killed in the arena can be raised as a Revenant: same name, class, level, perks and titles; 1 less Power', () => {
+  const { run, body } = withBody();
+  assert.ok(body.arena);
+  assert.deepEqual(raisable(run).map((x) => x.id), [body.id]);
+  const gold = run.gold;
+  const r = reanimate(run, body.id);
+  assert.equal(run.gold, gold - reanimatePrice(run));
+  assert.equal(reanimatePrice(run), REANIMATE.price + REANIMATE.perTier * 1);
+  assert.ok(run.roster.includes(r));
+  assert.notEqual(r.id, body.id);
+  assert.equal(r.kind, 'revenant');
+  assert.ok(KINDS.revenant.traits.includes(r.kindTrait));
+  for (const key of ['name', 'cls', 'weapon', 'level', 'humor']) assert.equal(r[key], body[key]);
+  assert.deepEqual([r.perks, r.titles, r.kills, r.renown], [body.perks, body.titles, body.kills, body.renown]);
+  assert.equal(r.power, body.power + REANIMATE.power);
+  assert.deepEqual([r.injuries, r.alive, r.job, r.stress], [[], true, 'rest', 0]);
+  assert.equal(run.fallen.length, 1); // the death still counts
+  assert.match(reanimateBlocker(run, body.id), /same body twice/);
+  assert.deepEqual(raisable(run), []);
+});
+
+test('a level-2 Temple raises them at full strength, and keeps bodies longer', () => {
+  const { run, body } = withBody({ level: 2 });
+  assert.deepEqual(BUILDINGS.vulcan.per, [4, 12]);
+  run.week += 10;
+  const r = reanimate(run, body.id);
+  assert.equal(r.power, body.power);
+});
+
+test('bodies keep only so long; executed fighters and Revenants can\'t be raised; the rite needs Gold and a bed', () => {
+  const { run, body } = withBody();
+  run.week += 5;
+  assert.match(reanimateBlocker(run, body.id), /dead too long/);
+  run.week -= 5;
+  run.gold = 0;
+  assert.match(reanimateBlocker(run, body.id), /Needs/);
+  run.gold = 200;
+  run.fallen.push({ ...body, id: 'exec', arena: undefined });
+  assert.match(reanimateBlocker(run, 'exec'), /executed/);
+  run.fallen.push({ ...body, id: 'rev', kind: 'revenant' });
+  assert.match(reanimateBlocker(run, 'rev'), /same body twice/);
+  const none = createRun(5);
+  assert.match(reanimateBlocker(none, 'x'), /Build the Unnatural Temple/);
+});
+
+test('reanimate is a recorded game action', () => {
+  assert.equal(typeof GAME_ACTIONS.reanimate, 'function');
+});
+
+test('a Revenant feels nothing: Morale heads for 50 whatever the room', () => {
+  const { run, body } = withBody();
+  const r = reanimate(run, body.id);
+  r.decor.bathhouse = 3;
+  r.renown = 40;
+  assert.equal(moraleTarget(run, r).target, REANIMATE.morale);
+  r.morale = 90;
+  advanceWeek(run);
+  assert.ok(r.morale < 90 && r.morale >= REANIMATE.morale);
+});
+
+const pair = (a, b) => {
+  const m = createMatch({ a: blank(a), b: blank(b), rng: createRng(1) });
+  return [m.a, m.b, m];
+};
+
+test('Revenant traits: Deathless holds the Death Gate one injury longer, Grave Chill −5% to the opponent, Cinder Heart +1 Power from Round 2', () => {
+  assert.equal(deathGateAt(blank({ kind: 'revenant', kindTrait: 'deathless' })), 3);
+  assert.equal(deathGateAt(blank({ kind: 'revenant', kindTrait: 'deathless' }), null, ['kind']), 2);
+  const [G, X] = pair({ kind: 'revenant', kindTrait: 'graveChill' }, {});
+  assert.ok(computePhase2(X, G, 1).win.some((x) => x.source === 'Grave Chill' && x.value === -5000));
+  assert.ok(!computePhase2(G, X, 1).win.some((x) => x.source === 'Grave Chill'));
+  const [C, Y] = pair({ kind: 'revenant', kindTrait: 'cinderHeart' }, {});
+  assert.equal(computePower(C, Y, 1).total, 5);
+  assert.equal(computePower(C, Y, 2).total, 6);
+  assert.equal(computePower(C, Y, 3).total, 6);
+});
+
+test('Revenants are never sold or met in the arena', () => {
+  for (let seed = 1; seed <= 30; seed++) {
+    const run = createRun(seed);
+    assert.ok(![...run.market, ...Object.values(run.arenas).map((a) => a.opponent)].some((f) => f.kind === 'revenant'));
+  }
+});
+
+test('a save with the Stables loads with the Temple of Vulcan in its place, at the same level', () => {
+  const run = createRun(2);
+  run.buildings.push({ id: 'b99', type: 'stables', level: 2 });
+  const back = deserialize(serialize(run));
+  assert.deepEqual(back.buildings.find((b) => b.id === 'b99'), { id: 'b99', type: 'vulcan', level: 2 });
 });
