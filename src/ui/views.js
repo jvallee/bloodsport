@@ -642,6 +642,17 @@ export { XP };
 
 // ---------- Next step ----------
 
+// The tutorial month: the steward's step, docked at the top (never blocks the page). `onTab`: is the player on the
+// step's tab already? If not, a button takes them there.
+const TAB_NAMES = { ludus: 'Ludus', estate: 'Estate', market: 'Market', codex: 'Codex' };
+// One line of the steward's news, as a notice.
+export const stewardNote = (text) => `<div class="tip steward-note" role="status">${npcPortrait('steward', 36)}<div><span class="guide-name">Your steward:</span> ${esc(text)}</div></div>`;
+
+export function guideBar(step, onTab) {
+  return `<div class="guide" role="status">${npcPortrait('steward', 44)}<div class="guide-body"><div class="guide-name">Your steward</div><div>${step.text}</div></div>
+    <div class="guide-actions">${onTab ? '' : `<button class="btn small primary" data-action="tab" data-tab="${step.tab}">Go to the ${TAB_NAMES[step.tab]}</button>`}<button class="link small" data-action="tutorial-skip">Skip tutorial</button></div></div>`;
+}
+
 export function nextBar(hint) {
   if (!hint) return '';
   const go = hint.action === 'tab' ? `<button class="btn small primary" data-action="tab" data-tab="${hint.tab}">${esc(hint.label)}</button>` : '';

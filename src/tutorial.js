@@ -32,20 +32,54 @@ export const INTRO = [
   },
 ];
 
-// Ludus steps, in order; the first one whose condition holds (and isn't done) is shown.
-export const STEPS = [
+// The tutorial month (playtest #8: "more hand-holding for the first month"). The steward walks a new Lanista through it one
+// step at a time. Each step is done when its goal is met, not by clicking "Got it"; it shows in a bar at the top (it never
+// blocks the page) and `focus` makes the button to press glow. `tab`: where the step happens.
+export const GUIDE = [
   {
     id: "recruit",
-    when: (r) => !r.roster.length,
-    title: "Recruit your first gladiators",
-    body: "Open the <b>Market</b> and recruit two fighters. Look at <b>Power</b> (the sword: wins rounds) and <b>Speed</b> (the arrow: strikes first). Every fighter has a Kind trait and a Class ability; hover over them to see what they do.",
+    when: (r) => r.roster.length < 2 && r.week === 0,
+    goal: (r) => r.roster.length >= 2,
+    tab: "market",
+    focus: '[data-action="recruit"]',
+    text: "Let's start with two gladiators. In the Market, look at each one's <b>Power</b> (the sword: wins rounds) and <b>Speed</b> (the arrow: strikes first), then press <b>Recruit</b> on two of them.",
   },
   {
     id: "jobs",
     when: (r) => r.roster.length > 0 && r.week === 0,
-    title: "Give everyone a weekly job",
-    body: `Each fighter does one job per week: <b>+1 Power</b> or <b>+3 Speed</b> (costs Gold and adds ${STRESS.train} Stress), <b>Rest</b> (removes Stress) or <b>Medbay</b> (heals injuries). One Trainer Room trains one fighter at a time, and each fighter can train only up to the <b>Trainer cap</b> (3 points at first). Then press <b>End week</b>.`,
+    goal: (r) => r.roster.some((f) => f.job === "trainPower" || f.job === "trainSpeed"),
+    tab: "ludus",
+    focus: '[data-action="job"][data-job="trainPower"]',
+    text: `Now the Ludus. Every fighter does one job a week. Give your strongest fighter <b>+1 Power</b>: training costs a little Gold and adds ${STRESS.train} Stress. The other can <b>Rest</b> for now; one Trainer Room trains one fighter at a time.`,
   },
+  {
+    id: "endweek",
+    when: (r) => r.week === 0 && r.roster.length > 0,
+    goal: (r) => r.week > 0,
+    tab: "ludus",
+    focus: '[data-action="advance"]',
+    text: "Jobs are set. Press <b>End week</b> and the week plays out: training, rest and healing all happen at once.",
+  },
+  {
+    id: "tofight",
+    when: (r) => r.week > 0 && !r.boutPending && !r.history.length,
+    goal: (r) => r.boutPending || r.history.length > 0,
+    tab: "ludus",
+    focus: '[data-action="advance-tournament"]',
+    text: `The last week of every month is fight day. Keep training, and rest a fighter whose Stress passes ${STRESS.overtrained - STRESS.train}: at ${STRESS.overtrained} they're overtrained and fight worse. When you're ready, <b>Skip to tournament</b> takes you straight there.`,
+  },
+  {
+    id: "bout",
+    when: (r) => r.boutPending && !r.history.length,
+    goal: (r) => r.history.length > 0,
+    tab: "ludus",
+    focus: '[data-action="fight"]',
+    text: "Fight day. Each fighter's line shows their odds, injury risk and the Power both sides will fight with. Sending one costs a little <b>Prestige</b>; winning pays it back with more. Pick your best and press <b>Send</b>.",
+  },
+];
+
+// Ludus steps, in order; the first one whose condition holds (and isn't done) is shown.
+export const STEPS = [
   {
     id: "trainerCap",
     when: (r) => r.roster.some((f) => f.trained >= trainCapFor(r)),
@@ -57,12 +91,6 @@ export const STEPS = [
     when: (r) => r.roster.some((f) => f.stress >= STRESS.train * 2),
     title: "Watch the Stress bar",
     body: `Training stacks Stress. At <b>${STRESS.overtrained}+</b> a fighter is overtrained: they can't train, and in the arena they fight at −1 Power with one ability lost. <b>Train, train, rest</b> keeps them sharp.`,
-  },
-  {
-    id: "bout",
-    when: (r) => r.boutPending,
-    title: "Fight day",
-    body: "The last week of every month is a tournament. On the right you can see the opponent and <b>your odds</b> for each fighter. Sending one costs the <b>Prestige buy-in</b>; winning returns it with interest. You may also <b>skip</b> Tournaments 1 and 2 (never a Boss).",
   },
   {
     id: "aftermath",

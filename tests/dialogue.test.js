@@ -67,3 +67,32 @@ test('the tutorial is the steward talking: a dialogue in the Ludus, inline on th
   assert.doesNotMatch(fight, /class="modal/, 'never blocks a fight');
   assert.match(fight, /Your steward: How a round works/);
 });
+
+test('the steward announces new buildings at a new House level, and new stock in the Market, Liaison and Armourer', async () => {
+  const { newsSnapshot, stewardNews } = await import('../src/dialogue.js');
+  const { BUILDINGS } = await import('../src/data.js');
+  const run = createRun(1);
+  const before = newsSnapshot(run);
+  assert.deepEqual(stewardNews(before, newsSnapshot(run), run), [], 'nothing changed, nothing said');
+  run.prestigeLevel = 2;
+  run.market = run.market.map((f, i) => ({ ...f, id: `new${i}` }));
+  run.liaisonOffer = { id: 'p1' };
+  run.armourerStock = ['gladius'];
+  const news = stewardNews(before, newsSnapshot(run), run).join(' ');
+  const opened = Object.values(BUILDINGS).filter((b) => b.req[0] === 2).map((b) => b.name);
+  assert.match(news, /level 2/);
+  for (const name of opened) assert.match(news, new RegExp(name));
+  assert.match(news, /New gladiators have arrived in the Market/);
+  assert.match(news, /Liaison has a new prisoner/);
+  assert.match(news, /Armourer has new stock/);
+});
+
+test('the tutorial month docks at the top, says where to go, and can be skipped', async () => {
+  const { guideBar } = await import('../src/ui/views.js');
+  const { GUIDE } = await import('../src/tutorial.js');
+  const html = guideBar(GUIDE[0], false);
+  assert.match(html, /Your steward/);
+  assert.match(html, /data-action="tab" data-tab="market">Go to the Market/);
+  assert.match(html, /data-action="tutorial-skip"/);
+  assert.doesNotMatch(guideBar(GUIDE[0], true), /Go to the Market/);
+});

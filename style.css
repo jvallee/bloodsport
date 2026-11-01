@@ -581,3 +581,19 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .result-lines li { padding: 3px 0; }
 .result-lines li.good { color: var(--good, #8fc98f); }
 .result-lines li.bad { color: var(--bad, #e07a6a); }
+
+/* Touch screens: help text on tap (src/main.js) */
+.touch-tip { position: absolute; z-index: 60; max-width: 280px; background: var(--panel); color: var(--text, #eee); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.4; box-shadow: 0 6px 24px rgba(0,0,0,0.5); white-space: pre-line; }
+@media (hover: none) { [title] { -webkit-tap-highlight-color: rgba(217, 180, 90, 0.2); } }
+
+/* The tutorial month: the steward docked at the top, and the button to press glowing */
+.guide { display: flex; gap: 12px; align-items: center; border: 1px solid var(--gold); border-radius: var(--radius); background: linear-gradient(90deg, #2b2416, var(--panel-2)); padding: 10px 14px; margin-bottom: 14px; }
+.guide .portrait { flex-shrink: 0; }
+.guide-body { flex: 1; }
+.guide-name { color: var(--gold); font-size: 13px; letter-spacing: 0.04em; }
+.guide-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+@media (max-width: 600px) { .guide { flex-wrap: wrap; } .guide-actions { flex-direction: row; width: 100%; justify-content: space-between; } }
+.tut-focus { box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(217, 180, 90, 0.7); animation: tut-pulse 1.4s ease-in-out infinite; }
+@keyframes tut-pulse { 50% { box-shadow: 0 0 0 2px var(--gold), 0 0 4px rgba(217, 180, 90, 0.2); } }
+@media (prefers-reduced-motion: reduce) { .tut-focus { animation: none; } }
+.steward-note { align-items: center; justify-content: flex-start; padding: 8px 12px; }

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
 import { createMatch, playRound } from '../src/fight.js';
-import { createRun, recruit, advanceToTournament } from '../src/run.js';
-import { INTRO, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
+import { createRun, recruit, advanceToTournament, advanceWeek, setJob } from '../src/run.js';
+import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
 import { blank, injuries } from './helpers.js';
 
 test('the intro explains the world, winning, losing and the core stats', () => {
@@ -12,15 +12,29 @@ test('the intro explains the world, winning, losing and the core stats', () => {
   for (const word of ['Grand Tournament', 'Imperial Favour', 'tribute', 'two injuries', 'Power', 'Speed']) assert.match(text, new RegExp(word));
 });
 
-test('the tutorial walks a new career in order: recruit → jobs → fight day', () => {
+// Playtest #8: the first month is a guided tutorial (GUIDE); each step is done when its goal is met.
+test('the tutorial month walks a new career in order: recruit two → a training job → end the week → fight day → send', () => {
   const run = createRun(1);
   const done = [];
-  assert.equal(nextStep(STEPS, done, run).id, 'recruit');
+  const step = () => nextStep(GUIDE, done, run);
+  const advance = () => { while (step()?.goal(run)) done.push(step().id); };
+  assert.equal(step().id, 'recruit');
   recruit(run, run.market[0].id);
-  assert.equal(nextStep(STEPS, done, run).id, 'jobs');
-  done.push('recruit', 'jobs');
+  advance();
+  assert.equal(step().id, 'recruit', 'two fighters, not one');
+  recruit(run, run.market[0].id);
+  advance();
+  assert.equal(step().id, 'jobs');
+  setJob(run, run.roster[0].id, 'trainPower');
+  advance();
+  assert.equal(step().id, 'endweek');
+  advanceWeek(run);
+  advance();
+  assert.equal(step().id, 'tofight');
   advanceToTournament(run);
-  assert.equal(nextStep(STEPS, done, run).id, 'bout');
+  advance();
+  assert.equal(step().id, 'bout');
+  for (const g of GUIDE) assert.ok(g.focus && g.tab && g.text, `${g.id} says where to look`);
 });
 
 test('finished steps never come back, and an empty list means no tutorial', () => {

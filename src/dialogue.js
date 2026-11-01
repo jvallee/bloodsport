@@ -5,7 +5,7 @@
 // files). Speakers are keys of SPEAKERS. Scenes are cosmetic: they never change the career, so replays don't record them.
 
 import { INTRO } from "./tutorial.js";
-import { FAVOR } from "./data.js";
+import { FAVOR, BUILDINGS } from "./data.js";
 import { GRAND_TIER } from "./run.js";
 import { WEEKS_PER_YEAR } from "./calendar.js";
 
@@ -108,6 +108,29 @@ const RETURNS = [
 export function dueScene(run, seen = []) {
   if (run.status !== "active") return null;
   return RETURNS.find((r) => !seen.includes(r.id) && r.when(run))?.id ?? null;
+}
+
+// The steward's news (playtest #8): what changed in the house that's worth a word. Pure: compare two snapshots.
+export function newsSnapshot(run) {
+  return {
+    level: run.prestigeLevel,
+    market: run.market.map((f) => f.id).join(),
+    liaison: run.liaisonOffer?.id ?? null,
+    armourer: run.armourerStock.join(),
+  };
+}
+export function stewardNews(before, after, run) {
+  const news = [];
+  if (after.level > before.level) {
+    const opened = Object.entries(BUILDINGS).filter(([, b]) => b.req[0] > before.level && b.req[0] <= after.level).map(([, b]) => b.name);
+    news.push(`Your house has reached level ${after.level}. ${opened.length ? `New in the Estate: ${opened.join(', ')}.` : 'There are new plots to build on in the Estate.'}`);
+  }
+  if (after.market !== before.market && run.market.length && after.market.split(',').some((id) => !before.market.split(',').includes(id))) {
+    news.push(`New gladiators have arrived in the Market${run.market.some((f) => f.kind === 'basa') ? ', and the Stables have Basa' : ''}.`);
+  }
+  if (after.liaison && after.liaison !== before.liaison) news.push('The Liaison has a new prisoner on offer.');
+  if (after.armourer && after.armourer !== before.armourer && run.armourerStock.length) news.push('The Armourer has new stock.');
+  return news;
 }
 
 // The tutorial's tips are the steward speaking (src/tutorial.js holds the words).

@@ -7,12 +7,12 @@ import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
-import { STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
-import { SCENES, dueScene } from './dialogue.js';
+import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
+import { SCENES, dueScene, newsSnapshot, stewardNews } from './dialogue.js';
 import { fightView, DICE_TIME, revealTime, roundEndTime } from './ui/fightView.js';
 import { roundSounds, setSound, sfx } from './ui/sound.js';
 
@@ -38,6 +38,7 @@ let prefs = { tutorial: [], showMath: false, introSeen: false, sound: true };
 let codex = loadCodex(null);
 let codexShownNew = []; // entries highlighted as new while the Codex tab is open
 let scene = null; // the dialogue scene showing: { id, beat } (src/dialogue.js)
+let stewardNotes = []; // the steward's news this week (new buildings, new stock): notes at the top, cleared each week
 let eventResult = null; // after an event card's choice: { title, lines } shown in a popup
 let logMark = 0; // the house log's length before an event choice
 let legacy = loadLegacy(null);
@@ -88,8 +89,18 @@ function oddsFor(f, tier = run.topTier, opp = opponentFor(run, tier)) {
 
 // ---------- Tutorial ----------
 
-// The steward's tips wait for any other dialog, and for the fight screen to close.
-const tutorialStep = () => (run.status === 'active' && !scene && !match && !showHelp && !setupChoice && !run.event && !run.mercy ? nextStep(STEPS, prefs.tutorial, run) : null);
+// The tutorial month (GUIDE): the steward's current step, done the moment its goal is met.
+function guideStep() {
+  if (run.status !== 'active' || scene) return null;
+  for (;;) {
+    const step = nextStep(GUIDE, prefs.tutorial, run);
+    if (!step || !step.goal(run)) return step;
+    prefs.tutorial.push(step.id);
+    savePrefs();
+  }
+}
+// The steward's tips wait for the tutorial month, any other dialog, and for the fight screen to close.
+const tutorialStep = () => (run.status === 'active' && !scene && !match && !showHelp && !setupChoice && !run.event && !run.mercy && !guideStep() ? nextStep(STEPS, prefs.tutorial, run) : null);
 
 // ---------- Dialogue (src/dialogue.js) ----------
 
@@ -136,13 +147,16 @@ function render() {
   else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore) + legacyPanel(legacy);
   else body = ludusTab(run, oddsFor);
   checkScene();
+  const guide = guideStep();
   const modal = setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, SCENES[scene.id], scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
-  const notices = [...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
+  const notices = [...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab) : nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
+  // The tutorial month: make the button to press glow.
+  if (guide?.focus && tab === guide.tab) for (const el of app.querySelectorAll(guide.focus)) if (!el.disabled) el.classList.add('tut-focus');
   renderFight();
 }
 
@@ -270,7 +284,7 @@ const actions = {
   },
   help: () => { showHelp = !showHelp; },
   'tutorial-done': (d) => { prefs.tutorial.push(d.step); savePrefs(); },
-  'tutorial-skip': () => { prefs.tutorial = [...STEPS, ...FIGHT_STEPS].map((s) => s.id); savePrefs(); },
+  'tutorial-skip': () => { prefs.tutorial = [...GUIDE, ...STEPS, ...FIGHT_STEPS].map((s) => s.id); savePrefs(); },
   'tutorial-replay': () => { prefs.tutorial = []; showHelp = false; savePrefs(); },
   'scene-next': () => { if (scene && scene.beat < SCENES[scene.id].length - 1) scene.beat += 1; else closeScene(); },
   'scene-skip': () => closeScene(),
@@ -336,8 +350,8 @@ const before = {
   retire: () => confirm('Retire this fighter to the Hall of Champions? They leave your roster for good.'),
   forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favour than losing the fight.'),
   withdraw: () => confirm('Withdraw from the tournament? It counts as capitulating; your fighter is safe.'),
-  advance: () => { summaries = []; achieved = []; return true; },
-  'advance-tournament': () => { summaries = []; achieved = []; return true; },
+  advance: () => { summaries = []; achieved = []; stewardNotes = []; return true; },
+  'advance-tournament': () => { summaries = []; achieved = []; stewardNotes = []; return true; },
   fight: () => { keepAuto = ui.auto && Boolean(match?.summary?.next); return true; },
 };
 const after = {
@@ -383,8 +397,10 @@ document.addEventListener('click', (e) => {
       if (isGameAction(name)) {
         if (before[name] && !before[name]()) return;
         lastAction = [name, data];
+        const snap = newsSnapshot(run);
         act(name, data);
         after[name]?.();
+        for (const n of stewardNews(snap, newsSnapshot(run), run)) if (!stewardNotes.includes(n)) stewardNotes.push(n);
       } else {
         actions[name](data);
       }
@@ -400,6 +416,26 @@ document.addEventListener('click', (e) => {
     scheduleAuto();
   });
 });
+
+// Touch screens have no hover: tapping something with help text (a stat, chip or badge) shows it in a small popup.
+// Buttons, links, fold-outs and form controls work as usual; tapping anywhere else closes the popup.
+const touchTip = document.createElement('div');
+touchTip.className = 'touch-tip';
+touchTip.hidden = true;
+document.body.appendChild(touchTip);
+const isTouch = () => window.matchMedia?.('(hover: none)').matches;
+document.addEventListener('click', (e) => {
+  if (!isTouch()) return;
+  const el = e.target.closest?.('[title]');
+  if (!el || el.closest('button:not([disabled]), a, summary, select, input, label, [data-action]')) { touchTip.hidden = true; return; }
+  touchTip.textContent = el.getAttribute('title');
+  touchTip.hidden = false;
+  const r = el.getBoundingClientRect();
+  const top = r.bottom + 8 + window.scrollY;
+  touchTip.style.top = `${top}px`;
+  touchTip.style.left = `${Math.max(8, Math.min(window.innerWidth - 288, r.left + window.scrollX))}px`;
+}, true);
+document.addEventListener('scroll', () => { touchTip.hidden = true; }, { passive: true });
 
 // Dropdowns (gear): choosing an option runs the action, like a button would.
 document.addEventListener('change', (e) => {

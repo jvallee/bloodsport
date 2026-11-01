@@ -22,7 +22,7 @@ import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, tra
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
-import { INTRO, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
+import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
 import { SCENES, SPEAKERS, dueScene } from '../src/dialogue.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText, slotLabel } from '../src/codex.js';
 
@@ -45,6 +45,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   look                          show the house again
   market | estate | store       the Market (fighters, decor, Armourer, Liaison), the Estate (buildings), the storeroom
   codex [key]                   list unlocked Codex entries, or read one (e.g. codex basics:favour)
+  skip-tutorial                 stop the steward's tutorial (the tutorial month and the tips)
   ok                            dismiss the current tutorial card
   recruit <id> | release <id>
   job <id> <rest|trainPower|trainSpeed|medbay>
@@ -85,10 +86,21 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
   let quiet = false; // replaying unshown commands: skip the (slow) odds simulations
   let shownStep = null; // the tutorial card the player last saw, so a new one is announced when it appears
 
+  // The tutorial month (GUIDE) comes first: each step is done when its goal is met. Then the steward's tips (STEPS).
+  function guideNow() {
+    if (run.status !== 'active') return null;
+    for (;;) {
+      const g = nextStep(GUIDE, done, run);
+      if (!g || !g.goal(run)) return g;
+      done.push(g.id);
+    }
+  }
+  const currentStep = () => (run.status !== 'active' ? null : guideNow() ?? nextStep(STEPS, done, run));
   function tutorialCard() {
-    const step = run.status === 'active' ? nextStep(STEPS, done, run) : null;
+    const step = currentStep();
     shownStep = step?.id ?? null;
-    return step ? `-- Tutorial: ${step.title} (\`ok\` to dismiss) --\n${plain(step.body)}` : '';
+    if (!step) return '';
+    return step.goal ? `-- Your steward (tutorial month) --\n${plain(step.text)}` : `-- Tutorial: ${step.title} (\`ok\` to dismiss) --\n${plain(step.body)}`;
   }
 
   // ---------- Views ----------
@@ -430,7 +442,13 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
       showMath = !showMath;
       return `Fight narration: ${showMath ? 'every roll' : 'the story'}.`;
     },
+    'skip-tutorial': () => {
+      done.push(...[...GUIDE, ...STEPS, ...FIGHT_STEPS].map((x) => x.id));
+      shownStep = null;
+      return 'Tutorial skipped.';
+    },
     ok: () => {
+      if (guideNow()) return 'The steward is waiting for you to do it (or `skip-tutorial`).';
       const step = nextStep(STEPS, done, run);
       if (!step) return 'No tutorial card to dismiss.';
       done.push(step.id);
@@ -636,7 +654,7 @@ export function createSession(seed = 1, { oddsSamples = 400 } = {}) {
     }
     const fresh = discover(codex, run);
     if (fresh.length) out += `\n(New in the Codex: ${fresh.join(', ')})`;
-    const step = run.status === 'active' ? nextStep(STEPS, done, run) : null;
+    const step = currentStep();
     if ((step?.id ?? null) !== shownStep) {
       const card = tutorialCard();
       if (card) out += `\n${card}`;
