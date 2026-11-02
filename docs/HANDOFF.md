@@ -1,6 +1,6 @@
 # Bloodsport: handoff for the next agent
 
-Last updated 2026-11-01, at **version 5.2.0** (live). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
+Last updated 2026-11-01, at **version 5.3.0** (committed; not pushed from the cloud session: see below). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
 
 ## 1. What this is
 
@@ -48,7 +48,29 @@ The user asked for each level to add +1 week to that fighter's own Trainer cap. 
 
 Every fighter is limited by the cap, so any extra cap adds Power across the whole roster. The user's real complaint (a late prisoner far too strong) was fixed at the source instead: see playtest #7 below. Halving the Market's Power bonus is an untried option for keeping veterans ahead of recruits.
 
-## Start here: the current state (5.2.0)
+## Start here: the current state (5.3.0)
+
+5.3.0 was built in a cloud session that couldn't reach GitHub. Its commits were bundled and fast-forwarded into the local repo; **push `main` to publish it**. All 480 tests pass. Gates: see "Gates at 5.3.0" below.
+
+**What 5.3.0 added** (details in `CHANGELOG.md`; numbers in `docs/fight-rules.md`, section "5.3.0"; tests in `tests/v53.test.js`):
+- **The Unnatural Temple of Vulcan** (`BUILDINGS.vulcan`, `REANIMATE`, `reanimate`/`raisable` in `src/run.js`) replaces the Stables. It raises a fighter killed in the arena as a **Revenant** (kind `revenant`, traits Deathless / Grave Chill / Cinder Heart, Morale fixed at 50). The name and all its words are PLACEHOLDERS; other names offered: the Forge of Vulcan, Vulcan's Unhallowed Forge, the Temple of Dis Pater.
+- **Basa in the Market** like any kind, base Power 6 → 5 (measured with `scripts/probes/kind-value.js`).
+- **Lower arenas move on** when nobody fights there (`arenaMovesOn`), with a log line.
+- **The rebel's confession** (`rebelScene`, `houseRecord`, `dueRebel` in `src/dialogue.js`): the first political prisoner tells you about the rising, coloured by your record. All lines PLACEHOLDER. A dialogue beat with `fighter` speaks with that fighter's name and face.
+- **The designer's notes:** one starting gladiator in the tutorial month; the top bar shows Prestige to the next level; feuds show months left; sparing earns no Favour when the crowd or the Emperor wanted a death (`spareFavor`).
+- **Playtest #9 fixes** (`docs/playtest-llm-9.md`, `docs/playtest-9-changes.md`): demands were judged the moment they were issued (every one failed); betting odds and refusals; short careers start at House level 2; Flesh Wounds heal on Rest at half speed; and more.
+- **Bots** now bet (60%+ favourites), build the Patron Lounge last, host and pass policies, and raise the dead. Betting cost the careful bot about 39 Gold a career (it isn't an exploit).
+- **Tools:** `npm run text-index` keeps `docs/text-to-rewrite.md`'s links on the right lines (section 13 lists every 5.2.0/5.3.0 first draft); `scripts/probes/bot-options.js` (bot options and tunables as JSON) and `scripts/probes/kind-value.js`.
+
+**Tests changed on purpose** (each in the commit message): the Stables tests became Temple/Basa tests; the tutorial tests start with one fighter; the demand test allows the next month's new demand.
+
+**Open for the designer:**
+- **The Bronze wall** (playtests #5, #8, #9; both #9 careers stalled there): flat 2-Gold training below Silver, an earlier Trainer cap, or a Bronze Boss at Power 13.
+- **The Temple's name**, and the Revenant's balance: at equal Power a Revenant wins 54% (Grave Chill 58%), the best kind, offset by −1 Power at Temple level 1 and no Inspired Morale.
+- **How hidden is the plot now?** The confession makes it explicit once you hold a political prisoner (the designer asked for it).
+- **The old tutorial tips**, Renown in the mismatch jeers, autoplay after round 1, and when to freeze v6 (all still open from 5.2.0).
+
+## The state at 5.2.0 (kept for reference)
 
 Everything is committed, pushed and live. All 460 tests and all 13 gates pass.
 
@@ -202,6 +224,10 @@ Then change the four keys in `v5/src/main.js` back to `bloodsport.v5.career|pref
 **Browser check:** `.claude/launch.json` in `/Users/jasonvallee/Documents/claude_practice` starts a no-cache server on port 8001 (`preview_start` with name `bloodsport`). Check new UI in the browser before reporting it done.
 
 ## 7. Gotchas I hit
+
+- **Cloud sessions** (Cowork) can't push to GitHub and the user's VM can't reach it either. Work in a clone, then `git bundle create x.bundle <old>..main`, copy it into the repo folder, `git fetch x.bundle main:refs/remotes/bundle/main && git merge --ff-only bundle/main`, and delete the bundle. Git in the VM needs delete permission for its lock files.
+- **`npm run check` takes 45+ minutes on a 2-core container.** Background jobs die when the container is reclaimed: keep the turn alive (sleep and poll) or run it on the user's machine.
+- **`pkill -f career-sim`** also kills the shell that launched it if the pattern is in that shell's command line.
 
 - **Bulk `sed` renames** of identifiers break `import { … }` lines (for example `SIGNATURE.level` inside an import). Grep the imports afterwards.
 - **zsh doesn't split unquoted variables.** Use `bash -c` for loops over argument lists.
