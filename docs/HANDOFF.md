@@ -50,7 +50,7 @@ Every fighter is limited by the cap, so any extra cap adds Power across the whol
 
 ## Start here: the current state (5.3.0)
 
-5.3.0 was built in a cloud session that couldn't reach GitHub. Its commits were bundled and fast-forwarded into the local repo; **push `main` to publish it**. All 481 tests and all 13 gates pass:
+5.3.0 was built in a cloud session that couldn't reach GitHub. Its commits were bundled and fast-forwarded into the local repo; **push `main` to publish it**. All 480 tests and all 13 gates pass:
 
 | Gate | Value |
 |---|---|
