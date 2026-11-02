@@ -518,3 +518,7 @@ Numbers are tunables in `src/data.js`; the words are placeholders for the design
 
   Other suspects measured and ruled out: no Temple of Vulcan 48%; no Lounge and no bets 55%.
 - **Short careers, re-tuned (5.3.0):** purses ×2 → ×1.75. With working demands and the level-2 start, the check had them at 59% (gate 20–55%). Probes on the check's seeds (150 careers from seed 1000): start Gold 20 → 10 gave 56%; purses ×1.75 gave **43%** in 78 weeks (chosen).
+- **Gates at 5.3.0** (`npm run check`, 300 careers; 150 each for the plot bots and short careers): all 13 pass.
+  - Careful 41%, careful deaths 0.71, reckless deaths 2.96. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +21.
+  - Loyalist +5 (at the edge of its 5–20 gate). Coup 19%. Treason 3%.
+  - Short careers 43% in 80 weeks (full careers 111).

@@ -50,7 +50,18 @@ Every fighter is limited by the cap, so any extra cap adds Power across the whol
 
 ## Start here: the current state (5.3.0)
 
-5.3.0 was built in a cloud session that couldn't reach GitHub. Its commits were bundled and fast-forwarded into the local repo; **push `main` to publish it**. All 480 tests pass. Gates: see "Gates at 5.3.0" below.
+5.3.0 was built in a cloud session that couldn't reach GitHub. Its commits were bundled and fast-forwarded into the local repo; **push `main` to publish it**. All 481 tests and all 13 gates pass:
+
+| Gate | Value |
+|---|---|
+| Careful career wins | 41% |
+| Careful deaths per career | 0.71 |
+| Reckless deaths per career | 2.96 |
+| Loyalist wins over careful | +5 points (at the edge of its gate) |
+| Coups (share of rebel careers) | 19% |
+| Short careers won | 43%, in 80 weeks (full careers 111) |
+
+The demand fix changed the balance: 5.2.0's numbers were measured while every demand silently cost Favour. Demands and short-career purses were re-tuned (tables in `docs/fight-rules.md`).
 
 **What 5.3.0 added** (details in `CHANGELOG.md`; numbers in `docs/fight-rules.md`, section "5.3.0"; tests in `tests/v53.test.js`):
 - **The Unnatural Temple of Vulcan** (`BUILDINGS.vulcan`, `REANIMATE`, `reanimate`/`raisable` in `src/run.js`) replaces the Stables. It raises a fighter killed in the arena as a **Revenant** (kind `revenant`, traits Deathless / Grave Chill / Cinder Heart, Morale fixed at 50). The name and all its words are PLACEHOLDERS; other names offered: the Forge of Vulcan, Vulcan's Unhallowed Forge, the Temple of Dis Pater.
@@ -58,6 +69,7 @@ Every fighter is limited by the cap, so any extra cap adds Power across the whol
 - **Lower arenas move on** when nobody fights there (`arenaMovesOn`), with a log line.
 - **The rebel's confession** (`rebelScene`, `houseRecord`, `dueRebel` in `src/dialogue.js`): the first political prisoner tells you about the rising, coloured by your record. All lines PLACEHOLDER. A dialogue beat with `fighter` speaks with that fighter's name and face.
 - **The designer's notes:** one starting gladiator in the tutorial month; the top bar shows Prestige to the next level; feuds show months left; sparing earns no Favour when the crowd or the Emperor wanted a death (`spareFavor`).
+- **A bug report:** game actions that settle no match (exhibition, host, bet) must return nothing; `act` in `src/main.js` reads any result as a match summary.
 - **Playtest #9 fixes** (`docs/playtest-llm-9.md`, `docs/playtest-9-changes.md`): demands were judged the moment they were issued (every one failed); betting odds and refusals; short careers start at House level 2; Flesh Wounds heal on Rest at half speed; and more.
 - **Bots** now bet (60%+ favourites), build the Patron Lounge last, host and pass policies, and raise the dead. Betting cost the careful bot about 39 Gold a career (it isn't an exploit).
 - **Tools:** `npm run text-index` keeps `docs/text-to-rewrite.md`'s links on the right lines (section 13 lists every 5.2.0/5.3.0 first draft); `scripts/probes/bot-options.js` (bot options and tunables as JSON) and `scripts/probes/kind-value.js`.
