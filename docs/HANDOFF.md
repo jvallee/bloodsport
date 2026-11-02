@@ -1,6 +1,6 @@
 # Bloodsport: handoff for the next agent
 
-Last updated 2026-11-01, at **version 5.3.0** (committed; not pushed from the cloud session: see below). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
+Last updated 2026-11-02, at **version 5.3.0** (committed locally; the designer pushes it to publish). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
 
 ## 1. What this is
 
@@ -50,7 +50,7 @@ Every fighter is limited by the cap, so any extra cap adds Power across the whol
 
 ## Start here: the current state (5.3.0)
 
-5.3.0 was built in a cloud session that couldn't reach GitHub. Its commits were bundled and fast-forwarded into the local repo; **push `main` to publish it**. All 480 tests and all 13 gates pass:
+5.3.0 was built in a cloud session that couldn't reach GitHub. Its commits were bundled and fast-forwarded into the local repo; **push `main` to publish it**. All 482 tests and all 13 gates pass:
 
 | Gate | Value |
 |---|---|
@@ -59,7 +59,7 @@ Every fighter is limited by the cap, so any extra cap adds Power across the whol
 | Reckless deaths per career | 2.96 |
 | Loyalist wins over careful | +5 points (at the edge of its gate) |
 | Coups (share of rebel careers) | 19% |
-| Short careers won | 43%, in 80 weeks (full careers 111) |
+| Short careers won | 42%, in 80 weeks (full careers 111) |
 
 The demand fix changed the balance: 5.2.0's numbers were measured while every demand silently cost Favour. Demands and short-career purses were re-tuned (tables in `docs/fight-rules.md`).
 
@@ -75,13 +75,20 @@ The demand fix changed the balance: 5.2.0's numbers were measured while every de
 - **Bots** now bet (60%+ favourites), build the Patron Lounge last, host and pass policies, and raise the dead. Betting cost the careful bot about 39 Gold a career (it isn't an exploit).
 - **Tools:** `npm run text-index` keeps `docs/text-to-rewrite.md`'s links on the right lines (section 13 lists every 5.2.0/5.3.0 first draft); `scripts/probes/bot-options.js` (bot options and tunables as JSON) and `scripts/probes/kind-value.js`.
 
-**Tests changed on purpose** (each in the commit message): the Stables tests became Temple/Basa tests; the tutorial tests start with one fighter; the demand test allows the next month's new demand.
+**Tests changed on purpose** (each in the commit message): the Stables tests became Temple/Basa tests; the tutorial tests start with one fighter; the demand test allows the next month's new demand; the rival-houses test keeps Favour topped up (it never fights, and a missed demand now costs 4).
 
 **Open for the designer:**
 - **The Bronze wall** (playtests #5, #8, #9; both #9 careers stalled there): flat 2-Gold training below Silver, an earlier Trainer cap, or a Bronze Boss at Power 13.
 - **The Temple's name**, and the Revenant's balance: at equal Power a Revenant wins 54% (Grave Chill 58%), the best kind, offset by −1 Power at Temple level 1 and no Inspired Morale.
 - **How hidden is the plot now?** The confession makes it explicit once you hold a political prisoner (the designer asked for it).
 - **The old tutorial tips**, Renown in the mismatch jeers, autoplay after round 1, and when to freeze v6 (all still open from 5.2.0).
+- **The loyalist gate sits at its edge** (+5, limit 5–20). Any change that helps careful careers more than loyalist ones will fail it.
+
+**Good next steps:**
+1. The designer pushes `main` (GitHub Pages then serves 5.3.0).
+2. The designer's text pass: section 13 of `docs/text-to-rewrite.md` lists every new first draft (the rebel's lines, the Temple, demands, policies, nemesis epithets).
+3. The next small fun idea, offered and not yet built: when a bonded partner dies, the survivor fights their next match for them (+1 Power, "for Corvax").
+4. A decision on the Bronze wall, then an LLM playtest of the early game.
 
 ## The state at 5.2.0 (kept for reference)
 
