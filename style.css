@@ -661,3 +661,11 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .career-row.current b { color: var(--gold); }
 .career-row .row { flex-shrink: 0; gap: 6px; }
 @media (max-width: 560px) { .career-row { flex-direction: column; align-items: flex-start; } }
+/* The steward asks before End week overtrains someone (5.4.0) */
+.dialogue.ask .ask-choices { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* The Ludus on a wide screen: Your gladiators and Fight day scroll on their own (the designer, 5.4.0), below the sticky
+   top bar and tabs. On narrow screens the columns stack and the page scrolls as before. */
+@media (min-width: 761px) {
+  .grid.ludus > .panel.roster, .grid.ludus > .panel.bout { position: sticky; top: 100px; max-height: calc(100vh - 116px); overflow-y: auto; overscroll-behavior: contain; }
+}

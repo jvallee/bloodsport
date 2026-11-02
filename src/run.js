@@ -6,7 +6,7 @@
 import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
-  STARTING_BUILDINGS, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
+  STARTING_BUILDINGS, SPY, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
   SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
@@ -371,13 +371,16 @@ function issueDemand(run) {
 function judgeDemand(run) {
   if (!run.demand) return;
   const tier = Math.min(run.topTier, CIRCUITS.length);
-  if (demandMet(run)) {
+  const met = demandMet(run);
+  if (met) {
     run.gold += DEMAND.goldPerTier * tier;
     changeFavor(run, DEMAND.favor, 'the Emperor\'s demand, met');
     log(run, `The Emperor is pleased: +${DEMAND.goldPerTier * tier} Gold from the palace.`, 'good');
   } else {
     changeFavor(run, DEMAND.missFavor, 'the Emperor\'s demand, unmet');
   }
+  // The last judgement, for the page's Emperor scene (the designer, 5.4.0: say when a demand fails).
+  run.demandResult = { id: run.demand.id, issued: run.demand.week, met, gold: met ? DEMAND.goldPerTier * tier : 0, favor: met ? DEMAND.favor : DEMAND.missFavor };
   run.demand = null;
 }
 
@@ -608,7 +611,8 @@ function plotMonth(run) {
   const prisoners = run.roster.filter((f) => f.political).length;
   const contacts = p.freed.filter((c) => !c.caught);
   changeSuspicion(run, PLOT.suspicion.perPrisoner * prisoners + PLOT.suspicion.perContact * contacts.length - PLOT.suspicion.decay
-    - (contacts.some((c) => c.cell === 'courier') ? PLOT.suspicion.courier : 0));
+    - (contacts.some((c) => c.cell === 'courier') ? PLOT.suspicion.courier : 0)
+    + SPY.perMonth * run.roster.filter((f) => f.spy).length); // a spy you kept keeps writing (5.4.0)
   if (contacts.some((c) => c.cell === 'scribe') && !p.pass && next(run.rng.plot) < 1 / 3) {
     p.pass = true;
     log(run, 'A sealed letter arrives with no name on it. Inside: a pass bearing the Emperor\'s seal.', 'event');
@@ -1234,6 +1238,15 @@ export function advanceWeek(run) {
   }
 }
 
+// Who this week's training would leave Overtrained (Stress 50+), for the warning on End week (the designer, 5.4.0).
+// It plays the week on a copy, so the career itself is untouched.
+export function overtrainedByWeek(run) {
+  if (advanceBlocker(run)) return [];
+  const copy = deserialize(serialize(run));
+  try { advanceWeek(copy); } catch { return []; }
+  return run.roster.filter((f) => isTraining(f.job) && f.stress < STRESS.overtrained && (findFighter(copy, f.id)?.stress ?? 0) >= STRESS.overtrained);
+}
+
 // Advance until the next tournament week (stops early if the run ends or a decision is needed).
 // Skipping ahead never lets training overtrain a fighter: a trainee about to cross the line rests instead
 // (playtest #6: a three-week skip left fighters Overtrained on fight day).
@@ -1325,12 +1338,30 @@ function applyEventEffects(run, eff, ev, out) {
       if (inj) out.push(`${f.name}'s ${INJURY_BY_TAG[inj.tag].name} is healed`);
     }
   }
+  if (eff.spy) spyFound(run, findFighter(run, ev.f), eff.spy, out);
   if (ev.plot) applyPlotEffects(run, eff, ev, out);
   if (eff.chance) {
     const p = typeof eff.chance.p === 'function' ? eff.chance.p(run, ev) : eff.chance.p;
     const won = next(ev.plot ? run.rng.plot : run.rng.events) < p;
     out.push(won ? 'it went well' : 'it went badly');
     applyEventEffects(run, won ? eff.chance.win : eff.chance.lose, ev, out);
+  }
+}
+
+// The Emperor's spy (the designer, 5.4.0). Executed: their body is kept for the Temple of Vulcan, and if the hidden plot runs,
+// the palace has lost its eyes in your house. Kept: the Emperor hears only good of you, and anything you hide, he hears too.
+function spyFound(run, f, choice, out) {
+  run.spyFound = true;
+  if (!f) return;
+  if (choice === 'execute') {
+    chronicle(run, f, 'Unmasked as the Emperor\'s spy, and executed in the yard.');
+    removeFromRoster(run, f);
+    run.fallen.push({ ...f, alive: false, diedWeek: run.week, body: true, spy: true }); // a body the Temple can raise
+    if (plotActive(run)) changeSuspicion(run, -SPY.suspicion);
+    out.push(`${f.name} is executed in the yard`);
+  } else {
+    f.spy = true;
+    if (plotActive(run)) changeSuspicion(run, SPY.suspicion);
   }
 }
 
@@ -1478,15 +1509,15 @@ export function pray(run, id) {
 // ---------- The Unnatural Temple of Vulcan (5.3.0): raising the dead ----------
 
 export const reanimatePrice = (run) => REANIMATE.price + REANIMATE.perTier * Math.min(run.topTier, CIRCUITS.length);
-// The fallen the Temple could raise now: killed in the arena (not executed), recently enough, and never raised before.
-export const raisable = (run) => !maxLevel(run, 'vulcan') ? [] : run.fallen.filter((f) => f.arena && !f.raised && f.kind !== 'revenant' && run.week - f.diedWeek <= effectAt('vulcan', maxLevel(run, 'vulcan')));
+// The fallen the Temple could raise now: killed in the arena (or a spy you executed: `body`), recently enough, never raised before.
+export const raisable = (run) => !maxLevel(run, 'vulcan') ? [] : run.fallen.filter((f) => (f.arena || f.body) && !f.raised && f.kind !== 'revenant' && run.week - f.diedWeek <= effectAt('vulcan', maxLevel(run, 'vulcan')));
 export function reanimateBlocker(run, id) {
   const idle = idleBlocker(run);
   if (idle) return idle;
   if (!maxLevel(run, 'vulcan')) return 'Build the Unnatural Temple of Vulcan first.';
   const f = run.fallen.find((x) => x.id === id);
   if (!f) return 'No such fallen fighter.';
-  if (!f.arena) return `${f.name} was executed; the Praetorians burned the body.`;
+  if (!f.arena && !f.body) return `${f.name} was executed; the Praetorians burned the body.`;
   if (f.raised || f.kind === 'revenant') return 'Vulcan cannot kindle the same body twice.';
   const keeps = effectAt('vulcan', maxLevel(run, 'vulcan'));
   if (run.week - f.diedWeek > keeps) return `${f.name} has been dead too long (a body keeps ${keeps} weeks${maxLevel(run, 'vulcan') < BUILDINGS.vulcan.per.length ? '; a bigger Temple keeps them longer' : ''}).`;
@@ -1959,6 +1990,9 @@ function settleBout(run, tier) {
   if (tier === run.topTier) run.boutPending = false;
 }
 
+// The Final of a Boss tournament from the Silver Coliseum up: losing it returns the buy-in (BRACKET.bossFinalRefund).
+export const keepsBuyIn = (run, tier) => Boolean(BRACKET.bossFinalRefund) && tier !== GRAND_TIER && hasBracket(tier) && boutFor(run, tier).boss && bracketOf(run, tier)?.round === 2;
+
 export function finishMatch(run, match) {
   if (!run.inMatch) throw new Error('No match in progress.');
   if (!match.over) throw new Error('The match is not over.');
@@ -2062,6 +2096,14 @@ export function finishMatch(run, match) {
       summary.bloodFaith = true;
       summary.gold += ECONOMY.bloodFaithGold * Math.min(tier, CIRCUITS.length); // the clan honours the sacrifice
       summary.prestige += bout.buyIn;
+    }
+    // Losing the Final of a Boss tournament from the Silver Coliseum up keeps the buy-in (the designer's request, 5.4.0):
+    // reaching the Boss was worth something. Not the Grand Tournament.
+    const refund = keepsBuyIn(run, tier) && !summary.bloodFaith ? Math.floor(bout.buyIn * BRACKET.bossFinalRefund) : 0;
+    if (refund) {
+      summary.prestige += refund;
+      summary.refund = refund;
+      log(run, `Reaching the Boss earns respect: ${refund === bout.buyIn ? `the ${refund} Prestige buy-in is` : `${refund} of the ${bout.buyIn} Prestige buy-in are`} returned.`, 'event');
     }
     // Losing a Boss bracket before its Final costs half (you never reached the Boss).
     const early = bracket && bracket.round < 2;

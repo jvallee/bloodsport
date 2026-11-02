@@ -1,6 +1,6 @@
 // Player-facing explanations shared by the web UI and the text port, so both always say the same thing. Pure.
 
-import { ECONOMY, FAVOR, MORALE, STRESS } from './data.js';
+import { ECONOMY, FAVOR, MORALE, STRESS, BRACKET } from './data.js';
 import { computePower, computeSpeed, effectiveInjuries } from './fight.js';
 import { boutFor, matchOptions, fightPowers, isChampionOf, bossLossFavor, GRAND_TIER, houseOf, opponentFor, crushingGapFor, hasBracket } from './run.js';
 
@@ -39,7 +39,7 @@ export function arenaStakes(run, tier) {
   }
   if (!bout.boss) return '';
   if (tier === GRAND_TIER) return `Win: the career. Lose: ${bossLossFavor(tier, run)} Favour and try again next month.`;
-  return `Win: the arena's Title (+1 Power) for a fighter who isn't its Champion yet, +${FAVOR.bossWin} Favour and the next arena. Lose: ${bossLossFavor(tier, run)} Favour. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour.`;
+  return `Win: the arena's Title (+1 Power) for a fighter who isn't its Champion yet, +${FAVOR.bossWin} Favour and the next arena. Lose: ${bossLossFavor(tier, run)} Favour${hasBracket(tier) && BRACKET.bossFinalRefund ? ' (lose the Final itself and the buy-in comes back)' : ''}. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour.`;
 }
 
 // The Power and Speed each side brings to the next round (everything included: gear, Titles,

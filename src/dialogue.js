@@ -5,7 +5,7 @@
 // files). Speakers are keys of SPEAKERS. Scenes are cosmetic: they never change the career, so replays don't record them.
 
 import { INTRO } from "./tutorial.js";
-import { FAVOR, BUILDINGS } from "./data.js";
+import { FAVOR, BUILDINGS, PLOT } from "./data.js";
 import { GRAND_TIER, raisable } from "./run.js";
 import { WEEKS_PER_YEAR } from "./calendar.js";
 
@@ -161,9 +161,28 @@ export function rebelScene(run, f) {
     },
   ];
 }
-// The fighter whose confession is due: the first political prisoner in the roster, while the plot runs.
+// ---------- The Emperor's demands: met and missed (the designer, 5.4.0) ----------
+// PLACEHOLDER lines: the Emperor reacts the moment a demand is met, and when its fight day ends without it.
+export function demandMetScene(goal, favor, gold) {
+  return [
+    { speaker: "emperor", text: "Good. That is what I asked for, and you gave it to me. I remember those who please me." },
+    { speaker: "steward", text: `Demand met: ${goal}. When fight day ends he pays +${favor} Favour and ${gold} Gold.` },
+  ];
+}
+export function demandMissedScene(goal, favor) {
+  return [
+    { speaker: "emperor", text: "I asked you for one thing, Lanista. One. The month is over, and I am still waiting." },
+    { speaker: "steward", text: `Demand missed: ${goal}. Imperial Favour ${favor < 0 ? `−${-favor}` : `+${favor}`}.` },
+  ];
+}
+
+// The fighter whose confession is due: the first political prisoner in the roster, while the plot runs. It waits
+// (5.4.0, the designer: it all came out the week they were bought): first the chalk sign copied and the prisoner's
+// guarded word about it (rebel-favours), then PLOT.confessTrust trust earned through favours.
 export function dueRebel(run, seen) {
-  if (run.status !== "active" || !run.plot || run.plot.ended || seen.includes("rebel")) return null;
+  const p = run.plot;
+  if (run.status !== "active" || !p || p.ended || seen.includes("rebel") || !seen.includes("rebel-favours")) return null;
+  if (p.stage === "favours" && p.trust < PLOT.confessTrust) return null;
   return run.roster.find((f) => f.political) ?? null;
 }
 
@@ -171,13 +190,14 @@ export function dueRebel(run, seen) {
 // As the plot moves on (src/run.js advancePlot), the same prisoner takes you aside once at each stage. What they say grows
 // with their trust, and warns you when the palace is watching. Every line is a PLACEHOLDER first draft for the designer.
 export const REBEL_STAGES = ["favours", "cause", "ready"];
-export function rebelStageScene(run, f, stage) {
+export function rebelStageScene(run, f, stage, { confessed = true } = {}) {
   const say = (text) => ({ speaker: "rebel", fighter: f, text });
   const watched = (run.plot?.suspicion ?? 0) >= 40;
   const lines = {
     favours: [
       say("You copied the sign. They saw. From now on they'll ask you for small things: a door left open, a stranger fed, a name forgotten."),
       say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good."),
+      say("Who are they? Not yet. Do this well, and one day I'll tell you."),
     ],
     cause: [
       say("They trust you now. More than they trust me, I think."),
@@ -190,18 +210,19 @@ export function rebelStageScene(run, f, stage) {
     ],
   }[stage] ?? [];
   if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. Every favour you do us, they notice."));
-  return [{ speaker: "narrator", text: `${f.name} finds you alone again.` }, ...lines];
+  return [{ speaker: "narrator", text: confessed ? `${f.name} finds you alone again.` : `${f.name} catches your eye across the yard, and waits until the guards have gone.` }, ...lines];
 }
-// The stage scene due now, if any: { id, fighter, beats }. Only after the first confession, while the plot runs and its
-// prisoner (or another political prisoner) is still in your house.
+// The stage scene due now, if any: { id, fighter, beats }, while the plot runs and its prisoner (or another political
+// prisoner) is still in your house. The favours scene comes first, before the confession (5.4.0); the rest after it.
 export function dueRebelStage(run, seen) {
   const p = run.plot;
-  if (run.status !== "active" || !p || p.ended || !seen.includes("rebel")) return null;
+  if (run.status !== "active" || !p || p.ended) return null;
   const f = run.roster.find((x) => x.political);
   if (!f) return null;
   const reached = REBEL_STAGES.slice(0, REBEL_STAGES.indexOf(p.stage) + 1);
   const stage = reached.find((st) => !seen.includes(`rebel-${st}`));
-  return stage ? { id: `rebel-${stage}`, fighter: f, beats: rebelStageScene(run, f, stage) } : null;
+  if (!stage || (stage !== "favours" && !seen.includes("rebel"))) return null;
+  return { id: `rebel-${stage}`, fighter: f, beats: rebelStageScene(run, f, stage, { confessed: seen.includes("rebel") }) };
 }
 
 // The steward's news (playtest #8): what changed in the house that's worth a word. Pure: compare two snapshots.

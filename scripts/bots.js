@@ -299,7 +299,9 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
     // Events: the careful bot takes the cautious (first) choice it can afford; the reckless one the boldest.
     if (run.event) {
       const n = EVENT_BY_ID[run.event.id].choices.length;
-      const order = run.event.plot && opts.plot ? plotOrder(run, opts.plot) : strategy === 'careful' ? [...Array(n).keys()] : [...Array(n).keys()].reverse();
+      // The Emperor's spy (5.4.0): a rebel house executes them (a kept spy feeds the Praetorians); others take the usual order.
+      const spyOrder = run.event.id === 'emperorsSpy' && opts.plot === 'rebel' && run.plot && !run.plot.ended ? [1, 0] : null;
+      const order = spyOrder ?? (run.event.plot && opts.plot ? plotOrder(run, opts.plot) : strategy === 'careful' ? [...Array(n).keys()] : [...Array(n).keys()].reverse());
       chooseEvent(run, order.find((i) => !eventChoiceBlocker(run, i)));
       continue;
     }

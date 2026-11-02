@@ -136,7 +136,8 @@ export const PLOT_EVENTS = [
   },
   {
     id: 'freeMe', plot: true, stages: ['favours', 'cause'], title: 'Free me',
-    when: (run) => (run.plot?.trust ?? 0) >= 3,
+    // Only with two political prisoners in the house (the designer, 5.4.0): the last one never asks to leave.
+    when: (run) => (run.plot?.trust ?? 0) >= 3 && political(run).length >= 2,
     target: asker(political),
     text: ({ f }) => `${f} asks to speak to you alone. "Free me. I can do more for the cause outside these walls than inside your arena."`,
     choices: [

@@ -219,6 +219,7 @@ export function summaryBanner(s) {
   if (s.injuries?.length) bits.push(`🩸 ${s.fighter} is now ${s.injuries.join(' and ')}: send them to the Medbay`);
   if (s.crushing) bits.push('The crowd jeered the mismatch');
   if (s.bloodFaith) bits.push('Blood Faith refunded the buy-in');
+  if (s.refund) bits.push('reaching the Boss returned the buy-in');
   if (s.levelUp) bits.push(`⭐ House Prestige level ${s.levelUp}! Visit the Estate.`);
   return `<div class="banner ${s.won ? 'win' : 'loss'}${s.injuries?.length ? ' hurt' : ''}"><button class="close" data-action="dismiss-summary" data-key="${s.week}-${s.tier}-${s.fighterId}" aria-label="Dismiss">×</button>
     <h2>${esc(s.name)}: ${esc(s.fighter)} ${verdict}</h2><div>${bits.map(esc).join(' · ')}</div></div>`;
@@ -263,6 +264,16 @@ function dialogueBox(beat, actions, kind = 'scene') {
 }
 
 // What just happened, after an event card's choice (playtest: the result only went to the house log).
+// End week would overtrain someone: the steward asks first, once per career (the designer, 5.4.0).
+export function overtrainModal(list) {
+  const names = list.map((f) => `<b>${esc(f.name)}</b> (Stress ${f.stress})`);
+  const who = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+  const html = `<p>Before you end the week: another week of training and ${who} will be <b>Overtrained</b> (Stress ${STRESS.overtrained}+).</p>
+    <p>An overtrained fighter can't train, and fights at −1 Power with one ability switched off, until Rest brings their Stress down. I'll only ask you this once.</p>`;
+  const actions = `<button class="btn small" data-action="overtrain-back">Back</button><span class="ask-choices"><button class="btn" data-action="overtrain-go">Train anyway</button><button class="btn primary" data-action="overtrain-go" data-rest="1" autofocus>Rest ${list.length > 1 ? 'them' : esc(list[0].name)} this week</button></span>`;
+  return dialogueBox({ speaker: 'steward', title: 'Overtraining', html }, actions, 'ask');
+}
+
 export function resultModal(title, lines) {
   // A gamble's outcome leads, in large type (playtest: "It went badly" was buried mid-sentence).
   const text = lines.map((l) => l.text).join(' ');
@@ -464,7 +475,7 @@ function rosterPanel(run) {
     return fighterCard(f, { actions, morale: moraleTarget(run, f) });
   }).join('');
   return `
-    <section class="panel">
+    <section class="panel roster">
       <h2>Your gladiators <small>${run.roster.length}/${rosterCap(run)}</small></h2>
       ${unequipAllBlocker(run) === null ? `<div class="row">${button('Unequip all gear', 'unequip-all', {}, null, 'btn small')}<small class="sub">Puts every fighter's gear back in the storeroom, ready to hand out afresh.</small></div>` : ''}
       <div class="cards">${cards || '<div class="empty">No gladiators yet. Recruit some in the <button class="link" data-action="tab" data-tab="market">Market</button>.</div>'}</div>

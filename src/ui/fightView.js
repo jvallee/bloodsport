@@ -116,6 +116,7 @@ function report(s) {
     s.title ? row(s.titlePower > 1 ? 'Titles' : 'Title', `🏆 ${esc(s.title)}${s.title === 'Master of the Games' ? '' : ` (+${s.titlePower ?? 1} Power)`}`, 'good') : '',
     s.champion ? row('The crowd', 'boos a champion back in the pits', 'bad') : s.crushing ? row('The crowd', 'jeers the mismatch', 'bad') : '',
     s.bloodFaith ? row('Blood Faith', 'buy-in refunded', 'good') : '',
+    s.refund ? row('The Boss Final', `${s.refund} Prestige buy-in returned`, 'good') : '',
     s.nemesis ? row('Nemesis', `☠ ${esc(s.nemesis)} is beaten`, 'good') : '',
     s.hype ? row('Crowd hype', `📣 ${s.hype.hype}${s.hype.renown ? `: +${s.hype.renown} Renown` : ''}${s.hype.gold ? `, +${s.hype.gold} Gold` : ''}`, s.hype.renown ? 'good' : '') : '',
     s.bet ? row('Your bet', s.bet.won ? `🪙 won: ${s.bet.payout} Gold back on ${s.bet.stake} (+${s.bet.payout - s.bet.stake} profit)` : `🪙 lost: ${s.bet.stake} Gold`, s.bet.won ? 'good' : 'bad') : '',
@@ -228,7 +229,7 @@ function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {
   if (m.round === 0) {
     // A fighter who walks in with the Death Gate open is warned before Round 1 too.
     const pre = mortalDanger(m.a) ? `<div class="alert">⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death. Capitulating is only possible between rounds.</div>` : '';
-    return `${pre}${signatureRow(m)}${itemRow}${betRow(m)}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button></div>`;
+    return `${pre}${signatureRow(m)}${itemRow}${betRow(m)}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button><button class="btn big" data-action="skip-fight" title="Play the rest of the match at once with the suggested tactic. It stops at the Death Gate while you can still capitulate.">Skip to the result</button></div>`;
   }
   const danger = mortalDanger(m.a);
   const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.</div>` : '';
@@ -239,8 +240,9 @@ function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {
     ${itemRow}
     ${tacticPicker(m)}
     <div class="row">
-      ${canThrowTowel(m) ? `<button class="btn danger big" data-action="towel" title="Forfeit the match and the buy-in. Your fighter is guaranteed to survive.">Capitulate (lose ${bout.buyIn} Prestige)</button>` : ''}
+      ${canThrowTowel(m) ? `<button class="btn danger big" data-action="towel" title="Forfeit the match and the buy-in. Your fighter is guaranteed to survive.">${bout.keepsBuyIn ? 'Capitulate (the buy-in comes back)' : `Capitulate (lose ${bout.buyIn} Prestige)`}</button>` : ''}
       <button class="btn big" data-action="auto-play">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button>
+      ${danger && canThrowTowel(m) ? '' : '<button class="btn big" data-action="skip-fight" title="Play the rest of the match at once with the suggested tactic. It stops at the Death Gate while you can still capitulate.">Skip to the result</button>'}
     </div>`;
 }
 

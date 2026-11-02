@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRun, recruit, advanceToTournament, advanceWeek, startMatch, finishMatch, choosePerk, resolveMercy } from '../src/run.js';
 import { createRng } from '../src/rng.js';
-import { KINDS, REANIMATE, BUILDINGS } from '../src/data.js';
+import { KINDS, REANIMATE, BUILDINGS, PLOT } from '../src/data.js';
 import { createMatch, computePower, computePhase2, deathGateAt } from '../src/fight.js';
 import { buildRoom, upgradeRoom, reanimate, reanimateBlocker, reanimatePrice, raisable, moraleTarget, serialize, deserialize } from '../src/run.js';
 import { GAME_ACTIONS } from '../src/game.js';
@@ -221,8 +221,15 @@ function withRebel() {
 test('the first political prisoner confesses the rising, once per career', () => {
   const { run, rebel } = withRebel();
   assert.ok(rebel && run.plot);
-  assert.equal(dueRebel(run, []), rebel);
-  assert.equal(dueRebel(run, ['rebel']), null);
+  // 5.4.0 (the designer): not the week they arrive. First the sign copied and the guarded word, then trust.
+  assert.equal(dueRebel(run, []), null, 'not on arrival');
+  run.plot.stage = 'favours';
+  run.plot.trust = 1;
+  assert.equal(dueRebel(run, []), null, 'not before the prisoner\'s guarded word about the sign');
+  assert.equal(dueRebel(run, ['rebel-favours']), null, 'not before trust is earned');
+  run.plot.trust = PLOT.confessTrust;
+  assert.equal(dueRebel(run, ['rebel-favours']), rebel);
+  assert.equal(dueRebel(run, ['rebel-favours', 'rebel']), null);
   const beats = rebelScene(run, rebel);
   const text = beats.map((b) => b.text).join(' ');
   assert.match(text, /There is a rising against Silbannacus/);

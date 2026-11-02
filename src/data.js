@@ -157,7 +157,8 @@ export const RETIRE = { level: 4, prestige: 5, morale: 10 };
 // lost Final ~9. Playtest #6's "brackets pay nothing" is answered with Gold instead (purse 2 → 3).
 // A Championship also crowns every arena below it (playtest #7). cascadePower: Power for each lower Title gained that way.
 export const TITLES = { cascade: true, cascadePower: 1 };
-export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 3, prestige: 1, prestigeTopOnly: false, earlyBossLoss: 0.5 };
+// bossFinalRefund (5.4.0, the designer's request): the share of its Prestige buy-in a lost Boss Final returns (not the Grand).
+export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 3, prestige: 1, prestigeTopOnly: false, earlyBossLoss: 0.5, bossFinalRefund: 1 };
 // prestige: × tier for each early win (swept: 1 took careful careers from 41% to 54%, so it's off); earlyBossLoss: share of the Boss-loss Favour for losing before the Final. // swept: -3/-2 took careful careers to 22%, -4/-3 to 28%
 
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
@@ -318,10 +319,10 @@ export const CIRCUITS = [
   { tier: 1, name: 'The Dirt Pits', oppPower: [6, 6, 7], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
   { tier: 2, name: 'The Bronze Arena', oppPower: [11, 12, 13], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
   { tier: 3, name: 'The Silver Coliseum', oppPower: [18, 18, 19], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
-  { tier: 4, name: 'The Imperial Coliseum', oppPower: [25, 26, 27], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
+  { tier: 4, name: 'The Imperial Coliseum', oppPower: [26, 27, 28], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
 ];
 
-export const GRAND = { name: 'The Grand Tournament', oppPower: 30, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
+export const GRAND = { name: 'The Grand Tournament', oppPower: 31, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
 
 // House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
 export const PRESTIGE_LEVELS = [
@@ -555,11 +556,16 @@ export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClu
 // The thread. gap: weeks between plot cards. cause/ready: trust needed for each stage (cause also needs this House level).
 // suspicion: hidden 0–100, its monthly drift and the levels where its signs show. contactWin: win chance per contact in the
 // coup Final (×1000 = %), up to contactMax.
+// The Emperor's spy (5.4.0): executing them lowers the hidden plot's suspicion by `suspicion`; keeping them raises it.
+export const SPY = { suspicion: 15, perMonth: 2 }; // perMonth: suspicion each month while a spy you kept is in the house
+
 export const PLOT = {
   gap: [3, 6], firstGap: [1, 3], refusalsToCold: 2, survivesAt: 2,
   // cause: trust, favours done and weeks since the Mark it takes (playtest #7: Acts 1–2 were over in 7 weeks); offerAfter: the
   // prefect's offer waits this long into the Cause, so betrayal has something to cost. maxTrust: trust stops piling up here.
   cause: { trust: 4, favours: 3, weeks: 12, houseLevel: 3 }, ready: { trust: 6 }, offerAfter: 16, maxTrust: 10, priestMorale: 5,
+  // confessTrust (5.4.0, the designer: the rebel told everything the week they arrived): the confession waits for this much trust.
+  confessTrust: 3,
   suspicion: { perPrisoner: 1, perContact: 1, decay: 2, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
   // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
   armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30, betrayGold: 20, // betrayGold: the Emperor's purse for the names, × tier
