@@ -1,6 +1,6 @@
 // The Ludus estate: room plots, buildings and what they provide. Pure.
 
-import { BUILDINGS, PRESTIGE_LEVELS } from './data.js';
+import { BUILDINGS, PRESTIGE_LEVELS, TRAINING } from './data.js';
 import { Refused } from './errors.js';
 
 export const levelInfo = (level) => PRESTIGE_LEVELS[level - 1];
@@ -20,7 +20,10 @@ export const effectAt = (type, level) => (level ? BUILDINGS[type].per[level - 1]
 export const rosterCap = (run) => Math.min(ofType(run, 'quarters').reduce((s, b) => s + effectAt('quarters', b.level), 0), levelInfo(run.prestigeLevel).maxFighters);
 export const trainerRooms = (run) => ofType(run, 'trainer').length;
 export const trainCap = (run) => effectAt('trainer', maxLevel(run, 'trainer'));
-export const trainCost = (run) => Math.max(1, maxLevel(run, 'trainer'));
+export const trainCost = (run) => {
+  const fee = Math.max(1, maxLevel(run, 'trainer'));
+  return run.topTier < TRAINING.fullFeeFrom ? Math.min(fee, TRAINING.cheapFee) : fee;
+};
 // A stranger hidden in the Medbay (v6's hidden plot) takes up one bed.
 export const medbaySlots = (run) => Math.max(0, ofType(run, 'medbay').reduce((s, b) => s + effectAt('medbay', b.level), 0) - (run.plot?.hidden ? 1 : 0));
 export const healRate = (run) => (maxLevel(run, 'medbay') >= 2 ? 2 : 1);

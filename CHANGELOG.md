@@ -2,7 +2,13 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## 5.3.0 (in progress)
+## 5.4.0 (in progress)
+
+- **The Bronze wall is lower:**
+  - The Bronze Arena's Boss fights at Power 13 (was 14).
+  - Until you reach the Silver Coliseum, training costs at most 2 Gold a week per fighter, however good your Trainer Room. From Silver on, the fee is the Trainer Room's level again.
+
+## 5.3.0
 
 - **The rebel speaks again:** after the first confession, the same prisoner takes you aside at each stage of the rising: when the favours begin, when they need a champion, and when it's ready. They warn you when the Praetorians are watching.
 - **The crowd remembers its dead:** a Revenant's first fight back starts with the crowd chanting their name, worth +20 on the hype meter (Renown, and Gold on a win).

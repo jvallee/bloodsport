@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRun } from '../src/run.js';
+import { CIRCUITS } from '../src/data.js';
 import {
   build, buildBlocker, upgrade, upgradeBlocker, plotCount, plotsFree, rosterCap, trainerRooms, trainCap, trainCost,
   medbaySlots, healRate, decorCap, oracleLevel, prestigeLevelFor, stressRelief,
@@ -55,7 +56,23 @@ test('trainer levels raise the cap and the weekly cost', () => {
   const run = richRun(5);
   const t = idOf(run, 'trainer');
   for (let i = 0; i < 4; i++) upgrade(run, t);
+  run.topTier = 3;
   assert.deepEqual([trainCap(run), trainCost(run)], [21, 5]);
+});
+
+test('below the Silver Coliseum, training costs at most 2 Gold a fighter-week (the Bronze wall, 5.4.0)', () => {
+  const run = richRun(5);
+  const t = idOf(run, 'trainer');
+  assert.equal(trainCost(run), 1);
+  for (let i = 0; i < 4; i++) upgrade(run, t);
+  for (const [tier, fee] of [[1, 2], [2, 2], [3, 5], [4, 5], [5, 5]]) {
+    run.topTier = tier;
+    assert.equal(trainCost(run), fee, `top arena tier ${tier}`);
+  }
+});
+
+test('the Bronze Boss fights at Power 13 (the Bronze wall, 5.4.0)', () => {
+  assert.deepEqual(CIRCUITS[1].oppPower, [11, 12, 13]);
 });
 
 test('Medbay Lv 2 heals 2 weeks per week; Lv 3 treats 3 fighters', () => {

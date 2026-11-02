@@ -523,3 +523,28 @@ Numbers are tunables in `src/data.js`; the words are placeholders for the design
   - Loyalist +5 (at the edge of its 5–20 gate). Coup 19%. Treason 3%.
   - Short careers 43% in 80 weeks (full careers 111); 42% after the crowd's chant for Revenants (all 13 still pass).
 - **A Revenant's first fight back** (fun idea): +20 hype from the start (`HYPE.risen`), paid out like any hype; the `risen` flag clears after that match. The rebel's stage scenes (`dueRebelStage`) are cosmetic.
+
+## 5.4.0: the Bronze wall
+
+Playtests #5, #8 and #9 all stalled at the Bronze Arena (both #9 careers). Two changes, chosen by the designer from the table below:
+
+- **The Bronze Boss fights at Power 13** (was 14): `CIRCUITS[1].oppPower` = 11 / 12 / 13.
+- **Cheap training below Silver:** training costs at most 2 Gold a fighter-week while your top arena is the Dirt Pits or the Bronze Arena (`TRAINING = { fullFeeFrom: 3, cheapFee: 2 }`, `trainCost` in `src/ludus.js`). From the Silver Coliseum the fee is the Trainer Room's level again (3 / 4 / 5). The cap is unchanged.
+
+Probe (`bronze.js`, a scratch copy of `scripts/probes/bot-options.js` that also counts weeks with Bronze as the top arena; the check's seeds: 300 careful careers, 150 loyalist and 150 short):
+
+| Variant | Careful wins | Weeks at Bronze | Careful careers past Bronze | Loyalist − careful | Short careers won |
+|---|---|---|---|---|---|
+| 5.3.0 | 41% | 36.1 | 72% | +5.3 | 42% |
+| A. Training ≤ 2 Gold below Silver | 38% | 35.5 | 73% | +8.0 | 43% |
+| B1. Trainer level 3 at House level 2 | 47% (fails) | 32.1 | 77% | +10.3 | 44% |
+| B2. Trainer level 2 cap 5 → 7 | 53% (fails) | 28.0 | 85% | +11.3 | 45% |
+| C. Bronze Boss 14 → 13 | 41% | 31.6 | 77% | +8.7 | 49% |
+
+- The bots stall at Bronze for want of Power, not Gold, so A barely moves them; it is there for the Gold famine human players report (Gold 0–3 for months in playtest #9).
+- A higher or earlier Trainer cap adds Power to every fighter for the rest of the career, the same snowball as the rejected veteran cap.
+- **Gates with C alone** (`npm run check`): all 13 pass. Careful 41%, loyalist +9, short careers 49%, Grand +16.
+- **Gates with C and A (shipped):** all 13 pass.
+  - Careful 43%, careful deaths 0.63, reckless deaths 3.10. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +14.
+  - Loyalist +6. Coup 19%. Treason 2%.
+  - Short careers 47% in 82 weeks (full careers 111).
