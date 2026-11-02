@@ -4,7 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 5.4.0 (in progress)
 
-- **Auto-play carries on through a tournament:** after a win, it goes on to the next match by itself (it still waits for your thumbs up or down).
+- **Auto-play covers one match:** the next match of a tournament always starts paused (it used to stay on when you went on to the next match).
 - **Skip to the result:** a new button on the fight screen plays the rest of the match at once with the suggested tactic. Like auto-play, it stops at the Death Gate while you can still capitulate.
 - **The Emperor's spy:** from the second year, once a career, you may find one of your fighters has been reporting to the palace. Let them be (the Emperor is pleased), or execute them, and the priests of Vulcan can have the body.
 - **A rebel asks to be freed only while you hold two:** the last political prisoner in your house never asks to leave.

@@ -37,7 +37,6 @@ let tab = 'ludus';
 let showHelp = false;
 let autoTimer = null;
 let roundStartedAt = 0; // when the latest round began playing (auto-play waits for its story to finish, not for a fresh wait)
-let keepAuto = false; // auto-play carries on into the next match of a tournament
 const ui = { animateRound: 0, showMath: false, auto: false, open: {} }; // open: fold-outs the player opened or closed, by data-key
 let prefs = { tutorial: [], showMath: false, introSeen: false, sound: true };
 let codex = loadCodex(null);
@@ -240,22 +239,7 @@ function renderFight() {
 // Auto-play: one round after another (each once its winner is announced), pausing whenever the capitulate decision really matters.
 function scheduleAuto() {
   clearTimeout(autoTimer);
-  if (!ui.auto || !match) return;
-  // A tournament match won: auto-play goes on to the next one by itself (the designer, 5.4.0), once the verdict is given.
-  if (match.over) {
-    const id = match.a.f.id;
-    const tier = match.bout.tier;
-    if (!match.summary?.next || run.mercy || fightBlocker(run, id, tier)) return;
-    autoTimer = setTimeout(() => guard('auto-play', () => {
-      if (!ui.auto || !match?.over || run.mercy || fightBlocker(run, id, tier)) return;
-      before.fight();
-      gameAction('fight', { id, tier });
-      save();
-      render();
-      scheduleAuto();
-    }), 2500);
-    return;
-  }
+  if (!ui.auto || !match || match.over) return; // one match only: the next match of a tournament starts paused
   if (match.round > 0 && mortalDanger(match.a) && canThrowTowel(match)) return;
   autoTimer = setTimeout(() => guard('auto-play', () => {
     if (!match || match.over) return;
@@ -496,13 +480,11 @@ const before = {
     summaries = []; achieved = []; stewardNotes = []; return true;
   },
   'advance-tournament': () => { summaries = []; achieved = []; stewardNotes = []; return true; },
-  fight: () => { keepAuto = ui.auto && Boolean(match?.summary?.next); return true; },
 };
 const after = {
   fight: () => {
     ui.animateRound = 0;
-    ui.auto = keepAuto; // each fight starts paused, except the next match of a tournament you were auto-playing
-    keepAuto = false;
+    ui.auto = false; // every match starts paused: auto-play covers one match (the designer, 5.4.0)
   },
   'next-round': () => {
     roundStartedAt = Date.now();
