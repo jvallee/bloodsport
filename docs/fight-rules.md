@@ -517,3 +517,4 @@ Numbers are tunables in `src/data.js`; the words are placeholders for the design
   | +2 / −5 / 2 Gold | 34% | |
 
   Other suspects measured and ruled out: no Temple of Vulcan 48%; no Lounge and no bets 55%.
+- **Short careers, re-tuned (5.3.0):** purses ×2 → ×1.75. With working demands and the level-2 start, the check had them at 59% (gate 20–55%). Probes on the check's seeds (150 careers from seed 1000): start Gold 20 → 10 gave 56%; purses ×1.75 gave **43%** in 78 weeks (chosen).

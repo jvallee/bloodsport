@@ -184,7 +184,8 @@ function act(name, data = {}) {
   try {
     const summary = applyGameAction(state, name, data);
     if (summary) {
-      if (discoverMatch(codex, before ?? state.match).length) saveCodex();
+      const fought = before ?? state.match; // a withdrawal settles a bracket with no match on screen
+      if (fought && discoverMatch(codex, fought).length) saveCodex();
       summaries.push(summary);
       noticePage = 0;
     }

@@ -307,3 +307,28 @@ test('a Flesh Wound heals on Rest at half speed, without a Medbay bed (playtest 
   advanceWeek(run);
   assert.deepEqual(f.injuries.map((i) => i.tag), ['concussed'], 'healed after two; a worse wound still needs the Medbay');
 });
+
+// Bug report (2026-11-02, 5.1.1): an exhibition bout crashed the page. Game actions that don't settle a match must return
+// nothing, or the page takes their result for a match summary (src/main.js act → discoverMatch on no match).
+test('game actions that settle no match return nothing: exhibition, host, bet (bug report: the Exhibition Ring crashed)', async () => {
+  const { applyGameAction } = await import('../src/game.js');
+  const run = createRun(7);
+  run.gold = 200;
+  const [a, b] = [recruit(run, run.market[0].id), recruit(run, run.market[0].id)];
+  run.buildings.push({ id: 'be', type: 'exhibition', level: 1 }, { id: 'bl', type: 'lounge', level: 1 });
+  advanceToTournament(run);
+  for (const f of [a, b]) f.injuries = [];
+  const state = { run, match: null };
+  assert.equal(applyGameAction(state, 'exhibition', { id: a.id, index: b.id }), undefined);
+  assert.equal(run.exhibitionWeek, run.week, 'the bout still happened');
+  assert.equal(applyGameAction(state, 'host', {}), undefined);
+  assert.ok(run.influence > 0);
+  a.power = b.power = 5;
+  applyGameAction(state, 'fight', { id: a.id, tier: 1 });
+  state.match.b.f.power = 5;
+  const stake = [2, 5, 10, 20].find((s) => !betBlocker(run, state.match, s));
+  if (stake) {
+    assert.equal(applyGameAction(state, 'bet', { amount: stake }), undefined);
+    assert.ok(state.match.bet);
+  }
+});

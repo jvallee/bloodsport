@@ -14,7 +14,8 @@ What changed from version to version, newest first. Each frozen version can stil
   - Event results start with a capital letter, and a wound reads "is wounded: Flesh Wound".
 - **Betting, honestly priced:** odds read as a multiplier ("×1.25: a win returns your stake × 1.25"), and every bet line says what it returns and the profit. A bet too small to win anything at its odds isn't taken (small bets on a clear favourite used to return only the stake).
 - **The Emperor's demands work:** a demand now lasts until that month's fight day. (It was judged the moment it was issued, so every demand failed and the Emperor never spoke.) Meeting one now pays +3 Favour and 3 Gold per arena tier; missing one costs 4 Favour, so they're worth chasing.
-- **Short careers** start at House level 2, as their head start of Prestige promised.
+- **Short careers** start at House level 2, as their head start of Prestige promised. To keep them a challenge, their purses are ×1.75 (was ×2).
+- **Fixed:** an Exhibition Ring bout (and hosting the Senate) crashed the page into the bug report box.
 - **The rebel speaks:** the first political prisoner in your house takes you aside and tells you, plainly, that there is a rising against the Emperor. What they've heard of you colours it: mercy shown when the crowd wanted blood, fighters you bought and set free, how often your thumb has gone down, and how well your fighters live.
 - **Mercy the Emperor wanted:** sparing a beaten opponent earns Favour only when mercy is what's wanted. If the crowd roars for blood, or the Emperor has demanded a death this month, he gives nothing for clemency (the verdict panel says so). Sparing against the crowd still makes their house owe you a life.
 - **Feuds say how long they last:** each opponent's card and the house standings show how many months a feud, a debt of mercy or your vengeance has left (3 months, cooling by one at every fight day).
