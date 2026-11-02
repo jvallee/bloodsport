@@ -505,3 +505,15 @@ Numbers are tunables in `src/data.js`; the words are placeholders for the design
 - **Demands (playtest #9):** judged when fight day ends, before the new month can issue the next one (issuing came first, so each demand was judged against no fights and failed).
 - **Short careers** start at the House level their starting Prestige (17) earns: level 2.
 - **Flesh Wounds on Rest (playtest #9, #8):** a fighter on Rest heals a Flesh Wound at half speed (0.5 week of healing per week), so 2 weeks of Rest heal a fresh one. Worse wounds still need the Medbay.
+- **The Emperor's demands, re-tuned (5.3.0):** met +3 Favour and 3 Gold × tier (was +4 and 4); missed −4 Favour (was −2). Why: until playtest #9 every demand failed the moment it was issued, so 5.2.0's gates were measured with a steady −2 Favour drain. With demands working, careful careers rose from 35% to 49% (gate: 45%) and short careers to 65% (gate: 55%). Probes (`scripts/probes/bot-options.js`, 100 careers, seeds 1–100; the bots don't chase demands):
+
+  | Variant | Careful wins | Short careers won |
+  |---|---|---|
+  | Demands still broken (commit 0a5a5e8) | 34% | |
+  | Demands working, +4 / −2 / 4 Gold | 49% | 65% (the check) |
+  | No demands at all | 56% | |
+  | +2 / −3 / 2 Gold | 47% | |
+  | **+3 / −4 / 3 Gold (chosen)** | **43%** | **50%** |
+  | +2 / −5 / 2 Gold | 34% | |
+
+  Other suspects measured and ruled out: no Temple of Vulcan 48%; no Lounge and no bets 55%.

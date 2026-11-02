@@ -527,7 +527,7 @@ export const LOUNGE = {
 export const REANIMATE = { price: 6, perTier: 4, power: -1, morale: 50 };
 export const HYPE = { upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 5, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
 export const BOND = { comfort: 8, mentorGap: 3, mentorXp: 1, grief: -20 };
-export const DEMAND = { chance: 0.5, fromWeek: 8, favor: 4, goldPerTier: 4, missFavor: -2 };
+export const DEMAND = { chance: 0.5, fromWeek: 8, favor: 3, goldPerTier: 3, missFavor: -4 }; // 5.3.0: was +4 / 4 Gold × tier / −2 (swept once demands worked: see docs/fight-rules.md)
 export const DEMANDS = {
   topWin: { goal: 'Win a match in your top arena', say: 'My guests are bored, Lanista. Give them a victory in your top arena this month.' },
   bloodied: { goal: 'Win a Bloodied Victory (a win with 2+ injuries)', say: 'I want to see blood on a winner. Win me a bloody victory this month.' },

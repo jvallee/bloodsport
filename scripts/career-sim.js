@@ -16,7 +16,7 @@ for (const [name, results] of [['CAREFUL', careful], ['RECKLESS', reckless]]) {
   const tiers = [2, 3, 4, 5].map((t) => results.filter((r) => r.tier >= t || r.won).length / results.length);
   const reasons = {};
   for (const r of results.filter((x) => !x.won)) {
-    const key = r.status === 'active' ? 'Timed out' : /Favor/.test(r.endReason) ? 'Executed (Favor)' : /revolt/.test(r.endReason) ? 'Revolt' : 'No fighters or Gold';
+    const key = r.status === 'active' ? 'Timed out' : /Favou?r/.test(r.endReason) ? 'Executed (Favour)' : /revolt/.test(r.endReason) ? 'Revolt' : 'No fighters or Gold';
     reasons[key] = (reasons[key] ?? 0) + 1;
   }
   console.log(`\n${name} bot, ${results.length} careers`);

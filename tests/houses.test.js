@@ -52,6 +52,7 @@ test('rival houses compete every tournament week and climb the arenas', () => {
     advanceToTournament(run);
     if (run.event) run.event = null;
     run.boutPending = false; // these tests are about the houses, not your bouts
+    run.favor = 50; // nor the Emperor's demands (5.3.0: missing one costs 4 Favour, and this house never fights)
     for (const f of run.roster) f.pendingPerks = [];
     advanceWeek(run);
   }
