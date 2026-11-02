@@ -119,6 +119,26 @@ test('skipping to the tournament rests a trainee before they would be overtraine
   f.stress = 45;
   advanceToTournament(run);
   assert.ok(f.stress < 50, `Stress ${f.stress}`);
+  assert.ok(run.log.some((l) => l.text.startsWith(`${f.name} switched to Rest`) && /overtrain/.test(l.text)));
+  // 5.4.0 (playtest #10): once rested they go back to training, but never into a week that would overtrain them.
+  if (f.job !== 'rest') assert.ok(f.stress + 20 < 50, `back to training at Stress ${f.stress}`);
+});
+
+test('a fighter switched to Rest goes back to the same training once they can (playtest #10)', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  run.gold = 1;
+  setJob(run, f.id, 'trainSpeed');
+  run.gold = 0;
+  advanceWeek(run);
   assert.equal(f.job, 'rest');
-  assert.match(f.notice, /overtrain/);
+  assert.match(f.notice, /Gold/);
+  run.gold = 100;
+  advanceWeek(run);
+  assert.equal(f.job, 'trainSpeed');
+  assert.match(f.notice, /Back to training/);
+  setJob(run, f.id, 'rest');
+  assert.equal(f.resume, undefined, 'choosing a job forgets the old one');
+  advanceWeek(run);
+  assert.equal(f.job, 'rest', 'a Rest the player chose stays');
 });

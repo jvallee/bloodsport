@@ -1050,13 +1050,28 @@ export function setJob(run, id, job) {
   const f = findFighter(run, id);
   f.job = job;
   f.notice = null;
+  delete f.resume;
 }
 
 // A fighter can't train after all: they rest this week, and the card says why.
+// Unless the cap is reached, they go back to the same training once they can (playtests #9 and #10: training stopped for good).
 function switchToRest(run, f, reason) {
+  if (isTraining(f.job) && f.trained < trainCap(run)) f.resume = f.job;
   f.job = 'rest';
   f.notice = `Switched to Rest: ${reason}`;
   log(run, `${f.name} switched to Rest: ${reason}`, 'warn');
+}
+
+// A fighter switched to Rest goes back to training when it can happen and won't overtrain them next week.
+function resumeTraining(run, f) {
+  if (f.trained >= trainCap(run)) { delete f.resume; return; }
+  const gain = STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0);
+  if (f.stress + gain >= STRESS.overtrained) return;
+  f.job = f.resume;
+  if (trainBlocker(run, f)) { f.job = 'rest'; return; }
+  delete f.resume;
+  f.notice = `Back to training: rested and ready.`;
+  log(run, `${f.name} goes back to training.`, 'good');
 }
 
 // ---------- Morale ----------
@@ -1167,7 +1182,7 @@ export function advanceWeek(run) {
     if (isTraining(f.job)) {
       const next = trainBlocker(run, f, { checkGold: false });
       if (next) switchToRest(run, f, next);
-    }
+    } else if (f.job === 'rest' && f.resume) resumeTraining(run, f);
     if (f.stress >= STRESS.overtrained) log(run, `${f.name} is overtrained (Stress ${f.stress}). Rest them before a fight.`, 'warn');
     if (f.morale < MORALE.mutinous) log(run, `${f.name} is mutinous and refuses to fight.`, 'bad');
   }
@@ -1224,14 +1239,18 @@ export function advanceWeek(run) {
 // (playtest #6: a three-week skip left fighters Overtrained on fight day).
 export function advanceToTournament(run) {
   let weeks = 0;
-  while (!run.boutPending && run.status === 'active' && !advanceBlocker(run)) {
+  const guard = () => {
     for (const f of run.roster) {
       const gain = STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0);
       if (isTraining(f.job) && f.stress + gain >= STRESS.overtrained) switchToRest(run, f, `another week of training would overtrain them (Stress ${f.stress}).`);
     }
+  };
+  while (!run.boutPending && run.status === 'active' && !advanceBlocker(run)) {
+    guard();
     advanceWeek(run);
     weeks++;
   }
+  if (run.boutPending) guard(); // and fight week too, now that a rested trainee goes back to training (playtest #10)
   return weeks;
 }
 
@@ -1863,6 +1882,9 @@ function payHype(run, match, won, tier, summary) {
 }
 
 // A bet is settled with the match's purse: a win pays the payout; a loss (or capitulating) loses the stake.
+// A match's purse without a won bet's payout, which the result shows on its own line (playtest #10).
+export const purseGold = (s) => s.gold - (s.bet?.won ? s.bet.payout : 0);
+
 function settleBet(run, match, won, summary) {
   if (!match.bet) return;
   summary.bet = { ...match.bet, won };
@@ -2142,8 +2164,9 @@ export function finishMatch(run, match) {
   }
   run.history.push(summary);
   log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
-  if (!won) recordNemesis(run, opp, tier, fighter, bout.boss);
-  advanceArena(run, tier, won, arena.opponent);
+  const fought = (match.round ?? 0) > 0; // a withdrawal between bracket matches fights nobody (playtest #10)
+  if (!won && fought) recordNemesis(run, opp, tier, fighter, bout.boss);
+  advanceArena(run, tier, won, arena.opponent, fought && opp === arena.opponent);
   if (tier === GRAND_TIER && plotActive(run) && run.plot.coup) resolveCoup(run, fighter, won, !bracket || bracket.round >= 2);
   offerMercy(run, match, summary, fighter, opp, tier);
   if (won && opp.rebel && plotActive(run)) rebelBeaten(run, opp, match.result.reason === 'death' ? 'kill' : run.mercy ? null : 'spare');
@@ -2155,12 +2178,26 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   const round = BRACKET.rounds[bracket.round];
   const next = BRACKET.rounds[bracket.round + 1];
   const kill = match.result.reason === 'death';
+  const bloodied = effectiveInjuries(fighter) >= 2; // playtest #10: bracket wins were never Bloodied Victories
   const summary = {
-    week: run.week, tier, name: `${bout.name} · ${round}`, boss: false, top: bout.top, won: true, reason: match.result.reason,
+    week: run.week, tier, name: `${bout.name} · ${round}`, boss: false, top: bout.top, won: true, reason: match.result.reason, bloodied,
     fighter: fighter.name, fighterId: fighter.id, died: false, gold: BRACKET.purse * Math.min(tier, 4), prestige: BRACKET.prestigeTopOnly && !bout.top ? 0 : BRACKET.prestige, favor: 0,
     xp: XP.win, renown: 1, injuries: newInjuries, morale: 0, levels: 0, bracket: round, next, kill, house: houseOf(run, opp)?.name ?? null,
   };
   const levelBefore = fighter.level;
+  if (bloodied) {
+    summary.renown += BLOODIED.renown;
+    summary.xp += BLOODIED.xp;
+    bumpMorale(fighter, BLOODIED.morale);
+    const favorBefore = run.favor;
+    changeFavor(run, FAVOR.spectacleWin, 'a Bloodied Victory (won with 2+ injuries)');
+    summary.favor = run.favor - favorBefore;
+    if (!(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
+      fighter.scars = [...(fighter.scars ?? []), { id: 'hardened' }];
+      summary.scar = 'Battle-Hardened';
+      chronicle(run, fighter, `Won bloodied and became Battle-Hardened.`);
+    }
+  }
   settleBet(run, match, true, summary);
   run.gold += summary.gold;
   run.prestige += summary.prestige;
@@ -2210,9 +2247,10 @@ export function spareFavor(run, mercy = run.mercy) {
 // Why a spare earns no Favour (for the verdict panels), or null when it does.
 export function spareFavorWhy(run, mercy = run.mercy) {
   if (spareFavor(run, mercy)) return null;
-  if (mercy?.crowd === 'kill') return 'no Favour: the Emperor wanted blood too';
+  // Playtest #10: the lower arena first, and the crowd (not the Emperor) wanting blood; a spare still meets a spare demand.
   if (run.demand?.id === 'kill') return 'no Favour: the Emperor demanded a death this month';
-  return 'no Favour in a lower arena';
+  const why = mercy?.top === false && !hasPolicy(run, 'edictOfMercy') ? 'no Favour in a lower arena' : 'no Favour: the crowd wanted blood';
+  return run.demand?.id === 'spare' ? `${why} (it still meets the Emperor's demand)` : why;
 }
 
 // Months a house that's being spared already owes you (a debt isn't renewed while it runs), or 0.
@@ -2319,7 +2357,7 @@ export function withdraw(run, tier) {
   return finishMatch(run, { over: true, round: 0, rounds: [], result: { winner: 'B', reason: 'towel' }, a: { f } });
 }
 
-function advanceArena(run, tier, won, opp) {
+function advanceArena(run, tier, won, opp, beatYou = true) {
   const arena = run.arenas[tier];
   if (tier === GRAND_TIER) {
     if (won) {
@@ -2348,7 +2386,7 @@ function advanceArena(run, tier, won, opp) {
       // The rival returns at the arena's Boss Power +1, however often they beat you: no compounding death spiral.
       const basePower = tier === GRAND_TIER ? GRAND.oppPower : CIRCUITS[tier - 1].oppPower[2];
       arena.rival = { ...structuredClone(opp), power: basePower + 1, renown: opp.renown + 2, rival: true, injuries: [], alive: true };
-      log(run, `${opp.name} will remember this, and will be waiting for you.`, 'warn');
+      log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn');
     }
     restartCircuit(run, tier);
   }

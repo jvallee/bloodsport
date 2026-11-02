@@ -180,7 +180,7 @@ export const choiceLabel = (choice, names) => choice.label.replace(/\$\{(\w+)\}/
 const WHO = { f: 'them', g: 'the other', both: 'both', all: 'everyone' };
 const sign = (n) => (n > 0 ? `+${n}` : `−${-n}`);
 const INJURY_NAMES = { fleshWound: 'Flesh Wound', distracted: 'Distracted', concussed: 'Concussed' };
-export function stakesText(eff, sep = '; ') {
+export function stakesText(eff, sep = '; ', names = {}) {
   const house = [];
   if (eff.gold) house.push(`${sign(eff.gold)} Gold`);
   if (eff.favor) house.push(`${sign(eff.favor)} Favour`);
@@ -202,10 +202,10 @@ export function stakesText(eff, sep = '; ') {
   if (eff.coup) house.push('there is no turning back');
   if (eff.champion) add(eff.champion, 'joins the cause');
   if (eff.betray) house.push('your political prisoners and everyone you freed are executed; the Emperor rewards you');
-  const parts = [house.join(', '), ...Object.entries(people).map(([to, list]) => `${WHO[to]}: ${list.join(', ')}`)].filter(Boolean);
+  const parts = [house.join(', '), ...Object.entries(people).map(([to, list]) => `${names[to] ?? WHO[to]}: ${list.join(', ')}`)].filter(Boolean);
   if (eff.chance) {
-    const win = stakesText(eff.chance.win, ', ');
-    const lose = stakesText(eff.chance.lose, ', ');
+    const win = stakesText(eff.chance.win, ', ', names);
+    const lose = stakesText(eff.chance.lose, ', ', names);
     // A plot card's odds can depend on the fighter (a function); its hidden effects never show, so say it's a gamble.
     const odds = typeof eff.chance.p === 'function' ? 'A chance' : `${Math.round(eff.chance.p * 100)}%`;
     if (win === 'Nothing happens' && lose === 'Nothing happens') parts.push(`A gamble${typeof eff.chance.p === 'function' ? '' : ` (${odds})`}`);

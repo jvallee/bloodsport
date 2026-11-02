@@ -18,7 +18,7 @@ import {
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
-  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft,
+  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
@@ -29,8 +29,8 @@ import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene, dueRebelStage } from 
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText, slotLabel } from '../src/codex.js';
 
 // A card choice's visible stakes. Plot cards (v6) show nothing rather than "Nothing happens" when only hidden things change.
-const plotStakes = (run, c) => {
-  const t = stakesText(c.effects);
+const plotStakes = (run, c, names = {}) => {
+  const t = stakesText(c.effects, '; ', { f: names.f, g: names.g });
   return run.event?.plot && t === 'Nothing happens' ? '' : ` → ${t}`;
 };
 
@@ -277,9 +277,9 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (run.event) {
       const e = EVENT_BY_ID[run.event.id];
       const names = eventNames(run);
-      out.push(`\n*** EVENT: ${e.title} ***\n${e.text(names)}\n${e.choices.map((c, i) => `  choose ${i}: ${choiceLabel(c, names)}${plotStakes(run, c)}${eventChoiceBlocker(run, i) ? ` (can't: ${eventChoiceBlocker(run, i)})` : ''}`).join('\n')}`);
+      out.push(`\n*** EVENT: ${e.title} ***\n${e.text(names)}\n${e.choices.map((c, i) => `  choose ${i}: ${choiceLabel(c, names)}${plotStakes(run, c, names)}${eventChoiceBlocker(run, i) ? ` (can't: ${eventChoiceBlocker(run, i)})` : ''}`).join('\n')}`);
     }
-    out.push(`\n-- Your gladiators ${run.roster.length}/${rosterCap(run)} · training costs ${trainCost(run)} Gold a week --`);
+    out.push(`\n-- Your gladiators ${run.roster.length}/${rosterCap(run)} · training costs ${trainCost(run)} Gold a week${maxLevel(run, 'trainer') > trainCost(run) ? ` (${maxLevel(run, 'trainer')} from the Silver Coliseum)` : ''} --`);
     out.push(run.roster.length ? run.roster.map(fighterBlock).join('\n') : '(none: `market` to see who is for sale)');
     if (run.fallen.length) out.push(`Fallen: ${run.fallen.map((f) => `${f.name}${f.raised ? ' (risen as a Revenant)' : ''}`).join(', ')}`);
     out.push(`\n-- ${run.bouts ? 'Fight day' : 'Next bouts'} --`);
@@ -425,7 +425,9 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     const s = finishMatch(run, match);
     match = null;
     if (s.next) out.push(`${s.fighter} wins the ${s.bracket} and is through to the ${s.next}. \`fight ${s.fighterId} ${s.tier}\` to fight on, or \`withdraw ${s.tier}\`.`);
-    const bits = [`${s.gold >= 0 ? '+' : ''}${s.gold} Gold`, `${s.prestige >= 0 ? '+' : ''}${s.prestige} Prestige`];
+    const purse = purseGold(s);
+    const bits = [`${purse >= 0 ? '+' : ''}${purse} Gold`, `${s.prestige >= 0 ? '+' : ''}${s.prestige} Prestige`];
+    if (s.bet) bits.push(s.bet.won ? `bet won: ${s.bet.payout} Gold back (+${s.bet.payout - s.bet.stake} profit)` : `bet lost: ${s.bet.stake} Gold`);
     if (s.favor) bits.push(`${s.favor > 0 ? '+' : ''}${s.favor} Favour`);
     if (!s.died) bits.push(`+${s.xp} XP`);
     if (s.renown) bits.push(`${s.renown > 0 ? '+' : ''}${s.renown} Renown`);

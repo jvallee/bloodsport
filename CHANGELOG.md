@@ -7,6 +7,14 @@ What changed from version to version, newest first. Each frozen version can stil
 - **The Bronze wall is lower:**
   - The Bronze Arena's Boss fights at Power 13 (was 14).
   - Until you reach the Silver Coliseum, training costs at most 2 Gold a week per fighter, however good your Trainer Room. From Silver on, the fee is the Trainer Room's level again.
+- **Training picks up again:** a fighter switched to Rest because they were close to overtraining, or the Gold ran short, goes back to the same training once they can. A Rest you choose yourself stays.
+- **Fixes from playtest #10:**
+  - A Quarter- or Semi-final won with 2+ injuries is a **Bloodied Victory**, with its Favour, Renown, XP and Morale (it can meet the Emperor's demand, too).
+  - Withdrawing from a tournament no longer makes a nemesis of an opponent you never fought, and losing a Boss tournament early no longer says the Boss beat you.
+  - The thumbs-up choice gives the right reason when a spare earns no Favour, and says when it still meets the Emperor's demand.
+  - Event choices name your fighters ("Pertinax: joins the cause", not "the other").
+  - A fight's result shows the purse and a won bet separately ("+8 Gold · Bet won: 5 Gold back (+1 profit)").
+  - The Ludus says when the cheap training fee will rise ("2 Gold per training week (3 from the Silver Coliseum)").
 
 ## 5.3.0
 

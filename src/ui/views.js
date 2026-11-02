@@ -7,7 +7,7 @@ import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker,
-  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf,
+  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold,
 } from '../run.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel, effectAt,
@@ -183,14 +183,14 @@ const plus = (n) => `${n >= 0 ? '+' : ''}${n}`;
 export function summaryBanner(s) {
   if (!s) return '';
   const verdict = s.reason === 'towel' ? 'capitulated' : s.died ? 'was slain' : s.won ? 'won' : 'lost';
-  const bits = [`${plus(s.gold)} Gold`, `${plus(s.prestige)} Prestige`];
+  const bits = [`${plus(purseGold(s))} Gold`, `${plus(s.prestige)} Prestige`];
   if (s.xp && !s.died) bits.push(`${plus(s.xp)} XP`);
   if (s.renown) bits.push(`${plus(s.renown)} Renown`);
   if (s.favor) bits.push(`${plus(s.favor)} Favour`);
   if (s.title) bits.push(`🏆 ${s.fighter} earns ${s.titlePower > 1 ? 'the titles' : 'the title'} "${s.title}"${s.title === 'Master of the Games' ? '' : ` (+${s.titlePower ?? 1} Power)`}`);
   if (s.nemesis) bits.push(`☠ Nemesis beaten: ${s.nemesis}`);
   if (s.hype?.renown || s.hype?.gold) bits.push(`📣 Crowd hype ${s.hype.hype}`);
-  if (s.bet) bits.push(s.bet.won ? `🪙 Bet won: +${s.bet.payout} Gold` : `🪙 Bet lost: ${s.bet.stake} Gold`);
+  if (s.bet) bits.push(s.bet.won ? `🪙 Bet won: ${s.bet.payout} Gold back (+${s.bet.payout - s.bet.stake} profit)` : `🪙 Bet lost: ${s.bet.stake} Gold`);
   if (s.bloodied) bits.push(`🩸 Bloodied Victory: won with 2+ injuries (extra Favour, Renown, XP and Morale)`);
   if (s.kill) bits.push(`💀 A kill${s.mark ? `: ${s.fighter} earns the mark "${s.mark}"` : ''}`);
   if (s.next) bits.push(`🏟 On to the ${s.next}`);
@@ -429,7 +429,7 @@ function rosterPanel(run) {
     const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(inj.tag === 'fleshWound' ? 'Flesh Wound' : inj.tag)} (${surgeonPrice(run)}g)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
     const augments = f.injuries.map((inj, i) => (['maimed', 'blinded'].includes(inj.tag) ? buttonWhy(`Replace the ${inj.tag === 'maimed' ? 'Maimed limb' : 'Blinded eye'}: ${AUGMENTS[inj.tag === 'maimed' ? 'arm' : 'eye'].name}`, 'augment', { id: f.id, index: i }, augmentBlocker(run, f.id, i)) : '')).join('');
     const actions = `${perkChooser(run, f)}<div class="actions">
-      <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week</small></div>
+      <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week${maxLevel(run, 'trainer') > trainCost(run) ? ` (${maxLevel(run, 'trainer')} from the Silver Coliseum)` : ''}</small></div>
       <div class="segs">${jobs}</div>
       ${f.injuries.length > 1 ? `<div class="treat"><span class="label">Medbay treats first:</span> <select class="treat-select" data-change="treat-first" data-id="${f.id}" aria-label="Which injury the Medbay treats first">${f.injuries.map((inj, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${esc(INJURY_BY_TAG[inj.tag].name)} (${inj.weeksLeft} week${inj.weeksLeft === 1 ? '' : 's'})</option>`).join('')}</select></div>` : ''}
       ${f.job === 'rest' && jobBlocker(run, f.id, 'trainPower') && jobBlocker(run, f.id, 'trainSpeed') ? `<div class="why-not">Can't train this week: ${esc(jobBlocker(run, f.id, 'trainPower'))}</div>` : ''}
@@ -782,8 +782,8 @@ function mercyCard(run) {
 }
 
 // A choice's visible stakes; a plot card (v6) shows nothing rather than "Nothing happens" when only hidden things change.
-const cardStakes = (run, c) => {
-  const t = stakesText(c.effects);
+const cardStakes = (run, c, names = {}) => {
+  const t = stakesText(c.effects, '; ', { f: names.f, g: names.g });
   return run.event?.plot && t === 'Nothing happens' ? '' : t;
 };
 
@@ -794,7 +794,7 @@ export function eventCard(run) {
   const names = eventNames(run);
   const who = [run.event.f, run.event.g].map((id) => run.roster.find((f) => f.id === id)).filter(Boolean);
   const faces = who.map((f) => portrait(f, 56)).join('');
-  const choices = e.choices.map((c, i) => `<div class="event-choice">${buttonWhy(esc(choiceLabel(c, names)), 'event-choice', { index: i }, eventChoiceBlocker(run, i), 'btn')}<small>${esc(cardStakes(run, c).replace(/\bthem\b/g, names.f ?? 'them').replace(/\bthe other\b/g, names.g ?? 'the other'))}</small></div>`).join('');
+  const choices = e.choices.map((c, i) => `<div class="event-choice">${buttonWhy(esc(choiceLabel(c, names)), 'event-choice', { index: i }, eventChoiceBlocker(run, i), 'btn')}<small>${esc(cardStakes(run, c, names))}</small></div>`).join('');
   return `<section class="panel event-card"><div class="event-faces">${faces}</div><div class="event-body">
     <div class="label">This week</div><h2>${esc(e.title)}</h2><p>${esc(e.text(names))}</p>
     <div class="row event-choices">${choices}</div></div></section>`;

@@ -548,3 +548,13 @@ Probe (`bronze.js`, a scratch copy of `scripts/probes/bot-options.js` that also 
   - Careful 43%, careful deaths 0.63, reckless deaths 3.10. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +14.
   - Loyalist +6. Coup 19%. Treason 2%.
   - Short careers 47% in 82 weeks (full careers 111).
+
+### Playtest #10 changes (5.4.0)
+
+- **Bracket Bloodied Victories:** a Quarter- or Semi-final won with 2+ effective injuries is a Bloodied Victory, with the same effects as a single match: +5 Favour (`FAVOR.spectacleWin`), `BLOODIED` Renown, XP and Morale, and Battle-Hardened the first time. It counts for the Emperor's "Bloodied Victory" demand.
+- **Withdrawing** from a bracket between matches makes no nemesis (no round was fought). A Boss bracket lost before its Final still brings the Boss back at Boss Power +1; only the log line changes.
+- **Training resumes:** a fighter switched to Rest by the game (Stress, Gold, Discontent) keeps their training job in `f.resume` and goes back to it at the end of a week in which it could happen without overtraining them next week. Reaching the cap, or the player choosing any job, forgets it. Skipping to the tournament also rests a trainee for fight week if training would overtrain them.
+- **Gates after these changes** (`npm run check`): all 13 pass.
+  - Careful 43%, careful deaths 0.64, reckless deaths 3.12. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +23.
+  - Loyalist +12. Coup 15%. Treason 1%.
+  - Short careers 51% in 84 weeks (full careers 114).

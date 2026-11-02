@@ -10,6 +10,7 @@ import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRis
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, fighterCard, mercyChoices } from './components.js';
 import { roundStats } from '../explain.js';
+import { purseGold } from '../run.js';
 
 function tagPills(r) {
   const pills = [];
@@ -104,7 +105,7 @@ function report(s) {
   const plus = (n) => `${n > 0 ? '+' : ''}${n}`;
   const tone = (n) => (n > 0 ? 'good' : n < 0 ? 'bad' : '');
   const rows = [
-    row('Gold', plus(s.gold), tone(s.gold)),
+    row('Gold', plus(purseGold(s)), tone(purseGold(s))),
     row('Prestige', plus(s.prestige), tone(s.prestige)),
     s.favor ? row('Imperial Favour', plus(s.favor), tone(s.favor)) : '',
     s.died ? '' : row('XP', `${plus(s.xp)}${s.levels ? ` · ⭐ level up! Choose a perk on their card` : ''}`, 'good'),
