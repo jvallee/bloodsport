@@ -50,7 +50,7 @@ Every fighter is limited by the cap, so any extra cap adds Power across the whol
 
 ## Start here: the current state (5.3.0)
 
-5.3.0 was built in a cloud session that couldn't reach GitHub. Its commits were bundled and fast-forwarded into the local repo; **push `main` to publish it**. All 482 tests and all 13 gates pass:
+5.3.0 is pushed and live (2026-11-02). 5.4.0 (the Bronze wall) is in progress on top of it. All 482 tests and all 13 gates pass:
 
 | Gate | Value |
 |---|---|
@@ -78,7 +78,7 @@ The demand fix changed the balance: 5.2.0's numbers were measured while every de
 **Tests changed on purpose** (each in the commit message): the Stables tests became Temple/Basa tests; the tutorial tests start with one fighter; the demand test allows the next month's new demand; the rival-houses test keeps Favour topped up (it never fights, and a missed demand now costs 4).
 
 **Open for the designer:**
-- **The Bronze wall** (playtests #5, #8, #9; both #9 careers stalled there): flat 2-Gold training below Silver, an earlier Trainer cap, or a Bronze Boss at Power 13.
+- ~~**The Bronze wall**~~ decided 2026-11-02 (5.4.0): the Bronze Boss at Power 13 and training at most 2 Gold below Silver. An earlier Trainer cap failed the careful gate (47–53%). Table in `docs/fight-rules.md`, "5.4.0". Gates after it: careful 43%, loyalist +6 (near its edge again), short 47%.
 - **The Temple's name**, and the Revenant's balance: at equal Power a Revenant wins 54% (Grave Chill 58%), the best kind, offset by −1 Power at Temple level 1 and no Inspired Morale.
 - **How hidden is the plot now?** The confession makes it explicit once you hold a political prisoner (the designer asked for it).
 - **The old tutorial tips**, Renown in the mismatch jeers, autoplay after round 1, and when to freeze v6 (all still open from 5.2.0).
