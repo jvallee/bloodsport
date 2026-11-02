@@ -558,3 +558,32 @@ Probe (`bronze.js`, a scratch copy of `scripts/probes/bot-options.js` that also 
   - Careful 43%, careful deaths 0.64, reckless deaths 3.12. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +23.
   - Loyalist +12. Coup 15%. Treason 1%.
   - Short careers 51% in 84 weeks (full careers 114).
+
+### The designer's requests (5.4.0)
+
+- **A Boss Final lost keeps the buy-in:** from the Silver Coliseum up, losing or capitulating in the Final of a Boss tournament returns its Prestige buy-in (`BRACKET.bossFinalRefund` = 1, the share returned; `keepsBuyIn` in `src/run.js`). Not the Grand Tournament, and not a Boss bracket lost before its Final. Blood Faith's refund doesn't add to it.
+- **The Imperial Coliseum is 26 / 27 / 28** (was 25 / 26 / 27), to pay for it, and the Grand Tournament 31 (below). Probe (`scripts/probes/bot-options.js`, 300 careful careers from seed 1000; gate 20–45%):
+
+  | Variant | Careful wins |
+  |---|---|
+  | No refund (5.4.0 before this) | 41% |
+  | Full refund | 47% (fails) |
+  | Half refund | 45% (at the edge) |
+  | Full refund, Silver Boss 20 | 51% (fails) |
+  | Full refund, Grand 31 | 48% (fails) |
+  | **Full refund, Imperial +1 (chosen)** | **43%** |
+
+  With the full refund alone, loyalist careers won 57% (+10) and short careers 53%.
+- **The overtraining warning:** the first time in a career that End week would take a training fighter from under Stress 50 to 50+ (`overtrainedByWeek`, which plays the week on a copy), the steward asks: rest them this week, or train anyway. Cosmetic: no rule changes.
+- **The Emperor's demands:** each judgement is kept in `run.demandResult` ({ id, issued, met, gold, favor }). The page plays an Emperor scene when a demand is met and when one is missed.
+- **The rebel's reveal** (cosmetic, `src/dialogue.js`): the confession waits for the chalk sign to be copied (stage `favours`), the prisoner's guarded scene (`rebel-favours`), and trust `PLOT.confessTrust` = 3. The champion and "ready" scenes follow it as before.
+- **"Free me"** comes only while two or more political prisoners are in the house.
+- **The Emperor's spy** (`emperorsSpy` in `src/events.js`, `SPY`): an ordinary event, once a career, from Year 2, with at least two non-political fighters (never the rebels' champion).
+  - Let them be: +3 Favour; the fighter is marked `spy`, and while the hidden plot runs, suspicion +15 now and +2 a month while they stay.
+  - Execute them: they die (the careful bot keeps them, the reckless one executes); everyone −5 Morale for 4 weeks; suspicion −15 if the plot runs. The body is kept (`body: true`), so the Temple of Vulcan can raise it like a fighter killed in the arena.
+- **Auto-play** goes on to a tournament's next match by itself, 2.5 seconds after a win, unless a verdict, a perk or anything else blocks the fight. **Skip to the result** plays the remaining rounds at once with the suggested tactic, stopping where auto-play would (the Death Gate open with capitulating still possible).
+- **The Grand Tournament is 31** (was 30). With everything above, the first check failed two gates: careful 45% (over the line) and the Grand only +9 harder than the first Boss. Treason had risen to 9% because the rebel bot kept the Emperor's spy (it takes the cautious first choice). The rebel bot now executes the spy while its plot runs, and the Grand rose by 1.
+- **Gates at 5.4.0** (`npm run check`, 300 careers; 150 each for the plot bots and short careers): all 13 pass.
+  - Careful 44%, careful deaths 0.70, reckless deaths 3.37. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +18.
+  - Loyalist +9. Coup 15%. Treason 4%.
+  - Short careers 47% in 88 weeks (full careers 119).

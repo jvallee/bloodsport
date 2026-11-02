@@ -4,6 +4,15 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 5.4.0 (in progress)
 
+- **Auto-play carries on through a tournament:** after a win, it goes on to the next match by itself (it still waits for your thumbs up or down).
+- **Skip to the result:** a new button on the fight screen plays the rest of the match at once with the suggested tactic. Like auto-play, it stops at the Death Gate while you can still capitulate.
+- **The Emperor's spy:** from the second year, once a career, you may find one of your fighters has been reporting to the palace. Let them be (the Emperor is pleased), or execute them, and the priests of Vulcan can have the body.
+- **A rebel asks to be freed only while you hold two:** the last political prisoner in your house never asks to leave.
+- **The Ludus scrolls in columns:** on a wide screen, Your gladiators and Fight day each scroll on their own.
+- **A Boss Final lost keeps your Prestige:** from the Silver Coliseum up, losing (or capitulating in) the Final of a Boss tournament returns its buy-in. Reaching the Boss was worth something. (Not the Grand Tournament.) To keep the finish hard, the Imperial Coliseum's fighters are 1 Power stronger (26 / 27 / 28), and so is the Grand Tournament's champion (31).
+- **The steward warns you before overtraining:** the first time in a career that End week would leave someone Overtrained, the steward asks first: rest them this week, or train anyway.
+- **The Emperor reacts to his demands:** he speaks up the moment you meet one, and again when its fight day ends and you haven't.
+- **The rebel takes their time:** a political prisoner no longer tells you everything the week you buy them. After you copy the chalk sign they say a guarded word; the full confession comes only once they trust you, a few favours in.
 - **Several careers at once:** the new **Careers** button lists every career saved in this browser (up to 8). Play any of them, or delete one. Starting a new career no longer abandons the one you were playing, and importing a save adds it as another career. Your old save carries over as the first one.
 - **The Bronze wall is lower:**
   - The Bronze Arena's Boss fights at Power 13 (was 14).
