@@ -90,6 +90,13 @@ The demand fix changed the balance: 5.2.0's numbers were measured while every de
 3. The next small fun idea, offered and not yet built: when a bonded partner dies, the survivor fights their next match for them (+1 Power, "for Corvax").
 4. A decision on the Bronze wall, then an LLM playtest of the early game.
 
+## 5.4.0 so far (2026-11-02)
+
+- **The Bronze wall** is lower (the Boss at 13, training ≤ 2 Gold below Silver) and LLM playtest #10 (`docs/playtest-llm-10.md`, `docs/playtest-10-changes.md`) confirmed it: Bronze took 3 months, not 7.
+- **Its fixes are in:** bracket Bloodied Victories, no nemesis from a withdrawal, training resumes after a forced rest (`f.resume`, `resumeTraining`), the spare reason, event stakes with names (`stakesText(eff, sep, names)`), the purse apart from a won bet (`purseGold`).
+- **Gates:** all 13 pass. Careful 43%, loyalist +12, short careers 51%. 491 tests.
+- **Open: the Silver wall.** The tester's career stopped at the Trainer cap of 8 against Silver Finals of 18–21, while Silver losses drained Prestige (31 → 5) away from House level 4. Options in `docs/playtest-10-changes.md`. Probe them with a "weeks at Silver" count, as the Bronze table did.
+
 ## The state at 5.2.0 (kept for reference)
 
 Everything is committed, pushed and live. All 460 tests and all 13 gates pass.
