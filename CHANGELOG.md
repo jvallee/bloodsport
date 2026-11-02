@@ -4,6 +4,8 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 5.3.0 (in progress)
 
+- **The rebel speaks again:** after the first confession, the same prisoner takes you aside at each stage of the rising: when the favours begin, when they need a champion, and when it's ready. They warn you when the Praetorians are watching.
+- **The crowd remembers its dead:** a Revenant's first fight back starts with the crowd chanting their name, worth +20 on the hype meter (Renown, and Gold on a win).
 - **Fixes from playtest #9:**
   - A **Flesh Wound heals on Rest** too, at half the Medbay's speed, so a light wound no longer waits months for a bed.
   - When an old arena **moves on without you**, the house log says so, and who you'll meet next.

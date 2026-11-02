@@ -593,7 +593,7 @@ export function deathRisk(m, stance = 'steady', n = 400) {
 export const canThrowTowel = (m) => !m.over && m.round >= 1 && m.debuff !== 'emperorsGaze';
 // The crowd's hype (fun idea #6): the drama of a match so far, for your fighter (side A). Pure: read from the rounds.
 export function hypeOf(m) {
-  let h = 0;
+  let h = m.a?.f?.risen ? HYPE.risen : 0; // a Revenant's first fight back: the crowd chants the name it buried
   for (const r of m.rounds ?? []) { // (a reload's stand-in match has no rounds)
     if (r.winner === 'A' && r.win?.chance < 40000) h += HYPE.upset; // won a round they were expected to lose
     for (const c of r.checks ?? []) if (c.attacker === 'A' && c.injury) h += c.injury.tag === 'death' ? HYPE.kill : HYPE.wound;

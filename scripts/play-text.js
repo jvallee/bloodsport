@@ -25,7 +25,7 @@ import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFesti
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
 import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
-import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene } from '../src/dialogue.js';
+import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene, dueRebelStage } from '../src/dialogue.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText, slotLabel } from '../src/codex.js';
 
 // A card choice's visible stakes. Plot cards (v6) show nothing rather than "Nothing happens" when only hidden things change.
@@ -262,6 +262,11 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (rebel) {
       scenesSeen.push('rebel');
       out.push(sceneText('rebel', rebelScene(run, rebel)));
+    }
+    const stage = dueRebelStage(run, scenesSeen);
+    if (stage) {
+      scenesSeen.push(stage.id);
+      out.push(sceneText(stage.id, stage.beats));
     }
     if (run.mercy) out.push(`\n${mercyText()}`);
     if (run.status !== 'active') {

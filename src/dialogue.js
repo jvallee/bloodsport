@@ -167,6 +167,43 @@ export function dueRebel(run, seen) {
   return run.roster.find((f) => f.political) ?? null;
 }
 
+// ---------- The rebel speaks again (fun idea, 5.3.0) ----------
+// As the plot moves on (src/run.js advancePlot), the same prisoner takes you aside once at each stage. What they say grows
+// with their trust, and warns you when the palace is watching. Every line is a PLACEHOLDER first draft for the designer.
+export const REBEL_STAGES = ["favours", "cause", "ready"];
+export function rebelStageScene(run, f, stage) {
+  const say = (text) => ({ speaker: "rebel", fighter: f, text });
+  const watched = (run.plot?.suspicion ?? 0) >= 40;
+  const lines = {
+    favours: [
+      say("You copied the sign. They saw. From now on they'll ask you for small things: a door left open, a stranger fed, a name forgotten."),
+      say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good."),
+    ],
+    cause: [
+      say("They trust you now. More than they trust me, I think."),
+      say("A rising needs a sword in the arena: one of your fighters, standing in the Grand Tournament when the Emperor watches. And it needs the barracks armed."),
+      say("Choose your champion carefully, Lanista. If they fall, the rising falls with them."),
+    ],
+    ready: [
+      say("It's ready. The blades are oiled, the crowd knows the signal, and your champion knows what to do."),
+      say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box. We'll do the rest."),
+    ],
+  }[stage] ?? [];
+  if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. Every favour you do us, they notice."));
+  return [{ speaker: "narrator", text: `${f.name} finds you alone again.` }, ...lines];
+}
+// The stage scene due now, if any: { id, fighter, beats }. Only after the first confession, while the plot runs and its
+// prisoner (or another political prisoner) is still in your house.
+export function dueRebelStage(run, seen) {
+  const p = run.plot;
+  if (run.status !== "active" || !p || p.ended || !seen.includes("rebel")) return null;
+  const f = run.roster.find((x) => x.political);
+  if (!f) return null;
+  const reached = REBEL_STAGES.slice(0, REBEL_STAGES.indexOf(p.stage) + 1);
+  const stage = reached.find((st) => !seen.includes(`rebel-${st}`));
+  return stage ? { id: `rebel-${stage}`, fighter: f, beats: rebelStageScene(run, f, stage) } : null;
+}
+
 // The steward's news (playtest #8): what changed in the house that's worth a word. Pure: compare two snapshots.
 export function newsSnapshot(run) {
   return {

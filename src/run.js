@@ -1485,7 +1485,7 @@ export function reanimate(run, id) {
   const lost = maxLevel(run, 'vulcan') >= 2 ? 0 : REANIMATE.power;
   Object.assign(f, {
     id: newId(run, 'f'), kind: 'revenant', kindTrait: pick(run.rng.growth, KINDS.revenant.traits), alive: true, injuries: [],
-    stress: 0, job: 'rest', morale: REANIMATE.morale, topStreak: 0, pendingPerks: [], revenantOf: body.id, power: body.power + lost,
+    stress: 0, job: 'rest', morale: REANIMATE.morale, topStreak: 0, pendingPerks: [], revenantOf: body.id, power: body.power + lost, risen: true, // until their first fight back
   });
   run.roster.push(f);
   chronicle(run, f, `Raised from the dead in the Unnatural Temple of Vulcan, ${run.week - body.diedWeek} week${run.week - body.diedWeek === 1 ? '' : 's'} after falling. ${TRAITS[f.kindTrait].name}.`);
@@ -2075,6 +2075,12 @@ export function finishMatch(run, match) {
   if (won && opp.nemesis) nemesisFalls(run, opp, fighter, tier, summary); // before the purse is paid
   settleBet(run, match, won, summary);
   payHype(run, match, won, tier, summary);
+  if (fighter.risen) { // a Revenant's first fight back (the crowd's chant is in the hype)
+    delete fighter.risen;
+    summary.risen = true;
+    chronicle(run, fighter, `Fought again, back from the dead. The crowd chanted their name.`);
+    log(run, `The crowd chants ${fighter.name}'s name: the dead fighter walks the sand again.`, 'event');
+  }
   summary.favor = run.favor - favorBefore;
   summary.morale = fighter.morale - moraleBefore;
   run.gold += summary.gold;

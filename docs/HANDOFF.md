@@ -15,7 +15,7 @@ Last updated 2026-11-01, at **version 5.3.0** (committed; not pushed from the cl
 ## 2. How the user likes to work (important)
 
 - **Be autonomous.** Implement worthwhile feedback without asking, then report clearly what changed and why. The user often hands over a batch of requests and goes to sleep. Finish everything, playtest, and leave a clear morning report.
-- **Goal:** make the game "very user friendly, fun, addictive and immersive". The user welcomes proactive fun ideas (end reports with a few).
+- **Goal:** make the game "very user friendly, fun, addictive and immersive". The user welcomes proactive fun ideas (end reports with a few), and likes it when you go ahead and build the small ones you suggest (2026-11-01).
 - **Commit often** with clear messages. Run `npm test` before every commit. **Never weaken, skip or delete a test.** When a deliberate rule change breaks a test, update the expected value and say so.
 - **Balance:** every balance or rules change must pass `npm run check` (13 gates; it takes 5–15 minutes, so run it in the background). When a gate fails, sweep the values and pick from a table; don't guess.
 - **Docs:** record every number change in `docs/fight-rules.md`, and every player-visible change in `CHANGELOG.md` under "Unreleased" (the user likes a summary of changes between versions).
@@ -69,6 +69,7 @@ The demand fix changed the balance: 5.2.0's numbers were measured while every de
 - **Lower arenas move on** when nobody fights there (`arenaMovesOn`), with a log line.
 - **The rebel's confession** (`rebelScene`, `houseRecord`, `dueRebel` in `src/dialogue.js`): the first political prisoner tells you about the rising, coloured by your record. All lines PLACEHOLDER. A dialogue beat with `fighter` speaks with that fighter's name and face.
 - **The designer's notes:** one starting gladiator in the tutorial month; the top bar shows Prestige to the next level; feuds show months left; sparing earns no Favour when the crowd or the Emperor wanted a death (`spareFavor`).
+- **Fun ideas built:** the rebel speaks again at each plot stage (`rebelStageScene`, `dueRebelStage`); a Revenant's first fight back gets the crowd's chant (+20 hype, `HYPE.risen`).
 - **A bug report:** game actions that settle no match (exhibition, host, bet) must return nothing; `act` in `src/main.js` reads any result as a match summary.
 - **Playtest #9 fixes** (`docs/playtest-llm-9.md`, `docs/playtest-9-changes.md`): demands were judged the moment they were issued (every one failed); betting odds and refusals; short careers start at House level 2; Flesh Wounds heal on Rest at half speed; and more.
 - **Bots** now bet (60%+ favourites), build the Patron Lounge last, host and pass policies, and raise the dead. Betting cost the careful bot about 39 Gold a career (it isn't an exploit).

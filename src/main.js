@@ -12,7 +12,7 @@ import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPat
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
-import { SCENES, dueScene, dueRebel, rebelScene, newsSnapshot, stewardNews } from './dialogue.js';
+import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews } from './dialogue.js';
 import { DEMANDS } from './data.js';
 import { fightView, DICE_TIME, revealTime, roundEndTime } from './ui/fightView.js';
 import { roundSounds, setSound, sfx } from './ui/sound.js';
@@ -129,6 +129,13 @@ function checkScene() {
   if (rebel) {
     markSceneSeen('rebel');
     scene = { id: 'rebel', beat: 0, beats: rebelScene(run, rebel) };
+    return;
+  }
+  // ...and speaks again as the rising grows (one scene per plot stage).
+  const stage = dueRebelStage(run, scenesSeen());
+  if (stage) {
+    markSceneSeen(stage.id);
+    scene = { id: stage.id, beat: 0, beats: stage.beats };
     return;
   }
   const id = dueScene(run, scenesSeen());

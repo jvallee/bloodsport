@@ -522,3 +522,4 @@ Numbers are tunables in `src/data.js`; the words are placeholders for the design
   - Careful 41%, careful deaths 0.71, reckless deaths 2.96. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +21.
   - Loyalist +5 (at the edge of its 5–20 gate). Coup 19%. Treason 3%.
   - Short careers 43% in 80 weeks (full careers 111).
+- **A Revenant's first fight back** (fun idea): +20 hype from the start (`HYPE.risen`), paid out like any hype; the `risen` flag clears after that match. The rebel's stage scenes (`dueRebelStage`) are cosmetic.

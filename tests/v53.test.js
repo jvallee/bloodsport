@@ -332,3 +332,49 @@ test('game actions that settle no match return nothing: exhibition, host, bet (b
     assert.ok(state.match.bet);
   }
 });
+
+// ---------- Fun ideas (5.3.0): the rebel speaks again; the crowd chants a Revenant's name ----------
+import { dueRebelStage, REBEL_STAGES } from '../src/dialogue.js';
+import { hypeOf } from '../src/fight.js';
+import { HYPE } from '../src/data.js';
+
+test('the rebel speaks again at each stage of the rising, once each, after the first confession', () => {
+  const { run, rebel } = withRebel();
+  assert.equal(dueRebelStage(run, []), null, 'not before the confession');
+  assert.equal(dueRebelStage(run, ['rebel']), null, "the plot's first stage has no scene of its own");
+  run.plot.stage = 'cause';
+  const seen = ['rebel'];
+  const first = dueRebelStage(run, seen);
+  assert.equal(first.id, 'rebel-favours', 'a skipped stage still plays, in order');
+  assert.equal(first.fighter, rebel);
+  seen.push(first.id);
+  const second = dueRebelStage(run, seen);
+  assert.equal(second.id, 'rebel-cause');
+  assert.match(second.beats.map((b) => b.text).join(' '), /champion/);
+  seen.push(second.id);
+  assert.equal(dueRebelStage(run, seen), null);
+  run.plot.stage = 'ready';
+  run.plot.suspicion = 50;
+  const ready = dueRebelStage(run, seen);
+  assert.equal(ready.id, 'rebel-ready');
+  assert.match(ready.beats.map((b) => b.text).join(' '), /Praetorians have been asking/);
+  run.plot.ended = 'cold';
+  assert.equal(dueRebelStage(run, ['rebel']), null, 'a cold plot says nothing');
+  assert.deepEqual(REBEL_STAGES, ['favours', 'cause', 'ready']);
+});
+
+test("a Revenant's first fight back: the crowd chants their name (+hype), once", () => {
+  const { run, body } = withBody();
+  const r = reanimate(run, body.id);
+  assert.equal(r.risen, true);
+  while (!run.boutPending) advanceWeek(run);
+  const m = startMatch(run, r.id, 1);
+  assert.equal(hypeOf(m), HYPE.risen);
+  m.over = true;
+  m.result = { winner: 'A', reason: 'rounds' };
+  m.round = 2;
+  const s = finishMatch(run, m);
+  assert.ok(s.risen);
+  assert.equal(r.risen, undefined);
+  assert.ok(run.log.some((l) => /chants .* name/.test(l.text)));
+});
