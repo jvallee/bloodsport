@@ -653,3 +653,11 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .hypebar > span { display: block; height: 100%; background: linear-gradient(90deg, #d9b45a, #e0603c); }
 .lean-loyalist { color: #d6a3dc; } .lean-reformist { color: var(--good, #8fc98f); } .lean-neutral { color: var(--muted); }
 .panel.lounge { margin-top: 14px; }
+
+/* The Careers dialog (5.4.0): every saved career */
+.modal.careers .modal-body { width: min(640px, 100%); box-sizing: border-box; }
+.career-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.career-row small { display: block; color: var(--muted); margin-top: 2px; }
+.career-row.current b { color: var(--gold); }
+.career-row .row { flex-shrink: 0; gap: 6px; }
+@media (max-width: 560px) { .career-row { flex-direction: column; align-items: flex-start; } }

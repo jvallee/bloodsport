@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 5.4.0 (in progress)
 
+- **Several careers at once:** the new **Careers** button lists every career saved in this browser (up to 8). Play any of them, or delete one. Starting a new career no longer abandons the one you were playing, and importing a save adds it as another career. Your old save carries over as the first one.
 - **The Bronze wall is lower:**
   - The Bronze Arena's Boss fights at Power 13 (was 14).
   - Until you reach the Silver Coliseum, training costs at most 2 Gold a week per fighter, however good your Trainer Room. From Silver on, the fee is the Trainer Room's level again.

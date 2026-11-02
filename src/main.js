@@ -6,8 +6,9 @@ import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
+import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey } from './careers.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, careersModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked, dailySeed, dailySetup } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
@@ -19,13 +20,15 @@ import { roundSounds, setSound, sfx } from './ui/sound.js';
 
 const app = document.getElementById('app');
 const fightEl = document.getElementById('fight');
-const SAVE_KEY = 'bloodsport.career';
 const PREFS_KEY = 'bloodsport.prefs';
 const CODEX_KEY = 'bloodsport.codex';
 const LEGACY_KEY = 'bloodsport.legacy';
-const SCENES_KEY = 'bloodsport.scenes'; // dialogue scenes already played: { seed, seen: [ids] } (cosmetic, not in the career save)
+// Dialogue scenes already played are kept per career (scenesKey), outside the career save (cosmetic).
 
 let run = null;
+let careers = { active: null, list: [] }; // every saved career (src/careers.js); careerId is the one being played
+let careerId = null;
+let careersOpen = false; // the Careers dialog
 let match = null;
 let summaries = []; // this week's match results, newest last
 let noticePage = 0;
@@ -60,6 +63,9 @@ const storage = {
   set(key, value) {
     try { localStorage.setItem(key, value); } catch { /* storage unavailable */ }
   },
+  remove(key) {
+    try { localStorage.removeItem(key); } catch { /* storage unavailable */ }
+  },
 };
 
 function loadPrefs() {
@@ -73,7 +79,7 @@ function loadPrefs() {
 const saveLegacy = () => storage.set(LEGACY_KEY, JSON.stringify(legacy));
 const saveCodex = () => storage.set(CODEX_KEY, JSON.stringify(codex));
 const savePrefs = () => storage.set(PREFS_KEY, JSON.stringify(prefs));
-const save = () => run && storage.set(SAVE_KEY, serialize(run));
+const save = () => run && careerId && saveCareer(storage, careers, careerId, run, Date.now());
 
 // ---------- Odds cache (simulating is cheap but not free) ----------
 
@@ -107,12 +113,12 @@ const tutorialStep = () => (run.status === 'active' && !scene && !match && !show
 
 function scenesSeen() {
   try {
-    const s = JSON.parse(storage.get(SCENES_KEY) ?? 'null');
-    return s?.seed === run.seed ? s.seen : [];
+    const seen = JSON.parse(storage.get(scenesKey(careerId)) ?? '[]');
+    return Array.isArray(seen) ? seen : [];
   } catch { return []; }
 }
 function markSceneSeen(id) {
-  storage.set(SCENES_KEY, JSON.stringify({ seed: run.seed, seen: [...new Set([...scenesSeen(), id])] }));
+  storage.set(scenesKey(careerId), JSON.stringify([...new Set([...scenesSeen(), id])]));
 }
 // The Emperor drops in at turning points, once each per career, when nothing else is on screen.
 function checkScene() {
@@ -172,7 +178,7 @@ function render() {
   else body = ludusTab(run, oddsFor);
   checkScene();
   const guide = guideStep();
-  const modal = setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
+  const modal = careersOpen ? careersModal(careers, careerId) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
@@ -240,8 +246,10 @@ function scheduleAuto() {
 // ---------- Careers ----------
 
 // `opening: false` when the opening has just played (before the patron choice).
+// Every new career gets its own save; the one before stays in the Careers list.
 function newRun(seed, setup = { classes: unlockedClasses(legacy) }, { opening = true } = {}) {
   run = createRun(seed ?? undefined, setup);
+  careerId = freshId(careers, Date.now());
   achieved = [];
   setupChoice = null;
   match = null;
@@ -259,11 +267,28 @@ function newRun(seed, setup = { classes: unlockedClasses(legacy) }, { opening = 
 
 function boot() {
   loadPrefs();
-  const saved = storage.get(SAVE_KEY);
+  careers = loadIndex(storage, () => freshId({ list: [] }, Date.now()));
   const urlSeed = Number(new URLSearchParams(location.search).get('seed'));
+  if (careers.active && openCareer(careers.active)) return;
+  newRun(Number.isInteger(urlSeed) && urlSeed > 0 ? urlSeed : null);
+}
+
+// Switch to a saved career (false if its save can't be read).
+function openCareer(id) {
+  const saved = loadCareerText(storage, id);
   if (saved) {
     try {
       run = deserialize(saved);
+      careerId = id;
+      match = null;
+      summaries = [];
+      stewardNotes = [];
+      achieved = [];
+      scene = null;
+      oddsCache.clear();
+      const url = new URL(location.href);
+      url.searchParams.set('seed', run.seed);
+      history.replaceState(null, '', url);
       tab = run.roster.length ? 'ludus' : 'market';
       // A career under way has had its opening; a brand-new one (nothing done yet) still gets it.
       if (!scenesSeen().includes('opening')) {
@@ -272,19 +297,26 @@ function boot() {
       }
       save();
       render();
-      return;
+      return true;
     } catch (err) {
       console.warn('Could not load the saved career:', err.message);
     }
   }
-  newRun(Number.isInteger(urlSeed) && urlSeed > 0 ? urlSeed : null);
+  return false;
+}
+// A new career needs a free place in the list.
+function roomForCareer() {
+  const why = newCareerBlocker(careers);
+  if (why) { alert(why); careersOpen = true; render(); }
+  return !why;
 }
 
 // ---------- Events ----------
 
 const actions = {
   'new-run': () => {
-    if (run.status === 'active' && run.week > 0 && !confirm('Abandon this career and start a new one?')) return;
+    if (!roomForCareer()) return; // the career being played is kept in the Careers list
+    careersOpen = false;
     // Once a past career has unlocked something, choose a patron and decrees first.
     // The opening plays first, then the patron and decree choice, then the career (without a second opening).
     // Every new career offers its length and the daily challenge now (fun idea #2), so the dialog always follows.
@@ -298,11 +330,25 @@ const actions = {
     newRun(null, { patron, decrees, classes: unlockedClasses(legacy), short }, { opening: false });
   },
   'daily-challenge': () => {
+    if (!roomForCareer()) return;
     const day = today();
     newRun(dailySeed(day), dailySetup(day), { opening: false });
   },
   'setup-cancel': () => { setupChoice = null; },
-  'replay-seed': () => newRun(run.seed, run.setup),
+  'replay-seed': () => { if (roomForCareer()) newRun(run.seed, run.setup); },
+  'careers-open': () => { careersOpen = true; showHelp = false; },
+  'careers-close': () => { careersOpen = false; },
+  'career-load': (d) => {
+    careersOpen = false;
+    if (d.id !== careerId && openCareer(d.id)) return;
+    if (d.id !== careerId) alert('That save could not be loaded.');
+    render();
+  },
+  'career-delete': (d) => {
+    const entry = careers.list.find((e) => e.id === d.id);
+    if (!entry || !confirm(`Delete this career for good?\n${entry.label}`)) return;
+    removeCareer(storage, careers, d.id);
+  },
   tab: (d) => {
     tab = d.tab;
     showHelp = false;
@@ -350,10 +396,11 @@ const actions = {
       if (!file) return;
       try {
         const data = importSave(await file.text());
-        if (!confirm('Load this save? It replaces your current career.')) return;
-        storage.set(SAVE_KEY, data.career);
+        if (!roomForCareer() || !confirm('Load this save as a new career? Your Codex and Legacy are replaced by the file\'s; your other careers are kept.')) return;
         storage.set(CODEX_KEY, JSON.stringify(data.codex));
         storage.set(LEGACY_KEY, JSON.stringify(data.legacy));
+        const id = freshId(careers, Date.now());
+        saveCareer(storage, careers, id, deserialize(data.career), Date.now());
         location.reload();
       } catch (err) {
         alert(err.message);
@@ -446,7 +493,7 @@ document.addEventListener('click', (e) => {
       alert(err.message);
     }
   });
-  if (name === 'new-run' || name === 'replay-seed' || name === 'start-career' || name === 'daily-challenge' || name === 'bug-reload') return;
+  if (name === 'new-run' || name === 'replay-seed' || name === 'start-career' || name === 'daily-challenge' || name === 'bug-reload' || name === 'career-load') return;
   guard('render', () => {
     save();
     render();

@@ -1,5 +1,6 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
+import { MAX_CAREERS } from '../careers.js';
 import { REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
@@ -68,7 +69,8 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
       <button class="btn small sound" data-action="toggle-sound" title="${sound ? 'Sound on: click to mute' : 'Sound off: click to turn on'}" aria-label="${sound ? 'Mute sound' : 'Turn sound on'}">${sound ? '🔊' : '🔇'}</button>
       <button class="btn small" data-action="help">How to play</button>
       <button class="btn small" data-action="bug-open" title="Something wrong or confusing? Send the developer a report they can replay.">Report a bug</button>
-      <button class="btn small" data-action="new-run">New career</button>
+      <button class="btn small" data-action="careers-open" title="Your saved careers: switch between them, or delete one">Careers</button>
+      <button class="btn small" data-action="new-run" title="Start another career (this one stays in Careers)">New career</button>
     </header>
     <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
 }
@@ -136,6 +138,22 @@ export function endBanner(run, legacy = null) {
 // Choosing how the next career starts (once a past career has unlocked anything).
 // Today's date as YYYY-MM-DD (local time): the daily challenge's key.
 export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+// Every saved career (src/careers.js): play another, or delete one for good.
+export function careersModal(index, activeId) {
+  const when = (t) => (t ? new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
+  const rows = index.list.map((e) => `<div class="career-row${e.id === activeId ? ' current' : ''}">
+    <div><b>${esc(e.label)}</b><small>Seed ${esc(e.seed ?? '?')}${e.savedAt ? ` · saved ${esc(when(e.savedAt))}` : ''}</small></div>
+    <div class="row">${e.id === activeId ? '<span class="chip">Playing</span>' : `<button class="btn small primary" data-action="career-load" data-id="${esc(e.id)}">Play</button><button class="btn small" data-action="career-delete" data-id="${esc(e.id)}">Delete</button>`}</div>
+  </div>`).join('');
+  return `<div class="modal careers" role="dialog" aria-label="Your careers"><div class="modal-body">
+    <button class="close" data-action="careers-close" aria-label="Close">×</button>
+    <h2>Your careers</h2>
+    <p class="sub">Each career saves on its own, in this browser. Starting a new one keeps the others here. Up to ${MAX_CAREERS}.</p>
+    ${rows}
+    <div class="row"><button class="btn" data-action="new-run">New career</button><button class="btn small" data-action="careers-close">Close</button></div>
+  </div></div>`;
+}
 
 export function setupModal(legacy, choice) {
   const patrons = unlockedPatrons(legacy);
@@ -678,7 +696,7 @@ export function helpModal() {
     <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or ends the week · T skips to the tournament · 1–4 switch tabs · ? opens this page.</p>
     <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>
     <div class="row"><button class="btn small" data-action="intro-replay">Replay the intro</button><button class="btn small" data-action="tutorial-replay">Restart the tutorial</button><button class="btn small" data-action="tab" data-tab="codex">Open the Codex</button></div>
-    <div class="row"><button class="btn small" data-action="export-save" title="Download your career, Codex and Legacy as one file">Export save</button><button class="btn small" data-action="import-save" title="Load a save file (replaces your current career)">Import save</button></div>
+    <div class="row"><button class="btn small" data-action="export-save" title="Download your career, Codex and Legacy as one file">Export save</button><button class="btn small" data-action="import-save" title="Load a save file as a new career (your other careers are kept)">Import save</button></div>
   </div></div>`;
 }
 
