@@ -521,5 +521,5 @@ Numbers are tunables in `src/data.js`; the words are placeholders for the design
 - **Gates at 5.3.0** (`npm run check`, 300 careers; 150 each for the plot bots and short careers): all 13 pass.
   - Careful 41%, careful deaths 0.71, reckless deaths 2.96. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +21.
   - Loyalist +5 (at the edge of its 5–20 gate). Coup 19%. Treason 3%.
-  - Short careers 43% in 80 weeks (full careers 111).
+  - Short careers 43% in 80 weeks (full careers 111); 42% after the crowd's chant for Revenants (all 13 still pass).
 - **A Revenant's first fight back** (fun idea): +20 hype from the start (`HYPE.risen`), paid out like any hype; the `risen` flag clears after that match. The rebel's stage scenes (`dueRebelStage`) are cosmetic.
