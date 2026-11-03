@@ -14,7 +14,7 @@ import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
 import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene } from './dialogue.js';
-import { DEMANDS, DEMAND, CIRCUITS } from './data.js';
+import { DEMANDS, DEMAND, CIRCUITS, SUMMONS } from './data.js';
 import { fightView, DICE_TIME, revealTime, roundEndTime } from './ui/fightView.js';
 import { roundSounds, setSound, sfx } from './ui/sound.js';
 
@@ -484,6 +484,7 @@ const before = {
   retire: () => confirm('Retire this fighter to the Hall of Champions? They leave your roster for good.'),
   forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favour than losing the fight.'),
   withdraw: () => confirm('Withdraw from the tournament? It counts as capitulating; your fighter is safe.'),
+  'refuse-summons': () => confirm(`Refuse the Emperor? It costs ${-SUMMONS.refuseFavor} Imperial Favour.`),
   advance: () => {
     // The first time in a career that End week would overtrain someone, the steward checks first (the designer, 5.4.0).
     if (!scenesSeen().includes('warn-overtrain')) {
@@ -586,6 +587,7 @@ document.addEventListener('change', (e) => {
       act(name, data);
       // An exhibition bout's result pops up, like an event's.
       if (name === 'exhibition') eventResult = { title: 'Exhibition Ring', lines: run.log.slice(mark).map((l) => ({ tone: l.tone, text: l.text.replace(/^Exhibition: /, '') })) };
+      if (name === 'summons') eventResult = { title: 'The Emperor\'s summons', lines: run.log.slice(mark).map((l) => ({ tone: l.tone, text: l.text.replace(/^The Emperor's summons: /, '') })) };
     } catch (err) {
       if (err.name !== 'Refused') throw err;
       alert(err.message);

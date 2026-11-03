@@ -7,11 +7,11 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, SPY, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, deltaRow,
+  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, SUMMONS, FEAR, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
-import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, stewardAlready, WANTS, REBEL_QUESTS, RIVAL_LINES, BOND_LINES } from './quests.js';
-import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt, hypeOf } from './fight.js';
+import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, stewardAlready, WANTS, REBEL_QUESTS, RIVAL_LINES, BOND_LINES, SUMMONS_LINES } from './quests.js';
+import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt, hypeOf, playRound, throwTowel, canThrowTowel, mortalDanger, suggestTactic } from './fight.js';
 import { Refused } from './errors.js';
 import { estimateOdds } from './odds.js';
 import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabel } from './events.js';
@@ -408,6 +408,108 @@ function judgeDemand(run) {
   // The last judgement, for the page's Emperor scene (the designer, 5.4.0: say when a demand fails).
   run.demandResult = { id: run.demand.id, issued: run.demand.week, met, gold: met ? DEMAND.goldPerTier * tier : 0, favor: met ? DEMAND.favor : DEMAND.missFavor };
   run.demand = null;
+}
+
+// ---------- The Emperor's summons (the designer, 5.4.2) ----------
+
+// At a month's start, once a career, before the Imperial Coliseum is open: the Emperor wants one of your fighters there.
+function summonsMonth(run) {
+  if (run.summons || run.summonsDone || run.week < SUMMONS.fromWeek || run.arenas[SUMMONS.tier] || isWinter(run.week)) return;
+  run.rng.summons ??= createRng(deriveSeed(run.seed, 12));
+  if (next(run.rng.summons) >= SUMMONS.chance) return;
+  run.summons = { week: run.week };
+  log(run, `The Emperor summons one of your fighters to ${arenaName(SUMMONS.tier)} on this month's fight day. Send someone, or refuse him (${SUMMONS.refuseFavor} Favour).`, 'warn');
+  talk(run, `summons-${run.week}`, [{ speaker: 'emperor', text: SUMMONS_LINES.ask }, { speaker: 'steward', text: SUMMONS_LINES.steward(SUMMONS.refuseFavor) }], { now: true });
+}
+export const SUMMONS_ORDERS = ['yield', 'death'];
+export function summonsBlocker(run, id, order) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!run.summons) return 'The Emperor has summoned nobody.';
+  if (!run.bouts) return 'The summons is for fight day.';
+  if (!SUMMONS_ORDERS.includes(order)) return 'Tell them to yield at the Death Gate, or to fight to the death.';
+  const f = findFighter(run, id);
+  if (!f) return 'Choose a fighter from your roster.';
+  if (foughtThisWeek(run).includes(id)) return `${f.name} already fought this week.`;
+  if (f.pendingPerks.length) return `${f.name} levelled up: choose a perk first.`;
+  if (f.morale < MORALE.mutinous) return `${f.name} is mutinous and refuses to fight.`;
+  return null;
+}
+// Sends a fighter: the match is played at once, with the suggested tactic each round; `yield` capitulates at the Death Gate.
+export function answerSummons(run, id, order) {
+  assertOk(summonsBlocker(run, id, order));
+  const fighter = findFighter(run, id);
+  const r = run.rng.summons ??= createRng(deriveSeed(run.seed, 12));
+  const bout = { tier: SUMMONS.tier, boss: false, oppPower: CIRCUITS[SUMMONS.tier - 1].oppPower[0] };
+  const opp = createFighter(r, { id: newId(run, 'o'), power: bout.oppPower, decorLevel: CIRCUITS[SUMMONS.tier - 1].oppDecor, takenNames: takenNames(run), classes: run.setup?.classes });
+  opp.speed = opponentSpeed(run, bout);
+  seasonOpponent(run, opp, bout);
+  opp.house = houseForArena(run, SUMMONS.tier).id;
+  remember(run, opp);
+  const m = createMatch({ a: fighter, b: opp, rng: r });
+  while (!m.over) {
+    if (order === 'yield' && canThrowTowel(m) && mortalDanger(m.a)) throwTowel(m);
+    else playRound(m, { stance: suggestTactic(m) });
+  }
+  const newInjuries = m.a.f.injuries.filter((i) => i.weeksLeft === undefined).map((i) => INJURY_BY_TAG[i.tag].name);
+  fighter.injuries = m.a.f.injuries.map(({ suppressed, ...i }) => ({ ...i, weeksLeft: i.weeksLeft ?? HEAL_WEEKS[i.tag] }));
+  fighter.alive = m.a.f.alive;
+  fighter.stress = clampStress(fighter.stress + STRESS.fight);
+  const won = m.result.winner === 'A';
+  const reason = m.result.reason;
+  const name = `${arenaName(SUMMONS.tier)} · the Emperor's summons`;
+  const summary = { week: run.week, tier: SUMMONS.tier, name, summons: true, boss: false, top: false, won, reason, fighter: fighter.name, fighterId: fighter.id, opponent: opp.name, oppPower: effectivePower(opp), died: !fighter.alive, kill: won && reason === 'death', gold: 0, prestige: 0, favor: 0, renown: 0, injuries: fighter.alive ? newInjuries : [] };
+  const favorBefore = run.favor;
+  let line;
+  if (won) {
+    changeFavor(run, SUMMONS.winFavor, 'won on the Imperial sand at his summons');
+    summary.renown = SUMMONS.winRenown;
+    chronicle(run, fighter, `Summoned to ${arenaName(SUMMONS.tier)} by the Emperor, and beat ${opp.name}.`);
+    line = SUMMONS_LINES.won(fighter.name);
+  } else if (!fighter.alive) {
+    chronicle(run, fighter, `Summoned to ${arenaName(SUMMONS.tier)} by the Emperor, and killed by ${opp.name}.`);
+    stripFighter(run, fighter);
+    run.roster = run.roster.filter((f) => f !== fighter);
+    run.fallen.push({ ...fighter, diedWeek: run.week, arena: true }); // a body the Temple of Vulcan could raise
+    for (const f of run.roster) bumpMorale(f, MORALE.allyDeath);
+    log(run, `${fighter.name} died on the Imperial sand. The house mourns; their gear returns to the storeroom.`, 'bad');
+    line = SUMMONS_LINES.died(fighter.name);
+  } else if (reason === 'towel') {
+    changeFavor(run, SUMMONS.yieldFavor, 'yielded on the Imperial sand');
+    chronicle(run, fighter, `Summoned to ${arenaName(SUMMONS.tier)} by the Emperor; yielded to ${opp.name} and lived.`);
+    line = SUMMONS_LINES.yielded(fighter.name);
+  } else {
+    changeFavor(run, SUMMONS.surviveFavor, 'survived three rounds on the Imperial sand');
+    summary.renown = SUMMONS.surviveRenown;
+    chronicle(run, fighter, `Summoned to ${arenaName(SUMMONS.tier)} by the Emperor; lost to ${opp.name}, but stood to the end.`);
+    line = SUMMONS_LINES.survived(fighter.name);
+  }
+  if (fighter.alive) {
+    fighter.renown += summary.renown;
+    gainXp(run, fighter, won ? XP.win : XP.loss);
+    if (won) faceFear(run, fighter, m.b);
+    if (won && reason === 'death') fighter.kills = (fighter.kills ?? 0) + 1;
+  }
+  summary.favor = run.favor - favorBefore;
+  run.history.push(summary);
+  run.summons = null;
+  run.summonsDone = true;
+  log(run, `The Emperor's summons: ${fighter.name} (Power ${effectivePower(fighter)}) against ${opp.name} (Power ${summary.oppPower}): ${won ? 'won' : !summary.died ? (reason === 'towel' ? 'yielded at the Death Gate' : 'lost, but survived') : 'killed'}${fighter.alive && newInjuries.length ? `, with ${newInjuries.join(', ')}` : ''}. ${summary.favor ? `Favour ${summary.favor > 0 ? '+' : '−'}${Math.abs(summary.favor)}` : ''}${summary.renown ? `, +${summary.renown} Renown` : ''}.`, won ? 'good' : summary.died ? 'bad' : 'event');
+  talk(run, `summons-done-${run.week}`, [{ speaker: 'emperor', text: line }], { now: true });
+  checkLoss(run);
+  return summary;
+}
+export function refuseSummonsBlocker(run) {
+  return idleBlocker(run) ?? (run.summons ? null : 'The Emperor has summoned nobody.');
+}
+export function refuseSummons(run) {
+  assertOk(refuseSummonsBlocker(run));
+  changeFavor(run, SUMMONS.refuseFavor, 'refused the Emperor\'s summons');
+  run.summons = null;
+  run.summonsDone = true;
+  log(run, `You refuse the Emperor's summons. Favour ${SUMMONS.refuseFavor}.`, 'bad');
+  talk(run, `summons-refused-${run.week}`, [{ speaker: 'emperor', text: SUMMONS_LINES.refused }], { now: true });
+  checkLoss(run);
 }
 
 // ---------- Nemeses (fun idea #1) ----------
@@ -1494,6 +1596,7 @@ export function advanceBlocker(run) {
   if (run.event) return `Decide this week's event first: "${EVENT_BY_ID[run.event.id].title}".`;
   const midBracket = Object.entries(run.brackets ?? {}).find(([t, b]) => b.fighterId && b.round > 0 && run.bouts?.[t] === 'open');
   if (midBracket) return `${findFighter(run, midBracket[1].fighterId)?.name ?? 'Your fighter'} is through to the ${BRACKET.rounds[midBracket[1].round]} in ${arenaName(Number(midBracket[0]))}: fight on, or withdraw.`;
+  if (run.summons && run.bouts) return 'The Emperor\'s summons: send a fighter to the Imperial Coliseum, or refuse him.';
   if (run.boutPending) return `Tournament week: send a fighter to ${arenaName(run.topTier)}, or skip the bout first.`;
   if (run.roster.some((f) => f.pendingPerks.length)) return 'A fighter levelled up: choose their perk first.';
   return null;
@@ -1600,6 +1703,7 @@ export function advanceWeek(run) {
     refreshArmourer(run);
     plotMonth(run);
     issueDemand(run);
+    summonsMonth(run);
     wantsMonth(run); // 5.4.0: quests (docs/plan-5.4-quests.md)
     rivalMonth(run);
     rebelQuestsMonth(run);
@@ -1898,6 +2002,45 @@ export function pray(run, id) {
   run.gold -= prayPrice(run);
   f.pendingPerks[0] = perkOffer(run, f);
   log(run, `You burn incense to Fortuna for ${f.name}. New paths open: ${f.pendingPerks[0].map((p) => PERKS[p].name).join(', ')}.`, 'event');
+}
+
+// ---------- Overcoming fear (the designer, 5.4.2) ----------
+
+// A win against the style a fighter fears counts toward conquering it; FEAR.conquerWins of them, and the scar is gone.
+function faceFear(run, f, oppSide) {
+  const vs = meleeOnly(oppSide) ? 'melee' : 'ranged';
+  const sc = (f.scars ?? []).find((x) => x.id === 'afeared' && x.vs === vs);
+  if (!sc) return null;
+  sc.faced = (sc.faced ?? 0) + 1;
+  if (sc.faced < FEAR.conquerWins) {
+    log(run, `${f.name} beat a ${vs} fighter, the kind they fear (${sc.faced}/${FEAR.conquerWins} to conquer it).`, 'event');
+    return null;
+  }
+  f.scars = f.scars.filter((x) => x !== sc);
+  chronicle(run, f, `Faced their fear of ${vs} fighters, and beat it.`);
+  log(run, `${f.name} has conquered their fear: no longer Afeared of ${vs} fighters.`, 'good');
+  return `No longer Afeared (${vs})`;
+}
+// The Temple of Fortuna's rite: one Afeared scar lifted, for Gold.
+export const ritePrice = (run) => FEAR.ritePrice + FEAR.ritePerTier * Math.min(run.topTier, CIRCUITS.length);
+export function riteBlocker(run, id) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!maxLevel(run, 'temple')) return 'Build the Temple of Fortuna first.';
+  const f = findFighter(run, id);
+  if (!f) return 'Choose a fighter from your roster.';
+  if (!(f.scars ?? []).some((x) => x.id === 'afeared')) return `${f.name} isn't Afeared.`;
+  if (run.gold < ritePrice(run)) return `Needs ${ritePrice(run)} Gold.`;
+  return null;
+}
+export function rite(run, id) {
+  assertOk(riteBlocker(run, id));
+  const f = findFighter(run, id);
+  const sc = f.scars.find((x) => x.id === 'afeared');
+  run.gold -= ritePrice(run);
+  f.scars = f.scars.filter((x) => x !== sc);
+  chronicle(run, f, `Fortuna's priests lifted their fear of ${sc.vs} fighters.`);
+  log(run, `The priests of Fortuna lift ${f.name}'s fear: no longer Afeared of ${sc.vs} fighters.`, 'good');
 }
 
 // ---------- The Unnatural Temple of Vulcan (5.3.0): raising the dead ----------
@@ -2588,6 +2731,7 @@ export function finishMatch(run, match) {
   } else {
     gainXp(run, fighter, summary.xp);
     summary.levels = fighter.level - levelBefore;
+    if (won) summary.fearConquered = faceFear(run, fighter, match.b);
   }
   if (fighter.job === 'medbay' && !fighter.injuries.length) fighter.job = 'rest';
   run.inMatch = false;
@@ -2649,6 +2793,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   fighter.renown += summary.renown;
   gainXp(run, fighter, summary.xp);
   summary.levels = fighter.level - levelBefore;
+  summary.fearConquered = faceFear(run, fighter, match.b);
   if (kill) {
     fighter.kills = (fighter.kills ?? 0) + 1;
     run.graveyard = [...(run.graveyard ?? []), opp.name];

@@ -8,7 +8,7 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { LOUNGE, DEMANDS, DEMAND, CIRCUITS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
+import { LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
@@ -18,7 +18,7 @@ import {
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
-  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardRewardText, risingProgress, archrival, checkQuests,
+  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardRewardText, risingProgress, archrival, checkQuests, answerSummons, refuseSummons, rite,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, buildingKnown, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
@@ -54,6 +54,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   job <id> <rest|trainPower|trainSpeed|medbay>
   perk <id> <perk>              choose a level-up perk
   pray <id>                     Temple of Fortuna: pay Gold for three new perk choices
+  rite <id>                     Temple of Fortuna: lift a fighter's Afeared scar for Gold (or win twice against what they fear)
   raise <id>                    Unnatural Temple of Vulcan: raise a fighter killed in the arena as a Revenant (see \`market\`)
   spar <id> <id>                Exhibition Ring (fight day): two free fighters spar for XP, Renown and Gold
   surgeon <id> <injury#>        Emergency Surgeon: heal one injury now (injury# from 0)
@@ -69,6 +70,8 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).filter((k) => !BUILDINGS[k].secret).join(', ')}
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
   pay-tribute                   pay this year's tribute early
+  summons <id> <yield|death>    the Emperor's summons (on fight day): send a fighter to the Imperial Coliseum
+  refuse-summons                refuse the Emperor's summons (costs Favour)
   houses                        the rival houses' standings
   quests                        the steward's assignment, what your fighters want, and any other requests
   story <id> | retire <id>      a fighter's chronicle; retire a veteran (level 4+ or a Title) to the Hall of Champions
@@ -255,6 +258,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (match) return fightStatus();
     lowerShown = 0;
     const out = [header()];
+    if (run.summons) out.push(`\n⚜ THE EMPEROR SUMMONS one of your fighters to the Imperial Coliseum (a regular, Power ${CIRCUITS[SUMMONS.tier - 1].oppPower[0]}) on this month's fight day: \`summons <id> <yield|death>\` then, or \`refuse-summons\` (${SUMMONS.refuseFavor} Favour).`);
     if (run.demand) out.push(`\n⚜ THE EMPEROR DEMANDS: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.${demandMet(run) ? ' (done)' : ''}`);
     // The Emperor's word on a demand met, and on one missed (as on the page; playtest LLM-11: only the page had them).
     if (run.demand && demandMet(run) && !scenesSeen.includes(`demand-met-${run.demand.week}`)) {
@@ -532,6 +536,11 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       const f = reanimate(run, id);
       return `${f.name} rises from the forge as a Revenant [${f.id}]: ${TRAITS[f.kindTrait].name} (${TRAITS[f.kindTrait].desc}) Power ${f.power}.`;
     },
+    rite: ([id]) => {
+      idle();
+      rite(run, id);
+      return `${run.log.at(-1).text}\n\n${look()}`;
+    },
     pray: ([id]) => {
       pray(run, id);
       const f = run.roster.find((x) => x.id === id);
@@ -711,6 +720,17 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       need([i].filter(Boolean), 1, 'choose <number>');
       idle();
       return `${chooseEvent(run, Number(i))}\n\n${look()}`;
+    },
+    summons: ([id, order]) => {
+      need([id, order].filter(Boolean), 2, 'summons <id> <yield|death>');
+      idle();
+      answerSummons(run, id, order);
+      return `${run.log.at(-1).text}\n\n${look()}`;
+    },
+    'refuse-summons': () => {
+      idle();
+      refuseSummons(run);
+      return `${run.log.at(-1).text}\n\n${look()}`;
     },
     'pay-tribute': () => {
       idle();

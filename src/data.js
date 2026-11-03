@@ -133,13 +133,17 @@ export const DECREES = {
 // Fighter stories (roadmap v3, phase C). Scars come from surviving severe wounds (`vs`: 'melee' or 'ranged', the style
 // of the opponent who caused it); Battle-Hardened from a Bloodied Victory. Values: power, enemy (to injure), self (to be injured).
 export const SCARS = {
-  afeared: { name: 'Afeared', desc: 'Against this style: −1 Power and −10% chance to injure, but fights warily (−10% chance to be injured).', power: -1, enemy: -10000, self: -10000 },
+  afeared: { name: 'Afeared', desc: 'Against this style: −1 Power and −10% chance to injure, but fights warily (−10% chance to be injured). Two wins against the style they fear conquer it; the Temple of Fortuna can lift it for Gold.', power: -1, enemy: -10000, self: -10000 },
   enraged: { name: 'Enraged', desc: 'Against this style: +1 Power and +15% chance to injure, but reckless (+15% chance to be injured).', power: 1, enemy: 15000, self: 15000 },
   hardened: { name: 'Battle-Hardened', desc: 'Won bloodied and lived: −5% chance to be injured.', self: -5000 },
 };
 export const SCAR_CHANCE = 0.5; // chance a survived severe wound (Concussed or worse) leaves a scar
-// The chance a scar is Afeared, by humour (else Enraged). 5.4.0, the designer: Afeared was half of all scars; now about 1 in 5.
-export const SCAR_AFEARED = { choleric: 0, melancholic: 0.5, other: 0.15 };
+// The chance a scar is Afeared, by humour (else Enraged). 5.4.0, the designer: Afeared was half of all scars, then about 1 in 5;
+// 5.4.2 (the designer again): about 1 in 10.
+export const SCAR_AFEARED = { choleric: 0, melancholic: 0.25, other: 0.05 };
+// Overcoming Afeared (5.4.2): `conquerWins` wins against the style they fear, or a rite at the Temple of Fortuna
+// (`ritePrice` + `ritePerTier` × arena tier Gold).
+export const FEAR = { conquerWins: 2, ritePrice: 6, ritePerTier: 2 };
 export const SEVERE = ['concussed', 'poisoned', 'maimed', 'senseless', 'blinded'];
 
 // Cyborg surgery (Medbay Lv 2+): replace a Maimed limb or Blinded eye. The crowd distrusts machines.
@@ -581,6 +585,13 @@ export const RIVAL = { championFrom: 2, minWeeks: 12, chance: 0.35, power: 1, ma
 // The resistance's requests: trust when met (gallery and lobby), trust lost when they lapse; asked this many weeks after the Mark.
 // Trust that would go past the cap lowers suspicion by `overflowSuspicion` a point instead.
 export const REBEL_QUEST = { galleryTrust: 1, lobbyTrust: 2, missTrust: -1, afterMark: 4, overflowSuspicion: 5 };
+
+// The Emperor's summons (the designer, 5.4.2): once a career, from `fromWeek` until the Imperial Coliseum is open, a month may
+// begin (`chance`, its own dice) with the Emperor ordering one of your fighters onto the Imperial sand on that month's fight
+// day, against a regular of the Imperial Coliseum. Send someone (told to yield at the Death Gate, or to fight to the death),
+// or refuse (`refuseFavor`). Survived three rounds: `surviveFavor`, `surviveRenown`. Won: `winFavor`, `winRenown`.
+// Yielded: `yieldFavor`. Died: a body the Temple of Vulcan can raise.
+export const SUMMONS = { fromWeek: 5, chance: 0.1, refuseFavor: -40, surviveFavor: 5, surviveRenown: 3, winFavor: 15, winRenown: 8, yieldFavor: -5, tier: 4 };
 
 // The Emperor's spy (5.4.0): executing them lowers the hidden plot's suspicion by `suspicion`; keeping them raises it.
 export const SPY = { suspicion: 15, perMonth: 2 }; // perMonth: suspicion each month while a spy you kept is in the house
