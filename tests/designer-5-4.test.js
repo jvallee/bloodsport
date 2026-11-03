@@ -181,3 +181,20 @@ test('keeping the spy pleases the Emperor, and they keep writing', () => {
   assert.equal(a.spy, true);
   assert.equal(run.spyFound, true);
 });
+
+import { decorCalm } from '../src/run.js';
+import { STRESS } from '../src/data.js';
+test('a room\'s decor lowers Stress by at most 30 a week (bug report: a furnished room took 80, and training never counted)', () => {
+  const run = createRun(61);
+  const f = recruit(run, run.market[0].id);
+  f.decor = { ...f.decor, bird: 1 };
+  assert.equal(decorCalm(f), 5);
+  f.decor = { ...f.decor, bird: 3, fireBrazier: 3, shrine: 2, bathhouse: 2 };
+  assert.equal(STRESS.decorCalm, 30);
+  assert.equal(decorCalm(f), 30);
+  run.gold = 50;
+  setJob(run, f.id, 'trainPower');
+  f.stress = 30;
+  advanceWeek(run);
+  assert.equal(f.stress, 30 + STRESS.train - 30, 'training now builds Stress in a furnished room only as fast as the cap allows');
+});

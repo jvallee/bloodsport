@@ -293,7 +293,9 @@ export const REVOLT = { morale: 20, weeks: 4 };
 // Speed trains three times as fast as Power: Speed's edge levels off, so it needs to be cheap to be worth a week (tuned with the balanced-fighter gate).
 export const TRAIN_GAIN = { power: 1, speed: 3 };
 
-export const STRESS = { train: 20, fight: 15, rest: -40, medbay: -10, overtrained: 50, max: 100 };
+// decorCalm (5.4.0, the designer, from a bug report): a room's calming decor lowers Stress by at most this much a week (it was
+// uncapped, and a furnished room took 80 a week, so training never built up Stress).
+export const STRESS = { train: 20, fight: 15, rest: -40, medbay: -10, overtrained: 50, max: 100, decorCalm: 30 };
 
 // Weeks an injury takes to heal in the Medbay (Medbay Lv 2+ heals 2 weeks per week).
 export const HEAL_WEEKS = { distracted: 1, fleshWound: 1, concussed: 2, poisoned: 2, maimed: 3, senseless: 2, blinded: 3 };

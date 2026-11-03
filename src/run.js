@@ -1078,6 +1078,9 @@ function resumeTraining(run, f) {
   log(run, `${f.name} goes back to training.`, 'good');
 }
 
+// A room's calming decor: its Stress relief a week, capped at STRESS.decorCalm (5.4.0).
+export const decorCalm = (f) => Math.min(STRESS.decorCalm, Object.entries(f.decor).reduce((n, [k, count]) => n + (DECOR[k].calm ?? 0) * count, 0));
+
 // ---------- Morale ----------
 
 export const decorCount = (f) => Object.values(f.decor).reduce((s, n) => s + n, 0);
@@ -1174,8 +1177,8 @@ export function advanceWeek(run) {
         log(run, `${f.name} shakes off the daze.`, 'good');
       }
     }
-    // The Entertainment Room, plus calming decor (Birds, Fire Braziers) in their quarters.
-    const calm = Object.entries(f.decor).reduce((n, [k, count]) => n + (DECOR[k].calm ?? 0) * count, 0);
+    // The Entertainment Room, plus calming decor in their quarters (at most STRESS.decorCalm a week).
+    const calm = decorCalm(f);
     f.stress = clampStress(f.stress - relief - calm);
     // Morale drifts toward what their room and fame warrant.
     const { target } = moraleTarget(run, f);
