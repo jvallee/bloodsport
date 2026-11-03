@@ -2,8 +2,9 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## 5.4.2 (in progress)
+## 5.4.2
 
+- **The steward pays less:** 1–2 Gold for each of his assignments (it was up to 4). The extra assignments in 5.4.1 made short careers too easy.
 - **The Emperor's summons:** once a career, before you've reached the Imperial Coliseum, a month may start with the Emperor ordering one of your fighters onto the Imperial sand on that month's fight day. Send someone against one of its regulars (Power 26), telling them either to yield at the Death Gate or to fight to the death, or refuse him and lose 40 Imperial Favour. Stand to the end of Round 3: +5 Favour and +3 Renown. Win: +15 Favour and +8 Renown. Yield: −5 Favour. Die: the Temple of Vulcan gets a body. The fight is played out at once.
 - **Afeared is rarer again:** about 1 scar in 10 (a Melancholic fighter a quarter of the time, Sanguine and Phlegmatic ones 1 in 20, Choleric never).
 - **Conquer your fear:** two wins against the style a fighter fears lift their Afeared scar. Or pay the Temple of Fortuna's priests to lift it (6 Gold + 2 per arena tier); the button is under "Surgeon, cyborg surgery, fear, retire, release" on their card.

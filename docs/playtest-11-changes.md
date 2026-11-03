@@ -56,6 +56,7 @@ From `docs/playtest-llm-11.md` (seed 11011, the quests and the rival house) and 
 - `tests/playtest3.test.js`: "houses that have climbed there fight there" now names a house that isn't the archrival; a new test covers the archrival's share.
 - New: `tests/playtest11.test.js`.
 
-## Balance (in progress)
+## Balance
 
-- The first check after these changes: 12 of 13 gates pass (careful 44%, loyalist +12, coup 22%, treason 1%, Grand +20, first Boss 70%), but **short careers win 60%** (ceiling 55%). Pushed on the designer's request so they can play it; the trim follows once the probes say which change caused it.
+- The first check after these changes: 12 of 13 gates pass (careful 44%, loyalist +12, coup 22%, treason 1%, Grand +20, first Boss 70%), but **short careers won 60%** (ceiling 55%). 5.4.1 was pushed like that on the designer's request.
+- The probes found the cause: the steward's Gold (no steward Gold: short careers 47%). The rival share and the trust overflow made no difference. 5.4.2 pays the steward's assignments ×0.2 (1–2 Gold); all 13 gates pass. The table is in `docs/fight-rules.md`.

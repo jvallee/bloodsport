@@ -626,3 +626,26 @@ Probe (`bronze.js`, a scratch copy of `scripts/probes/bot-options.js` that also 
   - Careful 44%, careful deaths 0.85, reckless deaths 3.26. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +22.
   - Loyalist +13. Coup 14%. Treason 1%.
   - Short careers 53% in 91 weeks (full careers 118).
+
+## 5.4.1 and 5.4.2: playtest LLM-11, the summons, fear, the Liaison
+
+- **Playtest LLM-11 (5.4.1)** (`docs/playtest-11-changes.md`):
+  - `RIVAL.oppShare` 0.2: the share of ordinary opponents from the archrival in an arena where other houses fight too, or any other house when it has climbed alone (was about 73%, now about 17%).
+  - The rival champion is drawn into any bracket round; a bracket win over them pays like any other.
+  - `FIGHTER_WANTS.titleReach` 3: a Championship want needs the fighter within 3 Power of the arena's Boss. Room wants vary, without dice.
+  - The steward: 19 assignments (5 new middle ones). Those already done are announced and paid together. `QUESTS.talkPerWeek` 2: at most 2 quest, want, rival and friendship scenes a week; the rest wait in order.
+  - `REBEL_QUEST.overflowSuspicion` 5: trust that would pass the cap lowers suspicion 5 a point. At `ready`, refusals don't count toward the plot going cold.
+- **The Emperor's summons (5.4.2)** (`SUMMONS`): once a career, from week 5, at a month's start, 10% (`rng.summons`), never in winter or once the Imperial Coliseum is open. On that month's fight day one fighter goes against an Imperial regular (Power 26, seasoned), played at once with the suggested tactic; told to `yield`, they capitulate at the Death Gate, told `death`, they fight on. Refuse: −40 Favour. Survive three rounds: +5 Favour, +3 Renown. Win: +15 Favour, +8 Renown. Yield: −5 Favour. Die: a body for the Temple of Vulcan. The week can't end until the summons is answered. The careful bot sends its weakest free fighter told to yield; the reckless one, to the death.
+- **Afeared (5.4.2):** `SCAR_AFEARED` choleric 0, melancholic 0.25, others 0.05 (about 1 scar in 10). `FEAR.conquerWins` 2 wins against the feared style lift it; the Temple of Fortuna's rite lifts one for `FEAR.ritePrice` 6 + `ritePerTier` 2 × tier Gold.
+- **The Liaison (5.4.2):** `LIAISON.offers` [2, 3] prisoners a month by Liaison level; only the first can be political (the same dice as before).
+- **The steward's Gold.** 5.4.1's extra assignments made short careers too easy (60%, ceiling 55%). Full checks with the summons and fear changes, by `QUESTS.goldScale` (`node scripts/career-sim.js 300 --check --tune …`):
+
+  | Steward Gold | Careful | Loyalist lead | Coup | Short | Gates |
+  |---|---|---|---|---|---|
+  | ×0.5 (5.4.1, without the summons) | 44% | +12 | 22% | **60%** | 12/13 |
+  | ×0.35 | **48%** | **+4** | 19% | 47% | 11/13 |
+  | **×0.2 (chosen: 1–2 Gold an assignment)** | 39% | +18 | 22% | 41% | 13/13 |
+  | none | 41% | +17 | 17% | 37% | 13/13 |
+
+  1 Prestige an assignment instead of Gold (the designer's idea, `QUESTS.prestige`, kept at 0) gave short 43% but full careers 47% in a probe: Prestige brings House levels sooner.
+- **Gates at 5.4.2** (`npm run check`): all 13 pass. Careful 39%, careful deaths 0.71, reckless deaths 3.18. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +21. Loyalist +17. Coup 21%. Treason 0%. Short careers 41% in 80 weeks (full careers 116).
