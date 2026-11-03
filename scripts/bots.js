@@ -132,7 +132,7 @@ function carefulWeek(run, opts) {
   // Roster: enough fighters to cover every arena, plus a spare.
   const want = Math.min(rosterCap(run), unlockedTiers(run).length + 2);
   // A plot-playing bot (v6) takes any political prisoner it's offered (it can read their record better than most players).
-  const offers = [...run.market, ...(run.liaisonOffer ? [run.liaisonOffer] : [])].sort((a, b) => (opts.plot ? Number(Boolean(b.political)) - Number(Boolean(a.political)) : 0) || b.power - a.power);
+  const offers = [...run.market, ...(run.liaisonOffers ?? [])].sort((a, b) => (opts.plot ? Number(Boolean(b.political)) - Number(Boolean(a.political)) : 0) || b.power - a.power);
   for (const f of offers) {
     if (run.roster.length >= (f.political && opts.plot ? rosterCap(run) : want)) continue;
     const price = recruitPrice(run, f);

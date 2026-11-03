@@ -209,8 +209,8 @@ test('the Liaison\'s prisoners, convicts too, arrive seasoned in later arenas, p
     run.topTier = 4;
     run.prestigeLevel = 2;
     run.buildings.push({ id: 'bl', type: 'liaison', level: 1 });
-    for (let i = 0; i < 6 && !run.liaisonOffer; i++) { run.event = null; run.boutPending = false; run.bouts = null; advanceWeek(run); }
-    const f = run.liaisonOffer;
+    for (let i = 0; i < 6 && !run.liaisonOffers.length; i++) { run.event = null; run.boutPending = false; run.bouts = null; advanceWeek(run); }
+    const f = run.liaisonOffers[0];
     assert.ok(RECRUIT.levels[3].includes(f.level));
     assert.equal(f.perks.length, f.level - 1);
     assert.ok(f.price >= LIAISON.convictPrice + RECRUIT.perLevel * (f.level - 1) - 2, 'priced by level (political ones a little cheaper)');

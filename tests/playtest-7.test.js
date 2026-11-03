@@ -22,7 +22,7 @@ test('a prisoner of war arrives fight-ready, but the Power above their natural P
   run.buildings.push({ id: 'bl', type: 'liaison', level: 2 });
   run.boutPending = false;
   advanceWeek(run); // a new month: the Liaison brings a prisoner
-  const f = run.liaisonOffer;
+  const f = run.liaisonOffers[0];
   assert.equal(f.origin, 'Prisoner of war');
   const natural = KINDS[f.kind].basePower + CIRCUITS[3].marketPower;
   assert.ok(f.power > natural + 5, 'still a strong fighter on arrival');

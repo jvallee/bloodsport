@@ -10,7 +10,7 @@ import {
   SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, SUMMONS, FEAR, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
-import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, stewardAlready, WANTS, REBEL_QUESTS, RIVAL_LINES, BOND_LINES, SUMMONS_LINES } from './quests.js';
+import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, stewardAlready, WANTS, REBEL_QUESTS, RIVAL_LINES, BOND_LINES, SUMMONS_LINES, LIAISON_LINES } from './quests.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt, hypeOf, playRound, throwTowel, canThrowTowel, mortalDanger, suggestTactic } from './fight.js';
 import { Refused } from './errors.js';
 import { estimateOdds } from './odds.js';
@@ -72,7 +72,7 @@ function remember(run, ...fighters) {
 // A fighter's comfort from the decor in their room.
 export const decorComfortOf = (f) => Object.entries(f.decor ?? {}).reduce((n, [k, c]) => n + (DECOR[k] ? decorComfort(DECOR[k]) * c : 0), 0);
 const takenNames = (run, extra = []) =>
-  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...(run.nemeses ?? []), ...(run.rivalChampion ? [run.rivalChampion.f] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? [], (run.retired ?? []).map((l) => l.name));
+  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffers ?? []), ...(run.nemeses ?? []), ...(run.rivalChampion ? [run.rivalChampion.f] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? [], (run.retired ?? []).map((l) => l.name));
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const clampStress = (n) => clamp(n, 0, STRESS.max);
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
@@ -321,7 +321,7 @@ export function enact(run, id) {
   run.policies = [...activePolicies(run), { id, until: run.week + LOUNGE.weeks }];
   log(run, `The Senate passes ${p.name}: ${p.desc}`, 'event');
   if (plotActive(run)) changeSuspicion(run, p.lean === 'loyalist' ? LOUNGE.loyalistSuspicion : p.lean === 'reformist' ? LOUNGE.reformistSuspicion : 0);
-  if (id === 'purgePrisons' && run.liaisonOffer?.political) run.liaisonOffer = null; // the cells are emptied
+  if (id === 'purgePrisons') run.liaisonOffers = (run.liaisonOffers ?? []).filter((f) => !f.political); // the cells are emptied
 }
 
 // ---------- Bonds between fighters (fun idea #5) ----------
@@ -941,7 +941,8 @@ export function matchOptions(run, f, tier = run.topTier) {
 export const isShort = (run) => Boolean(run.setup?.short);
 export const marketPrice = (run) => circuitInfo(run).price;
 // What a fighter costs: the Liaison's own price, or the Market's plus RECRUIT.perLevel per level above 1.
-export const recruitPrice = (run, f) => (run.liaisonOffer?.id === f.id ? f.price : marketPrice(run) + RECRUIT.perLevel * ((f.level ?? 1) - 1));
+export const liaisonOffer = (run, id) => (run.liaisonOffers ?? []).find((f) => f.id === id) ?? null;
+export const recruitPrice = (run, f) => (liaisonOffer(run, f.id) ? f.price : marketPrice(run) + RECRUIT.perLevel * ((f.level ?? 1) - 1));
 
 // A seasoned recruit: arrives at a level from RECRUIT.levels for this arena tier, with a perk chosen for each level.
 function season(run, rng, f) {
@@ -971,28 +972,32 @@ function refreshMarket(run) {
 // Liaison: Lv 1 offers a cheap weak convict with a Flesh Wound; Lv 2 a strong POW with a Concussion.
 function refreshLiaison(run) {
   const lv = liaisonLevel(run);
-  run.liaisonOffer = null;
+  run.liaisonOffers = [];
   if (!lv) return;
   const elite = lv >= 2;
   // A convict is a Market-strength fighter, wounded and cheap; a prisoner of war is near the arena's Power and costs more
   // (playtest #7: 1-Gold convicts at Power 16 against the Market's 7–10 made the Liaison a no-brainer).
   const natural = (kind) => KINDS[kind].basePower + circuitInfo(run).marketPower;
-  const f = createFighter(run.rng.market, { id: newId(run, 'f'), takenNames: takenNames(run), classes: run.setup?.classes });
-  f.power = elite ? Math.max(natural(f.kind), currentBout(run).oppPower + LIAISON.elitePower) : natural(f.kind);
-  // A prisoner arrives at their arena's Power, but anything above a Market fighter's natural Power is training they
-  // already did elsewhere: it counts toward the Trainer cap, so they can't train another full cap on top (playtest #7).
-  const prior = Math.max(0, f.power - (KINDS[f.kind].basePower + circuitInfo(run).marketPower));
-  Object.assign(f, { trained: prior, trainedPower: prior });
-  f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
-  f.stress = elite ? 30 : 40;
-  f.morale = elite ? 40 : 30;
-  // Prisoners arrive seasoned in later arenas, like the Market's fighters (playtest #8: the Liaison only sold level 1s).
-  season(run, run.rng.market, f);
-  f.price = (elite ? LIAISON.elitePrice + LIAISON.elitePerTier * Math.min(run.topTier, CIRCUITS.length) : LIAISON.convictPrice) + RECRUIT.perLevel * (f.level - 1);
-  f.origin = elite ? 'Prisoner of war' : 'Condemned convict';
-  markPolitical(run, f);
-  run.liaisonOffer = f;
-  remember(run, f);
+  for (let i = 0; i < LIAISON.offers[Math.min(lv, LIAISON.offers.length) - 1]; i++) {
+    const f = createFighter(run.rng.market, { id: newId(run, 'f'), takenNames: takenNames(run, run.liaisonOffers), classes: run.setup?.classes });
+    f.power = elite ? Math.max(natural(f.kind), currentBout(run).oppPower + LIAISON.elitePower) : natural(f.kind);
+    // A prisoner arrives at their arena's Power, but anything above a Market fighter's natural Power is training they
+    // already did elsewhere: it counts toward the Trainer cap, so they can't train another full cap on top (playtest #7).
+    const prior = Math.max(0, f.power - (KINDS[f.kind].basePower + circuitInfo(run).marketPower));
+    Object.assign(f, { trained: prior, trainedPower: prior });
+    f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
+    f.stress = elite ? 30 : 40;
+    f.morale = elite ? 40 : 30;
+    // Prisoners arrive seasoned in later arenas, like the Market's fighters (playtest #8: the Liaison only sold level 1s).
+    season(run, run.rng.market, f);
+    f.price = (elite ? LIAISON.elitePrice + LIAISON.elitePerTier * Math.min(run.topTier, CIRCUITS.length) : LIAISON.convictPrice) + RECRUIT.perLevel * (f.level - 1);
+    f.origin = elite ? 'Prisoner of war' : 'Condemned convict';
+    // Only the first may be political (its own dice, as before), so the hidden plot starts no more often than it did.
+    if (i === 0) markPolitical(run, f);
+    else f.record = [];
+    run.liaisonOffers.push(f);
+  }
+  remember(run, ...run.liaisonOffers);
 }
 
 // ---------- v6: the hidden plot (docs/roadmap-v6.md; cards in src/plot.js) ----------
@@ -1350,7 +1355,7 @@ export function createRun(seed = randomSeed(), setup = {}) {
     roster: [],
     fallen: [],
     market: [],
-    liaisonOffer: null,
+    liaisonOffers: [],
     armourerStock: [],
     inventory: { decor: emptyDecor(), gear: [], items: emptyItems() },
     buildings: [],
@@ -1450,10 +1455,10 @@ function stripFighter(run, f) {
 export function recruitBlocker(run, id) {
   const idle = idleBlocker(run);
   if (idle) return idle;
-  const fromLiaison = run.liaisonOffer?.id === id;
+  const fromLiaison = liaisonOffer(run, id);
   if (!fromLiaison && !run.market.some((f) => f.id === id)) return 'That fighter is not for sale.';
   if (run.roster.length >= rosterCap(run)) return `Your quarters are full (${rosterCap(run)} fighters). Build or upgrade Fighter Quarters.`;
-  const price = fromLiaison ? run.liaisonOffer.price : recruitPrice(run, run.market.find((f) => f.id === id));
+  const price = fromLiaison ? fromLiaison.price : recruitPrice(run, run.market.find((f) => f.id === id));
   if (run.gold < price) return `Needs ${price} Gold.`;
   return null;
 }
@@ -1461,10 +1466,11 @@ export function recruitBlocker(run, id) {
 export function recruit(run, id) {
   assertOk(recruitBlocker(run, id));
   let fighter;
-  if (run.liaisonOffer?.id === id) {
-    fighter = run.liaisonOffer;
+  if (liaisonOffer(run, id)) {
+    fighter = liaisonOffer(run, id);
     run.gold -= fighter.price;
-    run.liaisonOffer = null;
+    run.liaisonOffers = run.liaisonOffers.filter((f) => f !== fighter);
+    talk(run, 'liaison-saved', [{ speaker: 'steward', text: LIAISON_LINES.saved(fighter.name) }]); // the first one only (each key plays once)
   } else {
     fighter = run.market.find((f) => f.id === id);
     run.market = run.market.filter((f) => f !== fighter);
@@ -3007,7 +3013,7 @@ function checkLoss(run) {
     run.endReason = 'Your gladiators revolt and burn the Ludus.';
     return;
   }
-  const cheapest = Math.min(marketPrice(run), run.liaisonOffer?.price ?? Infinity);
+  const cheapest = Math.min(marketPrice(run), ...(run.liaisonOffers ?? []).map((f) => f.price));
   if (!run.roster.length && run.gold < cheapest) {
     run.status = 'lost';
     run.endReason = 'No fighters left and not enough Gold to buy one. Your house falls.';
@@ -3064,7 +3070,10 @@ export function deserialize(text) {
   run.inventory.decor = { ...emptyDecor(), ...run.inventory.decor }; // saves from before new decor
   for (const b of run.buildings) if (b.type === 'stables') b.type = 'vulcan'; // 5.3.0: the Temple of Vulcan takes the Stables' place
   for (const f of run.roster) f.decor = { ...emptyDecor(), ...f.decor };
-  for (const f of [...run.roster, ...run.market, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : [])]) f.humor ??= humorFor(f);
+  // 5.4.2: the Liaison offers several prisoners (an older save's one offer becomes a list of one).
+  if (!Array.isArray(run.liaisonOffers)) run.liaisonOffers = run.liaisonOffer ? [run.liaisonOffer] : [];
+  delete run.liaisonOffer;
+  for (const f of [...run.roster, ...run.market, ...allOpponents(run), ...run.liaisonOffers]) f.humor ??= humorFor(f);
   // Careers from before action recording: start recording now, from a snapshot of this point.
   if (!Array.isArray(run.actions)) {
     run.actions = [];

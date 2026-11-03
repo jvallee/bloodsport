@@ -164,3 +164,9 @@ export const SUMMONS_LINES = {
   yielded: (f) => `${f} begged for their life on my sand. I let them keep it. I will not forget the begging.`,
   died: (f) => `${f} died well. That is all I asked of them.`,
 };
+
+// ---------- The Liaison (the designer, 5.4.2) ----------
+// The first prisoner you buy: the steward points out what it means. PLACEHOLDER.
+export const LIAISON_LINES = {
+  saved: (f) => `${f} was on the list for the beasts, or the cross. Now they're on ours. I suppose that makes you the only Lanista in Rome who saves lives by buying them. Don't let it get about; it'll ruin your reputation.`,
+};

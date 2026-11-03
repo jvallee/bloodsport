@@ -20,7 +20,7 @@ function withPrisoner(seed = 1, cell = 'scribe') {
   recruit(run, run.market[0].id);
   const f = createFighter(createRng(9), { id: 'fp', takenNames: run.roster.map((x) => x.name) });
   Object.assign(f, { political: { cell }, price: 1, origin: 'Condemned convict' });
-  run.liaisonOffer = f;
+  run.liaisonOffers = [f];
   recruit(run, f.id);
   return { run, f };
 }
@@ -82,7 +82,7 @@ test('the plot draws only from its own dice: political prisoners on offer change
       if (run.event) chooseEvent(run, 0);
       run.boutPending = false;
       advanceWeek(run);
-      seen.push([run.market.map((f) => f.name).join(), run.event?.id ?? '-', run.liaisonOffer?.name ?? '-']);
+      seen.push([run.market.map((f) => f.name).join(), run.event?.id ?? '-', run.liaisonOffers.map((f) => f.name).join() || '-']);
     }
     POLITICAL.chance = old;
     return seen;
@@ -371,7 +371,7 @@ test('the Liaison card shows the prisoner\'s record; the end screen names the pl
   run.buildings.push({ id: 'bl', type: 'liaison', level: 1 });
   const f = createFighter(createRng(1), { id: 'px' });
   Object.assign(f, { price: 1, origin: 'Condemned convict', record: [CLUES.telling[0]] });
-  run.liaisonOffer = f;
+  run.liaisonOffers = [f];
   assert.match(marketTab(run), /Prison record.*Refuses to salute/s);
   const { run: won, champ } = coupReady();
   playGrand(won, champ.id, true);
@@ -628,8 +628,8 @@ test('playtest: the Liaison\'s convict is Market-strength; its prisoner of war c
   const run = createRun(6);
   run.prestigeLevel = 2;
   run.buildings.push({ id: 'bl', type: 'liaison', level: 1 });
-  for (let i = 0; i < 6 && !run.liaisonOffer; i++) { if (run.event) chooseEvent(run, 0); run.boutPending = false; advanceWeek(run); } // to a month start
-  const f = run.liaisonOffer;
+  for (let i = 0; i < 6 && !run.liaisonOffers.length; i++) { if (run.event) chooseEvent(run, 0); run.boutPending = false; advanceWeek(run); } // to a month start
+  const f = run.liaisonOffers[0]; // the first may be political (5.4.2: the rest never are)
   const { KINDS, CIRCUITS } = await import('../src/data.js');
   assert.equal(f.power, KINDS[f.kind].basePower + CIRCUITS[0].marketPower);
   assert.ok([LIAISON.convictPrice, 1].includes(f.price));

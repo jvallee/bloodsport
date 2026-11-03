@@ -20,7 +20,7 @@ function withPrisoner(seed = 1) {
   recruit(run, run.market[0].id);
   const f = createFighter(createRng(9), { id: 'fp', takenNames: run.roster.map((x) => x.name) });
   Object.assign(f, { political: { cell: 'scribe' }, price: 1, origin: 'Condemned convict' });
-  run.liaisonOffer = f;
+  run.liaisonOffers = [f];
   recruit(run, f.id);
   return { run, f };
 }
@@ -135,4 +135,28 @@ test('scenes are spaced out: no more than QUESTS.talkPerWeek a week, the rest wa
 test('the Codex says a one-level building\'s effect once', () => {
   const e = ENTRIES.find((x) => x.key === 'building:gallery');
   assert.ok(!/up to/.test(e.rules), e.rules);
+});
+
+test('the Liaison offers a line-up (LIAISON.offers by level), at most one political; older saves keep their one offer', async () => {
+  const { LIAISON } = await import('../src/data.js');
+  const { buildRoom, serialize, deserialize, advanceToTournament, upgradeRoom } = await import('../src/run.js');
+  const run = createRun(41);
+  run.prestige = 200; run.prestigeLevel = 4; run.gold = 200;
+  buildRoom(run, 'liaison');
+  assert.equal(run.liaisonOffers.length, LIAISON.offers[0]);
+  upgradeRoom(run, run.buildings.find((b) => b.type === 'liaison').id);
+  advanceToTournament(run); run.boutPending = false; advanceWeek(run);
+  assert.equal(run.liaisonOffers.length, LIAISON.offers[1]);
+  assert.ok(run.liaisonOffers.every((f) => f.origin === 'Prisoner of war'));
+  assert.ok(run.liaisonOffers.slice(1).every((f) => !f.political));
+  // The first prisoner bought: the steward says what it means.
+  recruit(run, run.liaisonOffers[1].id);
+  assert.ok([...run.talk, ...(run.talkLater ?? [])].some((t) => t.key === 'liaison-saved'));
+  // A save from before 5.4.2 had one offer.
+  const old = JSON.parse(serialize(run));
+  old.liaisonOffer = old.liaisonOffers[0];
+  delete old.liaisonOffers;
+  const back = deserialize(JSON.stringify(old));
+  assert.equal(back.liaisonOffers.length, 1);
+  assert.equal('liaisonOffer' in back, false);
 });

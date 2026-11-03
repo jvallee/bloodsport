@@ -59,7 +59,7 @@ const freshName = (run, rng) => {
   // Nobody you could meet: your house, the market, the dead, contacts, and every arena and bracket opponent.
   const opponents = [...Object.values(run.arenas ?? {}).flatMap((a) => [a.opponent, a.rival]), ...Object.values(run.brackets ?? {}).flatMap((b) => b.foes ?? [])].filter(Boolean);
   const taken = new Set([...run.roster, ...run.market, ...run.fallen, ...opponents].map((f) => f.name)
-    .concat((run.plot?.freed ?? []).map((c) => c.name), run.graveyard ?? [], run.liaisonOffer ? [run.liaisonOffer.name] : []));
+    .concat((run.plot?.freed ?? []).map((c) => c.name), run.graveyard ?? [], (run.liaisonOffers ?? []).map((f) => f.name)));
   const free = NAMES.filter((n) => !taken.has(n));
   return pick(rng, free.length ? free : NAMES);
 };

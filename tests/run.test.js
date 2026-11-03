@@ -344,7 +344,7 @@ test('the market and Liaison refresh at the start of each month', () => {
   assert.ok(run.market.every((x) => !before.includes(x.id)));
 });
 
-test('the Liaison offers a cheap injured convict once built', () => {
+test('the Liaison offers cheap injured convicts once built (LIAISON.offers[0] of them, 5.4.2)', () => {
   const run = createRun(1);
   run.prestigeLevel = 2;
   run.gold = 100;
@@ -353,11 +353,15 @@ test('the Liaison offers a cheap injured convict once built', () => {
   run.boutPending = false;
   advanceWeek(run);
   // A convict costs LIAISON.convictPrice (playtest #7: was 1); a political one comes cheaper still.
-  assert.equal(run.liaisonOffer.price, run.liaisonOffer.political ? Math.max(1, LIAISON.convictPrice - POLITICAL.priceCut) : LIAISON.convictPrice);
-  assert.equal(run.liaisonOffer.injuries[0].tag, 'fleshWound');
-  const id = run.liaisonOffer.id;
+  assert.equal(run.liaisonOffers.length, LIAISON.offers[0]);
+  assert.ok(run.liaisonOffers.filter((f) => f.political).length <= 1, 'at most one political prisoner');
+  for (const f of run.liaisonOffers) {
+    assert.equal(f.price, f.political ? Math.max(1, LIAISON.convictPrice - POLITICAL.priceCut) : LIAISON.convictPrice);
+    assert.equal(f.injuries[0].tag, 'fleshWound');
+  }
+  const id = run.liaisonOffers[0].id;
   recruit(run, id);
-  assert.equal(run.liaisonOffer, null);
+  assert.equal(run.liaisonOffers.length, LIAISON.offers[0] - 1, 'the others stay on offer');
   assert.ok(run.roster.some((x) => x.id === id));
 });
 

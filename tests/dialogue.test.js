@@ -76,7 +76,7 @@ test('the steward announces new buildings at a new House level, and new stock in
   assert.deepEqual(stewardNews(before, newsSnapshot(run), run), [], 'nothing changed, nothing said');
   run.prestigeLevel = 2;
   run.market = run.market.map((f, i) => ({ ...f, id: `new${i}` }));
-  run.liaisonOffer = { id: 'p1' };
+  run.liaisonOffers = [{ id: 'p1' }];
   run.armourerStock = ['gladius'];
   const news = stewardNews(before, newsSnapshot(run), run).join(' ');
   const opened = Object.values(BUILDINGS).filter((b) => b.req[0] === 2 && !b.secret).map((b) => b.name); // a secret building (5.4.0) is never announced

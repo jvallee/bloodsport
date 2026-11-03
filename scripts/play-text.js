@@ -311,7 +311,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     out.push(`\n-- ${run.bouts ? 'Fight day' : 'Next bouts'} --`);
     out.push(unlockedTiers(run).sort((a, b) => b - a).map(arenaBlock).join('\n'));
     if (!oracleLevel(run)) out.push('(Build an Oracle to see exact percentages.)');
-    out.push(`\nMarket: ${run.market.length} fighters at ${marketPrice(run)} Gold${run.liaisonOffer ? ', plus a Liaison offer' : ''} · Estate: ${run.buildings.length}/${plotCount(run)} plots · Storeroom: ${run.inventory.gear.length} gear`);
+    out.push(`\nMarket: ${run.market.length} fighters at ${marketPrice(run)} Gold${run.liaisonOffers?.length ? `, plus ${plural(run.liaisonOffers.length, 'Liaison prisoner')}` : ''} · Estate: ${run.buildings.length}/${plotCount(run)} plots · Storeroom: ${run.inventory.gear.length} gear`);
     const hint = nextHint(run);
     if (hint) out.push(`\nNext: ${textHint(hint.text)}`);
     const card = tutorialCard();
@@ -330,10 +330,10 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       out.push(`[${f.id}] ${identity(f)} · ${recruitPrice(run, f)} Gold · Power ${f.power} · Speed ${f.speed}${why ? ` · can't recruit: ${why}` : ''}\n     ${abilities(f)}`);
     }
     if (!run.market.length) out.push('Sold out until next month.');
-    const offer = run.liaisonOffer;
-    out.push(offer
-      ? `\nLiaison (${offer.origin}, ${offer.price} Gold): [${offer.id}] ${identity(offer)} · Power ${offer.power} · Speed ${offer.speed} · Stress ${offer.stress} · Morale ${offer.morale} · Injuries: ${injuriesText(offer)}\n     ${abilities(offer)}${offer.record?.length ? `\n     Prison record: ${offer.record.map((c) => `"${c}"`).join(' ')}` : ''}`
-      : maxLevel(run, 'liaison') ? '\nLiaison: no prisoner on offer this month.' : `\nLiaison: build one${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for a cheap monthly prisoner.`);
+    const offers = run.liaisonOffers ?? [];
+    out.push(offers.length
+      ? offers.map((offer) => `\nLiaison (${offer.origin}, ${offer.price} Gold): [${offer.id}] ${identity(offer)} · Power ${offer.power} · Speed ${offer.speed} · Stress ${offer.stress} · Morale ${offer.morale} · Injuries: ${injuriesText(offer)}\n     ${abilities(offer)}${offer.record?.length ? `\n     Prison record: ${offer.record.map((c) => `"${c}"`).join(' ')}` : ''}`).join('')
+      : maxLevel(run, 'liaison') ? '\nLiaison: no prisoners on offer this month.' : `\nLiaison: build one${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for cheap monthly prisoners.`);
     const lv = maxLevel(run, 'vulcan');
     out.push(!lv
       ? `\nUnnatural Temple of Vulcan: build it${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} to raise fighters killed in the arena as Revenants.`

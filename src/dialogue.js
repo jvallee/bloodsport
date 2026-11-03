@@ -232,7 +232,7 @@ export function newsSnapshot(run) {
   return {
     level: run.prestigeLevel,
     market: run.market.map((f) => f.id).join(),
-    liaison: run.liaisonOffer?.id ?? null,
+    liaison: (run.liaisonOffers ?? []).map((f) => f.id).join() || null,
     armourer: run.armourerStock.join(),
     bodies: raisable(run).map((f) => f.id).join(),
   };
@@ -246,7 +246,7 @@ export function stewardNews(before, after, run) {
   if (after.market !== before.market && run.market.length && after.market.split(',').some((id) => !before.market.split(',').includes(id))) {
     news.push('New gladiators have arrived in the Market.');
   }
-  if (after.liaison && after.liaison !== before.liaison) news.push('The Liaison has a new prisoner on offer.');
+  if (after.liaison && after.liaison !== before.liaison) news.push(`The Liaison has ${(run.liaisonOffers ?? []).length > 1 ? 'new prisoners' : 'a new prisoner'} on offer.`);
   if (after.armourer && after.armourer !== before.armourer && run.armourerStock.length) news.push('The Armourer has new stock.');
   // PLACEHOLDER (5.3.0): a body the Temple of Vulcan could raise.
   for (const f of raisable(run).filter((x) => !(before.bodies ?? '').split(',').includes(x.id))) news.push(`The priests of Vulcan have taken ${f.name}'s body. They can raise them as a Revenant, for a price (the Market tab).`);

@@ -562,7 +562,8 @@ export const NEMESIS = {
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],
 };
 export const EXHIBITION = { xpWin: 2, xpLoss: 1, renown: 1, goldPerTier: 1, woundChance: 0.15 }; // playtest #8: was XP 3/2, Gold 2 × tier (too rich every month)
-export const LIAISON = { convictPrice: 2, elitePrice: 3, elitePerTier: 2, elitePower: -1 };
+// offers: prisoners on offer each month, by Liaison level (the designer, 5.4.2: one was too few). At most one is political.
+export const LIAISON = { convictPrice: 2, elitePrice: 3, elitePerTier: 2, elitePower: -1, offers: [2, 3] };
 export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClue: 0.25 };
 // The thread. gap: weeks between plot cards. cause/ready: trust needed for each stage (cause also needs this House level).
 // suspicion: hidden 0–100, its monthly drift and the levels where its signs show. contactWin: win chance per contact in the

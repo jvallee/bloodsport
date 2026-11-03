@@ -175,7 +175,7 @@ function unlock(codex, list, keys) {
 export function discover(codex, run) {
   const keys = [];
   const opponents = unlockedTiers(run).map((t) => run.arenas[t].opponent);
-  for (const f of [...run.market, ...run.roster, ...run.fallen, ...opponents, run.liaisonOffer].filter(Boolean)) {
+  for (const f of [...run.market, ...run.roster, ...run.fallen, ...opponents, ...(run.liaisonOffers ?? [])].filter(Boolean)) {
     keys.push(...fighterKeys(f));
     for (const i of f.injuries) keys.push(`injury:${i.tag}`);
     for (const p of [...(f.perks ?? []), ...(f.pendingPerks ?? []).flat()]) keys.push(`perk:${p}`);

@@ -51,7 +51,7 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
     return `<span class="step ${cls}" title="${esc(c.name)}">${c.tier}</span>`;
   }).join('') + `<span class="step ${run.topTier === GRAND_TIER ? 'now' : ''}" title="The Grand Tournament">👑</span>`;
   const tabBtn = (id, label, badge = '') => `<button class="tab${tab === id ? ' on' : ''}" data-action="tab" data-tab="${id}">${label}${badge}</button>`;
-  const marketBadge = run.liaisonOffer || run.armourerStock.length ? '<span class="dot" title="New stock"></span>' : '';
+  const marketBadge = run.liaisonOffers?.length || run.armourerStock.length ? '<span class="dot" title="New stock"></span>' : '';
   const codexBadge = codexNew ? `<span class="count" title="New Codex entries">${codexNew}</span>` : '';
   const levelUps = run.roster.filter((f) => f.pendingPerks.length).length;
   const ludusBadge = levelUps ? `<span class="count" title="Fighters waiting to choose a perk">${levelUps}</span>` : '';
@@ -693,10 +693,10 @@ export function marketTab(run) {
     ? `<p class="sub">Build the Unnatural Temple of Vulcan${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} to raise fighters killed in the arena as Revenants.</p>`
     : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death, for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p>
       ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary small')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`;
-  const offer = run.liaisonOffer;
-  const liaison = offer
-    ? fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, notes: offer.record?.length ? `<div class="record"><div class="label">Prison record</div>${offer.record.map((c) => `<div>“${esc(c)}”</div>`).join('')}</div>` : '', actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })
-    : maxLevel(run, 'liaison') ? '<p class="sub">No prisoner on offer this month.</p>' : `<p class="sub">Build a Liaison${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for a cheap monthly prisoner.</p>`;
+  const offers = run.liaisonOffers ?? [];
+  const liaison = offers.length
+    ? `<div class="cards two">${offers.map((offer) => fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, notes: offer.record?.length ? `<div class="record"><div class="label">Prison record</div>${offer.record.map((c) => `<div>“${esc(c)}”</div>`).join('')}</div>` : '', actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })).join('')}</div>`
+    : maxLevel(run, 'liaison') ? '<p class="sub">No prisoners on offer this month.</p>' : `<p class="sub">Build a Liaison${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for cheap monthly prisoners.</p>`;
   const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small> <span class="chip small good" title="This item adds ${decorComfort(d)} comfort to the room it's in: that fighter's Morale drifts ${decorComfort(d)} points higher.">+${decorComfort(d)} comfort</span>${d.calm ? ` <span class="chip small" title="Lowers Stress each week. A room's decor lowers Stress by at most ${STRESS.decorCalm} a week in all.">−${d.calm} Stress/wk</span>` : ''}<br><small>${esc(d.effect)}</small></div>
     ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`).join('');
   const armourer = maxLevel(run, 'armourer')
