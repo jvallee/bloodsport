@@ -95,7 +95,7 @@ test('careers saved before recording start recording from a snapshot, and replay
 });
 
 test('parseReport rejects anything that is not a bug report', () => {
-  assert.throws(() => parseReport('{"hello":1}'), /not a Bloodsport bug report/);
+  assert.throws(() => parseReport('{"hello":1}'), /not a Blood and Circus bug report/);
 });
 
 test('the game version matches package.json', async () => {

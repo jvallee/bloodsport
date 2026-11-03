@@ -1,4 +1,4 @@
-# Bloodsport: handoff for the next agent
+# Blood and Circus (formerly Bloodsport): handoff for the next agent
 
 Last updated 2026-11-02, at **version 5.3.0** (committed locally; the designer pushes it to publish). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
 
@@ -96,7 +96,8 @@ The demand fix changed the balance: 5.2.0's numbers were measured while every de
 - **Its fixes are in:** bracket Bloodied Victories, no nemesis from a withdrawal, training resumes after a forced rest (`f.resume`, `resumeTraining`), the spare reason, event stakes with names (`stakesText(eff, sep, names)`), the purse apart from a won bet (`purseGold`).
 - **Gates:** all 13 pass. Careful 43%, loyalist +12, short careers 51%. 491 tests.
 - **The designer's requests (2026-11-02, later):** careers in slots (`src/careers.js`, a Careers dialog; the old single save migrates), a lost Boss Final keeps its buy-in (Imperial 26/27/28 and the Grand 31 pay for it), the overtraining warning (`overtrainedByWeek`), Emperor scenes for demands met and missed (`run.demandResult`), the rebel's slower reveal (`PLOT.confessTrust`), "Free me" only with two rebels, the Emperor's spy (`emperorsSpy`, `SPY`; an executed spy's body can be raised), auto-play contained to one match, Skip to the result, Ludus columns that scroll on their own. All 13 gates pass (careful 44%, loyalist +9, treason 4%, short 47%). 506 tests.
-- **Open: decor calming is uncapped.** A bug report (seed 9754698) found Brutus's room taking 80 Stress a week, against training's +20. Offered: cap the calm (about −30 a week), and show the weekly Stress change on the card.
+- **The game is named Blood and Circus** (the designer, 2026-11-02): the title, top bar, intro and download names. Internal names stay `bloodsport` on purpose: storage keys (`bloodsport.*`), the save and bug-report `kind`s, the package name, the repo and its Pages URL (renaming the repo would move the live address). The intro's "an empire of bloodsport" is the designer's text, left as it is.
+- **Decor calming is capped at 30 a week** (`STRESS.decorCalm`, `decorCalm`; the designer's choice after a bug report, seed 9754698, where Brutus's room took 80 a week). Still offered: show the weekly Stress change on the fighter card.
 - **Open: the Silver wall.** The tester's career stopped at the Trainer cap of 8 against Silver Finals of 18–21, while Silver losses drained Prestige (31 → 5) away from House level 4. Options in `docs/playtest-10-changes.md`. Probe them with a "weeks at Silver" count, as the Bronze table did.
 
 ## The state at 5.2.0 (kept for reference)

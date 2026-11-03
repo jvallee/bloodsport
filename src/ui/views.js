@@ -57,7 +57,7 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
   const low = run.favor <= FAVOR.warning;
   return `
     <header class="topbar">
-      <h1>BLOODSPORT</h1>
+      <h1>BLOOD AND CIRCUS</h1>
       <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
       <div class="stat prestige" title="${esc(prestigeTip(run))}">${ICON.prestige}<b>${run.prestige}</b>
         <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${Math.max(0, next.at - run.prestige)} to Lv ${next.level}</small>` : ''}</span></div>
@@ -302,7 +302,7 @@ export function introModal(page, pages) {
   const dots = pages.map((_, i) => `<i class="${i === page ? 'on' : ''}"></i>`).join('');
   const last = page === pages.length - 1;
   return `<div class="modal intro" role="dialog" aria-label="${esc(p.title)}"><div class="modal-body">
-    <div class="intro-kicker">Bloodsport</div>
+    <div class="intro-kicker">Blood and Circus</div>
     <h2>${p.title}</h2>${p.body}
     <div class="intro-nav"><span class="dots">${dots}</span>
       <span class="row">${page > 0 ? '<button class="btn" data-action="intro-back">Back</button>' : '<button class="link" data-action="intro-close">Skip intro</button>'}
@@ -652,7 +652,7 @@ export function marketTab(run) {
   const liaison = offer
     ? fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, notes: offer.record?.length ? `<div class="record"><div class="label">Prison record</div>${offer.record.map((c) => `<div>“${esc(c)}”</div>`).join('')}</div>` : '', actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })
     : maxLevel(run, 'liaison') ? '<p class="sub">No prisoner on offer this month.</p>' : `<p class="sub">Build a Liaison${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for a cheap monthly prisoner.</p>`;
-  const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small> <span class="chip small good" title="This item adds ${decorComfort(d)} comfort to the room it's in: that fighter's Morale drifts ${decorComfort(d)} points higher.">+${decorComfort(d)} comfort</span>${d.calm ? ` <span class="chip small" title="Lowers Stress each week">−${d.calm} Stress/wk</span>` : ''}<br><small>${esc(d.effect)}</small></div>
+  const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small> <span class="chip small good" title="This item adds ${decorComfort(d)} comfort to the room it's in: that fighter's Morale drifts ${decorComfort(d)} points higher.">+${decorComfort(d)} comfort</span>${d.calm ? ` <span class="chip small" title="Lowers Stress each week. A room's decor lowers Stress by at most ${STRESS.decorCalm} a week in all.">−${d.calm} Stress/wk</span>` : ''}<br><small>${esc(d.effect)}</small></div>
     ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`).join('');
   const armourer = maxLevel(run, 'armourer')
     ? run.armourerStock.length

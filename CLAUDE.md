@@ -1,4 +1,4 @@
-# Bloodsport — Web MVP
+# Blood and Circus (formerly Bloodsport) — Web MVP
 
 Turn-based gladiator-house management roguelike, built as a static site and hosted on GitHub Pages (https://jvallee.github.io/bloodsport/).
 

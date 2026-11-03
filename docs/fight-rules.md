@@ -1,4 +1,4 @@
-# Bloodsport — Fight Rules (Web MVP)
+# Blood and Circus — Fight Rules (Web MVP)
 
 Combat follows Tab 4 and Tab 6 of the design doc: the Power Delta table, the 5-step round order (4A → 4B → 4C), and the Escalating Injury Table with the 2-Injury Death Gate.
 
@@ -587,3 +587,4 @@ Probe (`bronze.js`, a scratch copy of `scripts/probes/bot-options.js` that also 
   - Careful 44%, careful deaths 0.70, reckless deaths 3.37. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +18.
   - Loyalist +9. Coup 15%. Treason 4%.
   - Short careers 47% in 88 weeks (full careers 119).
+- **Calming decor is capped:** a room's decor lowers Stress by at most 30 a week in all (`STRESS.decorCalm`, `decorCalm` in `src/run.js`; the designer, after a bug report where a furnished room took 80 a week). The gates are unchanged to the point (careful 44%, loyalist +9, short 47%): the bots never furnish a room past 30.

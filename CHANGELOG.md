@@ -1,9 +1,10 @@
-# Bloodsport version notes
+# Blood and Circus version notes
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
 ## 5.4.0 (in progress)
 
+- **The game is now called Blood and Circus.** Your saves, Codex and Legacy carry over unchanged.
 - **Auto-play covers one match:** the next match of a tournament always starts paused (it used to stay on when you went on to the next match).
 - **Skip to the result:** a new button on the fight screen plays the rest of the match at once with the suggested tactic. Like auto-play, it stops at the Death Gate while you can still capitulate.
 - **The Emperor's spy:** from the second year, once a career, you may find one of your fighters has been reporting to the palace. Let them be (the Emperor is pleased), or execute them, and the priests of Vulcan can have the body.
@@ -13,6 +14,7 @@ What changed from version to version, newest first. Each frozen version can stil
 - **The steward warns you before overtraining:** the first time in a career that End week would leave someone Overtrained, the steward asks first: rest them this week, or train anyway.
 - **The Emperor reacts to his demands:** he speaks up the moment you meet one, and again when its fight day ends and you haven't.
 - **The rebel takes their time:** a political prisoner no longer tells you everything the week you buy them. After you copy the chalk sign they say a guarded word; the full confession comes only once they trust you, a few favours in.
+- **Calming decor has a limit:** a room's Birds, Braziers, Shrines and Bathhouses lower Stress by at most 30 a week together. (A fully furnished room used to take 80 a week, so training never built up any Stress.)
 - **Several careers at once:** the new **Careers** button lists every career saved in this browser (up to 8). Play any of them, or delete one. Starting a new career no longer abandons the one you were playing, and importing a save adds it as another career. Your old save carries over as the first one.
 - **The Bronze wall is lower:**
   - The Bronze Arena's Boss fights at Power 13 (was 14).

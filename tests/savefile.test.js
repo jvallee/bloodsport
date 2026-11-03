@@ -16,8 +16,8 @@ test('a save file round-trips the career, Codex and Legacy', () => {
   assert.deepEqual(back.legacy.achievements, ['bronze']);
 });
 
-test('importing rejects files that are not Bloodsport saves', () => {
-  assert.throws(() => importSave('hello'), /not a Bloodsport save/);
-  assert.throws(() => importSave('{"kind":"bloodsport-bug-report"}'), /not a Bloodsport save/);
+test('importing rejects files that are not Blood and Circus saves', () => {
+  assert.throws(() => importSave('hello'), /not a Blood and Circus save/);
+  assert.throws(() => importSave('{"kind":"bloodsport-bug-report"}'), /not a Blood and Circus save/);
   assert.throws(() => importSave(JSON.stringify({ kind: 'bloodsport-save', career: { version: 1 } })), /older version/);
 });

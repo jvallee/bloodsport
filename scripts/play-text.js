@@ -1,4 +1,4 @@
-// Text interface to a Bloodsport career: drives the pure modules in src/ with no DOM, one command per line.
+// Text interface to a Blood and Circus career: drives the pure modules in src/ with no DOM, one command per line.
 // Usage: node scripts/play-text.js [--seed N] [--short] [--daily YYYY-MM-DD] [--last N] < commands.txt
 //   --short   a short career (Tournament → Boss in each arena). --daily DAY: that day's Emperor's Challenge.
 //   --seed N  career seed (default 1). Careers replay exactly, so a player can append commands and re-run.

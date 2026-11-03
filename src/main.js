@@ -411,7 +411,7 @@ const actions = {
     const blob = new Blob([exportSave({ run, codex, legacy, version: VERSION })], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `bloodsport-save-${run.seed}-week${run.week}.json`;
+    a.download = `blood-and-circus-save-${run.seed}-week${run.week}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   },
@@ -681,7 +681,7 @@ function downloadReport() {
   const blob = new Blob([reportText()], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `bloodsport-bug-${run?.seed ?? 'x'}-week${run?.week ?? 0}.json`;
+  a.download = `blood-and-circus-bug-${run?.seed ?? 'x'}-week${run?.week ?? 0}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   bugStatus = 'Downloaded. Send the file to the developer.';
