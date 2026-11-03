@@ -336,3 +336,22 @@ test('the Ludus shows the Quests panel, and a fighter\'s want as a chip (5.4.0)'
   assert.match(html, /class="chip want tip"[^>]*>💬 A Bathhouse in their room/);
   assert.doesNotMatch(html, /Whispering Gallery|The cause/, 'nothing of the plot without it');
 });
+
+test('a signature move that can\'t be used is a disabled button with the reason (the designer: an overtrained Cestus\'s Haymaker)', async () => {
+  const { createMatch } = await import('../src/fight.js');
+  const { createRng } = await import('../src/rng.js');
+  const { createFighter } = await import('../src/run.js');
+  const rng = createRng(3);
+  const a = createFighter(rng, { id: 'a', power: 10 });
+  Object.assign(a, { cls: 'cestus', level: 5 });
+  const b = createFighter(rng, { id: 'b', power: 10 });
+  const ui = { showMath: false, auto: false };
+  const bout = { name: 'Test', tier: 1, boss: false };
+  const ok = fightView(createMatch({ a, b, rng: createRng(1) }), ui, bout);
+  assert.match(ok, /data-action="signature"/);
+  const m = createMatch({ a, b, rng: createRng(1), overtrained: true });
+  assert.ok(m.a.disabled.includes('class'), 'overtraining takes the class ability');
+  const html = fightView(m, ui, bout);
+  assert.doesNotMatch(html, /data-action="signature"/);
+  assert.match(html, /class="btn signature" disabled[^>]*>★ Haymaker <small>Haymaker needs the class ability/);
+});
