@@ -328,7 +328,7 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
         continue;
       }
       pickPerks(run);
-      if (run.summons && run.status === 'active') answerSummonsBot(run, strategy);
+      if (run.summons && run.status === 'active') { answerSummonsBot(run, strategy); pickPerks(run); } // a win may level them up
       if (run.status === 'active') advanceWeek(run);
       continue;
     }

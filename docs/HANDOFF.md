@@ -242,6 +242,8 @@ Then change the four keys in `v5/src/main.js` back to `bloodsport.v5.career|pref
 
 **Freezing a new major version:** copy into `/vN/` the same way, with keys `bloodsport.vN.*`, add a README, list it in `CLAUDE.md`, then tag `vN.0` and push the tag.
 
+**Balance checks run in parallel** (5.4.1): `npm run check` and `scripts/probes/bot-options.js` spread their careers over every core but one (`scripts/pool.js`, `scripts/career-worker.js`). The results are identical to a one-by-one run; on the designer's 10-core Mac a check takes about 9 minutes (it was about 50). Progress goes to stderr (`careful 180/300 · …`). `node scripts/career-sim.js 300 --check --tune '{"QUESTS.goldScale": 0.2}'` runs the real gates with other values. Probes match the check exactly only with `'{"oddsSamples":150}'` and the check's seeds and counts (first seed 1000; 300 full careers, 150 short); the default probe settings drift by a few points. Don't edit `src/` while a check or probe runs: each batch loads the files as it starts (use a git worktree for parallel work).
+
 **LLM playtest**
 - Spawn a general-purpose subagent. It plays with `node scripts/play-text.js --seed N --last 1 < commands.txt`, appending commands to a file in the scratchpad (careers replay from the seed), for a budget of about 350–450 commands.
 - The report goes to `docs/playtest-llm-N.md`, in the format of `docs/playtest-llm-5.md`:

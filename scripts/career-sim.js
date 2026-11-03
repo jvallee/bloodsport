@@ -1,4 +1,5 @@
-// Whole-career balance report. Usage: node scripts/career-sim.js [careers] [--check]
+// Whole-career balance report. Usage: node scripts/career-sim.js [careers] [--check] [--tune '{"QUESTS.goldScale": 0.2}']
+// --tune: paths into src/data.js to try other values (as the probes take them), for every career and simulation.
 // With --check, exits non-zero unless every gate in scripts/checks.js passes (targets: docs/roadmap-v2.md).
 
 import { runGates } from './checks.js';
@@ -6,10 +7,11 @@ import { runGates } from './checks.js';
 const args = process.argv.slice(2);
 const check = args.includes('--check');
 const N = Number(args.find((a) => /^\d+$/.test(a))) || 200;
+const tunables = args.includes('--tune') ? JSON.parse(args[args.indexOf('--tune') + 1]) : {};
 const pct = (x) => `${(x * 100).toFixed(0)}%`;
 const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
-const { gates, careful, reckless, split, rebel, loyalist, short } = await runGates({ careers: N });
+const { gates, careful, reckless, split, rebel, loyalist, short } = await runGates({ careers: N, tunables });
 
 for (const [name, results] of [['CAREFUL', careful], ['RECKLESS', reckless]]) {
   const wins = results.filter((r) => r.won);

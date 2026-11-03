@@ -15,47 +15,47 @@ const decorPlaced = (run) => run.roster.some((f) => Object.values(f.decor).some(
 // LLM-11: they were skipped without a word). The middle ones give the steward something to say during a long arena.
 export const STEWARD_TASKS = [
   { id: 'twoFighters', goal: 'Have two gladiators in the house', gold: 2, test: (run) => run.roster.length >= 2,
-    say: 'One fighter is a hobby, Lanista. Two is a house. Find a second gladiator.' },
+    say: 'One gladiator is a hobby, Lanista. Two is a house. I\'d find you a second myself, but nobody listens to stewards at the Market.' },
   { id: 'firstWin', goal: 'Win a match', gold: 2, test: (run) => run.history.some((h) => h.won),
-    say: 'Your predecessor\'s banners still hang in the yard. Nobody has cheered them in years. Win a match, and they will.' },
+    say: 'Your predecessor\'s banners still hang in the yard. Nobody has cheered them in years. I stopped noticing. Win a match, and perhaps I\'ll notice again.' },
   { id: 'decor', goal: 'Put a piece of decor in a fighter\'s room', gold: 2, test: decorPlaced,
-    say: 'The barracks smell of damp and old fear. A bird, a brazier, anything. Happy fighters train harder.' },
+    say: 'The barracks smell of damp and old fear. Mostly damp. A bird, a brazier, anything. Happy fighters train harder, or so the scrolls claim.' },
   { id: 'quarters', goal: 'Upgrade the Fighter Quarters', gold: 3, test: (run) => maxLevel(run, 'quarters') >= 2,
-    say: 'We cannot grow a house in a single room. Upgrade the Quarters.' },
+    say: 'We cannot grow a house in a single room. I have tried. Upgrade the Quarters.' },
   { id: 'pits', goal: 'Conquer the Dirt Pits (beat its Boss)', gold: 3, test: (run) => conquered(run, 1),
-    say: 'Every house worth its name started in the Dirt Pits. Ours stayed there too long. Beat their Boss, and we leave.' },
+    say: 'Every great house started in the Dirt Pits. Ours stayed rather longer than it needed to. Beat their Boss and we can leave. I\'ll pack.' },
   { id: 'newBuilding', goal: 'Build something the house never had', gold: 3, test: (run) => run.buildings.some((b) => !STARTING_BUILDINGS.includes(b.type)),
-    say: 'The old Lanista sold half the estate to pay his wine merchant. Build on it again.' },
+    say: 'The old Lanista sold half the estate to pay his wine merchant. The wine merchant did very well out of us. Build on it again.' },
   { id: 'fourFighters', goal: 'Have four gladiators in the house', gold: 4, test: (run) => run.roster.length >= 4,
-    say: 'When I was a boy this house fed twenty fighters. Four would be a start.' },
+    say: 'When I was a boy this house fed twenty fighters. These days it mostly feeds me. Four would be a start.' },
   { id: 'trainer2', goal: 'Upgrade the Trainer Room', gold: 4, test: (run) => maxLevel(run, 'trainer') >= 2,
-    say: 'The old training posts are rotten through. Fighters can only learn as much as the yard can teach. Upgrade the Trainer Room.' },
+    say: 'The training posts are rotten through. I\'d replace them myself, but I was hired to count things, not lift them. Upgrade the Trainer Room.' },
   { id: 'bronzeWin', goal: 'Win a tournament in the Bronze Arena', gold: 4, test: (run) => tournamentWon(run, 2),
-    say: 'Before we take the Bronze Arena, let them see our colours on the winners\' rail. One tournament, Lanista.' },
+    say: 'Let them see our colours on the Bronze winners\' rail, just once. I\'ll have it painted on something.' },
   { id: 'bronze', goal: 'Conquer the Bronze Arena', gold: 6, test: (run) => conquered(run, 2),
-    say: 'The Bronze Arena remembers our colours. Remind it.' },
+    say: 'The Bronze Arena remembers our colours. Not fondly, but it remembers. Remind it.' },
   { id: 'twoTitles', goal: 'Have a fighter who holds two Titles', gold: 6, test: (run) => run.roster.some((f) => (f.titles ?? []).length >= 2),
-    say: 'A house is known by its champions. Make one that people name in the taverns.' },
+    say: 'A house is known by its champions. Ours is currently known by its debts. A fighter with two Titles would change the conversation.' },
   { id: 'level3', goal: 'Reach House level 3', gold: 6, test: (run) => run.prestigeLevel >= 3,
-    say: 'The senators have started asking who we are. Let\'s give them a reason: reach House level 3.' },
+    say: 'The senators have started asking who we are. I\'ve been telling them nobody. Reach House level 3, and I can stop.' },
   { id: 'trainer3', goal: 'Upgrade the Trainer Room to level 3', gold: 6, test: (run) => maxLevel(run, 'trainer') >= 3,
-    say: 'The Silver crowds pay to see real skill. Our yard can\'t teach it yet. Trainer Room, level 3.' },
+    say: 'The Silver crowds pay to see skill. Our yard mostly teaches enthusiasm. Trainer Room, level 3.' },
   { id: 'silverWin', goal: 'Win a tournament in the Silver Coliseum (its Final)', gold: 6, test: (run) => tournamentWon(run, 3),
-    say: 'Three fights in one day, and the last against the best they have. Win one of those days, and the Silver Coliseum will know us.' },
+    say: 'Three fights in one day, the last against the best they have. I won\'t watch. Tell me how it went.' },
   { id: 'silver', goal: 'Conquer the Silver Coliseum', gold: 8, test: (run) => conquered(run, 3),
-    say: 'Your predecessor never saw the Silver Coliseum from the sand. You will.' },
+    say: 'Your predecessor never saw the Silver Coliseum from the sand. He saw it from the tavern across the street, often.' },
   { id: 'level4', goal: 'Reach House level 4', gold: 8, test: (run) => run.prestigeLevel >= 4,
-    say: 'We are nearly what we were. House level 4, and I will stop counting the old days.' },
+    say: 'We are nearly what we were. House level 4, and I\'ll stop counting the old days. I\'ll find something else to count. I always do.' },
   { id: 'imperialWin', goal: 'Win a tournament in the Imperial Coliseum (its Final)', gold: 8, test: (run) => tournamentWon(run, 4),
-    say: 'The Emperor watches from his box in the Imperial Coliseum. Make him learn our name: win a tournament there.' },
+    say: 'The Emperor watches from his box in the Imperial Coliseum. I\'d rather he didn\'t, but if he must, give him something worth watching.' },
   { id: 'imperial', goal: 'Conquer the Imperial Coliseum', gold: 10, test: (run) => conquered(run, 4),
-    say: 'The Emperor\'s own arena. This house has never won there. Not once.' },
+    say: 'The Emperor\'s own arena. This house has never won there. Not once. I checked twice, hoping I\'d miscounted.' },
   { id: 'grand', goal: 'Win the Grand Tournament', gold: 0, test: (run) => run.status === 'won',
-    say: 'One fight left, Lanista. The one they will sing about.' },
+    say: 'One fight left, Lanista. The one they\'ll sing about. I don\'t sing. I may hum.' },
 ];
-export const STEWARD_INTRO = 'This house was great once, before your predecessor drank it away. I kept a list of what we lost. Let\'s win it back, one thing at a time.';
-export const stewardAlready = (goals) => `I was going to ask for more, but you got there first: ${goals.join('; ')}. The house is ahead of my list.`;
-export const stewardDone = (task) => `Done: ${task.goal.charAt(0).toLowerCase()}${task.goal.slice(1)}. The house is a little more itself again.`;
+export const STEWARD_INTRO = 'This house was great once, before your predecessor drank it away. Everyone else left. I stayed; I\'m still not sure why. I kept a list of what we lost. We might as well win it back, one thing at a time.';
+export const stewardAlready = (goals) => `I was going to ask for this next: ${goals.join('; ')}. You'd already done it. I'll cross it off and let people think it was my idea.`;
+export const stewardDone = (task) => `Done: ${task.goal.charAt(0).toLowerCase()}${task.goal.slice(1)}. The house is a little more itself again. Try not to let it go to your head.`;
 
 // ---------- What fighters want ----------
 // `eligible(run, f, ctx)` returns the want's target (or null); `met(run, f, want)` true once done. `weeks`: how long it lasts
@@ -138,8 +138,8 @@ export const BOND_LINES = {
     [(b) => `I owe ${b} a cup of wine for every time they've watched my back. That's a lot of wine.`, (a) => `${a} pays for none of it. I keep count anyway.`],
     [(b) => `${b} and I came from opposite ends of the Empire. Turns out the sand is the same everywhere.`, (a) => `So is the bad food. ${a} can have mine.`],
   ],
-  stewardAgain: (a, b) => `Another friendship: ${a} and ${b}. You know what that means by now, Lanista. Keep them both alive.`,
-  steward: (a, b, comfort, gap) => `${a} and ${b} are friends now. Each is happier while the other is in the house (+${comfort} comfort). If one is ${gap} or more levels above the other, they'll teach them a little every week. And if one dies, the other will grieve.`,
+  stewardAgain: (a, b) => `Another friendship: ${a} and ${b}. The house grows sentimental. Keep them both alive, Lanista; grief is bad for training.`,
+  steward: (a, b, comfort, gap) => `${a} and ${b} are friends now. I'd advise against it, but nobody asks the steward. Each is happier while the other is in the house (+${comfort} comfort). If one is ${gap} or more levels above the other, they'll teach them a little every week. And if one dies, the other will grieve.`,
 };
 
 // ---------- The rival house's champion and its Lanista ----------
@@ -157,7 +157,7 @@ export const RIVAL_LINES = {
 // PLACEHOLDER lines. The rules (and the steward's line) must stay accurate.
 export const SUMMONS_LINES = {
   ask: 'The games in my Coliseum have grown dull, Lanista. I want new blood on the Imperial sand. Send me one of yours on this month\'s fight day.',
-  steward: (favor) => `A summons, not a request. On fight day, send a fighter to the Imperial Coliseum against one of its regulars, told to yield at the Death Gate or to fight to the death. Or refuse him, and lose ${-favor} Favour.`,
+  steward: (favor) => `A summons, not a request. He doesn't make requests. On fight day, send a fighter to the Imperial Coliseum against one of its regulars, told to yield at the Death Gate or to fight to the death. Or refuse him, and lose ${-favor} Favour.`,
   refused: 'You refuse me? I will remember the name of your house, Lanista. I will remember it at every dinner.',
   won: (f) => `${f} beat my champion? On my own sand? Well. Someone bring me that fighter's name, I want to say it again.`,
   survived: (f) => `${f} lost, but still stood at the end. The crowd liked them. So, for a moment, did I.`,
