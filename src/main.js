@@ -187,6 +187,7 @@ const fightTutorial = () => (match ? nextStep(FIGHT_STEPS, prefs.tutorial, match
 
 // ---------- Rendering ----------
 
+let renderedTab = null; // the tab the page last drew (scroll positions carry over only within it)
 function render() {
   if (discover(codex, run).length) saveCodex();
   // Legacy: achievements as they happen, and the career once it ends.
@@ -207,9 +208,15 @@ function render() {
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
+  // Panels that scroll on their own (the Ludus columns, the logs) keep their place across re-renders on the same tab
+  // (the designer: clicking in Your gladiators jumped its column back to the top).
+  const SCROLLERS = '.grid > .panel, .log, .feed';
+  const scrolled = renderedTab === tab ? [...app.querySelectorAll(SCROLLERS)].map((el) => el.scrollTop) : [];
+  renderedTab = tab;
   app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab) : nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
+  app.querySelectorAll(SCROLLERS).forEach((el, i) => { if (scrolled[i]) el.scrollTop = scrolled[i]; });
   // The tutorial month: make the button to press glow.
   if (guide?.focus && tab === guide.tab) for (const el of app.querySelectorAll(guide.focus)) if (!el.disabled) el.classList.add('tut-focus');
   renderFight();

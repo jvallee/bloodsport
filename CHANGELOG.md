@@ -10,6 +10,7 @@ What changed from version to version, newest first. Each frozen version can stil
 - **The Liaison has a line-up:** 2 prisoners on offer each month (3 once the Liaison is level 2), instead of one. At most one of them is ever a political prisoner. The first prisoner you buy, the steward has a word about it.
 - **The steward has found his voice:** drier, and a little resigned to still being here.
 - **Fixed:** a long note above an opponent's card (a house that owes you a life) covered their name on a phone.
+- **Fixed:** clicking anything in the Your gladiators or Fight day column (a job, a fold-out) no longer jumps that column back to the top.
 - **Fixed:** a signature move that can't be used this match (Haymaker for an overtrained Cestus, who has lost the class ability it needs) is now a greyed-out button that says why, instead of a button that pops up an error.
 
 ## 5.4.1
