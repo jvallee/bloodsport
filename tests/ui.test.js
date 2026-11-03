@@ -309,3 +309,17 @@ test('a Firebug\'s Fire Braziers show in the card\'s Power, one per brazier', ()
   const html = ludusTab(run, fakeOdds);
   assert.match(html, /\+2 Firebug[^"]*">[\s\S]*?<b>8<\/b>/);
 });
+
+test('the Ludus compares your gladiators in one table, and cards fold their descriptions away (a phone playtester, 5.4.0)', () => {
+  const run = createRun(71);
+  const a = recruit(run, run.market[0].id);
+  const b = recruit(run, run.market[0].id);
+  const html = ludusTab(run, fakeOdds);
+  assert.match(html, /📊 Compare/);
+  for (const f of [a, b]) {
+    assert.match(html, new RegExp(`href="#card-${f.id}"`));
+    assert.match(html, new RegExp(`id="card-${f.id}"`));
+  }
+  assert.match(html, /<details class="more card-more"[^>]*><summary>ⓘ What they do<\/summary><div class="trait-text">/, 'the long descriptions sit in a fold-out');
+  assert.match(html, /class="chip trait tip/, 'the trait chip is marked as tappable');
+});

@@ -82,7 +82,7 @@ function signatureChip(f, opponent = null) {
 const signedNum = (n) => (n >= 0 ? `+${n}` : `−${-n}`);
 
 // In a fight, `fresh` wounds (the newest injuries) appear only at `freshAt` seconds, when the story reaches the blow.
-export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true, notes = '' } = {}) {
+export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true, notes = '', anchor = false } = {}) {
   const off = (slot) => (combatant?.disabled.includes(slot) ? ' off' : '');
   const trait = f.kindTrait ? TRAITS[f.kindTrait] : null;
   const clsName = f.cls ? CLASSES[f.cls].name + (f.weapon ? ` · ${WEAPONS[f.weapon].name}` : '') : '';
@@ -110,7 +110,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
   const bond = f.bond ? `<span class="chip bond" title="Bonded with ${esc(f.bond.name)}: +8 comfort while both are in the house. A partner 3+ levels higher teaches 1 XP a week. If one dies, the other grieves.">🤝 ${esc(f.bond.name)}</span>` : '';
   const kills = f.kills ? `<span class="chip kills" title="Opponents killed in the arena. ${KILL_MARKS.map((k) => `${k.at} kills: ${k.name} (${k.desc})`).join(' ')}">💀 ${f.kills}</span>` : '';
   return `
-    <article class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
+    <article ${anchor ? `id="card-${esc(f.id)}" ` : ''}class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
       ${tag ? `<div class="card-tag">${tag}</div>` : ''}
       <div class="card-head">
         <div class="id-row">${portrait(f, compact ? 44 : 52)}<div class="who"><h3><span class="nm">${esc(f.name)}</span></h3><div class="kind">${levelLine} ${KINDS[f.kind].name} · ${clsName}</div></div></div>
@@ -120,13 +120,13 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
         </div>
       </div>
       <div class="traits">
-        ${trait ? `<span class="chip trait${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
-        ${f.cls ? `<span class="chip ability${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
+        ${trait ? `<span class="chip trait tip${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
+        ${f.cls ? `<span class="chip ability tip${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
         ${signatureChip(f, opponent)}
-        ${f.humor ? `<span class="chip humor" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
+        ${f.humor ? `<span class="chip humor tip" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
         ${wins}${bond}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
       </div>
-      ${compact ? '' : `<div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div>`}
+      ${compact ? '' : `<details class="more card-more" data-key="what-${esc(f.id)}"><summary>ⓘ What they do</summary><div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div></details>`}
       ${f.notice ? `<div class="notice">⚠ ${esc(f.notice)}</div>` : ''}
       <div class="status-row">
         <span class="gate-wrap">Death Gate ${deathGate(f)}</span>
@@ -161,7 +161,7 @@ function moraleChip(f, info = null) {
   return `<span class="morale ${state[0]}${sliding ? ' sliding' : ''}" title="Morale ${f.morale}/100. ${state[1]}.${why}${sliding ? ' Sliding towards Discontented: more comfort needed.' : ''}">☺ ${f.morale}${info && info.target !== f.morale ? ` → ${info.target}` : ''} <small>${sliding ? '⚠ Discontented soon' : state[1].split(':')[0]}</small></span>`;
 }
 
-const gearSpd = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].speed ?? 0), 0);
+export const gearSpd = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].speed ?? 0), 0);
 // Gear effects that the badges don't show: injure chance and armour.
 function gearBonus(f) {
   const items = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => GEAR[k]);

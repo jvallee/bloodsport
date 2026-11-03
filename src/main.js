@@ -546,8 +546,9 @@ touchTip.className = 'touch-tip';
 touchTip.hidden = true;
 document.body.appendChild(touchTip);
 const isTouch = () => window.matchMedia?.('(hover: none)').matches;
+// Chips marked ⓘ (.tip) open their popup on a click with a mouse too (5.4.0: the descriptions moved off the cards).
 document.addEventListener('click', (e) => {
-  if (!isTouch()) return;
+  if (!isTouch() && !e.target.closest?.('.tip')) { touchTip.hidden = true; return; }
   const el = e.target.closest?.('[title]');
   if (!el || el.closest('button:not([disabled]), a, summary, select, input, label, [data-action]')) { touchTip.hidden = true; return; }
   touchTip.textContent = el.getAttribute('title');
@@ -557,7 +558,7 @@ document.addEventListener('click', (e) => {
   touchTip.style.top = `${top}px`;
   touchTip.style.left = `${Math.max(8, Math.min(window.innerWidth - 288, r.left + window.scrollX))}px`;
 }, true);
-document.addEventListener('scroll', () => { touchTip.hidden = true; }, { passive: true });
+document.addEventListener('scroll', () => { touchTip.hidden = true; }, { passive: true, capture: true }); // the Ludus columns scroll on their own
 
 // Dropdowns (gear): choosing an option runs the action, like a button would.
 document.addEventListener('change', (e) => {

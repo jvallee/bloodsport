@@ -16,7 +16,7 @@ import {
 import { describeOdds } from '../odds.js';
 import { fighterWarnings, arenaStakes } from '../explain.js';
 import { gearText, slotLabel } from '../codex.js';
-import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON, mercyChoices } from './components.js';
+import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON, mercyChoices, gearSpd } from './components.js';
 import { portrait, npcPortrait } from './portrait.js';
 import { SPEAKERS, tipSpeaker } from '../dialogue.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../events.js';
@@ -449,6 +449,19 @@ function roomPanel(run, f) {
 // Which tab each fighter's room panel shows (page state only; set by src/main.js).
 export const roomTabs = {};
 
+// Your fighters side by side, so you needn't scroll card to card (a phone playtester's note, 5.4.0). A name jumps to its card.
+function compareTable(run) {
+  if (run.roster.length < 2) return '';
+  const rows = [...run.roster].sort((a, b) => effectivePower(b) - effectivePower(a)).map((f) => {
+    const wounds = f.injuries.length ? `<span class="bad" title="${esc(f.injuries.map((i) => INJURY_BY_TAG[i.tag].name).join(', '))}">${f.injuries.length}</span>` : '–';
+    const stressCls = f.stress >= STRESS.overtrained ? ' class="bad"' : '';
+    const moraleCls = f.morale < MORALE.restless ? ' class="bad"' : f.morale >= MORALE.inspired ? ' class="good"' : '';
+    return `<tr><td><a href="#card-${esc(f.id)}">${esc(f.name)}</a><small>Lv ${f.level ?? 1}</small></td><td>${effectivePower(f)}</td><td>${f.speed + gearSpd(f)}</td><td${stressCls}>${f.stress}</td><td${moraleCls}>${f.morale}</td><td>${wounds}</td><td>${f.trained}/${trainCap(run)}</td><td>${JOB_LABELS[f.job] ?? f.job}</td></tr>`;
+  }).join('');
+  return `<details class="more compare" data-key="compare" open><summary>📊 Compare</summary>
+    <div class="compare-wrap"><table class="compare-table"><thead><tr><th>Gladiator</th><th title="Power, with gear and Titles">Pow</th><th title="Speed, with gear">Spd</th><th title="Stress (50+: Overtrained)">Str</th><th title="Morale (under ${MORALE.restless}: won't train)">Mor</th><th title="Injuries">Inj</th><th title="Training points used of the Trainer cap">Trn</th><th>Job</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
+
 function rosterPanel(run) {
   const cards = run.roster.map((f) => {
     const jobs = Object.keys(JOB_LABELS).map((job) => {
@@ -472,11 +485,12 @@ function rosterPanel(run) {
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>
     </div>`;
-    return fighterCard(f, { actions, morale: moraleTarget(run, f) });
+    return fighterCard(f, { actions, morale: moraleTarget(run, f), anchor: true });
   }).join('');
   return `
     <section class="panel roster">
       <h2>Your gladiators <small>${run.roster.length}/${rosterCap(run)}</small></h2>
+      ${compareTable(run)}
       ${unequipAllBlocker(run) === null ? `<div class="row">${button('Unequip all gear', 'unequip-all', {}, null, 'btn small')}<small class="sub">Puts every fighter's gear back in the storeroom, ready to hand out afresh.</small></div>` : ''}
       <div class="cards">${cards || '<div class="empty">No gladiators yet. Recruit some in the <button class="link" data-action="tab" data-tab="market">Market</button>.</div>'}</div>
       ${run.fallen.length ? `<p class="sub fallen">⚰ Fallen: ${run.fallen.map((f) => `${esc(f.name)}${f.raised ? ' <small>(risen as a Revenant)</small>' : ''}`).join(', ')}</p>` : ''}

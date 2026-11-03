@@ -4,6 +4,8 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 5.4.0 (in progress)
 
+- **Fewer words on the fighter cards** (a phone playtester): the long descriptions of each trait, class and humour are folded under "ⓘ What they do". Chips marked ⓘ show their description when you tap or click them.
+- **Compare your gladiators:** a small table at the top of Your gladiators lists everyone's Power, Speed, Stress, Morale, injuries, training and job side by side. Tap a name to jump to their card.
 - **The game is now called Blood and Circus.** Your saves, Codex and Legacy carry over unchanged.
 - **Auto-play covers one match:** the next match of a tournament always starts paused (it used to stay on when you went on to the next match).
 - **Skip to the result:** a new button on the fight screen plays the rest of the match at once with the suggested tactic. Like auto-play, it stops at the Death Gate while you can still capitulate.
