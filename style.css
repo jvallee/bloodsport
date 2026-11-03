@@ -114,7 +114,8 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .card.kind-orc { --kind: #c0632c; }
 .card.dead { opacity: 0.45; filter: grayscale(1); }
 .card.danger { border-color: var(--blood); box-shadow: 0 0 0 1px var(--blood), 0 0 18px rgba(192, 54, 44, 0.35); }
-.card-tag { position: absolute; top: -10px; left: 12px; font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); padding: 1px 8px; border-radius: 99px; color: var(--muted); }
+/* On the card's top edge, but in the flow: a tag that wraps pushes the card down instead of covering its name (the designer, 5.4.2). */
+.card-tag { position: relative; display: block; width: fit-content; max-width: 100%; margin: -22px 0 4px; font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); padding: 1px 8px; border-radius: 99px; color: var(--muted); }
 /* The name never hides behind the Power/Speed badges: when it needs the room, the badges drop to their own line. */
 .card-head { display: flex; justify-content: space-between; gap: 8px; row-gap: 6px; align-items: start; flex-wrap: wrap; }
 .card-head h3 { font-size: 17px; display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
