@@ -6,7 +6,6 @@ import { estimateOdds } from '../src/odds.js';
 import { createFighter } from '../src/run.js';
 import { createRng } from '../src/rng.js';
 import { createMatch, autoPlay, suggestTactic } from '../src/fight.js';
-import { playCareer } from './bots.js';
 
 const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
@@ -67,21 +66,39 @@ export function bossCurve(results) {
   return Object.fromEntries(Object.entries(by).map(([t, v]) => [t, v.w / v.n]));
 }
 
-export function runGates({ careers = 200, quick = false } = {}) {
-  const careful = Array.from({ length: careers }, (_, i) => playCareer(1000 + i, 'careful'));
-  const reckless = Array.from({ length: careers }, (_, i) => playCareer(1000 + i, 'reckless'));
+// Every career and simulation the gates need, as jobs for scripts/pool.js (all seeded: the order of play doesn't matter).
+export function gateJobs({ careers = 200, quick = false } = {}) {
+  // v6, the hidden plot: bots that play it (half as many careers, to keep the check quick). Short careers likewise.
+  const plotN = Math.max(50, Math.round(careers / 2));
+  const group = (name, n, strategy, opts = {}) => Array.from({ length: n }, (_, i) => ({ type: 'career', group: name, seed: 1000 + i, strategy, opts }));
+  return [
+    // The two long simulations first, so they don't finish last on their own.
+    { type: 'split', group: 'split', opts: { n: quick ? 800 : 3000 } },
+    { type: 'tactics', group: 'tactics', opts: { n: quick ? 1500 : 4000 } },
+    ...group('careful', careers, 'careful'),
+    ...group('reckless', careers, 'reckless'),
+    ...group('rebel', plotN, 'careful', { plot: 'rebel' }),
+    ...group('loyalist', plotN, 'careful', { plot: 'loyalist' }),
+    ...group('short', plotN, 'careful', { setup: { short: true } }), // fun idea #2: winnable, and quicker than a full one
+  ];
+}
+
+// Runs the gates on every core but one (scripts/pool.js), printing progress to stderr. Same numbers as one by one.
+export async function runGates({ careers = 200, quick = false, tunables = {} } = {}) {
+  const { runJobs, progress } = await import('./pool.js');
+  const jobs = gateJobs({ careers, quick });
+  const bar = progress('Gates: ');
+  bar.expect(jobs);
+  const results = await runJobs(jobs, { tunables, onDone: bar.tick });
+  const of = (g) => results.filter((_, i) => jobs[i].group === g);
+  return gatesFrom({ careful: of('careful'), reckless: of('reckless'), rebel: of('rebel'), loyalist: of('loyalist'), short: of('short'), split: of('split')[0], tactics: of('tactics')[0] });
+}
+
+export function gatesFrom({ careful, reckless, rebel, loyalist, short, split, tactics }) {
   const rate = (rs) => rs.filter((r) => r.won).length / rs.length;
   const deaths = (rs) => avg(rs.map((r) => r.deaths));
-  const split = speedSplit({ n: quick ? 800 : 3000 });
   const curve = bossCurve(careful);
-  const tactics = tacticsEdge({ n: quick ? 1500 : 4000 });
-  // v6, the hidden plot: bots that play it (half as many careers, to keep the check quick).
-  const plotN = Math.max(50, Math.round(careers / 2));
-  const rebel = Array.from({ length: plotN }, (_, i) => playCareer(1000 + i, 'careful', { plot: 'rebel' }));
-  const loyalist = Array.from({ length: plotN }, (_, i) => playCareer(1000 + i, 'careful', { plot: 'loyalist' }));
   const ending = (rs, e) => rs.filter((r) => r.run.ending === e).length / rs.length;
-  // Short careers (fun idea #2): winnable, and quicker than a full one.
-  const short = Array.from({ length: plotN }, (_, i) => playCareer(1000 + i, 'careful', { setup: { short: true } }));
   const weeks = (rs) => avg(rs.map((r) => r.weeks));
   const gates = [
     { name: 'Careful career win rate is 20–45%', value: rate(careful), pass: rate(careful) >= 0.2 && rate(careful) <= 0.45, fmt: 'pct' },

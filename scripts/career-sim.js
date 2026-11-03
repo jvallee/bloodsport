@@ -9,7 +9,7 @@ const N = Number(args.find((a) => /^\d+$/.test(a))) || 200;
 const pct = (x) => `${(x * 100).toFixed(0)}%`;
 const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
-const { gates, careful, reckless, split, rebel, loyalist, short } = runGates({ careers: N });
+const { gates, careful, reckless, split, rebel, loyalist, short } = await runGates({ careers: N });
 
 for (const [name, results] of [['CAREFUL', careful], ['RECKLESS', reckless]]) {
   const wins = results.filter((r) => r.won);
