@@ -16,6 +16,7 @@ import {
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom, recruitPrice,
   buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, resolveMercy,
   betOdds, betCap, betBlocker, placeBet, hostBlocker, host, enactBlocker, enact, raisable, reanimateBlocker, reanimate,
+  summonsBlocker, answerSummons, refuseSummons, effectivePower,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
 
@@ -293,6 +294,15 @@ function plotOrder(run, side) {
   return [...all.filter((i) => choices[i].help), ...all.filter((i) => !choices[i].help && !choices[i].betray)];
 }
 
+// The Emperor's summons (5.4.2): after the house's own bouts, send the weakest fighter still free (the careful bot tells them
+// to yield at the Death Gate, the reckless one to fight to the death); refuse only if nobody can go.
+function answerSummonsBot(run, strategy) {
+  const order = strategy === 'careful' ? 'yield' : 'death';
+  const free = run.roster.filter((f) => !summonsBlocker(run, f.id, order)).sort((a, b) => effectivePower(a) - effectivePower(b));
+  if (free.length) answerSummons(run, free[0].id, order);
+  else refuseSummons(run);
+}
+
 // `onWeek(run)`: optional, called at every step (for economy and other probes).
 // `opts.setup`: the career's setup (e.g. { short: true } for a short career).
 export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxWeeks = 400, onWeek = null, ...opts } = {}) {
@@ -318,6 +328,7 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
         continue;
       }
       pickPerks(run);
+      if (run.summons && run.status === 'active') answerSummonsBot(run, strategy);
       if (run.status === 'active') advanceWeek(run);
       continue;
     }

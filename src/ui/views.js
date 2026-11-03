@@ -2,13 +2,13 @@
 
 import { MAX_CAREERS } from '../careers.js';
 import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
-import { REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY } from '../data.js';
+import { REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker,
+  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker,
   isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardGold, risingProgress,
 } from '../run.js';
 import {
@@ -352,6 +352,7 @@ function weekPanel(run) {
       ${scheduleStrip(run)}
       ${festivalNote(run)}
       ${tribute}
+      ${run.summons ? `<div class="demand summons">⚜ <b>The Emperor's summons:</b> on this month's fight day, send one of your fighters to the Imperial Coliseum against one of its regulars (Power ${CIRCUITS[SUMMONS.tier - 1].oppPower[0]}), or refuse him and lose ${-SUMMONS.refuseFavor} Favour.</div>` : ''}
       ${run.demand ? `<div class="demand${demandMet(run) ? ' met' : ''}">⚜ <b>The Emperor demands:</b> ${esc(DEMANDS[run.demand.id].goal)}, by the end of this month's fight day. ${demandMet(run) ? '✔ Done: he will be pleased.' : `Reward: +${DEMAND.favor} Favour and Gold; missing it costs ${-DEMAND.missFavor} Favour.`}</div>` : ''}
       <div class="row">
         ${button('End week', 'advance', {}, blocked, 'btn primary')}
@@ -498,8 +499,9 @@ function rosterPanel(run) {
       <details class="more" data-key="room-${f.id}"><summary>Room &amp; decor${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f).room}</details>
       <details class="more" data-key="gear-${f.id}"><summary>Gear${f.gear.weapon || f.gear.armor ? ` <small>(${[f.gear.weapon, f.gear.armor].filter(Boolean).map((k) => esc(GEAR[k].name)).join(', ')})</small>` : run.inventory.gear.length ? ' <small>(spare gear in the storeroom)</small>' : ''}</summary>${roomPanel(run, f).gear}</details>
       ${f.story?.length ? `<details class="more" data-key="story-${f.id}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
-      <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, cyborg surgery, retire, release</summary>
+      <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, cyborg surgery, ${(f.scars ?? []).some((x) => x.id === 'afeared') ? 'fear, ' : ''}retire, release</summary>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
+        ${(f.scars ?? []).some((x) => x.id === 'afeared') ? `<div class="label">Afeared: win ${FEAR.conquerWins} fights against the style they fear to conquer it, or</div><div class="row">${buttonWhy(`🏛 Fortuna's rite: lift the fear (${ritePrice(run)} Gold)`, 'rite', { id: f.id }, riteBlocker(run, f.id), 'btn small')}</div>` : ''}
         ${augments ? `<div class="label">Cyborg surgery: replace the wound for good (${augmentPrice(run)} Gold, −1 Renown)</div><div class="row">${augments}</div>` : ''}
         <div class="row">${buttonWhy(`Retire to the Hall of Champions (+${RETIRE.prestige} Prestige, roster +${RETIRE.morale} Morale)`, 'retire', { id: f.id }, retireBlocker(run, f.id), 'btn small')}</div>
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
@@ -584,9 +586,18 @@ function boutPanel(run, oddsFor) {
       <h2>${run.bouts ? 'Fight day' : 'Next bouts'}</h2>
       ${when}
       ${tiers.map((t) => arenaBlock(run, t, oddsFor)).join('')}
+      ${summonsBlock(run)}
       ${exhibitionBlock(run)}
       ${oracleNote}
     </section>`;
+}
+
+// The Emperor's summons on fight day (5.4.2): each free fighter's dropdown sends them with an order; a button refuses.
+function summonsBlock(run) {
+  if (!run.summons || !run.bouts) return '';
+  const opp = CIRCUITS[SUMMONS.tier - 1].oppPower[0];
+  const rows = run.roster.filter((f) => !summonsBlocker(run, f.id, 'yield')).map((f) => `<div class="row tight"><b>${esc(f.name)}</b> <small>Power ${effectivePower(f)}</small> <select class="gear-select" data-change="summons" data-id="${f.id}" aria-label="Send ${esc(f.name)} to the Emperor"><option value="">Send them…</option><option value="yield">told to yield at the Death Gate</option><option value="death">told to fight to the death</option></select></div>`).join('');
+  return `<div class="arena-block summons"><h3>⚜ The Emperor's summons: the Imperial Coliseum</h3><p class="sub">One of your fighters against a regular of the Imperial Coliseum (Power ${opp}), played out at once. Stand to the end of Round 3: +${SUMMONS.surviveFavor} Favour, +${SUMMONS.surviveRenown} Renown. Win: +${SUMMONS.winFavor} Favour, +${SUMMONS.winRenown} Renown. Yield at the Death Gate: ${SUMMONS.yieldFavor} Favour. Die: the Temple of Vulcan gets a body.</p>${rows || '<p class="sub">Nobody is free to go.</p>'}<p>${buttonWhy(`Refuse (${SUMMONS.refuseFavor} Favour)`, 'refuse-summons', {}, refuseSummonsBlocker(run), 'btn small')}</p></div>`;
 }
 
 // The Exhibition Ring on fight day: pick a fighter's sparring partner from a dropdown (it runs the bout).
