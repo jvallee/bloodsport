@@ -588,3 +588,41 @@ Probe (`bronze.js`, a scratch copy of `scripts/probes/bot-options.js` that also 
   - Loyalist +9. Coup 15%. Treason 4%.
   - Short careers 47% in 88 weeks (full careers 119).
 - **Calming decor is capped:** a room's decor lowers Stress by at most 30 a week in all (`STRESS.decorCalm`, `decorCalm` in `src/run.js`; the designer, after a bug report where a furnished room took 80 a week). The gates are unchanged to the point (careful 44%, loyalist +9, short 47%): the bots never furnish a room past 30.
+
+### Quests, rivals, and the designer's later notes (5.4.0; design: docs/plan-5.4-quests.md)
+
+- **The steward's assignments** (`STEWARD_TASKS` in `src/quests.js`, `QUESTS`): 14 in order from week 4, one at a time; one already done when its turn comes is skipped unpaid. Gold 2 → 10 by stage in `src/quests.js`, × `QUESTS.goldScale` = 0.5 (so 1 → 5, about 33 in all; see Balance below).
+- **What fighters want** (`WANTS`, `FIGHTER_WANTS`): at a month's start, 35% (own dice, `rng.wants`), at most 2 open. Revenge on a nemesis who beat them; a Championship in the top arena (24 weeks); a Bathhouse, Shrine or Trophy Rack in their room (6 weeks); a bond with a level 4+ veteran (12 weeks); retirement at level 5+ with 2+ Titles (12 weeks). Met: mood +10, +2 Renown, +2 XP. Lapsed: mood −10. Impossible (nemesis gone, mentor gone): dropped quietly.
+- **The archrival** (`RIVAL`): the house with most Glory at the start (no dice). Its tier is at least your top arena's; +2 × tier Glory every fight day. Its champion is named from Bronze (`rng.rivals`) and returns to your top arena (not a Boss) after 12 weeks, 35% a time, at the bout's Power + 1 + wins over you (up to +2). Beaten: 4 Gold × tier, +3 Renown, their house −5 Glory. Wins: their house +3 × tier Glory. Killed: a new one is named later. Poaching: 15% of months, the Market's best fighter, bought at the end of week 1 unless you buy first.
+- **The cause's requests** (`REBEL_QUESTS`, `REBEL_QUEST`), from 4 weeks after the Mark: build the **Whispering Gallery** (`BUILDINGS.gallery`, secret until asked; 10 Gold, Prestige level 2; suspicion −2 a month; shows suspicion and what the rising still needs), +1 trust; then pass a reformist policy at the Lounge, +2 trust. Each lasts 16 weeks; lapsed −1 trust. The rebel bot builds the Gallery and passes the asked policy.
+- **Talk** (`run.talk`): lines the rules decide on; the page and the text port play each once. Also new friendships (a scene with both fighters and the steward).
+- **Afeared is rarer** (`SCAR_AFEARED`): the chance a scar is Afeared, else Enraged: Choleric 0, Melancholic 0.5, others 0.15 (was 0 / 1 / 0.5).
+- **The Emperor's spy** appears only with a rebel in place (the plot running, a political prisoner in the house); no Year-2 condition.
+- **"Win a Bloodied Victory"** is also met by a win where the opponent dies (`DEMAND.bloodiedKills`).
+- **Training resumes only into a free Trainer Room** (a bug report: two fighters trained in one room).
+- **Balance.** The first check failed: careful 51%, short careers 63%. Probes (`scripts/probes/bot-options.js`, careful careers from seed 1000):
+
+  | Variant | Careful wins |
+  |---|---|
+  | All of the above (600) | 49% |
+  | Quest systems all off (600) | 52% |
+  | Old Bloodied demand (600) | **44%** |
+  | Steward Gold halved (600) | 47% |
+  | Demand Gold 2 × tier (600) | 47% |
+  | **Demand Gold 2 × tier and +2 Favour (600, chosen)** | **44%** |
+  | Demands in 35% of months (600) | 51% |
+  | Old Afeared odds (300) | 51% |
+
+  The quests and rivals cost careful careers a little (the archrival takes year-end purses); the Bloodied demand's kills made demands pay far more often. So a met demand now pays **+2 Favour and 2 Gold × tier** (was +3 and 3). Short careers then still won 59%:
+
+  | Short-career variant (400, with the demand trim) | Won |
+  |---|---|
+  | Purses ×1.5 | 41% |
+  | **Purses ×1.6 (chosen; was ×1.75)** | **45%** |
+  | Start Gold 10 | 56% |
+  | ×1.6 and start Gold 15 | 49% |
+  - With both trims the check had careful careers at 46%; halving the steward's Gold (`QUESTS.goldScale` 0.5; the probe had it −2 points) brought them to 44%.
+- **Gates at 5.4.0, after the quests** (`npm run check`): all 13 pass.
+  - Careful 44%, careful deaths 0.85, reckless deaths 3.26. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +22.
+  - Loyalist +13. Coup 14%. Treason 1%.
+  - Short careers 53% in 91 weeks (full careers 118).

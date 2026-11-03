@@ -4,18 +4,27 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 5.4.0 (in progress)
 
+- **The steward's assignments:** the house was great once. From your second month, the steward hands you one task at a time to restore it (a second gladiator, a first win, decor, new buildings, each arena conquered, House levels...), with a little Gold for each (1 to 5).
+- **Fighters want things:** some months a gladiator asks for something: revenge on the nemesis who beat them, a Championship, a Bathhouse or Shrine in their room, a veteran to learn from, or to retire with honour. Give it to them and their spirits lift (+2 Renown, +2 XP); leave it too long and they sulk. A 💬 chip on the card shows what they want.
+- **Your rival house:** one house is your archrival. It climbs the arenas with you, so the year-end purse is a race. From the Bronze Arena it names a champion who turns up on your card (stronger for every win over you); beat them for Gold, Renown and their house's Glory. Some months it eyes the Market's best fighter and buys them at the end of the first week, unless you do.
+- **The 📜 Quests panel** in the Ludus lists the steward's assignment, what your fighters want, and anything else asked of you.
 - **Fewer words on the fighter cards** (a phone playtester): the long descriptions of each trait, class and humour are folded under "ⓘ What they do". Chips marked ⓘ show their description when you tap or click them.
 - **Compare your gladiators:** a small table at the top of Your gladiators lists everyone's Power, Speed, Stress, Morale, injuries, training and job side by side. Tap a name to jump to their card.
 - **The game is now called Blood and Circus.** Your saves, Codex and Legacy carry over unchanged.
 - **Auto-play covers one match:** the next match of a tournament always starts paused (it used to stay on when you went on to the next match).
 - **Skip to the result:** a new button on the fight screen plays the rest of the match at once with the suggested tactic. Like auto-play, it stops at the Death Gate while you can still capitulate.
-- **The Emperor's spy:** from the second year, once a career, you may find one of your fighters has been reporting to the palace. Let them be (the Emperor is pleased), or execute them, and the priests of Vulcan can have the body.
+- **The Emperor's spy:** once a career, when you have a rebel in your house, you may find one of your fighters has been reporting to the palace. Let them be (the Emperor is pleased), or execute them, and the priests of Vulcan can have the body.
 - **A rebel asks to be freed only while you hold two:** the last political prisoner in your house never asks to leave.
 - **The Ludus scrolls in columns:** on a wide screen, Your gladiators and Fight day each scroll on their own.
 - **A Boss Final lost keeps your Prestige:** from the Silver Coliseum up, losing (or capitulating in) the Final of a Boss tournament returns its buy-in. Reaching the Boss was worth something. (Not the Grand Tournament.) To keep the finish hard, the Imperial Coliseum's fighters are 1 Power stronger (26 / 27 / 28), and so is the Grand Tournament's champion (31).
 - **The steward warns you before overtraining:** the first time in a career that End week would leave someone Overtrained, the steward asks first: rest them this week, or train anyway.
 - **The Emperor reacts to his demands:** he speaks up the moment you meet one, and again when its fight day ends and you haven't.
 - **The rebel takes their time:** a political prisoner no longer tells you everything the week you buy them. After you copy the chalk sign they say a guarded word; the full confession comes only once they trust you, a few favours in.
+- **Afeared is rarer:** most scars now leave a fighter Enraged. A Melancholic fighter turns Afeared half the time, Sanguine and Phlegmatic ones only now and then, and a Choleric one never (about 1 scar in 5, down from 1 in 2).
+- **Friendships are announced:** when two fighters become friends (sparring in the Exhibition Ring, or both winning on one fight day), they say so, and the steward explains what it means.
+- **The Emperor's "Bloodied Victory" demand** is also met by any win where your opponent dies, in the fight or by your thumbs down. Because demands are now met more often, each one met pays +2 Favour and 2 Gold per arena tier (was +3 and 3), and short careers' purses are ×1.6 (was ×1.75).
+- **Scrolling the Ludus columns:** when a column reaches its end, the page scrolls on, so the bottom of the column always comes into view.
+- **Fixed:** a fighter going back to training after a forced rest could take a Trainer Room another fighter was already using, so two trained in one room. They now wait for a free room. (Bug reports were also still labelled 5.3.0; they now say 5.4.0.)
 - **Calming decor has a limit:** a room's Birds, Braziers, Shrines and Bathhouses lower Stress by at most 30 a week together. (A fully furnished room used to take 80 a week, so training never built up any Stress.)
 - **Several careers at once:** the new **Careers** button lists every career saved in this browser (up to 8). Play any of them, or delete one. Starting a new career no longer abandons the one you were playing, and importing a save adds it as another career. Your old save carries over as the first one.
 - **The Bronze wall is lower:**
