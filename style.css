@@ -707,3 +707,4 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .chip.want { border-color: #8a7a4a; }
 .speaker-rival { border-color: #b5543c; }
 .speaker-rival .dialogue-name { color: #e08a6a; }
+.chip.spy { border-color: #7a4a4a; }

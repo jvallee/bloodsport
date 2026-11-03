@@ -109,6 +109,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
   const totalWins = winsBy.reduce((n, [, w]) => n + w, 0) + ((f.titles ?? []).includes('Master of the Games') ? 1 : 0);
   const wins = totalWins ? `<span class="chip wins" title="Wins by arena: ${esc(winsBy.map(([t, n]) => `${CIRCUITS[t - 1]?.name ?? 'Grand Tournament'}: ${n}`).join(' · '))}">🏅 ${totalWins} win${totalWins === 1 ? '' : 's'}</span>` : '';
   const want = f.want && WANTS[f.want.id] ? `<span class="chip want tip" title="${esc(`They want: ${WANTS[f.want.id].goal(f.want)}. Met: their spirits lift, +2 Renown and +2 XP; left too long, they sulk. The Quests panel shows the time left.`)}">💬 ${esc(WANTS[f.want.id].label(f.want))}</span>` : '';
+  const spy = f.spy ? `<span class="chip spy tip" title="The Emperor's spy you chose to keep. Whatever your house hides, the palace hears.">👁 Writes to the palace</span>` : '';
   const bond = f.bond ? `<span class="chip bond" title="Bonded with ${esc(f.bond.name)}: +8 comfort while both are in the house. A partner 3+ levels higher teaches 1 XP a week. If one dies, the other grieves.">🤝 ${esc(f.bond.name)}</span>` : '';
   const kills = f.kills ? `<span class="chip kills" title="Opponents killed in the arena. ${KILL_MARKS.map((k) => `${k.at} kills: ${k.name} (${k.desc})`).join(' ')}">💀 ${f.kills}</span>` : '';
   return `
@@ -126,7 +127,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
         ${f.cls ? `<span class="chip ability tip${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
         ${signatureChip(f, opponent)}
         ${f.humor ? `<span class="chip humor tip" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
-        ${want}${wins}${bond}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
+        ${want}${spy}${wins}${bond}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
       </div>
       ${compact ? '' : `<details class="more card-more" data-key="what-${esc(f.id)}"><summary>ⓘ What they do</summary><div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div></details>`}
       ${f.notice ? `<div class="notice">⚠ ${esc(f.notice)}</div>` : ''}

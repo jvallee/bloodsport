@@ -103,7 +103,8 @@ function ruleText(cat, id) {
   if (cat === 'gear') return `${gearText(GEAR[id])} ${GEAR[id].slot === 'weapon' ? 'Weapon' : 'Armour'}, ${GEAR[id].price} Gold.`;
   if (cat === 'building') {
     const b = BUILDINGS[id];
-    return `${b.effect(b.per[0])} at level 1, up to: ${b.effect(b.per.at(-1))}. Build cost ${b.cost[0]} Gold.${b.unique ? ' One per estate.' : ''}`;
+    const levels = b.per.length > 1 ? `${b.effect(b.per[0])} at level 1, up to: ${b.effect(b.per.at(-1))}.` : `${b.effect(b.per[0])}.`; // one level: say it once (playtest LLM-11)
+    return `${levels} Build cost ${b.cost[0]} Gold.${b.unique ? ' One per estate.' : ''}`;
   }
   return '';
 }

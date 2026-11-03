@@ -308,7 +308,7 @@ export const CALENDAR = { weeksPerMonth: 4, winterWeeks: 4 };
 // Gods' Days (roadmap v3, phase B2): festivals on some months' tournament week. Each favours a style or pays out more.
 export const FESTIVALS = {
   Maius: { id: 'floralia', name: 'Floralia', god: 'Flora', desc: 'Flowers, wine and a generous crowd: wins pay +50% Gold.', gold: 1.5 },
-  Quintilis: { id: 'apollo', name: 'Ludi Apollinares', god: 'Apollo', desc: 'Games for the archer god: ranged fighters (Sagittarius, or a Bow, Gun or Spear) get +1 Power.', ranged: 1 },
+  Quintilis: { id: 'apollo', name: 'Ludi Apollinares', god: 'Apollo', desc: 'Games for the archer god: ranged fighters (Sagittarius, or a Fighter armed with a Bow, Gun or Spear) get +1 Power.', ranged: 1 },
   September: { id: 'romani', name: 'Ludi Romani', god: 'Jupiter', desc: 'The great games of Rome: wins pay +50% Prestige.', prestige: 1.5 },
   October: { id: 'mars', name: 'Armilustrium', god: 'Mars', desc: 'The god of war loves aggression: fighters who Press get +5% win chance, and every win earns +1 Renown.', tactic: { press: 5000 }, renown: 1 },
   November: { id: 'plebeii', name: 'Ludi Plebeii', god: 'Fortuna', desc: "The people's games, blessed by Fortuna: an upset win pays double Gold and double Favour.", upset: 2 },
@@ -565,17 +565,21 @@ export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClu
 // coup Final (×1000 = %), up to contactMax.
 // Quests (5.4.0, the designer's request; words in src/quests.js). The steward's first assignment comes in this week.
 // goldScale: × each assignment's Gold in src/quests.js (a balance lever).
-export const QUESTS = { stewardFromWeek: 4, goldScale: 0.5 };
+// talkPerWeek: at most this many quest, want, rival and friendship scenes a week; the rest wait for the next weeks.
+export const QUESTS = { stewardFromWeek: 4, goldScale: 0.5, talkPerWeek: 2 };
 // What fighters want: a new want some months (its own dice), at most `max` at a time. Met: a mood of +metMorale for 4 weeks,
-// Renown and XP. Lapsed: a mood of missMorale. Room wants ask for one of `roomItems`.
-export const FIGHTER_WANTS = { chance: 0.35, max: 2, metMorale: 10, metRenown: 2, metXp: 2, missMorale: -10, roomItems: ['bathhouse', 'shrine', 'trophy'] };
+// Renown and XP. Lapsed: a mood of missMorale. Room wants ask for one of `roomItems`. A Championship want needs the fighter
+// within `titleReach` Power of the arena's Boss.
+export const FIGHTER_WANTS = { chance: 0.35, max: 2, metMorale: 10, metRenown: 2, metXp: 2, missMorale: -10, roomItems: ['bathhouse', 'shrine', 'trophy'], titleReach: 3 };
 // The rival house (your archrival climbs with you). Its champion is named once your top arena is `championFrom`, and comes back
 // as a top-arena opponent (not a Boss) after `minWeeks`, `chance` a time, at the bout's Power + `power` + 1 per win over you
-// (up to `maxBonus`). Beating them: `beatGold` × tier Gold, `beatRenown` Renown, and `beatGlory` Glory taken from their house.
+// (up to `maxBonus`); from the Silver Coliseum they're drawn into any round of the bracket. Only `oppShare` of the ordinary
+// opponents in an arena come from the archrival when other houses fight there too (playtest LLM-11: 73% did). Beating them: `beatGold` × tier Gold, `beatRenown` Renown, and `beatGlory` Glory taken from their house.
 // `poachChance`: some months the house buys the Market's best fighter at the end of the first week. `monthGlory`: × tier.
-export const RIVAL = { championFrom: 2, minWeeks: 12, chance: 0.35, power: 1, maxBonus: 2, beatGold: 4, beatRenown: 3, beatGlory: 5, winGlory: 3, poachChance: 0.15, monthGlory: 2 };
+export const RIVAL = { championFrom: 2, minWeeks: 12, chance: 0.35, power: 1, maxBonus: 2, beatGold: 4, beatRenown: 3, beatGlory: 5, winGlory: 3, poachChance: 0.15, monthGlory: 2, oppShare: 0.2 };
 // The resistance's requests: trust when met (gallery and lobby), trust lost when they lapse; asked this many weeks after the Mark.
-export const REBEL_QUEST = { galleryTrust: 1, lobbyTrust: 2, missTrust: -1, afterMark: 4 };
+// Trust that would go past the cap lowers suspicion by `overflowSuspicion` a point instead.
+export const REBEL_QUEST = { galleryTrust: 1, lobbyTrust: 2, missTrust: -1, afterMark: 4, overflowSuspicion: 5 };
 
 // The Emperor's spy (5.4.0): executing them lowers the hidden plot's suspicion by `suspicion`; keeping them raises it.
 export const SPY = { suspicion: 15, perMonth: 2 }; // perMonth: suspicion each month while a spy you kept is in the house

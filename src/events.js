@@ -164,7 +164,12 @@ export const EVENTS = [
     ],
     // Only once a rebel is in place (the designer, 5.4.0): the hidden plot runs and a political prisoner is in the house.
     when: (run) => Boolean(run.plot) && !run.plot.ended && run.roster.some((x) => x.political) && !run.spyFound && run.roster.filter((x) => !x.political).length >= 2,
-    target: (run) => run.roster.filter((x) => !x.political && x.id !== run.plot?.champion),
+    // Not your most famous fighter (playtest LLM-11: executing the house's star made "keep" the only sane choice).
+    target: (run) => {
+      const pool = run.roster.filter((x) => !x.political && x.id !== run.plot?.champion);
+      const star = [...pool].sort((a, b) => b.renown - a.renown || b.power - a.power)[0];
+      return pool.length > 1 ? pool.filter((x) => x !== star) : pool;
+    },
   },
   {
     id: 'onlookers', who: 'any', title: 'Crowds at the training yard',
@@ -209,8 +214,9 @@ export function stakesText(eff, sep = '; ', names = {}) {
   // v6 plot cards: what anyone could see happen (trust and suspicion stay hidden).
   if (eff.freeAsker) add('f', 'leaves your house for good');
   if (eff.execute) add(eff.execute, 'executed');
-  if (eff.spy === 'execute') add('f', 'executed; the body is kept');
-  if (eff.spy === 'keep') add('f', 'stays, and keeps writing');
+  if (eff.spy === 'execute') { add('f', 'executed; the body is kept'); house.push('the palace loses its eyes in your house'); }
+  // Playtest LLM-11: keeping them hid its cost. Say it in words (the numbers stay hidden).
+  if (eff.spy === 'keep') { add('f', 'stays, and keeps writing'); house.push('the palace hears whatever your house hides, every month they stay'); }
   if (eff.hide) house.push(`one Medbay bed taken for ${eff.hide} weeks`);
   if (eff.giveGear) house.push(`${eff.giveGear} pieces of gear handed over`);
   if (eff.contact === 'new') house.push('a prisoner goes free');

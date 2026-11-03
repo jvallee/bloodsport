@@ -2,7 +2,20 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## 5.4.0 (in progress)
+## 5.4.1
+
+From two playtests of the quests and the rival house (`docs/playtest-11-changes.md`).
+
+- **The rival champion shows up:** from the Silver Coliseum it can be drawn into any round of a tournament, not only the Final you rarely reach. Beating them in a Quarter- or Semi-final pays like any other win over them.
+- **Your archrival is special, not everywhere:** only about 1 opponent in 5 now fights for the archrival (it was nearly 3 in 4, so their name was on almost every card).
+- **Wants you can meet:** a fighter only asks to become Champion of an arena they could realistically win (within 3 Power of its Boss). Room wants vary (Bathhouse, Shrine of Mars or Trophy Rack) instead of always asking for a Bathhouse. A fighter no longer asks to learn from a veteran they are about to befriend anyway, or for revenge on a nemesis in an arena where they are Champion (a win there costs Favour). The mentor want now says how to meet it.
+- **The steward keeps up:** tasks you'd already done are no longer skipped in silence. The steward says so and pays their Gold. Five new assignments fill the long middle of each arena: upgrade the Trainer Room (twice), and win a tournament in the Bronze Arena, the Silver Coliseum and the Imperial Coliseum.
+- **Fewer scenes at once:** at most two quest, rival or friendship scenes play in a week; the rest wait for the weeks after, in order.
+- **Friendships vary:** new friends say one of several pairs of lines, and the steward explains friendship in full only the first time.
+- **The Emperor's spy:** the card now says what keeping them costs (the palace hears whatever your house hides, every month they stay). A spy you keep is marked 👁 on their card and in their story. The spy is never your most famous fighter.
+- **Fixed:** the rival champion's name could be reused for another fighter; an opponent's card listed "owes you a life" while a feud overrode it; the Ludi Apollinares' text promised +1 to anyone with a bow (it's Sagittarii, and Fighters armed with a Bow, Gun or Spear); a one-level building's Codex entry repeated itself.
+
+## 5.4.0
 
 - **The steward's assignments:** the house was great once. From your second month, the steward hands you one task at a time to restore it (a second gladiator, a first win, decor, new buildings, each arena conquered, House levels...), with a little Gold for each (1 to 5).
 - **Fighters want things:** some months a gladiator asks for something: revenge on the nemesis who beat them, a Championship, a Bathhouse or Shrine in their room, a veteran to learn from, or to retire with honour. Give it to them and their spirits lift (+2 Renown, +2 XP); leave it too long and they sulk. A 💬 chip on the card shows what they want.

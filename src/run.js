@@ -10,7 +10,7 @@ import {
   SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
-import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, WANTS, REBEL_QUESTS, RIVAL_LINES, BOND_LINES } from './quests.js';
+import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, stewardAlready, WANTS, REBEL_QUESTS, RIVAL_LINES, BOND_LINES } from './quests.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt, hypeOf } from './fight.js';
 import { Refused } from './errors.js';
 import { estimateOdds } from './odds.js';
@@ -72,7 +72,7 @@ function remember(run, ...fighters) {
 // A fighter's comfort from the decor in their room.
 export const decorComfortOf = (f) => Object.entries(f.decor ?? {}).reduce((n, [k, c]) => n + (DECOR[k] ? decorComfort(DECOR[k]) * c : 0), 0);
 const takenNames = (run, extra = []) =>
-  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...(run.nemeses ?? []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? [], (run.retired ?? []).map((l) => l.name));
+  [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffer ? [run.liaisonOffer] : []), ...(run.nemeses ?? []), ...(run.rivalChampion ? [run.rivalChampion.f] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? [], (run.retired ?? []).map((l) => l.name));
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const clampStress = (n) => clamp(n, 0, STRESS.max);
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
@@ -191,7 +191,8 @@ function bracketFor(run, tier) {
   if (!run.brackets[tier]) {
     const bout = boutFor(run, tier);
     const foes = [];
-    const finalPower = effectivePower(run.arenas[tier].opponent);
+    const champ = run.arenas[tier].opponent?.rivalChampion ? run.arenas[tier].opponent : null;
+    const finalPower = effectivePower(run.arenas[tier].opponent) - (champ?.rivalBonus ?? 0);
     for (const d of BRACKET.power.slice(0, 2)) {
       const f = createFighter(run.rng.opponents, { id: newId(run, 'o'), power: bout.oppPower + d, decorLevel: bout.oppDecor, takenNames: takenNames(run, foes), classes: run.setup?.classes });
       f.speed = opponentSpeed(run, { ...bout, boss: false });
@@ -199,6 +200,14 @@ function bracketFor(run, tier) {
       f.power -= effectivePower(f) - (finalPower + d); // weaker than the Final opponent by d, gear and all
       f.house = houseForArena(run, tier).id;
       foes.push(f);
+    }
+    // The rival champion can be in any round, not only the Final you rarely reach (playtest LLM-11).
+    const k = champ ? int(rivalsRng(run), 0, 2) : 2;
+    if (k < 2) {
+      const f = foes[k];
+      foes[k] = champ;
+      f.power += finalPower - effectivePower(f); // the Final keeps its usual strength
+      run.arenas[tier].opponent = f;
     }
     remember(run, ...foes);
     run.brackets[tier] = { foes, round: 0, fighterId: null, buyIn: 0 };
@@ -326,12 +335,16 @@ function formBond(run, a, b, how = 'fightDay') {
   for (const [x, y] of [[a, b], [b, a]]) chronicle(run, x, `Bonded with ${y.name}.`);
   log(run, `${a.name} and ${b.name} have become fast friends: each is happier while the other is in the house.`, 'good');
   // 5.4.0 (the designer: say when a friendship forms): a short scene.
+  // The pair's lines vary by who they are; the steward explains friendship in full only the first time (playtest LLM-11).
+  const v = (a.id + b.id).split('').reduce((n, ch) => n + ch.charCodeAt(0), 0);
+  const [first, second] = BOND_LINES.pairs[v % BOND_LINES.pairs.length];
   talk(run, `bond-${a.id}-${b.id}`, [
     { speaker: 'narrator', text: BOND_LINES.narrator(a.name, b.name, how) },
-    { speaker: 'fighter', fighterId: a.id, text: BOND_LINES.first(b.name) },
-    { speaker: 'fighter', fighterId: b.id, text: BOND_LINES.second(a.name) },
-    { speaker: 'steward', text: BOND_LINES.steward(a.name, b.name, BOND.comfort, BOND.mentorGap) },
+    { speaker: 'fighter', fighterId: a.id, text: first(b.name) },
+    { speaker: 'fighter', fighterId: b.id, text: second(a.name) },
+    { speaker: 'steward', text: run.bondExplained ? BOND_LINES.stewardAgain(a.name, b.name) : BOND_LINES.steward(a.name, b.name, BOND.comfort, BOND.mentorGap) },
   ]);
+  run.bondExplained = true;
 }
 // Two fighters who both won on the same fight day may bond.
 function bondOverFightDay(run) {
@@ -452,10 +465,22 @@ function nemesisFalls(run, opp, fighter, tier, summary) {
 // ---------- Quests (5.4.0, docs/plan-5.4-quests.md) ----------
 
 // Dialogue the rules decide on: the page plays each entry once (by key), the text port prints it. Beats: { speaker, text, fighterId? }.
+// At most QUESTS.talkPerWeek scenes a week; the rest wait, in order, for the weeks after (playtest LLM-11: 13 lines in one week).
+// `now`: a scene that can't wait (the rival champion on this month's card).
 const TALK_MEMORY = 30;
-function talk(run, key, beats) {
-  if ((run.talk ?? []).some((t) => t.key === key)) return;
+function talk(run, key, beats, { now = false } = {}) {
+  if ([...(run.talk ?? []), ...(run.talkLater ?? [])].some((t) => t.key === key)) return;
+  if (!now && (run.talk ?? []).filter((t) => t.week === run.week).length >= QUESTS.talkPerWeek) {
+    run.talkLater = [...(run.talkLater ?? []), { key, beats }];
+    return;
+  }
   run.talk = [...(run.talk ?? []), { key, week: run.week, beats }].slice(-TALK_MEMORY);
+}
+// At a new week's start: the scenes that waited go first.
+function releaseTalk(run) {
+  const later = run.talkLater ?? [];
+  run.talkLater = [];
+  for (const t of later) talk(run, t.key, t.beats);
 }
 const moodShift = (f, n) => { f.mood = { n: (f.mood?.n ?? 0) + n, weeks: MOOD_WEEKS }; };
 const questState = (run) => (run.quests ??= { steward: null, stewardIndex: 0, rebel: [] });
@@ -484,7 +509,16 @@ function stewardTasks(run) {
     talk(run, `steward-done-${task.id}`, [{ speaker: 'steward', text: `${stewardDone(task)}${paid ? ` I found ${paid} Gold for the house.` : ''}` }]);
   }
   if (run.status !== 'active') return;
-  while (q.stewardIndex < STEWARD_TASKS.length && STEWARD_TASKS[q.stewardIndex].test(run)) q.stewardIndex += 1;
+  // Assignments already done count, and pay, together (not those done before the steward's first assignment).
+  const already = [];
+  while (q.stewardIndex < STEWARD_TASKS.length && STEWARD_TASKS[q.stewardIndex].test(run)) already.push(STEWARD_TASKS[q.stewardIndex++]);
+  const late = already.filter((t) => t.id !== 'grand');
+  if (late.length && q.introduced) {
+    const paid = late.reduce((n, t) => n + stewardGold(t), 0);
+    run.gold += paid;
+    log(run, `The steward's list: already done: ${late.map((t) => t.goal).join('; ')}.${paid ? ` +${paid} Gold.` : ''}`, 'good');
+    talk(run, `steward-already-${late[0].id}`, [{ speaker: 'steward', text: `${stewardAlready(late.map((t) => t.goal.charAt(0).toLowerCase() + t.goal.slice(1)))}${paid ? ` I found ${paid} Gold for the house.` : ''}` }]);
+  }
   const task = STEWARD_TASKS[q.stewardIndex];
   if (!task) return;
   q.steward = task.id;
@@ -502,20 +536,27 @@ export const stewardTask = (run) => STEWARD_TASKS.find((t) => t.id === run.quest
 // ---- What fighters want ----
 
 // The want a fighter could have of this kind now (its details), or null.
-function wantFor(run, f, id) {
+export function wantFor(run, f, id) {
   if (f.kind === 'revenant') return null;
   if (id === 'revenge') {
-    const n = (run.nemeses ?? []).find((x) => (x.nemesis.beat ?? []).includes(f.id));
+    // Not a nemesis fighting in an arena this fighter is Champion of: a win there costs Favour (playtest LLM-11).
+    const n = (run.nemeses ?? []).find((x) => (x.nemesis.beat ?? []).includes(f.id) && !isChampionOf(f, x.nemesis.tier));
     return n ? { name: `${n.name} ${n.nemesis.epithet}`, of: n.id } : null;
   }
-  if (id === 'title') return f.level >= 3 && run.topTier <= CIRCUITS.length && !isChampionOf(f, run.topTier) ? { tier: run.topTier, arena: championTitle(run.topTier).replace(/^Champion of /, '') } : null;
+  // Only a Championship within reach: no more than `titleReach` Power below the arena's Boss (playtest LLM-11).
+  if (id === 'title') return f.level >= 3 && run.topTier <= CIRCUITS.length && !isChampionOf(f, run.topTier)
+    && effectivePower(f) >= CIRCUITS[run.topTier - 1].oppPower[2] - FIGHTER_WANTS.titleReach ? { tier: run.topTier, arena: championTitle(run.topTier).replace(/^Champion of /, '') } : null;
   if (id === 'room') {
-    const k = FIGHTER_WANTS.roomItems.find((x) => !(f.decor[x] > 0));
-    return k ? { key: k, item: DECOR[k].name } : null;
+    const missing = FIGHTER_WANTS.roomItems.filter((x) => !(f.decor[x] > 0));
+    if (!missing.length) return null;
+    const k = missing[(f.id.length + run.week) % missing.length]; // varied, without a dice roll (playtest LLM-11: always a Bathhouse)
+    return { key: k, item: DECOR[k].name };
   }
   if (id === 'mentor') {
     if ((f.level ?? 1) > 2 || f.bond) return null;
-    const g = run.roster.find((x) => x !== f && x.level >= 4 && !x.bond && x.kind !== 'revenant');
+    // Not a pair who both won last fight day: they bond this week anyway (playtest LLM-11: asked and met at once).
+    const won = new Set(run.history.filter((h) => h.week === run.week - 1 && h.won && !h.died).map((h) => h.fighterId));
+    const g = run.roster.find((x) => x !== f && x.level >= 4 && !x.bond && x.kind !== 'revenant' && !(won.has(f.id) && won.has(x.id)));
     return g ? { name: g.name, of: g.id } : null;
   }
   if (id === 'retire') return f.level >= 5 && (f.titles ?? []).length >= 2 && !retireBlocker(run, f.id) ? {} : null;
@@ -621,11 +662,12 @@ function rivalChampionFor(run, bout) {
   if (next(rivalsRng(run)) >= RIVAL.chance) return null;
   c.lastSeen = run.week;
   const f = { ...structuredClone(c.f), id: newId(run, 'o'), injuries: [], alive: true, stress: 0, house: h.id, rivalChampion: true };
-  f.power = bout.oppPower + RIVAL.power + Math.min(RIVAL.maxBonus, c.wins);
+  f.rivalBonus = RIVAL.power + Math.min(RIVAL.maxBonus, c.wins);
+  f.power = bout.oppPower + f.rivalBonus;
   f.speed = opponentSpeed(run, bout);
   seasonOpponent(run, f, bout);
   log(run, RIVAL_LINES.arrives(h.name, f.name), 'warn');
-  talk(run, `rival-arrives-${f.id}`, [{ speaker: 'rival', text: RIVAL_LINES.arrives(h.name, f.name) }]);
+  talk(run, `rival-arrives-${f.id}`, [{ speaker: 'rival', text: RIVAL_LINES.arrives(h.name, f.name) }], { now: true });
   return f;
 }
 // After a match against the rival champion.
@@ -682,7 +724,7 @@ function rebelQuestsMonth(run) {
     const quest = { id: 'lobby', policy: policy[0], name: policy[1].name, since: run.week, until: run.week + REBEL_QUESTS.lobby.weeks };
     q.rebel.push(quest);
     log(run, `The cause asks: ${REBEL_QUESTS.lobby.goal(quest)}.`, 'event');
-    talk(run, 'rebel-lobby', [say(REBEL_QUESTS.lobby.ask(quest))]);
+    talk(run, 'rebel-lobby', [say(REBEL_QUESTS.lobby.ask(quest, maxLevel(run, 'lounge') > 0))]);
   }
 }
 function rebelQuestMet(run, quest) {
@@ -701,7 +743,10 @@ function checkRebelQuests(run) {
     const def = REBEL_QUESTS[quest.id];
     if (rebelQuestMet(run, quest)) {
       const trust = quest.id === 'gallery' ? REBEL_QUEST.galleryTrust : REBEL_QUEST.lobbyTrust;
+      // Trust past the cap isn't wasted (playtest LLM-11): the cause covers your tracks instead.
+      const over = Math.max(0, p.trust + trust - PLOT.maxTrust);
       p.trust = clamp(p.trust + trust, 0, PLOT.maxTrust);
+      if (over) changeSuspicion(run, -REBEL_QUEST.overflowSuspicion * over);
       log(run, `The cause's request is done: ${def.goal(quest)}.`, 'good');
       talk(run, `rebel-done-${quest.id}`, [say(typeof def.thanks === 'function' ? def.thanks(quest) : def.thanks)]);
     } else if (run.week > quest.until) {
@@ -730,7 +775,11 @@ export function risingProgress(run) {
     if (!isArmed(run)) needs.push('the barracks armed');
     if (!run.roster.some((f) => f.id === p.champion)) needs.push('a champion sworn');
   }
-  return { suspicion: Math.round(p.suspicion), watch: s.watch, informer: s.informer, raid: s.raid, stage: p.ended ? 'ended' : p.stage, needs };
+  const stage = p.ended ? 'ended' : p.stage;
+  // In the player's words, not the stage ids (playtest LLM-11), with a line for when nothing is left to do.
+  const label = { mark: 'watching you', favours: 'testing you with small favours', cause: 'gathering for the cause', ready: 'ready: it waits for the Emperor\'s games (the Grand Tournament)', ended: 'over' }[stage] ?? stage;
+  const waiting = !needs.length && (stage === 'favours' || stage === 'cause') ? 'everything is in place: the next step comes at the month\'s turn, or with the cause\'s next message' : null;
+  return { suspicion: Math.round(p.suspicion), watch: s.watch, informer: s.informer, raid: s.raid, stage, label, needs, waiting };
 }
 
 function openArena(run, tier) {
@@ -976,7 +1025,16 @@ function applyPlotEffects(run, eff, ev, out) {
     if (eff.stage === 'favours') p.markWeek = run.week;
   }
   if (eff.reveal) p.reveal = run.topTier;
-  if (eff.hide) { p.hidden = eff.hide; out.push('a stranger sleeps in the Medbay'); }
+  if (eff.hide) {
+    p.hidden = eff.hide;
+    out.push('a stranger sleeps in the Medbay');
+    // The stranger's bed is taken from a patient if the Medbay is full (playtest LLM-11: it cost nothing).
+    const patients = run.roster.filter((f) => f.job === 'medbay');
+    for (const f of patients.slice(medbaySlots(run))) {
+      f.job = 'rest';
+      out.push(`${f.name} gives up their Medbay bed and rests instead`);
+    }
+  }
   if (eff.crowd) p.crowdUntil = run.week + eff.crowd;
   if (eff.pass) { p.pass = true; out.push('the pass is hidden in your strongbox'); }
   if (eff.usePass) p.pass = false;
@@ -1126,6 +1184,13 @@ const leadingHouse = (run) => [...run.houses].sort((a, b) => b.glory - a.glory)[
 export function houseForArena(run, tier) {
   if (tier === GRAND_TIER) return leadingHouse(run);
   const there = run.houses.filter((h) => h.tier >= tier);
+  // The archrival is a special opponent, not the usual one (playtest LLM-11: 73% of opponents were theirs). When it has
+  // climbed ahead alone, the other houses still send fighters up to fight there.
+  if (there.some((h) => h.id === run.archrival)) {
+    const others = there.filter((h) => h.id !== run.archrival);
+    const pool = others.length ? others : run.houses.filter((h) => h.id !== run.archrival);
+    if (pool.length && next(run.rng.houses) >= RIVAL.oppShare) return pick(run.rng.houses, pool);
+  }
   return there.length ? pick(run.rng.houses, there) : leadingHouse(run);
 }
 
@@ -1513,6 +1578,7 @@ export function advanceWeek(run) {
   run.bouts = null;
   run.brackets = {};
   run.week += 1;
+  releaseTalk(run);
   const d = dateOf(run.week);
   if (isMonthStart(run.week)) {
     refreshMarket(run);
@@ -1672,6 +1738,7 @@ function spyFound(run, f, choice, out) {
     out.push(`${f.name} is executed in the yard`);
   } else {
     f.spy = true;
+    chronicle(run, f, 'Kept on, though you know who they write to.');
     if (plotActive(run)) changeSuspicion(run, SPY.suspicion);
   }
 }
@@ -1686,7 +1753,9 @@ export function chooseEvent(run, index) {
   const names = eventNames(run, ev); // before the effects: a freed or executed fighter leaves the roster
   applyEventEffects(run, choice.effects, ev, out);
   if (ev.plot && plotActive(run)) {
-    if (choice.refuse) run.plot.refusals += 1;
+    // Once the rising is ready, turning down a favour no longer risks the cause going cold (playtest LLM-11):
+    // a careful Lanista can keep their head down until the Grand Tournament.
+    if (choice.refuse && run.plot.stage !== 'ready') run.plot.refusals += 1;
     else if (choice.help) {
       run.plot.refusals = 0;
       if (run.plot.stage === 'favours' && ev.id !== 'chalkMark') run.plot.favours = (run.plot.favours ?? 0) + 1;
@@ -2555,6 +2624,10 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
       summary.scar = 'Battle-Hardened';
       chronicle(run, fighter, `Won bloodied and became Battle-Hardened.`);
     }
+  }
+  if (opp.rivalChampion) { // before the purse is paid
+    rivalChampionResult(run, opp, fighter, tier, true, summary);
+    if (kill) rivalChampionKilled(run, opp.name);
   }
   settleBet(run, match, true, summary);
   run.gold += summary.gold;

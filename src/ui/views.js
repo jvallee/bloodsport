@@ -322,7 +322,7 @@ function questsPanel(run) {
   const rising = risingProgress(run);
   const gallery = rising ? `<div class="gallery-readout" title="${esc(GALLERY_INTRO)}">👁 <b>Whispering Gallery</b> · the palace's suspicion <b>${rising.suspicion}</b>/100 <small>(watched at ${rising.watch}, informers at ${rising.informer}, a raid at ${rising.raid})</small>
     <span class="susbar"><span style="width:${Math.min(100, rising.suspicion)}%"></span></span>
-    <div>The rising: <b>${esc(rising.stage === 'favours' ? 'small favours' : rising.stage === 'cause' ? 'the cause' : rising.stage === 'ready' ? 'ready' : rising.stage)}</b>${rising.needs.length ? ` · still needs ${esc(rising.needs.join(', '))}` : ''}</div></div>` : '';
+    <div>The rising: <b>${esc(rising.label)}</b>${rising.needs.length ? ` · still needs ${esc(rising.needs.join(', '))}` : ''}${rising.waiting ? ` · ${esc(rising.waiting)}` : ''}</div></div>` : '';
   const items = [
     task ? `<li>🏛 <b>The steward</b> asks: ${esc(task.goal)}${stewardGold(task) ? ` <small>· ${stewardGold(task)} Gold</small>` : ''}</li>` : '',
     ...wants, ...cause,
@@ -417,7 +417,7 @@ export function standingsTable(run) {
   if (!run.houses) return '';
   const rows = standings(run).map((h, i) => {
     const notes = [h.feud ? `<span class="feud" title="You killed one of theirs: their fighters get +1 Power against you">⚔ feud · ${h.feud} month${h.feud === 1 ? '' : 's'} left</span>` : '',
-      h.owed ? `<span class="vengeance" title="You spared one of theirs when the crowd wanted blood: their fighters get −1 Power against you">owes you a life · ${h.owed} month${h.owed === 1 ? '' : 's'} left</span>` : '',
+      h.owed && !h.feud ? `<span class="vengeance" title="You spared one of theirs when the crowd wanted blood: their fighters get −1 Power against you">owes you a life · ${h.owed} month${h.owed === 1 ? '' : 's'} left</span>` : '', // a feud overrides the debt (playtest LLM-11)
       h.vengeance ? `<span class="vengeance" title="They killed one of yours: your fighters get +5% win chance against them">vengeance · ${h.vengeance} month${h.vengeance === 1 ? '' : 's'} left</span>` : ''].join('');
     return `<tr class="${h.you ? 'you' : ''}"><td>${i + 1}</td><td><span class="house-dot" style="background:${esc(h.color)}"></span>${esc(h.name)}${h.motto ? `<small title="${esc(h.motto)}"> ❝</small>` : ''} ${notes}</td><td>${esc(arenaName(Math.min(h.tier, 4)).replace('The ', ''))}</td><td><b>${h.glory}</b></td></tr>`;
   }).join('');

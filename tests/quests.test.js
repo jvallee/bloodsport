@@ -23,7 +23,7 @@ test('the steward\'s first assignment comes after the tutorial month, with the s
   assert.ok(said.beats.some((b) => /great once/.test(b.text)), 'the first one says why');
 });
 
-test('an assignment done pays its Gold once, then the next one comes; one already done is skipped quietly', () => {
+test('an assignment done pays its Gold once, then the next one comes; one already done is counted and paid with a word', () => {
   const run = createRun(2);
   run.week = QUESTS.stewardFromWeek;
   recruit(run, run.market[0].id);
@@ -33,10 +33,13 @@ test('an assignment done pays its Gold once, then the next one comes; one alread
   const gold = run.gold;
   run.history.push({ week: run.week, won: true }); // a win already in the books
   checkQuests(run);
-  assert.equal(run.gold, gold + stewardGold(STEWARD_TASKS[0]), 'two gladiators: paid');
-  assert.notEqual(stewardTask(run).id, 'firstWin', 'the win was already done: skipped, unpaid');
+  // 5.4.1 (playtest LLM-11): an assignment already done is no longer skipped silently and unpaid.
+  const paid = stewardGold(STEWARD_TASKS[0]) + stewardGold(STEWARD_TASKS[1]);
+  assert.equal(run.gold, gold + paid, 'two gladiators, and the win already done: both paid');
+  assert.notEqual(stewardTask(run).id, 'firstWin', 'the win was already done: not asked for');
+  assert.ok([...run.talk, ...(run.talkLater ?? [])].some((t) => t.key === 'steward-already-firstWin'), 'the steward says so (perhaps next week: scenes are spaced out)');
   checkQuests(run);
-  assert.equal(run.gold, gold + stewardGold(STEWARD_TASKS[0]), 'paid once');
+  assert.equal(run.gold, gold + paid, 'paid once');
 });
 
 test('a game action completes an assignment at once (build something new)', () => {

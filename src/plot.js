@@ -194,7 +194,7 @@ export const PLOT_EVENTS = [
     needed: (run) => !run.roster.some((f) => f.id === run.plot?.champion),
     // Your two most famous fighters; whether they'll say yes depends on their Morale (shown on the buttons).
     target: (run) => {
-      const [f, g] = [...run.roster].sort((a, b) => b.renown - a.renown || b.power - a.power);
+      const [f, g] = run.roster.filter((x) => !x.spy).sort((a, b) => b.renown - a.renown || b.power - a.power); // never the Emperor's spy
       return f ? { f: f.id, g: g?.id, fOdds: recruitOdds(f), gOdds: g ? recruitOdds(g) : null } : null;
     },
     text: ({ f, g }) => `The rebels want a champion from your house. "When the Emperor comes to the games, the crowd must see one of their own strike the blow." They name ${f}${g ? `, or ${g}` : ''}.`,

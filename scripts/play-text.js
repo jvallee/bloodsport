@@ -8,7 +8,7 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { LOUNGE, DEMANDS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
+import { LOUNGE, DEMANDS, DEMAND, CIRCUITS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
@@ -18,14 +18,14 @@ import {
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
-  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardGold, risingProgress, archrival,
+  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardGold, risingProgress, archrival, checkQuests,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, buildingKnown, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
 import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
-import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene, dueRebelStage } from '../src/dialogue.js';
+import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene, dueRebelStage, demandMetScene, demandMissedScene } from '../src/dialogue.js';
 import { WANTS, REBEL_QUESTS } from '../src/quests.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText, slotLabel } from '../src/codex.js';
 
@@ -66,7 +66,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   lounge / host / enact <id>    the Patron Lounge: see policies, host the Senate (Influence), pass a policy
   place <id> <item> | remove <id> <item>      put decor in a fighter's room, or take it back
   buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armour> | sell-gear <storeroom#> (half price)
-  build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).join(', ')}
+  build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).filter((k) => !BUILDINGS[k].secret).join(', ')}
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
   pay-tribute                   pay this year's tribute early
   houses                        the rival houses' standings
@@ -142,6 +142,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   function extras(f) {
     const bits = [];
     if (f.titles.length) bits.push(`Titles: ${f.titles.join(', ')} (+1 Power each)`);
+    if (f.spy) bits.push('writes to the palace (the spy you kept)');
     const gear = ['weapon', 'armor'].filter((s) => f.gear[s]).map((s) => `${GEAR[f.gear[s]].name} (${gearText(GEAR[f.gear[s]])})`);
     if (gear.length) bits.push(`Gear: ${gear.join('; ')}`);
     const decor = Object.entries(f.decor).filter(([, n]) => n).map(([k, n]) => `${DECOR[k].name} ×${n}${DECOR[k].helps(f) ? '' : ' (comfort only)'}`);
@@ -177,7 +178,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   function opponentBlock(f, boss = false) {
     const bits = [`Power ${effectivePower(f)}${effectivePower(f) !== f.power ? ` (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')})` : ''}`, `Speed ${effectiveSpeed(f)}`, ...(opponentHasSignature(f, boss) ? [`Signature: ${SIGNATURES[f.cls].name} (${SIGNATURES[f.cls].desc} Used when behind, or in Round 3)`] : []), `Renown ${f.renown}`, ...(f.humor ? [`${HUMORS[f.humor].name}: ${HUMORS[f.humor].tell}`] : []), ...extras(f)];
     const house = houseOf(run, f);
-    return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ` (FEUD: +1 Power against you, ${plural(house.feud, 'month')} left)` : ''}${house.owed ? ` (OWES YOU A LIFE: −1 Power against you, ${plural(house.owed, 'month')} left)` : ''}${house.vengeance ? ` (your VENGEANCE: +5% win chance, ${plural(house.vengeance, 'month')} left)` : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}${f.nemesis ? ` · NEMESIS ${f.nemesis.epithet} (beat your house ${f.nemesis.wins}×${f.nemesis.victims.length ? `, killed ${f.nemesis.victims.join(' and ')}` : ''}; +${f.nemesis.bonus} Power)` : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
+    return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ` (FEUD: +1 Power against you, ${plural(house.feud, 'month')} left)` : ''}${house.owed && !house.feud ? ` (OWES YOU A LIFE: −1 Power against you, ${plural(house.owed, 'month')} left)` : ''}${house.vengeance ? ` (your VENGEANCE: +5% win chance, ${plural(house.vengeance, 'month')} left)` : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}${f.nemesis ? ` · NEMESIS ${f.nemesis.epithet} (beat your house ${f.nemesis.wins}×${f.nemesis.victims.length ? `, killed ${f.nemesis.victims.join(' and ')}` : ''}; +${f.nemesis.bonus} Power)` : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
   }
 
   function arenaBlock(tier) {
@@ -255,6 +256,16 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     lowerShown = 0;
     const out = [header()];
     if (run.demand) out.push(`\n⚜ THE EMPEROR DEMANDS: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.${demandMet(run) ? ' (done)' : ''}`);
+    // The Emperor's word on a demand met, and on one missed (as on the page; playtest LLM-11: only the page had them).
+    if (run.demand && demandMet(run) && !scenesSeen.includes(`demand-met-${run.demand.week}`)) {
+      scenesSeen.push(`demand-met-${run.demand.week}`);
+      out.push(sceneText('demand-met', demandMetScene(DEMANDS[run.demand.id].goal, DEMAND.favor, DEMAND.goldPerTier * Math.min(run.topTier, CIRCUITS.length))));
+    }
+    const judged = run.demandResult;
+    if (judged && !judged.met && !scenesSeen.includes(`demand-missed-${judged.issued}`)) {
+      scenesSeen.push(`demand-missed-${judged.issued}`);
+      out.push(sceneText('demand-missed', demandMissedScene(DEMANDS[judged.id].goal, judged.favor)));
+    }
     const due = scenesSeen.includes('opening') ? dueScene(run, scenesSeen) : 'opening';
     if (due) {
       scenesSeen.push(due);
@@ -303,7 +314,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (card) out.push(`\n${card}`);
     out.push(`\n-- House log --\n${run.log.slice(-8).map((l) => `  ${l.text}`).join('\n')}`);
     const blocked = advanceBlocker(run);
-    if (blocked && run.status === 'active' && !run.boutPending) out.push(`(Can't end the week: ${blocked})`);
+    if (blocked && run.status === 'active' && !run.boutPending) out.push(`(Before this week can end: ${blocked})`);
     return out.join('\n');
   }
 
@@ -683,7 +694,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       for (const f of run.roster.filter((x) => x.want)) lines.push(`  ${f.name} [${f.id}] wants: ${WANTS[f.want.id].goal(f.want)}${f.want.until != null ? ` (${Math.max(0, f.want.until - run.week)} weeks left)` : ''}.`);
       for (const q of run.quests?.rebel ?? []) lines.push(`  The cause asks: ${REBEL_QUESTS[q.id].goal(q)} (${Math.max(0, q.until - run.week)} weeks left).`);
       const rising = risingProgress(run);
-      if (rising) lines.push(`  Whispering Gallery: suspicion ${rising.suspicion}/100 (watched at ${rising.watch}, informers at ${rising.informer}, raid at ${rising.raid}); the rising: ${rising.stage}${rising.needs.length ? `, still needs ${rising.needs.join(', ')}` : ''}.`);
+      if (rising) lines.push(`  Whispering Gallery: suspicion ${rising.suspicion}/100 (watched at ${rising.watch}, informers at ${rising.informer}, raid at ${rising.raid}); the rising: ${rising.label}${rising.needs.length ? `, still needs ${rising.needs.join(', ')}` : ''}${rising.waiting ? `; ${rising.waiting}` : ''}.`);
       const c = run.rivalChampion;
       const arch = archrival(run);
       if (arch) lines.push(`  Your rival house: ${arch.name} (Glory ${arch.glory})${c ? `, champion ${c.f.name} (${c.wins} wins and ${c.losses} losses against you)` : ''}.`);
@@ -744,6 +755,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
         out = `Can't do that: ${err.message}`;
       }
     }
+    checkQuests(run); // as the page does after every game action (playtest LLM-11: quests waited for end-week)
     const fresh = discover(codex, run);
     if (fresh.length) out += `\n(New in the Codex: ${fresh.join(', ')})`;
     const step = currentStep();

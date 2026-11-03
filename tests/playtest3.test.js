@@ -111,9 +111,21 @@ test('opponents in higher arenas fight for houses that have climbed there (or th
   const run = createRun(5);
   run.houses[0].glory = 30;
   run.houses[0].tier = 3;
+  run.archrival = run.houses[1].id; // 5.4.1: the archrival is a special case (next test)
   for (let i = 0; i < 10; i++) assert.equal(houseForArena(run, 3).id, run.houses[0].id);
   const low = houseForArena(run, 1);
   assert.ok(run.houses.includes(low), 'any house fights in the Dirt Pits');
+});
+
+test('the archrival sends only a share of the opponents, even where it has climbed alone (playtest LLM-11)', () => {
+  const run = createRun(5);
+  run.archrival = run.houses[0].id;
+  run.houses[0].tier = 3;
+  const n = 200;
+  let theirs = 0;
+  for (let i = 0; i < n; i++) if (houseForArena(run, 3).id === run.archrival) theirs += 1;
+  assert.ok(theirs / n < 0.35, `${theirs} of ${n} from the archrival`);
+  assert.ok(theirs > 0, 'but some');
 });
 
 test('upsets and crushing wins are judged on the Power actually fought with (decor, augments, feuds)', async () => {

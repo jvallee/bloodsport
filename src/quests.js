@@ -6,10 +6,13 @@ import { maxLevel } from './ludus.js';
 import { STARTING_BUILDINGS } from './data.js';
 
 const conquered = (run, tier) => Boolean(run.arenas[tier]?.conquered);
+// A tournament won in this arena: a single-match win, or a bracket's Final.
+const tournamentWon = (run, tier) => run.history.some((h) => h.tier === tier && h.won && (!h.bracket || h.bracket === 'Final'));
 const decorPlaced = (run) => run.roster.some((f) => Object.values(f.decor).some((n) => n > 0));
 
 // ---------- The steward's assignments: restore the house to its former glory ----------
-// One at a time, in order; an assignment already done when its turn comes is skipped quietly.
+// One at a time, in order. Assignments already done when their turn comes are counted done and paid together (playtest
+// LLM-11: they were skipped without a word). The middle ones give the steward something to say during a long arena.
 export const STEWARD_TASKS = [
   { id: 'twoFighters', goal: 'Have two gladiators in the house', gold: 2, test: (run) => run.roster.length >= 2,
     say: 'One fighter is a hobby, Lanista. Two is a house. Find a second gladiator.' },
@@ -25,22 +28,33 @@ export const STEWARD_TASKS = [
     say: 'The old Lanista sold half the estate to pay his wine merchant. Build on it again.' },
   { id: 'fourFighters', goal: 'Have four gladiators in the house', gold: 4, test: (run) => run.roster.length >= 4,
     say: 'When I was a boy this house fed twenty fighters. Four would be a start.' },
+  { id: 'trainer2', goal: 'Upgrade the Trainer Room', gold: 4, test: (run) => maxLevel(run, 'trainer') >= 2,
+    say: 'The old training posts are rotten through. Fighters can only learn as much as the yard can teach. Upgrade the Trainer Room.' },
+  { id: 'bronzeWin', goal: 'Win a tournament in the Bronze Arena', gold: 4, test: (run) => tournamentWon(run, 2),
+    say: 'Before we take the Bronze Arena, let them see our colours on the winners\' rail. One tournament, Lanista.' },
   { id: 'bronze', goal: 'Conquer the Bronze Arena', gold: 6, test: (run) => conquered(run, 2),
     say: 'The Bronze Arena remembers our colours. Remind it.' },
   { id: 'twoTitles', goal: 'Have a fighter who holds two Titles', gold: 6, test: (run) => run.roster.some((f) => (f.titles ?? []).length >= 2),
     say: 'A house is known by its champions. Make one that people name in the taverns.' },
   { id: 'level3', goal: 'Reach House level 3', gold: 6, test: (run) => run.prestigeLevel >= 3,
     say: 'The senators have started asking who we are. Let\'s give them a reason: reach House level 3.' },
+  { id: 'trainer3', goal: 'Upgrade the Trainer Room to level 3', gold: 6, test: (run) => maxLevel(run, 'trainer') >= 3,
+    say: 'The Silver crowds pay to see real skill. Our yard can\'t teach it yet. Trainer Room, level 3.' },
+  { id: 'silverWin', goal: 'Win a tournament in the Silver Coliseum (its Final)', gold: 6, test: (run) => tournamentWon(run, 3),
+    say: 'Three fights in one day, and the last against the best they have. Win one of those days, and the Silver Coliseum will know us.' },
   { id: 'silver', goal: 'Conquer the Silver Coliseum', gold: 8, test: (run) => conquered(run, 3),
     say: 'Your predecessor never saw the Silver Coliseum from the sand. You will.' },
   { id: 'level4', goal: 'Reach House level 4', gold: 8, test: (run) => run.prestigeLevel >= 4,
     say: 'We are nearly what we were. House level 4, and I will stop counting the old days.' },
+  { id: 'imperialWin', goal: 'Win a tournament in the Imperial Coliseum (its Final)', gold: 8, test: (run) => tournamentWon(run, 4),
+    say: 'The Emperor watches from his box in the Imperial Coliseum. Make him learn our name: win a tournament there.' },
   { id: 'imperial', goal: 'Conquer the Imperial Coliseum', gold: 10, test: (run) => conquered(run, 4),
     say: 'The Emperor\'s own arena. This house has never won there. Not once.' },
   { id: 'grand', goal: 'Win the Grand Tournament', gold: 0, test: (run) => run.status === 'won',
     say: 'One fight left, Lanista. The one they will sing about.' },
 ];
 export const STEWARD_INTRO = 'This house was great once, before your predecessor drank it away. I kept a list of what we lost. Let\'s win it back, one thing at a time.';
+export const stewardAlready = (goals) => `I was going to ask for more, but you got there first: ${goals.join('; ')}. The house is ahead of my list.`;
 export const stewardDone = (task) => `Done: ${task.goal.charAt(0).toLowerCase()}${task.goal.slice(1)}. The house is a little more itself again.`;
 
 // ---------- What fighters want ----------
@@ -48,7 +62,7 @@ export const stewardDone = (task) => `Done: ${task.goal.charAt(0).toLowerCase()}
 // (null: until it can no longer happen). Lines: `ask` when it appears, `thanks` when met, `sulk` when it lapses.
 export const WANTS = {
   revenge: {
-    label: (w) => `Face ${w.name} again`,
+    label: (w) => `Beat ${w.name}`,
     goal: (w) => `Beat ${w.name}, who beat them`,
     weeks: null,
     ask: (w) => `${w.name} beat me, and laughed doing it. When they come back, send me. Nobody else.`,
@@ -73,7 +87,7 @@ export const WANTS = {
   },
   mentor: {
     label: (w) => `Learn from ${w.name}`,
-    goal: (w) => `Bond them with ${w.name} (an Exhibition bout, or both winning on one fight day)`,
+    goal: (w) => `Make them friends with ${w.name}: spar the two in the Exhibition Ring, or have both win on the same fight day`,
     weeks: 12,
     ask: (w) => `${w.name} fights like nobody I've seen. If I could spar with them, even once, I'd learn more than in a year of drills.`,
     thanks: (w) => `${w.name} says I have a terrible guard and a good heart. I'll fix the guard.`,
@@ -94,9 +108,9 @@ export const WANTS = {
 export const REBEL_QUESTS = {
   gallery: {
     label: () => 'Build the Whispering Gallery',
-    goal: () => 'Build the Whispering Gallery in the Estate',
+    goal: () => 'Build the Whispering Gallery in the Estate (it needs a free plot)',
     weeks: 16,
-    ask: 'We need ears in your house. Build a gallery where the walls carry voices: you\'ll hear what the guards say about you, and we\'ll know how close the rising is.',
+    ask: 'We need ears in your house. Build a gallery where the walls carry voices: you\'ll hear what the guards say about you, and we\'ll know how close the rising is. It needs a free plot in your Estate.',
     thanks: 'The gallery is built. Listen well, Lanista. We are.',
     sulk: 'No gallery. Then we stay deaf, and so do you.',
   },
@@ -104,7 +118,7 @@ export const REBEL_QUESTS = {
     label: (q) => `Pass ${q.name} in the Senate`,
     goal: (q) => `Pass ${q.name} at the Patron Lounge`,
     weeks: 16,
-    ask: (q) => `The Senate can do more for us than any blade. Get ${q.name} passed. If you have no seat at their table, buy one: build a Patron Lounge.`,
+    ask: (q, lounge) => `The Senate can do more for us than any blade. Get ${q.name} passed.${lounge ? ' Your Patron Lounge gives you a seat at their table: use it.' : ' If you have no seat at their table, buy one: build a Patron Lounge.'}`,
     thanks: (q) => `${q.name}. The streets heard about it before the ink was dry. Well done.`,
     sulk: () => 'The Senate went home and the law never came. The cause noticed.',
   },
@@ -117,8 +131,14 @@ export const GALLERY_INTRO = 'The walls of the Whispering Gallery carry every vo
 // When two fighters become friends (an Exhibition bout, or both winning on one fight day). PLACEHOLDER lines.
 export const BOND_LINES = {
   narrator: (a, b, how) => `${how === 'exhibition' ? `After the bout in the ring, ${a} offers ${b} a hand up.` : `That night, ${a} and ${b} share a jug of wine by the brazier.`}`,
-  first: (b) => `${b} fights like someone I'd want at my back. Don't tell them I said so.`,
-  second: (a) => `${a}? Fine. Somebody has to keep them alive.`,
+  // A pair's two lines, chosen by who they are. PLACEHOLDER.
+  pairs: [
+    [(b) => `${b} fights like someone I'd want at my back. Don't tell them I said so.`, (a) => `${a}? Fine. Somebody has to keep them alive.`],
+    [(b) => `${b} snores like a bear. But they shared their bread when I had none.`, (a) => `And ${a} never once told the others I cried after my first fight.`],
+    [(b) => `I owe ${b} a cup of wine for every time they've watched my back. That's a lot of wine.`, (a) => `${a} pays for none of it. I keep count anyway.`],
+    [(b) => `${b} and I came from opposite ends of the Empire. Turns out the sand is the same everywhere.`, (a) => `So is the bad food. ${a} can have mine.`],
+  ],
+  stewardAgain: (a, b) => `Another friendship: ${a} and ${b}. You know what that means by now, Lanista. Keep them both alive.`,
   steward: (a, b, comfort, gap) => `${a} and ${b} are friends now. Each is happier while the other is in the house (+${comfort} comfort). If one is ${gap} or more levels above the other, they'll teach them a little every week. And if one dies, the other will grieve.`,
 };
 

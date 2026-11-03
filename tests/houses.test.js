@@ -34,6 +34,7 @@ test('standings rank your house among the rivals by Glory; wins earn Glory by ti
   const { run, f } = atBout();
   const before = run.glory;
   const opp = houseOf(run, run.arenas[1].opponent);
+  opp.glory = Math.max(opp.glory, 10); // 5.4.1: the opponent is rarely the archrival, and the others may start at 0 Glory
   const oppGlory = opp.glory;
   play(run, f.id);
   assert.equal(run.glory, before + HOUSES.glory.win * 1);
