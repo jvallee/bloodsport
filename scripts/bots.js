@@ -43,6 +43,8 @@ function spend(run, reserve, opts = {}) {
   };
   // The bot reads exact odds and never needs cheap recruits, so it skips the Oracle and Liaison.
   if (opts.plot) tryBuild('liaison'); // v6: the plot starts with the Liaison's prisoners
+  // 5.4.0: a rebel answers the cause's request for the Whispering Gallery before anything else.
+  if (opts.plot === 'rebel' && run.quests?.rebel?.some((q) => q.id === 'gallery') && !buildBlocker(run, 'gallery')) buildRoom(run, 'gallery');
   tryUp('trainer');
   tryBuild('entertainment');
   tryBuild('armourer');
@@ -70,7 +72,9 @@ const POLICY_ORDER = ['breadAndCircuses', 'grainToLudus', 'edictOfMercy', 'lower
 function useLounge(run, opts) {
   if (opts.lounge === false) return;
   if (!hostBlocker(run) && run.gold - LOUNGE.hostGold * 4 >= 8) host(run);
-  const order = opts.plot === 'rebel' ? ['amnesty', ...POLICY_ORDER] : POLICY_ORDER;
+  // 5.4.0: a rebel passes the law the cause asked for first.
+  const asked = run.quests?.rebel?.find((q) => q.id === 'lobby')?.policy;
+  const order = opts.plot === 'rebel' ? [...(asked ? [asked] : []), 'amnesty', ...POLICY_ORDER] : POLICY_ORDER;
   for (const id of order) if (!enactBlocker(run, id)) enact(run, id);
 }
 

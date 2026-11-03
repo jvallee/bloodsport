@@ -79,7 +79,8 @@ test('the steward announces new buildings at a new House level, and new stock in
   run.liaisonOffer = { id: 'p1' };
   run.armourerStock = ['gladius'];
   const news = stewardNews(before, newsSnapshot(run), run).join(' ');
-  const opened = Object.values(BUILDINGS).filter((b) => b.req[0] === 2).map((b) => b.name);
+  const opened = Object.values(BUILDINGS).filter((b) => b.req[0] === 2 && !b.secret).map((b) => b.name); // a secret building (5.4.0) is never announced
+  assert.doesNotMatch(stewardNews(before, newsSnapshot(run), run).join(' '), /Whispering Gallery/);
   assert.match(news, /level 2/);
   for (const name of opened) assert.match(news, new RegExp(name));
   assert.match(news, /New gladiators have arrived in the Market/);

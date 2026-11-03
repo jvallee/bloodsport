@@ -14,6 +14,8 @@ export const SPEAKERS = {
   emperor: { name: "Emperor Silbannacus", portrait: "emperor" },
   steward: { name: "Your steward", portrait: "steward" }, // a plain, neutral helper (the designer's choice)
   rebel: { name: "A prisoner", portrait: "narrator" }, // a political prisoner: their beats carry the fighter (name and face)
+  fighter: { name: "", portrait: "narrator" }, // one of your fighters (5.4.0 quests): the beat carries the fighter
+  rival: { name: "A rival Lanista", portrait: "emperor" }, // the archrival house (5.4.0)
 };
 
 export const SCENES = {
@@ -238,7 +240,7 @@ export function newsSnapshot(run) {
 export function stewardNews(before, after, run) {
   const news = [];
   if (after.level > before.level) {
-    const opened = Object.entries(BUILDINGS).filter(([, b]) => b.req[0] > before.level && b.req[0] <= after.level).map(([, b]) => b.name);
+    const opened = Object.entries(BUILDINGS).filter(([, b]) => !b.secret && b.req[0] > before.level && b.req[0] <= after.level).map(([, b]) => b.name);
     news.push(`Your house has reached level ${after.level}. ${opened.length ? `New in the Estate: ${opened.join(', ')}.` : 'There are new plots to build on in the Estate.'}`);
   }
   if (after.market !== before.market && run.market.length && after.market.split(',').some((id) => !before.market.split(',').includes(id))) {

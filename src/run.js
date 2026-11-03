@@ -7,9 +7,10 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, SPY, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, deltaRow,
+  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, deltaRow,
 } from './data.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
+import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, WANTS, REBEL_QUESTS, RIVAL_LINES, BOND_LINES } from './quests.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt, hypeOf } from './fight.js';
 import { Refused } from './errors.js';
 import { estimateOdds } from './odds.js';
@@ -251,6 +252,11 @@ function newOpponent(run, tier) {
     arena.opponent = arena.rival; // a Boss who beat you comes back, stronger
     return;
   }
+  const champ = rivalChampionFor(run, bout); // 5.4.0: the archrival's champion
+  if (champ) {
+    arena.opponent = champ;
+    return;
+  }
   const back = returningNemesis(run, bout);
   if (back) {
     arena.opponent = back;
@@ -313,12 +319,19 @@ export function enact(run, id) {
 
 export const bondmate = (run, f) => (f.bond ? run.roster.find((x) => x.id === f.bond.id) ?? null : null);
 // Two fighters without a bond become bonded (one bond each).
-function formBond(run, a, b) {
+function formBond(run, a, b, how = 'fightDay') {
   if (a.bond || b.bond || a === b) return;
   a.bond = { id: b.id, name: b.name, since: run.week };
   b.bond = { id: a.id, name: a.name, since: run.week };
   for (const [x, y] of [[a, b], [b, a]]) chronicle(run, x, `Bonded with ${y.name}.`);
   log(run, `${a.name} and ${b.name} have become fast friends: each is happier while the other is in the house.`, 'good');
+  // 5.4.0 (the designer: say when a friendship forms): a short scene.
+  talk(run, `bond-${a.id}-${b.id}`, [
+    { speaker: 'narrator', text: BOND_LINES.narrator(a.name, b.name, how) },
+    { speaker: 'fighter', fighterId: a.id, text: BOND_LINES.first(b.name) },
+    { speaker: 'fighter', fighterId: b.id, text: BOND_LINES.second(a.name) },
+    { speaker: 'steward', text: BOND_LINES.steward(a.name, b.name, BOND.comfort, BOND.mentorGap) },
+  ]);
 }
 // Two fighters who both won on the same fight day may bond.
 function bondOverFightDay(run) {
@@ -350,7 +363,7 @@ function tendBonds(run) {
 // Has this month's demand been met? Judged from the fights since it was issued.
 const DEMAND_MET = {
   topWin: (h) => h.some((x) => x.top && x.won),
-  bloodied: (h) => h.some((x) => x.bloodied),
+  bloodied: (h) => h.some((x) => x.bloodied || (DEMAND.bloodiedKills && x.won && (x.kill || x.verdict === 'kill'))), // a death counts too (the designer, 5.4.0)
   kill: (h) => h.some((x) => x.verdict === 'kill' || (x.won && x.kill)),
   spare: (h) => h.some((x) => x.verdict === 'spare'),
   twoArenas: (h) => new Set(h.filter((x) => x.won).map((x) => x.tier)).size >= 2,
@@ -417,6 +430,7 @@ function recordNemesis(run, opp, tier, fighter, boss) {
   }
   n.nemesis.wins += 1;
   n.nemesis.lastSeen = run.week;
+  n.nemesis.beat = [...new Set([...(n.nemesis.beat ?? []), fighter.id])]; // for a fighter's revenge (5.4.0)
   if (!fighter.alive) {
     n.nemesis.kills += 1;
     n.nemesis.victims = [...n.nemesis.victims, fighter.name];
@@ -433,6 +447,290 @@ function nemesisFalls(run, opp, fighter, tier, summary) {
   changeFavor(run, NEMESIS.favor, `${opp.name} ${opp.nemesis.epithet} is beaten`);
   chronicle(run, fighter, `Beat the house's nemesis, ${opp.name} ${opp.nemesis.epithet}${opp.nemesis.victims.length ? `, who had killed ${opp.nemesis.victims.join(' and ')}` : ''}.`);
   log(run, `${fighter.name} beats ${opp.name} ${opp.nemesis.epithet}! +${gold} Gold, +${NEMESIS.renown} Renown. The house breathes again.`, 'good');
+}
+
+// ---------- Quests (5.4.0, docs/plan-5.4-quests.md) ----------
+
+// Dialogue the rules decide on: the page plays each entry once (by key), the text port prints it. Beats: { speaker, text, fighterId? }.
+const TALK_MEMORY = 30;
+function talk(run, key, beats) {
+  if ((run.talk ?? []).some((t) => t.key === key)) return;
+  run.talk = [...(run.talk ?? []), { key, week: run.week, beats }].slice(-TALK_MEMORY);
+}
+const moodShift = (f, n) => { f.mood = { n: (f.mood?.n ?? 0) + n, weeks: MOOD_WEEKS }; };
+const questState = (run) => (run.quests ??= { steward: null, stewardIndex: 0, rebel: [] });
+
+// Everything a quest waits on, checked at the end of every week and after every game action (src/game.js). Idempotent.
+export function checkQuests(run) {
+  if (!run || run.inMatch) return;
+  stewardTasks(run);
+  if (run.status !== 'active') return;
+  checkWants(run);
+  checkRebelQuests(run);
+}
+
+// The steward's assignments: one at a time, in order; one already done when its turn comes is skipped quietly.
+function stewardTasks(run) {
+  const q = questState(run);
+  if (run.week < QUESTS.stewardFromWeek) return;
+  if (q.steward) {
+    const task = STEWARD_TASKS.find((t) => t.id === q.steward);
+    if (!task?.test(run)) return;
+    const paid = stewardGold(task);
+    run.gold += paid;
+    q.steward = null;
+    q.stewardIndex += 1;
+    log(run, `The steward's assignment is done: ${task.goal}.${paid ? ` +${paid} Gold.` : ''}`, 'good');
+    talk(run, `steward-done-${task.id}`, [{ speaker: 'steward', text: `${stewardDone(task)}${paid ? ` I found ${paid} Gold for the house.` : ''}` }]);
+  }
+  if (run.status !== 'active') return;
+  while (q.stewardIndex < STEWARD_TASKS.length && STEWARD_TASKS[q.stewardIndex].test(run)) q.stewardIndex += 1;
+  const task = STEWARD_TASKS[q.stewardIndex];
+  if (!task) return;
+  q.steward = task.id;
+  log(run, `The steward's assignment: ${task.goal}.`, 'event');
+  talk(run, `steward-${task.id}`, [
+    ...(q.stewardIndex === 0 || !q.introduced ? [{ speaker: 'steward', text: STEWARD_INTRO }] : []),
+    { speaker: 'steward', text: task.say },
+    { speaker: 'steward', text: `Your assignment: ${task.goal}.${stewardGold(task) ? ` Do it, and I'll find ${stewardGold(task)} Gold for the house.` : ''}` },
+  ]);
+  q.introduced = true;
+}
+export const stewardGold = (task) => Math.round((task?.gold ?? 0) * QUESTS.goldScale);
+export const stewardTask = (run) => STEWARD_TASKS.find((t) => t.id === run.quests?.steward) ?? null;
+
+// ---- What fighters want ----
+
+// The want a fighter could have of this kind now (its details), or null.
+function wantFor(run, f, id) {
+  if (f.kind === 'revenant') return null;
+  if (id === 'revenge') {
+    const n = (run.nemeses ?? []).find((x) => (x.nemesis.beat ?? []).includes(f.id));
+    return n ? { name: `${n.name} ${n.nemesis.epithet}`, of: n.id } : null;
+  }
+  if (id === 'title') return f.level >= 3 && run.topTier <= CIRCUITS.length && !isChampionOf(f, run.topTier) ? { tier: run.topTier, arena: championTitle(run.topTier).replace(/^Champion of /, '') } : null;
+  if (id === 'room') {
+    const k = FIGHTER_WANTS.roomItems.find((x) => !(f.decor[x] > 0));
+    return k ? { key: k, item: DECOR[k].name } : null;
+  }
+  if (id === 'mentor') {
+    if ((f.level ?? 1) > 2 || f.bond) return null;
+    const g = run.roster.find((x) => x !== f && x.level >= 4 && !x.bond && x.kind !== 'revenant');
+    return g ? { name: g.name, of: g.id } : null;
+  }
+  if (id === 'retire') return f.level >= 5 && (f.titles ?? []).length >= 2 && !retireBlocker(run, f.id) ? {} : null;
+  return null;
+}
+// At a month's start, perhaps a new want (its own dice, so nothing else shifts).
+function wantsMonth(run) {
+  run.rng.wants ??= createRng(deriveSeed(run.seed, 10));
+  const r = run.rng.wants;
+  if (run.roster.filter((f) => f.want).length >= FIGHTER_WANTS.max || next(r) >= FIGHTER_WANTS.chance) return;
+  const options = [];
+  for (const f of run.roster) if (!f.want) for (const id of Object.keys(WANTS)) { const w = wantFor(run, f, id); if (w) options.push({ f, id, w }); }
+  if (!options.length) return;
+  const { f, id, w } = pick(r, options);
+  const def = WANTS[id];
+  f.want = { id, ...w, since: run.week, until: def.weeks ? run.week + def.weeks : null };
+  log(run, `${f.name} wants something: ${def.label(f.want)}.`, 'event');
+  talk(run, `want-${f.id}-${run.week}`, [{ speaker: 'fighter', fighterId: f.id, text: def.ask(f.want) }]);
+}
+function wantMet(run, f, w) {
+  if (w.id === 'revenge') return run.history.some((h) => h.week >= w.since && h.fighterId === f.id && h.won && h.nemesis === w.name);
+  if (w.id === 'title') return isChampionOf(f, w.tier);
+  if (w.id === 'room') return f.decor[w.key] > 0;
+  if (w.id === 'mentor') return f.bond?.id === w.of;
+  return false; // retire: met in retire()
+}
+// A want that can no longer happen goes quietly (no sulk).
+function wantImpossible(run, f, w) {
+  if (w.id === 'revenge') return !(run.nemeses ?? []).some((n) => n.id === w.of);
+  if (w.id === 'mentor') return !run.roster.some((x) => x.id === w.of) || (f.bond && f.bond.id !== w.of);
+  return false;
+}
+function wantDone(run, f) {
+  const def = WANTS[f.want.id];
+  moodShift(f, FIGHTER_WANTS.metMorale);
+  f.renown += FIGHTER_WANTS.metRenown;
+  gainXp(run, f, FIGHTER_WANTS.metXp);
+  log(run, `${f.name} got what they wanted: ${def.label(f.want)}. +${FIGHTER_WANTS.metRenown} Renown, +${FIGHTER_WANTS.metXp} XP, and their spirits lift.`, 'good');
+  chronicle(run, f, `Got what they wanted: ${def.label(f.want)}.`);
+  talk(run, `want-done-${f.id}-${f.want.since}`, [{ speaker: 'fighter', fighterId: f.id, text: def.thanks(f.want) }]);
+  delete f.want;
+}
+function checkWants(run) {
+  for (const f of run.roster) {
+    const w = f.want;
+    if (!w) continue;
+    if (wantMet(run, f, w)) wantDone(run, f);
+    else if (wantImpossible(run, f, w)) delete f.want;
+    else if (w.until !== null && run.week > w.until) {
+      moodShift(f, FIGHTER_WANTS.missMorale);
+      log(run, `${f.name} gives up on what they wanted (${WANTS[w.id].label(w)}).`, 'bad');
+      talk(run, `want-lapsed-${f.id}-${w.since}`, [{ speaker: 'fighter', fighterId: f.id, text: WANTS[w.id].sulk(w) }]);
+      delete f.want;
+    }
+  }
+}
+
+// ---- The rival house ----
+
+// Your archrival: the house that started with the most Glory (no dice, so older saves agree).
+export function archrival(run) {
+  if (!run.houses?.length) return null;
+  run.archrival ??= [...run.houses].sort((a, b) => b.glory - a.glory)[0].id;
+  return run.houses.find((h) => h.id === run.archrival) ?? null;
+}
+const rivalsRng = (run) => (run.rng.rivals ??= createRng(deriveSeed(run.seed, 11)));
+
+// At a month's start: the archrival names a champion (from Bronze), and may eye the Market's best fighter.
+function rivalMonth(run) {
+  const h = archrival(run);
+  if (!h) return;
+  const r = rivalsRng(run);
+  if (run.topTier >= RIVAL.championFrom && !run.rivalChampion) {
+    const f = createFighter(r, { id: newId(run, 'o'), power: 0, takenNames: takenNames(run), classes: run.setup?.classes });
+    f.house = h.id;
+    run.rivalChampion = { f, wins: 0, losses: 0, lastSeen: run.week };
+    remember(run, f);
+    log(run, `${h.name} names its champion: ${f.name}.`, 'warn');
+    talk(run, `rival-named-${f.id}`, [{ speaker: 'rival', text: RIVAL_LINES.named(h.name, f.name) }]);
+  }
+  if (run.market.length && next(r) < RIVAL.poachChance) {
+    const best = [...run.market].sort((a, b) => effectivePower(b) - effectivePower(a))[0];
+    run.poach = { id: best.id, week: run.week };
+    log(run, RIVAL_LINES.eyeing(h.name, best.name), 'warn');
+  }
+}
+// At the end of the month's first week the archrival buys the fighter it eyed, if you didn't.
+function rivalPoach(run) {
+  if (!run.poach || run.week !== run.poach.week) return;
+  const h = archrival(run);
+  const f = run.market.find((x) => x.id === run.poach.id);
+  if (f && h) {
+    run.market = run.market.filter((x) => x !== f);
+    log(run, RIVAL_LINES.bought(h.name, f.name), 'bad');
+  }
+  run.poach = null;
+}
+// The archrival's champion, ready to face you in this bout (a top-arena regular, not a Boss), or null.
+function rivalChampionFor(run, bout) {
+  const c = run.rivalChampion;
+  const h = archrival(run);
+  if (!c || !h || !bout.top || bout.boss || bout.tier === GRAND_TIER || run.week - c.lastSeen < RIVAL.minWeeks) return null;
+  if (next(rivalsRng(run)) >= RIVAL.chance) return null;
+  c.lastSeen = run.week;
+  const f = { ...structuredClone(c.f), id: newId(run, 'o'), injuries: [], alive: true, stress: 0, house: h.id, rivalChampion: true };
+  f.power = bout.oppPower + RIVAL.power + Math.min(RIVAL.maxBonus, c.wins);
+  f.speed = opponentSpeed(run, bout);
+  seasonOpponent(run, f, bout);
+  log(run, RIVAL_LINES.arrives(h.name, f.name), 'warn');
+  talk(run, `rival-arrives-${f.id}`, [{ speaker: 'rival', text: RIVAL_LINES.arrives(h.name, f.name) }]);
+  return f;
+}
+// After a match against the rival champion.
+function rivalChampionResult(run, opp, fighter, tier, won, summary) {
+  const c = run.rivalChampion;
+  const h = archrival(run);
+  if (!c || !h) return;
+  const t = Math.min(tier, CIRCUITS.length);
+  if (won) {
+    c.losses += 1;
+    const gold = RIVAL.beatGold * t;
+    summary.gold += gold;
+    summary.renown += RIVAL.beatRenown;
+    h.glory = Math.max(0, h.glory - RIVAL.beatGlory);
+    summary.rivalChampion = opp.name;
+    chronicle(run, fighter, `Beat ${opp.name}, champion of ${h.name}.`);
+    log(run, `${fighter.name} beats ${opp.name}, champion of ${h.name}! +${gold} Gold, +${RIVAL.beatRenown} Renown, and ${h.name} loses ${RIVAL.beatGlory} Glory.`, 'good');
+    talk(run, `rival-beaten-${opp.id}`, [{ speaker: 'rival', text: RIVAL_LINES.beaten(h.name, opp.name) }]);
+  } else {
+    c.wins += 1;
+    h.glory += RIVAL.winGlory * t;
+    talk(run, `rival-wins-${opp.id}`, [{ speaker: 'rival', text: RIVAL_LINES.wins(h.name, opp.name) }]);
+  }
+}
+// The rival champion died (in the match, or by thumbs down): the house will name another.
+function rivalChampionKilled(run, name) {
+  const h = archrival(run);
+  if (!run.rivalChampion || !h) return;
+  run.rivalChampion = null;
+  talk(run, `rival-killed-${run.week}-${name}`, [{ speaker: 'rival', text: RIVAL_LINES.killed(h.name, name) }]);
+}
+
+// ---- The resistance's requests ----
+
+// At a month's start, while the plot runs: the Gallery first, then lobbying, from REBEL_QUEST.afterMark weeks after the Mark.
+function rebelQuestsMonth(run) {
+  const p = run.plot;
+  if (!plotActive(run) || p.stage === 'mark' || run.week - (p.markWeek ?? run.week) < REBEL_QUEST.afterMark) return;
+  const q = questState(run);
+  const asker = run.roster.find((f) => f.political);
+  const say = (text) => (asker ? { speaker: 'fighter', fighterId: asker.id, text } : { speaker: 'narrator', text: `A note is pushed under your door: "${text}"` });
+  if (!p.galleryAsked) {
+    p.galleryAsked = true;
+    const quest = { id: 'gallery', since: run.week, until: run.week + REBEL_QUESTS.gallery.weeks };
+    q.rebel.push(quest);
+    log(run, `The cause asks: ${REBEL_QUESTS.gallery.goal(quest)}.`, 'event');
+    talk(run, 'rebel-gallery', [say(REBEL_QUESTS.gallery.ask)]);
+    return;
+  }
+  if (!p.lobbyAsked && !q.rebel.some((x) => x.id === 'gallery')) {
+    const policy = Object.entries(LOUNGE.policies).find(([id, pol]) => pol.lean === 'reformist' && !hasPolicy(run, id));
+    if (!policy) return;
+    p.lobbyAsked = true;
+    const quest = { id: 'lobby', policy: policy[0], name: policy[1].name, since: run.week, until: run.week + REBEL_QUESTS.lobby.weeks };
+    q.rebel.push(quest);
+    log(run, `The cause asks: ${REBEL_QUESTS.lobby.goal(quest)}.`, 'event');
+    talk(run, 'rebel-lobby', [say(REBEL_QUESTS.lobby.ask(quest))]);
+  }
+}
+function rebelQuestMet(run, quest) {
+  if (quest.id === 'gallery') return maxLevel(run, 'gallery') > 0;
+  if (quest.id === 'lobby') return hasPolicy(run, quest.policy);
+  return false;
+}
+function checkRebelQuests(run) {
+  const q = run.quests;
+  if (!q?.rebel?.length) return;
+  if (!plotActive(run)) { q.rebel = []; return; }
+  const p = run.plot;
+  const asker = run.roster.find((f) => f.political);
+  const say = (text) => (asker ? { speaker: 'fighter', fighterId: asker.id, text } : { speaker: 'narrator', text });
+  for (const quest of [...q.rebel]) {
+    const def = REBEL_QUESTS[quest.id];
+    if (rebelQuestMet(run, quest)) {
+      const trust = quest.id === 'gallery' ? REBEL_QUEST.galleryTrust : REBEL_QUEST.lobbyTrust;
+      p.trust = clamp(p.trust + trust, 0, PLOT.maxTrust);
+      log(run, `The cause's request is done: ${def.goal(quest)}.`, 'good');
+      talk(run, `rebel-done-${quest.id}`, [say(typeof def.thanks === 'function' ? def.thanks(quest) : def.thanks)]);
+    } else if (run.week > quest.until) {
+      p.trust = clamp(p.trust + REBEL_QUEST.missTrust, 0, PLOT.maxTrust);
+      log(run, `The cause's request lapsed: ${def.goal(quest)}.`, 'bad');
+      talk(run, `rebel-lapsed-${quest.id}`, [say(typeof def.sulk === 'function' ? def.sulk(quest) : def.sulk)]);
+    } else continue;
+    q.rebel = q.rebel.filter((x) => x !== quest);
+    advancePlot(run);
+  }
+}
+// The Whispering Gallery's readout: how much the palace suspects, and what the rising still needs. Null without the Gallery.
+export function risingProgress(run) {
+  const p = run.plot;
+  if (!maxLevel(run, 'gallery') || !p) return null;
+  const s = PLOT.suspicion;
+  const needs = [];
+  if (p.stage === 'favours') {
+    if (p.trust < PLOT.cause.trust) needs.push(`trust ${p.trust}/${PLOT.cause.trust}`);
+    if ((p.favours ?? 0) < PLOT.cause.favours) needs.push(`favours ${p.favours ?? 0}/${PLOT.cause.favours}`);
+    const weeks = PLOT.cause.weeks - (run.week - (p.markWeek ?? run.week));
+    if (weeks > 0) needs.push(`${weeks} more week${weeks === 1 ? '' : 's'}`);
+    if (run.prestigeLevel < PLOT.cause.houseLevel) needs.push(`House level ${PLOT.cause.houseLevel}`);
+  } else if (p.stage === 'cause') {
+    if (p.trust < PLOT.ready.trust) needs.push(`trust ${p.trust}/${PLOT.ready.trust}`);
+    if (!isArmed(run)) needs.push('the barracks armed');
+    if (!run.roster.some((f) => f.id === p.champion)) needs.push('a champion sworn');
+  }
+  return { suspicion: Math.round(p.suspicion), watch: s.watch, informer: s.informer, raid: s.raid, stage: p.ended ? 'ended' : p.stage, needs };
 }
 
 function openArena(run, tier) {
@@ -612,7 +910,8 @@ function plotMonth(run) {
   const contacts = p.freed.filter((c) => !c.caught);
   changeSuspicion(run, PLOT.suspicion.perPrisoner * prisoners + PLOT.suspicion.perContact * contacts.length - PLOT.suspicion.decay
     - (contacts.some((c) => c.cell === 'courier') ? PLOT.suspicion.courier : 0)
-    + SPY.perMonth * run.roster.filter((f) => f.spy).length); // a spy you kept keeps writing (5.4.0)
+    + SPY.perMonth * run.roster.filter((f) => f.spy).length // a spy you kept keeps writing (5.4.0)
+    - effectAt('gallery', maxLevel(run, 'gallery'))); // the Whispering Gallery hears the guards first (5.4.0)
   if (contacts.some((c) => c.cell === 'scribe') && !p.pass && next(run.rng.plot) < 1 / 3) {
     p.pass = true;
     log(run, 'A sealed letter arrives with no name on it. Inside: a pass bearing the Emperor\'s seal.', 'event');
@@ -839,9 +1138,11 @@ export function standings(run) {
 // After each tournament week the rivals fight their own bouts, climb, and their feuds cool.
 function rivalsCompete(run) {
   const r = run.rng.houses;
+  const arch = archrival(run);
   for (const h of run.houses) {
     if (next(r) < 0.5) h.glory += HOUSES.glory.win * h.tier;
-    h.tier = houseTier(h);
+    if (h === arch) h.glory += RIVAL.monthGlory * h.tier; // 5.4.0: your archrival keeps pace, so the year-end purse is a race
+    h.tier = h === arch ? Math.max(houseTier(h), Math.min(run.topTier, CIRCUITS.length)) : houseTier(h);
     if (h.since === run.week - 1) continue; // set during the tournament week just ended: it starts counting next month
     h.feud = Math.max(0, h.feud - 1);
     h.vengeance = Math.max(0, h.vengeance - 1);
@@ -900,6 +1201,7 @@ export function createRun(seed = randomSeed(), setup = {}) {
   refreshMarket(run);
   log(run, `You take charge of a bottom-tier Ludus in ${arenaName(1)}.`);
   applyPatron(run);
+  archrival(run); // 5.4.0: your rival house, fixed now (no dice)
   return run;
 }
 
@@ -1071,6 +1373,7 @@ function resumeTraining(run, f) {
   if (f.trained >= trainCap(run)) { delete f.resume; return; }
   const gain = STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0);
   if (f.stress + gain >= STRESS.overtrained) return;
+  if (run.roster.filter((x) => x !== f && isTraining(x.job)).length >= trainerRooms(run)) return; // every Trainer Room is taken (bug report: two trained in one room)
   f.job = f.resume;
   if (trainBlocker(run, f)) { f.job = 'rest'; return; }
   delete f.resume;
@@ -1206,6 +1509,7 @@ export function advanceWeek(run) {
   if (run.bouts) for (const tier of unlockedTiers(run)) if (tier < run.topTier && run.bouts[tier] === 'open') arenaMovesOn(run, tier);
   // The month's demand is judged now, before a new month can issue the next one (playtest #9: it was issued and judged at once).
   if (tournamentEnds) judgeDemand(run);
+  rivalPoach(run); // the archrival buys the fighter it eyed, at the end of the month's first week (5.4.0)
   run.bouts = null;
   run.brackets = {};
   run.week += 1;
@@ -1216,6 +1520,9 @@ export function advanceWeek(run) {
     refreshArmourer(run);
     plotMonth(run);
     issueDemand(run);
+    wantsMonth(run); // 5.4.0: quests (docs/plan-5.4-quests.md)
+    rivalMonth(run);
+    rebelQuestsMonth(run);
   }
   if (run.plot?.hidden && --run.plot.hidden <= 0) { delete run.plot.hidden; log(run, 'The stranger in the Medbay slipped away before dawn.', 'event'); }
   if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) if (!tributePaid(run)) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
@@ -1233,6 +1540,7 @@ export function advanceWeek(run) {
   if (tournamentEnds) rivalsCompete(run);
   if (tournamentEnds) bondOverFightDay(run);
   if (tournamentEnds && plotActive(run) && run.plot.coup) postponeCoup(run); // the champion never fought
+  checkQuests(run);
   checkLoss(run);
   if (run.status === 'active') {
     const recentBefore = run.recentEvents;
@@ -1577,7 +1885,7 @@ export function exhibition(run, id, otherId) {
   gainXp(run, loser, EXHIBITION.xpLoss);
   const wound = next(r) < EXHIBITION.woundChance;
   if (wound) loser.injuries.push({ tag: 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS.fleshWound });
-  formBond(run, a, b);
+  formBond(run, a, b, 'exhibition');
   log(run, `Exhibition: ${winner.name} beats ${loser.name} in the ring. +${gold} Gold from the crowd${wound ? `; ${loser.name} takes a Flesh Wound` : ''}.`, 'good');
   return { winner: winner.name, loser: loser.name, gold, wound };
 }
@@ -1795,6 +2103,7 @@ export function retire(run, id) {
   assertOk(retireBlocker(run, id));
   const f = findFighter(run, id);
   chronicle(run, f, 'Retired to the Hall of Champions.');
+  if (f.want?.id === 'retire') talk(run, `want-done-${f.id}-${f.want.since}`, [{ speaker: 'fighter', fighterId: f.id, text: WANTS.retire.thanks(f.want) }]); // 5.4.0: what they wanted
   stripFighter(run, f);
   run.roster = run.roster.filter((x) => x !== f);
   run.prestige += RETIRE.prestige;
@@ -2140,6 +2449,10 @@ export function finishMatch(run, match) {
     }
   }
   if (won && opp.nemesis) nemesisFalls(run, opp, fighter, tier, summary); // before the purse is paid
+  if (opp.rivalChampion) {
+    rivalChampionResult(run, opp, fighter, tier, won, summary);
+    if (won && match.result.reason === 'death') rivalChampionKilled(run, opp.name);
+  }
   settleBet(run, match, won, summary);
   payHype(run, match, won, tier, summary);
   if (fighter.risen) { // a Revenant's first fight back (the crowd's chant is in the hype)
@@ -2171,8 +2484,8 @@ export function finishMatch(run, match) {
   const severe = fighter.alive && newInjuries.length && match.a.f.injuries.some((i) => i.weeksLeft === undefined && SEVERE.includes(i.tag));
   if (severe && next(run.rng.growth) < SCAR_CHANCE) {
     const vs = meleeOnly(match.b ?? { f: opp }) ? 'melee' : 'ranged';
-    const enraged = fighter.humor === 'choleric' || (fighter.humor !== 'melancholic' && next(run.rng.growth) < 0.5);
-    const id = enraged ? 'enraged' : 'afeared';
+    const afeared = SCAR_AFEARED[fighter.humor] ?? SCAR_AFEARED.other;
+    const id = afeared > 0 && next(run.rng.growth) < afeared ? 'afeared' : 'enraged';
     if (!(fighter.scars ?? []).some((sc) => sc.vs === vs)) {
       fighter.scars = [...(fighter.scars ?? []), { id, vs }];
       summary.scar = `${SCARS[id].name} (${vs})`;
@@ -2278,7 +2591,7 @@ function offerMercy(run, match, summary, fighter, opp, tier) {
   const house = houseOf(run, opp);
   // The crowd smells blood once the beaten fighter's Death Gate is open (Lions, Unbreakable and Iron Will move it).
   const blood = Boolean(house?.feud || house?.vengeance) || wounds >= deathGateAt(match.b.f, match.b.arena);
-  run.mercy = { fighterId: fighter.id, opp: opp.name, house: house?.id ?? null, crowd: blood ? 'kill' : 'spare', tier, top: Boolean(summary.top), at: run.history.length - 1 };
+  run.mercy = { fighterId: fighter.id, opp: opp.name, house: house?.id ?? null, crowd: blood ? 'kill' : 'spare', tier, top: Boolean(summary.top), at: run.history.length - 1, ...(opp.rivalChampion ? { rivalChampion: true } : {}) };
   summary.mercy = run.mercy.crowd;
 }
 
@@ -2321,7 +2634,8 @@ function rebelBeaten(run, opp, verdict) {
 
 export function resolveMercy(run, choice) {
   assertOk(mercyBlocker(run, choice));
-  const { fighterId, opp, house: houseId, crowd, at, rebel = false } = run.mercy;
+  const { fighterId, opp, house: houseId, crowd, at, rebel = false, rivalChampion = false } = run.mercy;
+  if (rivalChampion && choice === 'kill') rivalChampionKilled(run, opp); // 5.4.0
   const top = run.mercy.top ?? true;
   const favorFor = spareFavor(run);
   if (rebel && plotActive(run)) rebelBeaten(run, { name: opp }, choice);

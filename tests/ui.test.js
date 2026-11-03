@@ -323,3 +323,16 @@ test('the Ludus compares your gladiators in one table, and cards fold their desc
   assert.match(html, /<details class="more card-more"[^>]*><summary>ⓘ What they do<\/summary><div class="trait-text">/, 'the long descriptions sit in a fold-out');
   assert.match(html, /class="chip trait tip/, 'the trait chip is marked as tappable');
 });
+
+test('the Ludus shows the Quests panel, and a fighter\'s want as a chip (5.4.0)', () => {
+  const run = createRun(72);
+  const a = recruit(run, run.market[0].id);
+  run.quests = { steward: 'firstWin', stewardIndex: 1, rebel: [] };
+  a.want = { id: 'room', key: 'bathhouse', item: 'Bathhouse', since: run.week, until: run.week + 6 };
+  const html = ludusTab(run, fakeOdds);
+  assert.match(html, /📜 Quests/);
+  assert.match(html, /The steward<\/b> asks: Win a match/);
+  assert.match(html, /wants: Put a Bathhouse in their room/);
+  assert.match(html, /class="chip want tip"[^>]*>💬 A Bathhouse in their room/);
+  assert.doesNotMatch(html, /Whispering Gallery|The cause/, 'nothing of the plot without it');
+});

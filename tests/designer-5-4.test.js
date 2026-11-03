@@ -149,13 +149,16 @@ test('a political prisoner asks to be freed only while two are in the house (des
 import { EVENT_BY_ID } from '../src/events.js';
 import { chooseEvent, raisable, buildRoom, reanimateBlocker } from '../src/run.js';
 import { WEEKS_PER_YEAR } from '../src/calendar.js';
-test('the Emperor\'s spy: once a career from Year 2; executing them leaves a body the Temple of Vulcan can raise', () => {
+test('the Emperor\'s spy: once a career, only with a rebel in the house; executing them leaves a body the Temple of Vulcan can raise', () => {
   const run = createRun(51);
   const a = recruit(run, run.market[0].id);
-  recruit(run, run.market[0].id);
+  const b = recruit(run, run.market[0].id);
   const card = EVENT_BY_ID.emperorsSpy;
-  assert.equal(card.when(run), false, 'not in the first year');
   run.week = WEEKS_PER_YEAR + 2;
+  assert.equal(card.when(run), false, 'no rebel in place: no spy, even late in the game (the designer)');
+  run.plot = { stage: 'mark', trust: 0, suspicion: 0, refusals: 0, seen: [], cells: [], champion: null, freed: [], nextAt: 99, ended: null };
+  b.political = { cell: 'courier' };
+  run.roster.push({ ...structuredClone(a), id: 'fx', name: 'Extra', political: undefined }); // a third fighter (the Quarters hold two)
   assert.equal(card.when(run), true);
   run.event = { id: 'emperorsSpy', f: a.id };
   chooseEvent(run, 1);
@@ -166,6 +169,7 @@ test('the Emperor\'s spy: once a career from Year 2; executing them leaves a bod
   run.prestige = 40; run.prestigeLevel = 3; run.gold = 100;
   buildRoom(run, 'vulcan');
   assert.ok(raisable(run).some((x) => x.id === a.id));
+  run.roster = run.roster.filter((x) => x.id !== 'fx'); // a free bed for the Revenant
   assert.equal(reanimateBlocker(run, a.id), null);
 });
 
@@ -197,4 +201,18 @@ test('a room\'s decor lowers Stress by at most 30 a week (bug report: a furnishe
   f.stress = 30;
   advanceWeek(run);
   assert.equal(f.stress, 30 + STRESS.train - 30, 'training now builds Stress in a furnished room only as fast as the cap allows');
+});
+
+import { demandMet as demandMetFn } from '../src/run.js';
+test('the "Bloodied Victory" demand is also met by a win where the opponent dies (designer, 5.4.0)', () => {
+  const run = createRun(81);
+  run.demand = { id: 'bloodied', week: 0 };
+  run.history = [{ week: 1, won: true, bloodied: false, kill: false }];
+  assert.equal(demandMetFn(run), false);
+  run.history.push({ week: 2, won: true, kill: true });
+  assert.equal(demandMetFn(run), true, 'killed in the fight');
+  run.history = [{ week: 2, won: true, verdict: 'kill' }];
+  assert.equal(demandMetFn(run), true, 'thumbs down');
+  run.history = [{ week: 2, won: true, bloodied: true }];
+  assert.equal(demandMetFn(run), true, 'still met by 2+ injuries');
 });

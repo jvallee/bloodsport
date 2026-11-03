@@ -120,6 +120,12 @@ function scenesSeen() {
 function markSceneSeen(id) {
   storage.set(scenesKey(careerId), JSON.stringify([...new Set([...scenesSeen(), id])]));
 }
+// A talk beat (src/run.js talk) with its fighter's name and face; a fighter no longer in the house still speaks, by name.
+function talkBeat(b) {
+  if (!b.fighterId) return { speaker: b.speaker, text: b.text };
+  const f = run.roster.find((x) => x.id === b.fighterId) ?? run.fallen.find((x) => x.id === b.fighterId) ?? (run.retired ?? []).find((x) => x.id === b.fighterId);
+  return f?.kind ? { speaker: 'fighter', fighter: { ...f, injuries: f.injuries ?? [] }, text: b.text } : { speaker: 'narrator', text: f ? `${f.name}: "${b.text}"` : b.text };
+}
 // The Emperor drops in at turning points, once each per career, when nothing else is on screen.
 function checkScene() {
   if (scene || eventResult || match || setupChoice || showHelp || !scenesSeen().includes('opening')) return; // the Emperor's visits come after the opening
@@ -133,6 +139,13 @@ function checkScene() {
   if (judged && !judged.met && !scenesSeen().includes(`demand-missed-${judged.issued}`)) {
     markSceneSeen(`demand-missed-${judged.issued}`);
     scene = { id: 'demand-missed', beat: 0, beats: demandMissedScene(DEMANDS[judged.id].goal, judged.favor) };
+    return;
+  }
+  // Quests and rivals (5.4.0): what the rules said someone says (run.talk), each once per career.
+  const said = (run.talk ?? []).find((t) => !scenesSeen().includes(`talk-${t.key}`));
+  if (said) {
+    markSceneSeen(`talk-${said.key}`);
+    scene = { id: 'talk', beat: 0, beats: said.beats.map(talkBeat) };
     return;
   }
   // A new demand from the Emperor (fun idea #4): he says it himself.

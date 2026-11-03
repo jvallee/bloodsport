@@ -142,3 +142,22 @@ test('a fighter switched to Rest goes back to the same training once they can (p
   advanceWeek(run);
   assert.equal(f.job, 'rest', 'a Rest the player chose stays');
 });
+
+test('a fighter going back to training waits for a free Trainer Room (bug report, seed 768937813: two trained in one room)', () => {
+  const run = createRun(1);
+  const a = recruit(run, run.market[0].id);
+  const b = recruit(run, run.market[0].id);
+  run.gold = 1;
+  setJob(run, b.id, 'trainSpeed');
+  run.gold = 0;
+  advanceWeek(run); // b can't pay: rests, and remembers the training job
+  assert.equal(b.job, 'rest');
+  run.gold = 100;
+  setJob(run, a.id, 'trainPower'); // a takes the only room
+  advanceWeek(run);
+  assert.equal(b.job, 'rest', 'the room is taken: b keeps resting');
+  assert.equal(run.roster.filter((f) => f.job.startsWith('train')).length, 1);
+  setJob(run, a.id, 'rest');
+  advanceWeek(run);
+  assert.equal(b.job, 'trainSpeed', 'the room is free again: b goes back');
+});

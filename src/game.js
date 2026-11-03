@@ -5,7 +5,7 @@ import { playRound, throwTowel, useSignature } from './fight.js';
 import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom, pray, reanimate, exhibition, host, enact,
   assignDecor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
-  recordMatchProgress, buyItem, useItem, placeBet, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy,
+  recordMatchProgress, buyItem, useItem, placeBet, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy, checkQuests,
 } from './run.js';
 
 // A finished match is settled at once (the fight screen shows the full report). Returns the summary when it settles.
@@ -88,5 +88,7 @@ export const isGameAction = (name) => Object.hasOwn(GAME_ACTIONS, name);
 export function applyGameAction(state, name, data = {}) {
   const d = Object.fromEntries(Object.entries(data).filter(([k, v]) => k !== 'action' && v !== undefined).map(([k, v]) => [k, String(v)]));
   state.run.actions?.push(Object.keys(d).length ? [name, d] : [name]);
-  return GAME_ACTIONS[name](state, d);
+  const result = GAME_ACTIONS[name](state, d);
+  checkQuests(state.run); // a quest done by this action is noticed at once (5.4.0)
+  return result;
 }

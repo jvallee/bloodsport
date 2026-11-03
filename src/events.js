@@ -7,7 +7,6 @@
 // The first choice is the cautious one (the careful bot takes it). A choice with `cost` needs that much Gold.
 
 import { PLOT_EVENTS } from './plot.js';
-import { WEEKS_PER_YEAR } from './calendar.js';
 
 export const EVENT_CHANCE = { season: 0.25, winter: 0.2 }; // v5: was 0.3 (playtest #5: too many)
 // Event Morale is a mood that shifts where Morale is heading for this many weeks (a one-off bump would drift away in a week).
@@ -154,7 +153,7 @@ export const EVENTS = [
     when: (run) => run.roster.some((x) => x.injuries.length),
     target: (run) => run.roster.filter((x) => x.injuries.length),
   },
-  // The Emperor's spy (the designer, 5.4.0): once a career, from Year 2. One of your fighters has been reporting on your
+  // The Emperor's spy (the designer, 5.4.0): once a career, once a rebel is in the house. One of your fighters has been reporting on your
   // house. Execute them (their body is kept, so the Temple of Vulcan can raise it), or let them be. PLACEHOLDER words.
   {
     id: 'emperorsSpy', who: 'any', title: "The Emperor's spy",
@@ -163,7 +162,8 @@ export const EVENTS = [
       { label: 'Let them be, and mind what you say', effects: { favor: 3, spy: 'keep' } },
       { label: 'Execute ${f}', effects: { spy: 'execute', morale: { to: 'all', n: -5 } } },
     ],
-    when: (run) => run.week >= WEEKS_PER_YEAR && !run.spyFound && run.roster.filter((x) => !x.political).length >= 2,
+    // Only once a rebel is in place (the designer, 5.4.0): the hidden plot runs and a political prisoner is in the house.
+    when: (run) => Boolean(run.plot) && !run.plot.ended && run.roster.some((x) => x.political) && !run.spyFound && run.roster.filter((x) => !x.political).length >= 2,
     target: (run) => run.roster.filter((x) => !x.political && x.id !== run.plot?.champion),
   },
   {

@@ -1,6 +1,7 @@
 // Ludus screens: top bar, week planner, fight day across arenas, estate, market and storeroom, help, Codex.
 
 import { MAX_CAREERS } from '../careers.js';
+import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
 import { REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
@@ -8,10 +9,10 @@ import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker,
-  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold,
+  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardGold, risingProgress,
 } from '../run.js';
 import {
-  plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, upgradeBlocker, levelInfo, maxLevel, effectAt,
+  plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, buildingKnown, upgradeBlocker, levelInfo, maxLevel, effectAt,
 } from '../ludus.js';
 import { describeOdds } from '../odds.js';
 import { fighterWarnings, arenaStakes } from '../explain.js';
@@ -312,6 +313,24 @@ export function introModal(page, pages) {
 
 // ---------- Ludus tab ----------
 
+// Quests (5.4.0): the steward's assignment, what fighters want, the cause's requests, and the Whispering Gallery's readout.
+function questsPanel(run) {
+  const task = stewardTask(run);
+  const weeksLeft = (until) => (until === null || until === undefined ? '' : ` <small>· ${Math.max(0, until - run.week)} wk left</small>`);
+  const wants = run.roster.filter((f) => f.want).map((f) => `<li>💬 <b>${esc(f.name)}</b> wants: ${esc(WANTS[f.want.id].goal(f.want))}${weeksLeft(f.want.until)}</li>`);
+  const cause = (run.quests?.rebel ?? []).map((q) => `<li>⛓ <b>The cause</b> asks: ${esc(REBEL_QUESTS[q.id].goal(q))}${weeksLeft(q.until)}</li>`);
+  const rising = risingProgress(run);
+  const gallery = rising ? `<div class="gallery-readout" title="${esc(GALLERY_INTRO)}">👁 <b>Whispering Gallery</b> · the palace's suspicion <b>${rising.suspicion}</b>/100 <small>(watched at ${rising.watch}, informers at ${rising.informer}, a raid at ${rising.raid})</small>
+    <span class="susbar"><span style="width:${Math.min(100, rising.suspicion)}%"></span></span>
+    <div>The rising: <b>${esc(rising.stage === 'favours' ? 'small favours' : rising.stage === 'cause' ? 'the cause' : rising.stage === 'ready' ? 'ready' : rising.stage)}</b>${rising.needs.length ? ` · still needs ${esc(rising.needs.join(', '))}` : ''}</div></div>` : '';
+  const items = [
+    task ? `<li>🏛 <b>The steward</b> asks: ${esc(task.goal)}${stewardGold(task) ? ` <small>· ${stewardGold(task)} Gold</small>` : ''}</li>` : '',
+    ...wants, ...cause,
+  ].filter(Boolean);
+  if (!items.length && !gallery) return '';
+  return `<details class="more quests" data-key="quests" open><summary>📜 Quests</summary><ul class="quest-list">${items.join('')}</ul>${gallery}</details>`;
+}
+
 function weekPanel(run) {
   const until = weeksUntilTournament(run.week);
   const status = run.boutPending
@@ -341,6 +360,7 @@ function weekPanel(run) {
       ${blocked && !run.boutPending ? `<div class="why-not">${esc(blocked)}</div>` : ''}
       <p class="sub">Each fighter does their job once per week. Jobs stay set until you change them.
         ${tributePaid(run) ? '<span class="good">✔ Tribute already paid for this year.</span> The next one is due next winter.' : `Tribute of <b>${tributeDue(run)} Gold</b> is due in ${toTribute} week${toTribute === 1 ? '' : 's'}. ${buttonWhy('Pay now', 'pay-tribute', {}, payTributeBlocker(run), 'btn small')}`}</p>
+      ${questsPanel(run)}
       ${standingsTable(run)}
       ${friendsOutside(run)}
       <h3 class="mini">House log</h3>
@@ -456,7 +476,7 @@ function compareTable(run) {
     const wounds = f.injuries.length ? `<span class="bad" title="${esc(f.injuries.map((i) => INJURY_BY_TAG[i.tag].name).join(', '))}">${f.injuries.length}</span>` : '–';
     const stressCls = f.stress >= STRESS.overtrained ? ' class="bad"' : '';
     const moraleCls = f.morale < MORALE.restless ? ' class="bad"' : f.morale >= MORALE.inspired ? ' class="good"' : '';
-    return `<tr><td><a href="#card-${esc(f.id)}">${esc(f.name)}</a><small>Lv ${f.level ?? 1}</small></td><td>${effectivePower(f)}</td><td>${f.speed + gearSpd(f)}</td><td${stressCls}>${f.stress}</td><td${moraleCls}>${f.morale}</td><td>${wounds}</td><td>${f.trained}/${trainCap(run)}</td><td>${JOB_LABELS[f.job] ?? f.job}</td></tr>`;
+    return `<tr><td><a href="#card-${esc(f.id)}">${esc(f.name)}</a>${f.want ? ` <span title="${esc(WANTS[f.want.id].goal(f.want))}">💬</span>` : ''}<small>Lv ${f.level ?? 1}</small></td><td>${effectivePower(f)}</td><td>${f.speed + gearSpd(f)}</td><td${stressCls}>${f.stress}</td><td${moraleCls}>${f.morale}</td><td>${wounds}</td><td>${f.trained}/${trainCap(run)}</td><td>${JOB_LABELS[f.job] ?? f.job}</td></tr>`;
   }).join('');
   return `<details class="more compare" data-key="compare" open><summary>📊 Compare</summary>
     <div class="compare-wrap"><table class="compare-table"><thead><tr><th>Gladiator</th><th title="Power, with gear and Titles">Pow</th><th title="Speed, with gear">Spd</th><th title="Stress (50+: Overtrained)">Str</th><th title="Morale (under ${MORALE.restless}: won't train)">Mor</th><th title="Injuries">Inj</th><th title="Training points used of the Trainer cap">Trn</th><th>Job</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
@@ -601,7 +621,7 @@ function buildingCard(run, b) {
 }
 
 function emptyPlot(run) {
-  const options = Object.entries(BUILDINGS).map(([type, def]) => {
+  const options = Object.entries(BUILDINGS).filter(([type]) => buildingKnown(run, type)).map(([type, def]) => {
     const reason = buildBlocker(run, type);
     return `<button class="build-opt" data-action="build" data-type="${type}" ${reason ? `disabled title="${esc(reason)}"` : ''}>
       <span>${BUILDING_ICON[def.icon]} <b>${esc(def.name)}</b> · ${def.cost[0]} Gold</span><small>${esc(def.effect(def.per[0]))}${reason ? ` · ${esc(reason)}` : ''}</small></button>`;

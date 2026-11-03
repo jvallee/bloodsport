@@ -18,14 +18,15 @@ import {
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
-  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn,
+  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardGold, risingProgress, archrival,
 } from '../src/run.js';
-import { build, upgrade, buildBlocker, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
+import { build, upgrade, buildBlocker, buildingKnown, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
 import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
 import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene, dueRebelStage } from '../src/dialogue.js';
+import { WANTS, REBEL_QUESTS } from '../src/quests.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText, slotLabel } from '../src/codex.js';
 
 // A card choice's visible stakes. Plot cards (v6) show nothing rather than "Nothing happens" when only hidden things change.
@@ -69,6 +70,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   fight <id> [tier]             send a fighter to an arena on tournament week (default: your top arena)
   pay-tribute                   pay this year's tribute early
   houses                        the rival houses' standings
+  quests                        the steward's assignment, what your fighters want, and any other requests
   story <id> | retire <id>      a fighter's chronicle; retire a veteran (level 4+ or a Title) to the Hall of Champions
   treat <id> <injury#>          choose which injury the Medbay heals first
   augment <id> <injury#>        cyborg surgery on a Maimed or Blinded wound (Medbay level 2+)
@@ -268,6 +270,15 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       scenesSeen.push(stage.id);
       out.push(sceneText(stage.id, stage.beats));
     }
+    // Quests and rivals (5.4.0): what the rules said someone says, once each.
+    for (const t of run.talk ?? []) {
+      if (scenesSeen.includes(`talk-${t.key}`)) continue;
+      scenesSeen.push(`talk-${t.key}`);
+      out.push(sceneText('talk', t.beats.map((b) => {
+        const f = b.fighterId && [...run.roster, ...run.fallen, ...(run.retired ?? [])].find((x) => x.id === b.fighterId);
+        return f ? { speaker: 'fighter', fighter: f, text: b.text } : { speaker: b.speaker, text: b.text };
+      })));
+    }
     if (run.mercy) out.push(`\n${mercyText()}`);
     if (run.status !== 'active') {
       const fought = run.history.filter((h) => !h.skipped && !h.forfeit);
@@ -339,7 +350,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       out.push(`[${b.id}] ${def.name} Lv ${b.level}: ${def.effect(def.per[b.level - 1])}${extra}\n     ${up}`);
     }
     out.push('\nBuild on a free plot:');
-    for (const [type, def] of Object.entries(BUILDINGS)) {
+    for (const [type, def] of Object.entries(BUILDINGS).filter(([t]) => buildingKnown(run, t))) {
       const why = buildBlocker(run, type);
       out.push(`  ${type} · ${def.name} · ${def.cost[0]} Gold: ${def.effect(def.per[0])}${why ? ` · blocked: ${why}` : ''}`);
     }
@@ -664,6 +675,19 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     kill: () => {
       const v = resolveMercy(run, 'kill');
       return `Thumbs down. +${v.renown} Renown${v.morale ? `, +${v.morale} Morale` : ''}${v.mark ? `, earns the mark ${v.mark}` : ''}.${v.feud ? ` ${v.feud}` : ''}${v.crowd === 'kill' ? ' The crowd roars its approval.' : ''}\n\n${look()}`;
+    },
+    quests: () => {
+      const task = stewardTask(run);
+      const lines = ['-- Quests --'];
+      if (task) lines.push(`  The steward asks: ${task.goal}${stewardGold(task) ? ` (${stewardGold(task)} Gold)` : ''}.`);
+      for (const f of run.roster.filter((x) => x.want)) lines.push(`  ${f.name} [${f.id}] wants: ${WANTS[f.want.id].goal(f.want)}${f.want.until != null ? ` (${Math.max(0, f.want.until - run.week)} weeks left)` : ''}.`);
+      for (const q of run.quests?.rebel ?? []) lines.push(`  The cause asks: ${REBEL_QUESTS[q.id].goal(q)} (${Math.max(0, q.until - run.week)} weeks left).`);
+      const rising = risingProgress(run);
+      if (rising) lines.push(`  Whispering Gallery: suspicion ${rising.suspicion}/100 (watched at ${rising.watch}, informers at ${rising.informer}, raid at ${rising.raid}); the rising: ${rising.stage}${rising.needs.length ? `, still needs ${rising.needs.join(', ')}` : ''}.`);
+      const c = run.rivalChampion;
+      const arch = archrival(run);
+      if (arch) lines.push(`  Your rival house: ${arch.name} (Glory ${arch.glory})${c ? `, champion ${c.f.name} (${c.wins} wins and ${c.losses} losses against you)` : ''}.`);
+      return lines.length > 1 ? lines.join('\n') : '-- Quests --\n  Nothing asked of you yet.';
     },
     houses: () => [`-- The houses (Glory: a win is worth its arena tier, ×3 for a Boss; year-end purse ${HOUSES.yearPurse.map((g) => g * dateOf(run.week).year).join('/')} Gold by place) --`, ...standings(run).map((h, i) => `  ${i + 1}. ${h.name}${h.you ? ' (you)' : ''} · ${arenaName(Math.min(h.tier, 4))} · Glory ${h.glory}${h.feud ? ` · feud ${h.feud} months` : ''}${h.vengeance ? ` · vengeance ${h.vengeance} months` : ''}`)].join('\n'),
     withdraw: ([tier]) => {

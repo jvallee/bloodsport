@@ -667,7 +667,9 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 /* The Ludus on a wide screen: Your gladiators and Fight day scroll on their own (the designer, 5.4.0), below the sticky
    top bar and tabs. On narrow screens the columns stack and the page scrolls as before. */
 @media (min-width: 761px) {
-  .grid.ludus > .panel.roster, .grid.ludus > .panel.bout { position: sticky; top: 100px; max-height: calc(100vh - 116px); overflow-y: auto; overscroll-behavior: contain; }
+  /* No overscroll containment: a column scrolled to its end hands the wheel to the page, which brings the column's foot into view
+     (the designer: from the top of the page a column's bottom was out of reach). */
+  .grid.ludus > .panel.roster, .grid.ludus > .panel.bout { position: sticky; top: 100px; max-height: calc(100vh - 116px); overflow-y: auto; }
 }
 
 /* Fewer words on the cards (a phone playtester, 5.4.0): chips that explain something carry ⓘ (tap or hover for the
@@ -692,3 +694,16 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
   .compare-table th, .compare-table td { padding: 4px 3px; }
   .compare-table td small { display: none; }
 }
+
+/* Quests (5.4.0) */
+.quests > summary { font-size: 13px; }
+.quest-list { list-style: none; padding: 0; margin: 6px 0; font-size: 13px; }
+.quest-list li { padding: 4px 0; border-bottom: 1px solid var(--line); }
+.quest-list small { color: var(--muted); }
+.gallery-readout { font-size: 13px; padding: 8px; border: 1px solid #5a4a6a; border-radius: 8px; background: #140f17; margin: 6px 0; }
+.gallery-readout small { color: var(--muted); }
+.susbar { display: block; height: 6px; background: #241b29; border-radius: 3px; margin: 6px 0; overflow: hidden; }
+.susbar span { display: block; height: 100%; background: linear-gradient(90deg, #6a8a5a, #c0a040 40%, #c0362c 80%); }
+.chip.want { border-color: #8a7a4a; }
+.speaker-rival { border-color: #b5543c; }
+.speaker-rival .dialogue-name { color: #e08a6a; }

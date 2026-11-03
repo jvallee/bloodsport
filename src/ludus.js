@@ -32,9 +32,12 @@ export const oracleLevel = (run) => maxLevel(run, 'oracle');
 export const liaisonLevel = (run) => maxLevel(run, 'liaison');
 export const stressRelief = (run) => effectAt('entertainment', maxLevel(run, 'entertainment'));
 
+// A secret building (5.4.0: the Whispering Gallery) exists for the house only once the resistance has asked for it.
+export const buildingKnown = (run, type) => Boolean(BUILDINGS[type]) && (!BUILDINGS[type].secret || Boolean(run.plot?.galleryAsked) || ofType(run, type).length > 0);
+
 export function buildBlocker(run, type) {
   const def = BUILDINGS[type];
-  if (!def) return 'Unknown building.';
+  if (!def || !buildingKnown(run, type)) return 'Unknown building.';
   if (run.status !== 'active') return 'The run is over.';
   if (run.inMatch) return 'A match is in progress.';
   if (run.prestigeLevel < def.req[0]) return `Unlocks at Prestige level ${def.req[0]}.`;

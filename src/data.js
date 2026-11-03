@@ -138,6 +138,8 @@ export const SCARS = {
   hardened: { name: 'Battle-Hardened', desc: 'Won bloodied and lived: −5% chance to be injured.', self: -5000 },
 };
 export const SCAR_CHANCE = 0.5; // chance a survived severe wound (Concussed or worse) leaves a scar
+// The chance a scar is Afeared, by humour (else Enraged). 5.4.0, the designer: Afeared was half of all scars; now about 1 in 5.
+export const SCAR_AFEARED = { choleric: 0, melancholic: 0.5, other: 0.15 };
 export const SEVERE = ['concussed', 'poisoned', 'maimed', 'senseless', 'blinded'];
 
 // Cyborg surgery (Medbay Lv 2+): replace a Maimed limb or Blinded eye. The crowd distrusts machines.
@@ -353,6 +355,8 @@ export const BUILDINGS = {
   temple: { unique: true, name: 'Temple of Fortuna', dept: 'training', icon: 'temple', cost: [8, 12], req: [2, 3], per: [3, 1], effect: (n) => `Pray for a fighter's level-up perks: ${n} Gold for three new choices` },
   // Fun idea #7: host the Senate for Influence, and spend it on policies.
   lounge: { unique: true, name: 'Patron Lounge', dept: 'scouting', icon: 'goblet', cost: [12, 18], req: [3, 4], per: [1, 2], effect: (n) => `Host the Senate once a month for Influence; up to ${n} polic${n > 1 ? 'ies' : 'y'} in force at a time` },
+  // secret: only shown once the resistance asks for it (5.4.0). The name is the designer's to change.
+  gallery: { unique: true, secret: true, name: 'Whispering Gallery', dept: 'scouting', icon: 'eye', cost: [10], req: [2], per: [2], effect: (n) => `Shows how much the palace suspects your house and how close the rising is; suspicion −${n} a month` },
   exhibition: { unique: true, name: 'Exhibition Ring', dept: 'training', icon: 'swords', cost: [10], req: [2], per: [1], effect: () => 'On tournament day, two fighters who aren\'t competing can fight an exhibition bout: XP for both, Renown and Gold for the winner, and no risk of death' },
   // 5.3.0: replaces the Stables (a save with Stables gets this at the same level). Name and words are PLACEHOLDER for the designer.
   vulcan: { unique: true, name: 'Unnatural Temple of Vulcan', dept: 'medical', icon: 'forge', cost: [10, 16], req: [2, 3], per: [4, 12], effect: (n) => `Raises a fighter killed in the arena as a Revenant, up to ${n} weeks after their death`, extra: (lv) => (lv >= 2 ? 'Revenants come back with all their strength' : 'Revenants come back with 1 less Power') },
@@ -535,10 +539,11 @@ export const REANIMATE = { price: 6, perTier: 4, power: -1, morale: 50 };
 // risen: a Revenant's first fight back, when the crowd chants the name it buried (fun idea, 5.3.0).
 export const HYPE = { risen: 20, upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 5, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
 export const BOND = { comfort: 8, mentorGap: 3, mentorXp: 1, grief: -20 };
-export const DEMAND = { chance: 0.5, fromWeek: 8, favor: 3, goldPerTier: 3, missFavor: -4 }; // 5.3.0: was +4 / 4 Gold × tier / −2 (swept once demands worked: see docs/fight-rules.md)
+// bloodiedKills (5.4.0, the designer): a win where the opponent dies also meets the Bloodied Victory demand.
+export const DEMAND = { bloodiedKills: true, chance: 0.5, fromWeek: 8, favor: 2, goldPerTier: 2, missFavor: -4 }; // 5.3.0: was +4 / 4 Gold × tier / −2 (swept once demands worked: see docs/fight-rules.md)
 export const DEMANDS = {
   topWin: { goal: 'Win a match in your top arena', say: 'My guests are bored, Lanista. Give them a victory in your top arena this month.' },
-  bloodied: { goal: 'Win a Bloodied Victory (a win with 2+ injuries)', say: 'I want to see blood on a winner. Win me a bloody victory this month.' },
+  bloodied: { goal: 'Win a Bloodied Victory (a win with 2+ injuries, or one where your opponent dies)', say: 'I want to see blood on a winner. Win me a bloody victory this month.' },
   kill: { goal: 'Finish a beaten opponent (thumbs down)', say: 'The crowd grows soft. Give them a death this month.' },
   spare: { goal: 'Spare a beaten opponent (thumbs up)', say: 'The Senate calls me cruel. Show them my clemency: spare someone in the arena this month.' },
   twoArenas: { goal: 'Win in two different arenas on fight day', say: 'Show me the depth of your house. Win in two of my arenas this month.' },
@@ -547,7 +552,7 @@ export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] }
 // Swept (100 short careers each): ×1.5 purses 13% won; ×2 purses and ×2.5 Prestige 49% (92 weeks); a head start (+20 Gold, House
 // level 2) 30%; both 44% in 82 weeks (full careers 109); ×2 training 99% (too easy). `train` must keep Power whole.
 // 5.3.0: purses ×2 → ×1.75 once demands worked and the head start became House level 2 (short careers 59% → 43% in probes).
-export const SHORT = { purse: 1.75, prestige: 2.5, startGold: 20, startPrestige: 12, train: 1 };
+export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 1 };
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],
@@ -558,6 +563,20 @@ export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClu
 // The thread. gap: weeks between plot cards. cause/ready: trust needed for each stage (cause also needs this House level).
 // suspicion: hidden 0–100, its monthly drift and the levels where its signs show. contactWin: win chance per contact in the
 // coup Final (×1000 = %), up to contactMax.
+// Quests (5.4.0, the designer's request; words in src/quests.js). The steward's first assignment comes in this week.
+// goldScale: × each assignment's Gold in src/quests.js (a balance lever).
+export const QUESTS = { stewardFromWeek: 4, goldScale: 0.5 };
+// What fighters want: a new want some months (its own dice), at most `max` at a time. Met: a mood of +metMorale for 4 weeks,
+// Renown and XP. Lapsed: a mood of missMorale. Room wants ask for one of `roomItems`.
+export const FIGHTER_WANTS = { chance: 0.35, max: 2, metMorale: 10, metRenown: 2, metXp: 2, missMorale: -10, roomItems: ['bathhouse', 'shrine', 'trophy'] };
+// The rival house (your archrival climbs with you). Its champion is named once your top arena is `championFrom`, and comes back
+// as a top-arena opponent (not a Boss) after `minWeeks`, `chance` a time, at the bout's Power + `power` + 1 per win over you
+// (up to `maxBonus`). Beating them: `beatGold` × tier Gold, `beatRenown` Renown, and `beatGlory` Glory taken from their house.
+// `poachChance`: some months the house buys the Market's best fighter at the end of the first week. `monthGlory`: × tier.
+export const RIVAL = { championFrom: 2, minWeeks: 12, chance: 0.35, power: 1, maxBonus: 2, beatGold: 4, beatRenown: 3, beatGlory: 5, winGlory: 3, poachChance: 0.15, monthGlory: 2 };
+// The resistance's requests: trust when met (gallery and lobby), trust lost when they lapse; asked this many weeks after the Mark.
+export const REBEL_QUEST = { galleryTrust: 1, lobbyTrust: 2, missTrust: -1, afterMark: 4 };
+
 // The Emperor's spy (5.4.0): executing them lowers the hidden plot's suspicion by `suspicion`; keeping them raises it.
 export const SPY = { suspicion: 15, perMonth: 2 }; // perMonth: suspicion each month while a spy you kept is in the house
 

@@ -64,7 +64,7 @@ const BASICS = [
   ['festivals', "Gods' Days", `Some months end in a festival tournament that favours a style or pays out more. ${Object.entries(FESTIVALS).map(([month, f]) => `${f.name} (${f.god}, end of ${month}): ${f.desc}`).join(' ')}`],
   ['challenger', 'Challengers', `From the Silver Coliseum on, famous fighters draw tougher opponents in your top arena: +1 Power for the opponent per ${ECONOMY.challengerRenown} Renown of the fighter they face, up to +${ECONOMY.challengerMax}.`],
   ['houses', 'Rival houses', `Three rival houses climb the same arenas, and every opponent fights for one of them. Glory ranks the houses: a win is worth its arena tier (three times that for a Boss). Kill a house's fighter and they feud with you: +1 Power against you for ${HOUSES.feudMonths} months. Lose a fighter to them and your house fights for vengeance: +5% win chance against them for ${HOUSES.feudMonths} months. A grudge cools by one month at every fight day; the standings and each opponent's card show how long is left. The Grand Tournament's champion fights for the leading rival. At the start of each winter the Emperor pays a year-end purse to the top two houses in the standings (8 and 4 Gold × the year), before tribute is collected.`],
-  ['scars', 'Scars', `Surviving a severe wound (Concussed or worse) can leave a lasting scar against the style of fighter who caused it, melee or ranged. ${Object.values(SCARS).map((x) => `${x.name}: ${x.desc}`).join(' ')} Choleric fighters turn Enraged; Melancholic ones Afeared.`],
+  ['scars', 'Scars', `Surviving a severe wound (Concussed or worse) can leave a lasting scar against the style of fighter who caused it, melee or ranged. ${Object.values(SCARS).map((x) => `${x.name}: ${x.desc}`).join(' ')} Most scars leave a fighter Enraged. Choleric fighters never turn Afeared; Melancholic ones do half the time, others only now and then.`],
   ['cyborg', 'Cyborg surgery', `With a Medbay level 2+, a Maimed limb or a Blinded eye can be replaced for good. ${Object.values(AUGMENTS).map((x) => `${x.name}: ${x.desc}`).join(' ')} It costs Gold and 1 Renown: the crowd distrusts machines.`],
   ['retire', 'Retirement', 'A veteran (level 4+ or holding a Title) can retire to the Hall of Champions: the house gains Prestige and the roster takes heart. The Hall remembers them across careers.'],
   ['signatures', 'Signature moves', `From level ${SIGNATURE.level}, every fighter can unleash their class's signature move once per fight, for one round (the ★ button on the fight screen, before any round). ${Object.entries(SIGNATURES).map(([k, s]) => `${CLASSES[k].name}: ${s.name} (${s.desc})`).join(' ')} Seasoned opponents have theirs too (from level ${SIGNATURE.bossLevel}: in every round of a Boss tournament, otherwise only in a tournament's Final), and save it for when they fall behind, or for Round 3.`],
@@ -181,7 +181,7 @@ export function discover(codex, run) {
     for (const g of [f.gear?.weapon, f.gear?.armor]) if (g) keys.push(`gear:${g}`);
   }
   for (const g of [...(run.inventory?.gear ?? []), ...(run.armourerStock ?? [])]) keys.push(`gear:${g}`);
-  for (const [id, b] of Object.entries(BUILDINGS)) if (run.prestigeLevel >= b.req[0]) keys.push(`building:${id}`);
+  for (const [id, b] of Object.entries(BUILDINGS)) if (run.prestigeLevel >= b.req[0] && !b.secret) keys.push(`building:${id}`); // a secret building only once built
   for (const t of unlockedTiers(run)) {
     if (boutFor(run, t).boss || oracleLevel(run) >= 2) keys.push(`debuff:${run.arenas[t].debuff}`);
   }
