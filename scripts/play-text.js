@@ -18,7 +18,7 @@ import {
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
-  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardGold, risingProgress, archrival, checkQuests,
+  bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardRewardText, risingProgress, archrival, checkQuests,
 } from '../src/run.js';
 import { build, upgrade, buildBlocker, buildingKnown, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
@@ -690,7 +690,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     quests: () => {
       const task = stewardTask(run);
       const lines = ['-- Quests --'];
-      if (task) lines.push(`  The steward asks: ${task.goal}${stewardGold(task) ? ` (${stewardGold(task)} Gold)` : ''}.`);
+      if (task) lines.push(`  The steward asks: ${task.goal}${stewardRewardText(task) ? ` (${stewardRewardText(task)})` : ''}.`);
       for (const f of run.roster.filter((x) => x.want)) lines.push(`  ${f.name} [${f.id}] wants: ${WANTS[f.want.id].goal(f.want)}${f.want.until != null ? ` (${Math.max(0, f.want.until - run.week)} weeks left)` : ''}.`);
       for (const q of run.quests?.rebel ?? []) lines.push(`  The cause asks: ${REBEL_QUESTS[q.id].goal(q)} (${Math.max(0, q.until - run.week)} weeks left).`);
       const rising = risingProgress(run);

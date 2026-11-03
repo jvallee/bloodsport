@@ -566,7 +566,8 @@ export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClu
 // Quests (5.4.0, the designer's request; words in src/quests.js). The steward's first assignment comes in this week.
 // goldScale: × each assignment's Gold in src/quests.js (a balance lever).
 // talkPerWeek: at most this many quest, want, rival and friendship scenes a week; the rest wait for the next weeks.
-export const QUESTS = { stewardFromWeek: 4, goldScale: 0.5, talkPerWeek: 2 };
+// prestige: Prestige for each of the steward's assignments done.
+export const QUESTS = { stewardFromWeek: 4, goldScale: 0.35, prestige: 0, talkPerWeek: 2 };
 // What fighters want: a new want some months (its own dice), at most `max` at a time. Met: a mood of +metMorale for 4 weeks,
 // Renown and XP. Lapsed: a mood of missMorale. Room wants ask for one of `roomItems`. A Championship want needs the fighter
 // within `titleReach` Power of the arena's Boss.

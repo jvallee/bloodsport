@@ -9,7 +9,7 @@ import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker,
-  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardGold, risingProgress,
+  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
 } from '../run.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, buildingKnown, upgradeBlocker, levelInfo, maxLevel, effectAt,
@@ -324,7 +324,7 @@ function questsPanel(run) {
     <span class="susbar"><span style="width:${Math.min(100, rising.suspicion)}%"></span></span>
     <div>The rising: <b>${esc(rising.label)}</b>${rising.needs.length ? ` · still needs ${esc(rising.needs.join(', '))}` : ''}${rising.waiting ? ` · ${esc(rising.waiting)}` : ''}</div></div>` : '';
   const items = [
-    task ? `<li>🏛 <b>The steward</b> asks: ${esc(task.goal)}${stewardGold(task) ? ` <small>· ${stewardGold(task)} Gold</small>` : ''}</li>` : '',
+    task ? `<li>🏛 <b>The steward</b> asks: ${esc(task.goal)}${stewardRewardText(task) ? ` <small>· ${stewardRewardText(task)}</small>` : ''}</li>` : '',
     ...wants, ...cause,
   ].filter(Boolean);
   if (!items.length && !gallery) return '';

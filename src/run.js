@@ -501,12 +501,11 @@ function stewardTasks(run) {
   if (q.steward) {
     const task = STEWARD_TASKS.find((t) => t.id === q.steward);
     if (!task?.test(run)) return;
-    const paid = stewardGold(task);
-    run.gold += paid;
+    const paid = paySteward(run, [task]);
     q.steward = null;
     q.stewardIndex += 1;
-    log(run, `The steward's assignment is done: ${task.goal}.${paid ? ` +${paid} Gold.` : ''}`, 'good');
-    talk(run, `steward-done-${task.id}`, [{ speaker: 'steward', text: `${stewardDone(task)}${paid ? ` I found ${paid} Gold for the house.` : ''}` }]);
+    log(run, `The steward's assignment is done: ${task.goal}.${paid ? ` +${paid}.` : ''}`, 'good');
+    talk(run, `steward-done-${task.id}`, [{ speaker: 'steward', text: `${stewardDone(task)}${paid ? ` The house gains ${paid}.` : ''}` }]);
   }
   if (run.status !== 'active') return;
   // Assignments already done count, and pay, together (not those done before the steward's first assignment).
@@ -514,23 +513,38 @@ function stewardTasks(run) {
   while (q.stewardIndex < STEWARD_TASKS.length && STEWARD_TASKS[q.stewardIndex].test(run)) already.push(STEWARD_TASKS[q.stewardIndex++]);
   const late = already.filter((t) => t.id !== 'grand');
   if (late.length && q.introduced) {
-    const paid = late.reduce((n, t) => n + stewardGold(t), 0);
-    run.gold += paid;
-    log(run, `The steward's list: already done: ${late.map((t) => t.goal).join('; ')}.${paid ? ` +${paid} Gold.` : ''}`, 'good');
-    talk(run, `steward-already-${late[0].id}`, [{ speaker: 'steward', text: `${stewardAlready(late.map((t) => t.goal.charAt(0).toLowerCase() + t.goal.slice(1)))}${paid ? ` I found ${paid} Gold for the house.` : ''}` }]);
+    const paid = paySteward(run, late);
+    log(run, `The steward's list: already done: ${late.map((t) => t.goal).join('; ')}.${paid ? ` +${paid}.` : ''}`, 'good');
+    talk(run, `steward-already-${late[0].id}`, [{ speaker: 'steward', text: `${stewardAlready(late.map((t) => t.goal.charAt(0).toLowerCase() + t.goal.slice(1)))}${paid ? ` The house gains ${paid}.` : ''}` }]);
   }
   const task = STEWARD_TASKS[q.stewardIndex];
   if (!task) return;
   q.steward = task.id;
   log(run, `The steward's assignment: ${task.goal}.`, 'event');
+  const reward = stewardRewardText(task);
   talk(run, `steward-${task.id}`, [
     ...(q.stewardIndex === 0 || !q.introduced ? [{ speaker: 'steward', text: STEWARD_INTRO }] : []),
     { speaker: 'steward', text: task.say },
-    { speaker: 'steward', text: `Your assignment: ${task.goal}.${stewardGold(task) ? ` Do it, and I'll find ${stewardGold(task)} Gold for the house.` : ''}` },
+    { speaker: 'steward', text: `Your assignment: ${task.goal}.${reward ? ` Do it, and the house gains ${reward}.` : ''}` },
   ]);
   q.introduced = true;
 }
+// What an assignment pays: Gold (scaled by QUESTS.goldScale) and QUESTS.prestige Prestige (the Grand Tournament pays nothing).
 export const stewardGold = (task) => Math.round((task?.gold ?? 0) * QUESTS.goldScale);
+export const stewardPrestige = (task) => (task && task.id !== 'grand' ? QUESTS.prestige : 0);
+const rewardText = (gold, prestige) => [gold ? `${gold} Gold` : '', prestige ? `${prestige} Prestige` : ''].filter(Boolean).join(' and ');
+export const stewardRewardText = (task) => rewardText(stewardGold(task), stewardPrestige(task));
+// Pays for these assignments (and a House level they reach); returns what was paid, in words.
+function paySteward(run, tasks) {
+  const gold = tasks.reduce((n, t) => n + stewardGold(t), 0);
+  const prestige = tasks.reduce((n, t) => n + stewardPrestige(t), 0);
+  run.gold += gold;
+  run.prestige += prestige;
+  const before = run.prestigeLevel;
+  run.prestigeLevel = prestigeLevelFor(run.prestige, run.prestigeLevel);
+  if (run.prestigeLevel > before) log(run, `House Prestige level ${run.prestigeLevel}! New buildings and room plots unlocked.`, 'event');
+  return rewardText(gold, prestige);
+}
 export const stewardTask = (run) => STEWARD_TASKS.find((t) => t.id === run.quests?.steward) ?? null;
 
 // ---- What fighters want ----
