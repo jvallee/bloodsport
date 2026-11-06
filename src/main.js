@@ -194,6 +194,7 @@ for (const type of ['click', 'change']) {
   document.addEventListener(type, (e) => {
     const card = e.target.closest?.('[id^="card-"]');
     clickAnchor = card ? { id: card.id, top: card.getBoundingClientRect().top, tab } : null;
+    setTimeout(() => { clickAnchor = null; }); // only for the render this event causes, never a later one
   }, true);
 }
 function render() {
@@ -219,12 +220,21 @@ function render() {
   // Panels that scroll on their own (the Ludus columns, the logs) keep their place across re-renders on the same tab
   // (the designer: clicking in Your gladiators jumped its column back to the top).
   const SCROLLERS = '.grid > .panel, .log, .feed';
-  const scrolled = renderedTab === tab ? [...app.querySelectorAll(SCROLLERS)].map((el) => el.scrollTop) : [];
+  // Keyed by class and place among elements of that class, so a scroller appearing or vanishing doesn't shift the others.
+  const scrollKeys = () => {
+    const seen = {};
+    return [...app.querySelectorAll(SCROLLERS)].map((el) => {
+      const c = [...el.classList].slice(0, 2).join('.'); // e.g. panel.bout, whether or not it's "live" this week
+      seen[c] = (seen[c] ?? 0) + 1;
+      return [`${c}#${seen[c]}`, el];
+    });
+  };
+  const scrolled = renderedTab === tab ? Object.fromEntries(scrollKeys().map(([k, el]) => [k, el.scrollTop])) : {};
   renderedTab = tab;
   app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab) : nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
-  app.querySelectorAll(SCROLLERS).forEach((el, i) => { if (scrolled[i]) el.scrollTop = scrolled[i]; });
+  for (const [k, el] of scrollKeys()) if (scrolled[k]) el.scrollTop = scrolled[k];
   // Then keep the card you clicked where it was on screen: a line appearing on a card above it (a notice, a reason) would
   // otherwise push it away from the pointer (the designer: the Ludus still jumped when clicking).
   if (clickAnchor && renderedTab === clickAnchor.tab) {

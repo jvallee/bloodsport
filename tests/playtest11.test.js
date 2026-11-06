@@ -160,3 +160,85 @@ test('the Liaison offers a line-up (LIAISON.offers by level), at most one politi
   assert.equal(back.liaisonOffers.length, 1);
   assert.equal('liaisonOffer' in back, false);
 });
+
+// ---- Code review fixes (5.4.3) ----
+
+test('room wants vary from month to month (wants come at month starts, 4 weeks apart)', () => {
+  const run = createRun(51);
+  const f = recruit(run, run.market[0].id);
+  f.decor.trophy = 1; // two items missing
+  const items = new Set();
+  for (let m = 1; m < 6; m++) { run.week = m * 4; items.add(wantFor(run, f, 'room').key); }
+  assert.equal(items.size, 2);
+});
+
+test('an older save\'s steward index follows its assignment by id (the list grew in 5.4.1)', async () => {
+  const { STEWARD_TASKS } = await import('../src/quests.js');
+  const run = createRun(52);
+  recruit(run, run.market[0].id);
+  run.week = QUESTS.stewardFromWeek;
+  run.quests = { steward: 'level3', stewardIndex: 9, rebel: [], introduced: true }; // 9 was level3 in 5.4.0
+  const gold = run.gold;
+  checkQuests(run);
+  assert.equal(run.quests.steward, 'level3', 'still waiting for House level 3');
+  assert.equal(run.quests.stewardIndex, STEWARD_TASKS.findIndex((t) => t.id === 'level3'));
+  assert.equal(run.gold, gold, 'nothing paid twice');
+});
+
+test('the archrival sends RIVAL.oppShare of the opponents where other houses fight too', async () => {
+  const { RIVAL } = await import('../src/data.js');
+  const { houseForArena } = await import('../src/run.js');
+  const run = createRun(53);
+  run.archrival = run.houses[0].id;
+  for (const h of run.houses) h.tier = 2;
+  const n = 1000;
+  let theirs = 0;
+  for (let i = 0; i < n; i++) if (houseForArena(run, 2).id === run.archrival) theirs += 1;
+  assert.ok(Math.abs(theirs / n - RIVAL.oppShare) < 0.05, `${theirs} of ${n}`);
+});
+
+test('a summons win is no Imperial tournament won (the steward\'s list), and its log reads cleanly', async () => {
+  const { STEWARD_TASKS } = await import('../src/quests.js');
+  const run = createRun(54);
+  run.history.push({ week: 9, tier: 4, won: true, summons: true });
+  assert.equal(STEWARD_TASKS.find((t) => t.id === 'imperialWin').test(run), false);
+  const { answerSummons } = await import('../src/run.js');
+  for (let seed = 60; seed < 75; seed++) {
+    const r = createRun(seed);
+    recruit(r, r.market[0].id);
+    r.week = 5; r.summons = { week: 5 };
+    r.boutPending = false; r.bouts = null;
+    const { advanceToTournament } = await import('../src/run.js');
+    advanceToTournament(r);
+    answerSummons(r, r.roster[0].id, 'death');
+    const line = r.log.find((l) => l.text.startsWith("The Emperor's summons:")).text;
+    assert.doesNotMatch(line, /\. \.|\. ,|\.\.$/, line);
+  }
+});
+
+test('the rival champion drawn into an early round fights at that round\'s strength plus their bonus, not the Final\'s', async () => {
+  const { drawBrackets, effectivePower: ep } = await import('../src/run.js');
+  let checked = 0;
+  for (let seed = 1; seed < 40 && checked < 3; seed++) {
+    const run = createRun(seed);
+    recruit(run, run.market[0].id);
+    run.topTier = 3;
+    run.arenas[3] = { ...structuredClone(run.arenas[1]), tier: 3, stage: 0 };
+    const final = run.arenas[3].opponent;
+    Object.assign(final, { rivalChampion: true, rivalBonus: 2 });
+    final.power += 2;
+    const finalPower = ep(final) - 2;
+    run.bouts = { 3: 'open' };
+    run.brackets = {};
+    drawBrackets(run);
+    const b = run.brackets[3];
+    const k = b.foes.findIndex((x) => x.rivalChampion);
+    if (k < 0) continue;
+    checked += 1;
+    const other = b.foes[1 - k];
+    assert.ok(ep(b.foes[k]) <= finalPower + 2 - (k === 0 ? 1 : 0), `champion ${ep(b.foes[k])} vs Final ${finalPower}`);
+    assert.equal(ep(run.arenas[3].opponent), finalPower, 'the Final keeps its strength');
+    assert.ok(other);
+  }
+  assert.ok(checked > 0, 'drew the champion early at least once');
+});

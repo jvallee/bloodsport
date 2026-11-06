@@ -7,7 +7,7 @@ import { STARTING_BUILDINGS } from './data.js';
 
 const conquered = (run, tier) => Boolean(run.arenas[tier]?.conquered);
 // A tournament won in this arena: a single-match win, or a bracket's Final.
-const tournamentWon = (run, tier) => run.history.some((h) => h.tier === tier && h.won && (!h.bracket || h.bracket === 'Final'));
+const tournamentWon = (run, tier) => run.history.some((h) => h.tier === tier && h.won && !h.summons && (!h.bracket || h.bracket === 'Final')); // the Emperor's summons is no tournament
 const decorPlaced = (run) => run.roster.some((f) => Object.values(f.decor).some((n) => n > 0));
 
 // ---------- The steward's assignments: restore the house to its former glory ----------

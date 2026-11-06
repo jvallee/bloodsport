@@ -206,6 +206,7 @@ function bracketFor(run, tier) {
     if (k < 2) {
       const f = foes[k];
       foes[k] = champ;
+      champ.power += effectivePower(f) + champ.rivalBonus - effectivePower(champ); // that round's strength, plus their bonus
       f.power += finalPower - effectivePower(f); // the Final keeps its usual strength
       run.arenas[tier].opponent = f;
     }
@@ -446,7 +447,10 @@ export function answerSummons(run, id, order) {
   seasonOpponent(run, opp, bout);
   opp.house = houseForArena(run, SUMMONS.tier).id;
   remember(run, opp);
-  const m = createMatch({ a: fighter, b: opp, rng: r });
+  // The fighter's own state counts as in any bout: overtrained, the festival, a feud or debt with the opponent's house.
+  const house = houseOf(run, opp);
+  const m = createMatch({ a: fighter, b: opp, rng: r, overtrained: fighter.stress >= STRESS.overtrained, festival: festivalOn(run.week)?.id ?? null,
+    grudge: house?.feud > 0 ? 1 : house?.owed > 0 ? -1 : 0, vengeance: house?.vengeance > 0 });
   while (!m.over) {
     if (order === 'yield' && canThrowTowel(m) && mortalDanger(m.a)) throwTowel(m);
     else playRound(m, { stance: suggestTactic(m) });
@@ -488,13 +492,16 @@ export function answerSummons(run, id, order) {
     fighter.renown += summary.renown;
     gainXp(run, fighter, won ? XP.win : XP.loss);
     if (won) faceFear(run, fighter, m.b);
-    if (won && reason === 'death') fighter.kills = (fighter.kills ?? 0) + 1;
+    if (won && reason === 'death') {
+      fighter.kills = (fighter.kills ?? 0) + 1;
+      run.graveyard = [...(run.graveyard ?? []), opp.name]; // the dead don't come back
+    }
   }
   summary.favor = run.favor - favorBefore;
   run.history.push(summary);
   run.summons = null;
   run.summonsDone = true;
-  log(run, `The Emperor's summons: ${fighter.name} (Power ${effectivePower(fighter)}) against ${opp.name} (Power ${summary.oppPower}): ${won ? 'won' : !summary.died ? (reason === 'towel' ? 'yielded at the Death Gate' : 'lost, but survived') : 'killed'}${fighter.alive && newInjuries.length ? `, with ${newInjuries.join(', ')}` : ''}. ${summary.favor ? `Favour ${summary.favor > 0 ? '+' : '−'}${Math.abs(summary.favor)}` : ''}${summary.renown ? `, +${summary.renown} Renown` : ''}.`, won ? 'good' : summary.died ? 'bad' : 'event');
+  log(run, `The Emperor's summons: ${fighter.name} (Power ${effectivePower(fighter)}) against ${opp.name} (Power ${summary.oppPower}): ${won ? 'won' : !summary.died ? (reason === 'towel' ? 'yielded at the Death Gate' : 'lost, but survived') : 'killed'}${fighter.alive && newInjuries.length ? `, with ${newInjuries.join(', ')}` : ''}.${[summary.favor ? ` Favour ${summary.favor > 0 ? '+' : '−'}${Math.abs(summary.favor)}` : '', summary.renown ? ` +${summary.renown} Renown` : ''].filter(Boolean).join(',')}${summary.favor || summary.renown ? '.' : ''}`, won ? 'good' : summary.died ? 'bad' : 'event');
   talk(run, `summons-done-${run.week}`, [{ speaker: 'emperor', text: line }], { now: true });
   checkLoss(run);
   return summary;
@@ -600,6 +607,8 @@ export function checkQuests(run) {
 function stewardTasks(run) {
   const q = questState(run);
   if (run.week < QUESTS.stewardFromWeek) return;
+  // The list grew in 5.4.1: follow the assignment by its id, so an older save's index lands on the right task.
+  if (q.steward && STEWARD_TASKS.some((t) => t.id === q.steward)) q.stewardIndex = STEWARD_TASKS.findIndex((t) => t.id === q.steward);
   if (q.steward) {
     const task = STEWARD_TASKS.find((t) => t.id === q.steward);
     if (!task?.test(run)) return;
@@ -665,7 +674,8 @@ export function wantFor(run, f, id) {
   if (id === 'room') {
     const missing = FIGHTER_WANTS.roomItems.filter((x) => !(f.decor[x] > 0));
     if (!missing.length) return null;
-    const k = missing[(f.id.length + run.week) % missing.length]; // varied, without a dice roll (playtest LLM-11: always a Bathhouse)
+    // Varied by fighter and by month, without a dice roll (playtest LLM-11: always a Bathhouse; wants come at month starts).
+    const k = missing[([...f.id].reduce((n, ch) => n + ch.charCodeAt(0), 0) + Math.floor(run.week / 4)) % missing.length];
     return { key: k, item: DECOR[k].name };
   }
   if (id === 'mentor') {
@@ -1310,7 +1320,8 @@ export function houseForArena(run, tier) {
   if (there.some((h) => h.id === run.archrival)) {
     const others = there.filter((h) => h.id !== run.archrival);
     const pool = others.length ? others : run.houses.filter((h) => h.id !== run.archrival);
-    if (pool.length && next(run.rng.houses) >= RIVAL.oppShare) return pick(run.rng.houses, pool);
+    if (!pool.length) return archrival(run);
+    return next(run.rng.houses) < RIVAL.oppShare ? archrival(run) : pick(run.rng.houses, pool);
   }
   return there.length ? pick(run.rng.houses, there) : leadingHouse(run);
 }
