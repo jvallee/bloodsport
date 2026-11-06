@@ -29,7 +29,7 @@ let run = null;
 let careers = { active: null, list: [] }; // every saved career (src/careers.js); careerId is the one being played
 let careerId = null;
 let careersOpen = false; // the Careers dialog
-let overtrainWarn = null; // End week would overtrain these fighters: [{ id, name, stress }] (warned once per career)
+let overtrainWarn = null; // End week would overtrain these fighters: [{ id, name, stress }] (asked every time)
 let match = null;
 let summaries = []; // this week's match results, newest last
 let noticePage = 0;
@@ -372,7 +372,6 @@ const actions = {
   'overtrain-go': (d) => { // End the week as planned, or with the named fighters resting
     const list = overtrainWarn ?? [];
     overtrainWarn = null;
-    markSceneSeen('warn-overtrain');
     if (d.rest) for (const f of list) gameAction('job', { id: f.id, job: 'rest' });
     summaries = []; achieved = []; stewardNotes = [];
     gameAction('advance');
@@ -491,13 +490,16 @@ const before = {
   retire: () => confirm('Retire this fighter to the Hall of Champions? They leave your roster for good.'),
   forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favour than losing the fight.'),
   withdraw: () => confirm('Withdraw from the tournament? It counts as capitulating; your fighter is safe.'),
+  // Unequip all strips everyone (the designer's bug report: it looked like gear vanished): say who first.
+  'unequip-all': () => {
+    const worn = run.roster.filter((f) => f.gear.weapon || f.gear.armor);
+    return confirm(`Take the gear off ${worn.map((f) => f.name).join(', ')}? It all goes back to the storeroom.`);
+  },
   'refuse-summons': () => confirm(`Refuse the Emperor? It costs ${-SUMMONS.refuseFavor} Imperial Favour.`),
   advance: () => {
-    // The first time in a career that End week would overtrain someone, the steward checks first (the designer, 5.4.0).
-    if (!scenesSeen().includes('warn-overtrain')) {
-      const at = overtrainedByWeek(run);
-      if (at.length) { overtrainWarn = at.map((f) => ({ id: f.id, name: f.name, stress: f.stress })); return false; }
-    }
+    // Whenever End week would overtrain someone, the steward checks first (the designer: 5.4.0 asked once a career, 5.4.3 every time).
+    const at = overtrainedByWeek(run);
+    if (at.length) { overtrainWarn = at.map((f) => ({ id: f.id, name: f.name, stress: f.stress })); return false; }
     summaries = []; achieved = []; stewardNotes = []; return true;
   },
   'advance-tournament': () => { summaries = []; achieved = []; stewardNotes = []; return true; },

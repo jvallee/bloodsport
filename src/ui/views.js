@@ -270,7 +270,7 @@ export function overtrainModal(list) {
   const names = list.map((f) => `<b>${esc(f.name)}</b> (Stress ${f.stress})`);
   const who = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
   const html = `<p>Before you end the week: another week of training and ${who} will be <b>Overtrained</b> (Stress ${STRESS.overtrained}+).</p>
-    <p>An overtrained fighter can't train, and fights at −1 Power with one ability switched off, until Rest brings their Stress down. I'll only ask you this once.</p>`;
+    <p>An overtrained fighter can't train, and fights at −1 Power with one ability switched off, until Rest brings their Stress down.</p>`;
   const actions = `<button class="btn small" data-action="overtrain-back">Back</button><span class="ask-choices"><button class="btn" data-action="overtrain-go">Train anyway</button><button class="btn primary" data-action="overtrain-go" data-rest="1" autofocus>Rest ${list.length > 1 ? 'them' : esc(list[0].name)} this week</button></span>`;
   return dialogueBox({ speaker: 'steward', title: 'Overtraining', html }, actions, 'ask');
 }
@@ -435,6 +435,28 @@ function perkChooser(run, f) {
   return `<div class="perk-choice"><div class="label">⭐ Level ${f.level - f.pendingPerks.length + 1}! Choose a perk:</div><div class="perk-list">${offer}</div>${temple}</div>`;
 }
 
+// A dropdown of the storeroom's gear for one slot, each with what it does ('' if nothing fits).
+function equipPicker(run, f, slot) {
+  const cur = f.gear[slot];
+  const options = run.inventory.gear.map((k, i) => (GEAR[k].slot === slot && !equipBlocker(run, f.id, i)
+    ? `<option value="${i}">${esc(GEAR[k].name)}: ${esc(gearText(GEAR[k]))}</option>` : '')).join('');
+  return options
+    ? `<select class="gear-select equip" data-change="equip" data-id="${f.id}" aria-label="Equip a ${slot === 'weapon' ? 'weapon' : 'piece of armour'}"><option value="">${cur ? 'Swap for…' : 'Equip from the storeroom…'}</option>${options}</select>`
+    : '';
+}
+// On the card, outside the fold-out: an empty slot with spare gear waiting (the designer: gear seemed to vanish).
+function spareGearPrompt(run, f) {
+  const slots = ['weapon', 'armor'].filter((slot) => !f.gear[slot] && equipPicker(run, f, slot));
+  if (!slots.length) return '';
+  return `<div class="spare-gear"><span class="label">⚒ No ${slots.map((s) => (s === 'weapon' ? 'weapon' : 'armour')).join(' or ')}, and the storeroom has some:</span> ${slots.map((slot) => equipPicker(run, f, slot)).join(' ')}</div>`;
+}
+// The storeroom's unworn gear, named, under Your gladiators.
+function storeroomLine(run) {
+  const counts = run.inventory.gear.reduce((o, k) => ({ ...o, [k]: (o[k] ?? 0) + 1 }), {});
+  const items = Object.entries(counts).map(([k, n]) => `${n > 1 ? `${n} × ` : ''}${esc(GEAR[k].name)}`);
+  return items.length ? `<p class="sub storeroom-line">🗄 In the storeroom, unworn: ${items.join(', ')}.</p>` : '';
+}
+
 function roomPanel(run, f) {
   const decor = Object.entries(DECOR).map(([k, d]) => {
     const helps = d.helps(f);
@@ -446,12 +468,7 @@ function roomPanel(run, f) {
   const { target, comfort, expects, revenant } = moraleTarget(run, f);
   const gear = ['weapon', 'armor'].map((slot) => {
     const cur = f.gear[slot];
-    // A dropdown of the storeroom's gear for this slot, each with what it does.
-    const options = run.inventory.gear.map((k, i) => (GEAR[k].slot === slot && !equipBlocker(run, f.id, i)
-      ? `<option value="${i}">${esc(GEAR[k].name)}: ${esc(gearText(GEAR[k]))}</option>` : '')).join('');
-    const picker = options
-      ? `<select class="gear-select equip" data-change="equip" data-id="${f.id}" aria-label="Equip a ${slot === 'weapon' ? 'weapon' : 'piece of armour'}"><option value="">${cur ? 'Swap for…' : 'Equip from the storeroom…'}</option>${options}</select>`
-      : '';
+    const picker = equipPicker(run, f, slot);
     return `<div class="gear-slot"><span class="label">${slot === 'weapon' ? 'Weapon' : 'Armour'}:</span> ${cur ? `<b>${esc(GEAR[cur].name)}</b> <small>${esc(gearText(GEAR[cur]))}</small> ${button('Unequip', 'unequip', { id: f.id, slot }, unequipBlocker(run, f.id, slot), 'btn small unequip')}` : '<small>empty</small>'}
       ${picker ? `<div class="row tight">${picker}</div>` : ''}</div>`;
   }).join('');
@@ -494,6 +511,7 @@ function rosterPanel(run) {
     const actions = `${perkChooser(run, f)}<div class="actions">
       <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week${maxLevel(run, 'trainer') > trainCost(run) ? ` (${maxLevel(run, 'trainer')} from the Silver Coliseum)` : ''}</small></div>
       <div class="segs">${jobs}</div>
+      ${spareGearPrompt(run, f)}
       ${f.injuries.length > 1 ? `<div class="treat"><span class="label">Medbay treats first:</span> <select class="treat-select" data-change="treat-first" data-id="${f.id}" aria-label="Which injury the Medbay treats first">${f.injuries.map((inj, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${esc(INJURY_BY_TAG[inj.tag].name)} (${inj.weeksLeft} week${inj.weeksLeft === 1 ? '' : 's'})</option>`).join('')}</select></div>` : ''}
       ${f.job === 'rest' && jobBlocker(run, f.id, 'trainPower') && jobBlocker(run, f.id, 'trainSpeed') ? `<div class="why-not">Can't train this week: ${esc(jobBlocker(run, f.id, 'trainPower'))}</div>` : ''}
       <details class="more" data-key="room-${f.id}"><summary>Room &amp; decor${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f).room}</details>
@@ -513,7 +531,8 @@ function rosterPanel(run) {
     <section class="panel roster">
       <h2>Your gladiators <small>${run.roster.length}/${rosterCap(run)}</small></h2>
       ${compareTable(run)}
-      ${unequipAllBlocker(run) === null ? `<div class="row">${button('Unequip all gear', 'unequip-all', {}, null, 'btn small')}<small class="sub">Puts every fighter's gear back in the storeroom, ready to hand out afresh.</small></div>` : ''}
+      ${storeroomLine(run)}
+      ${unequipAllBlocker(run) === null ? `<div class="row">${button('Unequip all gear', 'unequip-all', {}, null, 'btn small')}<small class="sub">Takes every fighter's gear off, back to the storeroom, ready to hand out afresh.</small></div>` : ''}
       <div class="cards">${cards || '<div class="empty">No gladiators yet. Recruit some in the <button class="link" data-action="tab" data-tab="market">Market</button>.</div>'}</div>
       ${run.fallen.length ? `<p class="sub fallen">⚰ Fallen: ${run.fallen.map((f) => `${esc(f.name)}${f.raised ? ' <small>(risen as a Revenant)</small>' : ''}`).join(', ')}</p>` : ''}
     </section>`;

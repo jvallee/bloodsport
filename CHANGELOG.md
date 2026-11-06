@@ -2,6 +2,13 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 5.4.3 (in progress)
+
+- **Quarter- and Semi-final wins can take the loser's gear** (35%, like any other win). They never could, so from the Silver Coliseum two of every three wins dropped nothing.
+- **The overtraining warning comes every time** End week would leave someone Overtrained, not just the first time.
+- **Spare gear stays in sight:** Your gladiators lists what's unworn in the storeroom, and a fighter with an empty weapon or armour slot gets an "Equip from the storeroom" choice right on their card when there's something that fits.
+- **"Unequip all gear" asks first** (it takes the gear off every fighter), and the house log lists what came off whom.
+
 ## 5.4.2
 
 - **The steward pays less:** 1–2 Gold for each of his assignments (it was up to 4). The extra assignments in 5.4.1 made short careers too easy.

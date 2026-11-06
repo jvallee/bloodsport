@@ -2249,7 +2249,9 @@ export function unequipAllBlocker(run) {
 
 export function unequipAll(run) {
   assertOk(unequipAllBlocker(run));
-  for (const f of run.roster) for (const slot of ['weapon', 'armor']) if (f.gear[slot]) unequip(run, f.id, slot);
+  const off = [];
+  for (const f of run.roster) for (const slot of ['weapon', 'armor']) if (f.gear[slot]) { off.push(`${f.name}'s ${GEAR[f.gear[slot]].name}`); unequip(run, f.id, slot); }
+  log(run, `Back to the storeroom: ${off.join(', ')}.`, 'info');
 }
 
 // ---------- Surgeon ----------
@@ -2609,14 +2611,8 @@ export function finishMatch(run, match) {
     if (bout.top && bout.boss) changeFavor(run, FAVOR.bossWin, `beat ${bout.name}`);
     if (upset) changeFavor(run, FAVOR.upsetWin * (fest?.upset ?? 1), fest?.upset ? `an upset at the ${fest.name}` : 'an upset');
     if (bloodied) changeFavor(run, FAVOR.spectacleWin, 'a Bloodied Victory (won with 2+ injuries)');
-    // Loot: claim the loser's gear.
-    const drops = [opp.gear.weapon, opp.gear.armor].filter(Boolean);
-    // Only your top arena's Boss always drops gear; anything else is a chance (no farming conquered Bosses).
-    if (drops.length && ((bout.boss && bout.top) || next(run.rng.growth) < ECONOMY.lootChance)) {
-      summary.loot = pick(run.rng.growth, drops);
-      run.inventory.gear.push(summary.loot);
-      log(run, `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good');
-    }
+    // Loot: claim the loser's gear. Only your top arena's Boss always drops it (no farming conquered Bosses).
+    claimLoot(run, fighter, opp, summary, bout.boss && bout.top);
     // Championships: beat an arena's Boss, or win there 3 times. One Title (+1 Power) per arena.
     if (tier !== GRAND_TIER) {
       fighter.arenaWins = { ...(fighter.arenaWins ?? {}), [tier]: (fighter.arenaWins?.[tier] ?? 0) + 1 };
@@ -2764,6 +2760,15 @@ export function finishMatch(run, match) {
   return summary;
 }
 
+// A won match may claim one piece of the loser's gear (always, for your top arena's Boss).
+function claimLoot(run, fighter, opp, summary, always) {
+  const drops = [opp.gear?.weapon, opp.gear?.armor].filter(Boolean);
+  if (!drops.length || !(always || next(run.rng.growth) < ECONOMY.lootChance)) return;
+  summary.loot = pick(run.rng.growth, drops);
+  run.inventory.gear.push(summary.loot);
+  log(run, `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good');
+}
+
 function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries) {
   const bout = boutFor(run, tier);
   const round = BRACKET.rounds[bracket.round];
@@ -2804,6 +2809,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
     fighter.kills = (fighter.kills ?? 0) + 1;
     run.graveyard = [...(run.graveyard ?? []), opp.name];
   }
+  claimLoot(run, fighter, opp, summary, false); // as for any other win (the designer's bug report: early rounds never dropped gear)
   const house = houseOf(run, opp);
   if (house) {
     run.glory += HOUSES.glory.win * Math.min(tier, 4);

@@ -709,3 +709,4 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .speaker-rival { border-color: #b5543c; }
 .speaker-rival .dialogue-name { color: #e08a6a; }
 .chip.spy { border-color: #7a4a4a; }
+.spare-gear { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

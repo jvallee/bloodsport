@@ -170,3 +170,23 @@ test('a bracket arena shows next-match odds by name and the whole-tournament odd
   assert.match(html, new RegExp(`Next \\(${run.brackets[3].foes[0].name}\\)`));
   assert.match(html, /Whole tournament: Even fight/); // 0.8 × 0.8 × 0.8 ≈ 51%
 });
+
+test('a Quarter- or Semi-final won can claim the loser\'s gear, like any other win (the designer\'s bug report: no Gladius from Thraxa)', async () => {
+  const { ECONOMY } = await import('../src/data.js');
+  let looted = 0;
+  const n = 60;
+  for (let seed = 1; seed <= n; seed++) {
+    const { run, f } = atSilver(seed);
+    const foe = run.brackets[3].foes[0];
+    foe.gear = { weapon: 'gladius', armor: null };
+    const before = run.inventory.gear.length;
+    const { s } = play(run, f.id, 3);
+    run.mercy = null;
+    if (s.loot) {
+      looted += 1;
+      assert.equal(s.loot, 'gladius');
+      assert.equal(run.inventory.gear.length, before + 1);
+    }
+  }
+  assert.ok(looted > n * ECONOMY.lootChance * 0.5 && looted < n * ECONOMY.lootChance * 1.6, `${looted} of ${n}`);
+});
