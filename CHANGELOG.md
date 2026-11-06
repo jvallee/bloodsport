@@ -9,6 +9,8 @@ What changed from version to version, newest first. Each frozen version can stil
 - **Spare gear stays in sight:** Your gladiators lists what's unworn in the storeroom, and a fighter with an empty weapon or armour slot gets an "Equip from the storeroom" choice right on their card when there's something that fits.
 - **"Unequip all gear" asks first** (it takes the gear off every fighter), and the house log lists what came off whom.
 
+- **Fixed: the Ludus no longer jumps when you click.** A new line appearing on a card above the one you clicked (like "Can't train this week") used to push your card away from the pointer; the card you clicked now stays where it is, in the columns and on a phone.
+
 ## 5.4.2
 
 - **The steward pays less:** 1–2 Gold for each of his assignments (it was up to 4). The extra assignments in 5.4.1 made short careers too easy.

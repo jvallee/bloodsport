@@ -188,6 +188,14 @@ const fightTutorial = () => (match ? nextStep(FIGHT_STEPS, prefs.tutorial, match
 // ---------- Rendering ----------
 
 let renderedTab = null; // the tab the page last drew (scroll positions carry over only within it)
+let clickAnchor = null; // the card a click or choice came from, and where it was on screen: { id, top, tab }
+// Before any click or dropdown choice is handled (capture phase), remember the fighter card it was on.
+for (const type of ['click', 'change']) {
+  document.addEventListener(type, (e) => {
+    const card = e.target.closest?.('[id^="card-"]');
+    clickAnchor = card ? { id: card.id, top: card.getBoundingClientRect().top, tab } : null;
+  }, true);
+}
 function render() {
   if (discover(codex, run).length) saveCodex();
   // Legacy: achievements as they happen, and the career once it ends.
@@ -217,6 +225,18 @@ function render() {
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
   app.querySelectorAll(SCROLLERS).forEach((el, i) => { if (scrolled[i]) el.scrollTop = scrolled[i]; });
+  // Then keep the card you clicked where it was on screen: a line appearing on a card above it (a notice, a reason) would
+  // otherwise push it away from the pointer (the designer: the Ludus still jumped when clicking).
+  if (clickAnchor && renderedTab === clickAnchor.tab) {
+    const el = document.getElementById(clickAnchor.id);
+    const shift = el ? el.getBoundingClientRect().top - clickAnchor.top : 0;
+    if (shift) {
+      const box = el.closest(SCROLLERS);
+      if (box && box.scrollHeight > box.clientHeight) box.scrollTop += shift;
+      else window.scrollBy(0, shift);
+    }
+  }
+  clickAnchor = null;
   // The tutorial month: make the button to press glow.
   if (guide?.focus && tab === guide.tab) for (const el of app.querySelectorAll(guide.focus)) if (!el.disabled) el.classList.add('tut-focus');
   renderFight();
