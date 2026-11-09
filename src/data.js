@@ -579,10 +579,11 @@ export const QUESTS = { stewardFromWeek: 4, goldScale: 0.2, prestige: 0, talkPer
 export const FIGHTER_WANTS = { chance: 0.35, max: 2, metMorale: 10, metRenown: 2, metXp: 2, missMorale: -10, roomItems: ['bathhouse', 'shrine', 'trophy'], titleReach: 3 };
 // The rival house (your archrival climbs with you). Its champion is named once your top arena is `championFrom`, and comes back
 // as a top-arena opponent (not a Boss) after `minWeeks`, `chance` a time, at the bout's Power + `power` + 1 per win over you
-// (up to `maxBonus`); from the Silver Coliseum they're drawn into any round of the bracket. Only `oppShare` of the ordinary
-// opponents in an arena come from the archrival when other houses fight there too (playtest LLM-11: 73% did). Beating them: `beatGold` × tier Gold, `beatRenown` Renown, and `beatGlory` Glory taken from their house.
+// (up to `maxBonus`); from the Silver Coliseum they're drawn into any round of the bracket, at the Final's strength in any round
+// (`earlyAtFinal`: the champion is dangerous wherever you meet them). Only `oppShare` of the ordinary opponents in an arena
+// come from the archrival when other houses fight there too (playtest LLM-11: 73% did; 5.4.3: 0.07, see fight-rules). Beating them: `beatGold` × tier Gold, `beatRenown` Renown, and `beatGlory` Glory taken from their house.
 // `poachChance`: some months the house buys the Market's best fighter at the end of the first week. `monthGlory`: × tier.
-export const RIVAL = { championFrom: 2, minWeeks: 12, chance: 0.35, power: 1, maxBonus: 2, beatGold: 4, beatRenown: 3, beatGlory: 5, winGlory: 3, poachChance: 0.15, monthGlory: 2, oppShare: 0.2 };
+export const RIVAL = { championFrom: 2, minWeeks: 12, chance: 0.35, power: 1, maxBonus: 2, beatGold: 4, beatRenown: 3, beatGlory: 5, winGlory: 3, poachChance: 0.15, monthGlory: 2, oppShare: 0.07, earlyAtFinal: true };
 // The resistance's requests: trust when met (gallery and lobby), trust lost when they lapse; asked this many weeks after the Mark.
 // Trust that would go past the cap lowers suspicion by `overflowSuspicion` a point instead.
 export const REBEL_QUEST = { galleryTrust: 1, lobbyTrust: 2, missTrust: -1, afterMark: 4, overflowSuspicion: 5 };

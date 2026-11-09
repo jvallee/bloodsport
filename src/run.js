@@ -206,7 +206,7 @@ function bracketFor(run, tier) {
     if (k < 2) {
       const f = foes[k];
       foes[k] = champ;
-      champ.power += effectivePower(f) + champ.rivalBonus - effectivePower(champ); // that round's strength, plus their bonus
+      if (!RIVAL.earlyAtFinal) champ.power += effectivePower(f) + champ.rivalBonus - effectivePower(champ); // that round's strength, plus their bonus
       f.power += finalPower - effectivePower(f); // the Final keeps its usual strength
       run.arenas[tier].opponent = f;
     }

@@ -216,7 +216,13 @@ test('a summons win is no Imperial tournament won (the steward\'s list), and its
   }
 });
 
-test('the rival champion drawn into an early round fights at that round\'s strength plus their bonus, not the Final\'s', async () => {
+test('the rival champion drawn into an early round fights at that round\'s strength plus their bonus (when RIVAL.earlyAtFinal is off)', async () => {
+  const { RIVAL } = await import('../src/data.js');
+  const was = RIVAL.earlyAtFinal;
+  RIVAL.earlyAtFinal = false;
+  try { await earlyChampion(); } finally { RIVAL.earlyAtFinal = was; }
+});
+async function earlyChampion() {
   const { drawBrackets, effectivePower: ep } = await import('../src/run.js');
   let checked = 0;
   for (let seed = 1; seed < 40 && checked < 3; seed++) {
@@ -241,4 +247,5 @@ test('the rival champion drawn into an early round fights at that round\'s stren
     assert.ok(other);
   }
   assert.ok(checked > 0, 'drew the champion early at least once');
-});
+}
+

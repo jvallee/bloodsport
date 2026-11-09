@@ -2,13 +2,14 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## 5.4.3 (in progress)
+## 5.4.3
 
 - **Quarter- and Semi-final wins can take the loser's gear** (35%, like any other win). They never could, so from the Silver Coliseum two of every three wins dropped nothing.
 - **The overtraining warning comes every time** End week would leave someone Overtrained, not just the first time.
 - **Spare gear stays in sight:** Your gladiators lists what's unworn in the storeroom, and a fighter with an empty weapon or armour slot gets an "Equip from the storeroom" choice right on their card when there's something that fits.
 - **"Unequip all gear" asks first** (it takes the gear off every fighter), and the house log lists what came off whom.
 
+- **Fixed (a code review):** winning the Emperor's summons no longer counts as winning an Imperial Coliseum tournament on the steward's list; the summons fight now accounts for an overtrained fighter, the festival and feuds; saves from 5.4.0 follow the steward's list correctly; a fighter missing two room items no longer always asks for the same one; and the summons result no longer reads "killed. .".
 - **Fixed: the Ludus no longer jumps when you click.** A new line appearing on a card above the one you clicked (like "Can't train this week") used to push your card away from the pointer; the card you clicked now stays where it is, in the columns and on a phone.
 
 ## 5.4.2

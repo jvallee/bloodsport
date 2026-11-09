@@ -649,3 +649,17 @@ Probe (`bronze.js`, a scratch copy of `scripts/probes/bot-options.js` that also 
 
   1 Prestige an assignment instead of Gold (the designer's idea, `QUESTS.prestige`, kept at 0) gave short 43% but full careers 47% in a probe: Prestige brings House levels sooner.
 - **Gates at 5.4.2** (`npm run check`): all 13 pass. Careful 39%, careful deaths 0.71, reckless deaths 3.18. Balanced build 2/4. First Boss 69%. Tactics +8, always-Press −7. Grand +21. Loyalist +17. Coup 21%. Treason 0%. Short careers 41% in 80 weeks (full careers 116).
+
+## 5.4.3: the designer's gear report and a code review
+
+- **Loot in brackets:** a Quarter- or Semi-final won rolls `ECONOMY.lootChance` (35%) for one of the loser's gear, like any other win (`claimLoot`). Check with it: all 13 gates pass (careful within range; numbers as 5.4.2).
+- **The code review's rival fixes, measured** (`node scripts/career-sim.js 300 --check --tune …`): fixing the archrival share to a true 20% and the early-round champion to that round's strength took careful careers to 48% (ceiling 45%) and the coup to 25%.
+
+  | Variant | Careful | Loyalist lead | Coup | Short | Gates |
+  |---|---|---|---|---|---|
+  | Both fixes (true 20% share, champion at the round's strength) | **48%** | +10 | 25% | 43% | 12/13 |
+  | Champion at Final strength only | **45%+** | +8 | 25% | 39% | 12/13 |
+  | Share 0.07 only | 44% | +11 | 23% | 52% | 13/13 |
+  | **Both as in 5.4.2 (chosen: `RIVAL.oppShare` 0.07, `earlyAtFinal` true)** | 39% | +17 | 17% | 42% | 13/13 |
+
+  So the rival champion fights at the Final's strength in whichever round it's drawn (it's the champion), and about 1 ordinary opponent in 14 comes from the archrival where other houses fight too.
