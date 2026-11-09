@@ -40,7 +40,7 @@ function pickPerks(run) {
 // (the rarer the better), then gear, then boons; the reckless bot loves the Fates' Wager, the careful one avoids it.
 const RARITY_BONUS = { common: 0, rare: 1, legendary: 3 };
 function fortuneScore(run, c, strategy) {
-  if (c.kind === 'fighter') return run.roster.length < 3 ? 9 : 3 + RARITY_BONUS[c.rarity];
+  if (c.kind === 'fighter' || c.kind === 'legend') return run.roster.length < 3 ? 9 : 3 + RARITY_BONUS[c.rarity];
   if (c.kind === 'relic') return 6 + RARITY_BONUS[c.rarity];
   if (c.kind === 'gear') return 3 + GEAR[c.id].tier;
   if (c.kind === 'wager') return strategy === 'careful' ? 1 : 8;

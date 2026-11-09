@@ -9,7 +9,7 @@ import { exportSave, importSave } from './savefile.js';
 import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey } from './careers.js';
 import { estimateOdds } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
-import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked, dailySeed, dailySetup } from './legacy.js';
+import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, dailySetup, careerSetup } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
@@ -50,7 +50,7 @@ let eventResult = null; // after an event card's choice: { title, lines } shown 
 let logMark = 0; // the house log's length before an event choice
 let legacy = loadLegacy(null);
 let achieved = []; // achievements earned this week, shown as notices
-let setupChoice = null; // the New career dialog: { patron, decrees } while it's open
+let setupChoice = null; // the New career dialog: { patron, heat, colour } while it's open
 // Bug reports: `bug` is null, or { error, where } (error null for a report the player asked for).
 let bug = null;
 let bugNotes = '';
@@ -184,7 +184,7 @@ function closeScene() {
   const then = scene?.then;
   if (scene?.id === 'opening') { prefs.introSeen = true; savePrefs(); markSceneSeen('opening'); }
   scene = null;
-  if (then === 'setup') setupChoice = { patron: '', decrees: [] }; // the opening came first; now choose a patron
+  if (then === 'setup') setupChoice = { patron: '', heat: 0, colour: run.setup?.colour ?? 'crimson' }; // the opening came first; now choose a patron
 }
 const fightTutorial = () => (match ? nextStep(FIGHT_STEPS, prefs.tutorial, match) : null);
 
@@ -234,6 +234,7 @@ function render() {
   };
   const scrolled = renderedTab === tab ? Object.fromEntries(scrollKeys().map(([k, el]) => [k, el.scrollTop])) : {};
   renderedTab = tab;
+  document.body.dataset.house = run.setup?.colour ?? ''; // version 6: the house colour (a Legacy unlock)
   app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab) : nextBar(nextHint(run))}${eventCard(run)}${fortunePanel(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
@@ -317,7 +318,7 @@ function scheduleAuto() {
 // `opening: false` when the opening has just played (before the patron choice).
 // Every new career gets its own save; the one before stays in the Careers list.
 // Version 6: a new career is a season (the short shape) unless the player chooses the Long Road.
-function newRun(seed, setup = { classes: unlockedClasses(legacy), short: true }, { opening = true } = {}) {
+function newRun(seed, setup = careerSetup(legacy), { opening = true } = {}) {
   run = createRun(seed ?? undefined, setup);
   careerId = freshId(careers, Date.now());
   achieved = [];
@@ -395,9 +396,10 @@ const actions = {
   },
   'start-career': () => {
     const patron = document.querySelector('input[name=patron]:checked')?.value || null;
-    const decrees = [...document.querySelectorAll('input[name=decree]:checked')].map((i) => i.value);
+    const heat = Number(document.querySelector('input[name=heat]:checked')?.value ?? 0);
+    const colour = document.querySelector('input[name=colour]:checked')?.value ?? null;
     const short = document.querySelector('input[name=length]:checked')?.value === 'short';
-    newRun(null, { patron, decrees, classes: unlockedClasses(legacy), short }, { opening: false });
+    newRun(null, careerSetup(legacy, { patron, heat, short, colour }), { opening: false });
   },
   'daily-challenge': () => {
     if (!roomForCareer()) return;

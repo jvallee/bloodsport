@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
 import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, advanceToTournament, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute, resolveMercy } from '../src/run.js';
-import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal, eventCard, setupModal, legacyPanel, roomTabs } from '../src/ui/views.js';
-import { TRIBUTE } from '../src/data.js';
+import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal, eventCard, setupModal, legacyPanel, roomTabs, today } from '../src/ui/views.js';
+import { TRIBUTE, LEGACY, LEGACY_LEVELS } from '../src/data.js';
+import { createLegacy, recordCareer } from '../src/legacy.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
 import { INTRO, STEPS, FIGHT_STEPS } from '../src/tutorial.js';
 import { fightView } from '../src/ui/fightView.js';
@@ -261,14 +262,19 @@ test('the end of a career shows its score, best fighter and the fallen', () => {
   assert.match(html, /The fallen/);
 });
 
-test('the new-career dialog offers unlocked patrons, and decrees only after a win', () => {
+// Version 6, phase 3: Heat replaced the decree checkboxes (a deliberate rule change; docs/plan-v6-phase3.md).
+test('the new-career dialog offers unlocked patrons, and Heat only after a win', () => {
   const legacy = { achievements: ['firstBoss', 'bronze'], careers: 1, best: 0, past: [] };
   const html = setupModal(legacy, { patron: '', decrees: [] });
   assert.match(html, /value="veteran"/);
   assert.doesNotMatch(html, /value="purse"/);
-  assert.match(html, /Win a career to unlock the Emperor/);
+  assert.match(html, /Win a career to unlock Heat/);
   assert.match(html, /Unlocked classes in the market: Thorn-Blade/);
-  assert.match(setupModal({ ...legacy, achievements: ['champion'] }, { patron: '', decrees: [] }), /value="ironBosses"/);
+  const hot = setupModal({ ...legacy, achievements: ['champion'], maxHeat: 1 }, { patron: '', heat: 0 });
+  assert.match(hot, /name="heat" value="1"/);
+  assert.match(hot, /Heat 1: Harsh Judges/);
+  assert.doesNotMatch(hot, /name="heat" value="2"/);
+  assert.match(hot, /Win at Heat 1 to unlock Heat 2/);
   assert.match(legacyPanel(legacy), /★ First Blood/);
   assert.match(legacyPanel(legacy), /☆ Master of the Games/);
 });
@@ -354,4 +360,28 @@ test('a signature move that can\'t be used is a disabled button with the reason 
   const html = fightView(m, ui, bout);
   assert.doesNotMatch(html, /data-action="signature"/);
   assert.match(html, /class="btn signature" disabled[^>]*>★ Haymaker <small>Haymaker needs the class ability/);
+});
+
+test('the end of a career shows the Legacy XP it earned, the level bar and what it unlocked', () => {
+  const legacy = { ...createLegacy(), xp: LEGACY.first - 5 };
+  const run = createRun(4);
+  Object.assign(run, { status: 'lost', endReason: 'Executed.', topTier: 2 });
+  recordCareer(legacy, run);
+  const html = endBanner(run, legacy);
+  assert.match(html, /\+\d+ Legacy XP/);
+  assert.match(html, new RegExp(`1 arena climbed <b>\\+${LEGACY.xp.arena}</b>`));
+  assert.match(html, /Legacy level <b>2<\/b>/);
+  assert.match(html, new RegExp(`New: <b>${LEGACY_LEVELS[0].name}</b>`));
+  assert.match(html, new RegExp(`next, at level 3: <b>${LEGACY_LEVELS[1].name.replace(/[()]/g, '\\$&')}</b>`));
+  assert.match(legacyPanel(legacy), /Level 2: The Hall Remembers/);
+});
+
+test('the setup dialog shows the daily streak and unlocked house colours', () => {
+  const day = today();
+  const legacy = { ...createLegacy(), xp: 1e6, daily: { [day]: 50 } };
+  const html = setupModal(legacy, { patron: '', heat: 0 });
+  assert.match(html, /1-day streak/);
+  assert.match(html, /name="colour" value="purple"/);
+  assert.match(html, /value="augur"/);
+  assert.doesNotMatch(setupModal(createLegacy(), { patron: '', heat: 0 }), /name="colour"/);
 });

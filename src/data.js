@@ -121,6 +121,7 @@ export const PATRONS = {
   warChest: { name: 'The War Chest', desc: 'Start with 2 War Paint and a Blessed Bandage.' },
   defector: { name: 'A Defector', desc: 'A strong fighter from a rival house joins you at the start (Power +3).' },
   liberator: { name: 'Friends of the Rising', desc: 'Start with a political prisoner in your roster. The rebels remember your house.' }, // v6, secret
+  augur: { name: 'The Augur', desc: 'Open the career with a pick of three rare relics.' }, // version 6: a Legacy level unlock
 };
 
 // Emperor's Decrees: optional harder rules for a career, after your first win. Each adds to the score.
@@ -128,7 +129,38 @@ export const DECREES = {
   ironBosses: { name: 'Iron Bosses', desc: 'Every Boss fights with +1 Power.', score: 30 },
   greedyEmperor: { name: 'A Greedy Emperor', desc: 'Tribute costs 50% more.', score: 20 },
   harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favour.', score: 20 },
+  leanFortune: { name: 'Lean Fortunes', desc: 'Fortune deals one card fewer each month.', score: 25 }, // version 6
+  hungryLions: { name: 'Hungry Lions', desc: 'Every opponent fights with +1 Power.', score: 40 }, // version 6
 };
+
+// Version 6, Heat (docs/plan-v6-phase3.md): numbered levels of the decrees, each adding one rule to the last.
+// Winning a career at Heat N unlocks Heat N+1. Legacy XP gains `xpPerHeat` × the Heat level.
+export const HEAT = { decrees: ['harshJudges', 'greedyEmperor', 'ironBosses', 'leanFortune', 'hungryLions'], xpPerHeat: 0.2 };
+
+// Version 6, Legacy XP and the unlock tree (src/legacy.js). Level 2 needs `first` XP; each level after needs `step` more.
+// Past level 12 a level still comes, but unlocks nothing new.
+export const LEGACY = {
+  first: 70, step: 10,
+  // Bosses and Titles count once each (every Boss win and every Title took careful careers to about 140 XP).
+  xp: { career: 10, arena: 10, boss: 5, kill: 1, maxKills: 10, title: 3, maxTitles: 5, won: 40, coup: 40, martyr: 25, loyalist: 20 },
+  legendsKept: 6, // how many Hall legends a career's setup may deal as Fortune cards
+};
+// One unlock a level (the index + 2 is the level). Past it, levels unlock nothing more. Names and words are PLACEHOLDER for the designer.
+export const LEGACY_LEVELS = [
+  { id: 'legends', name: 'The Hall Remembers', desc: 'A retired legend from an earlier career can return, once, as a Fortune card.' },
+  { id: 'relic:dice', name: 'The Loaded Dice', desc: 'Can now appear in your Fortune draft.' },
+  { id: 'colour:purple', name: 'Imperial Purple', desc: 'A house colour.' },
+  { id: 'oracle', name: 'A Seer in the House', desc: 'Every career starts with an Oracle.' },
+  { id: 'relic:scrolls', name: 'The Scrolls of the Masters', desc: 'Can now appear in your Fortune draft.' },
+  { id: 'patron:augur', name: 'The Augur', desc: 'A new patron: open the career with a pick of three rare relics.' },
+  { id: 'relic:laurel', name: 'The Gilded Laurel', desc: 'Can now appear in your Fortune draft.' },
+  { id: 'colour:verdigris', name: 'Verdigris', desc: 'A house colour.' },
+  { id: 'fourCards', name: 'A Generous Wheel', desc: 'Fortune deals four cards each month.' },
+  { id: 'relic:proserpina', name: "Proserpina's Coin", desc: 'Can now appear in your Fortune draft.' },
+  { id: 'relic:eagle', name: 'The Eagle Standard', desc: "Can now appear in your Fortune draft (until then, only the Emperor's friends carry it)." },
+  { id: 'colour:gold', name: 'Imperial Gold', desc: 'A house colour, for a lanista of legend.' },
+];
+export const HOUSE_COLOURS = { crimson: 'Crimson', purple: 'Imperial Purple', verdigris: 'Verdigris', gold: 'Imperial Gold' };
 
 // Fighter stories (roadmap v3, phase C). Scars come from surviving severe wounds (`vs`: 'melee' or 'ranged', the style
 // of the opponent who caused it); Battle-Hardened from a Bloodied Victory. Values: power, enemy (to injure), self (to be injured).
@@ -324,14 +356,15 @@ export const STAGES = ['Tournament 1', 'Tournament 2', 'Boss Tournament'];
 
 // One circuit per tier: Tournament 1 → Tournament 2 → Boss. Arrays are per stage.
 // Version 6 (alpha.2): tiers 2–4 fight 3–4 Power harder (and the Grand Tournament 4), to match the Fortune draft (docs/fight-rules.md).
+// Version 6 (alpha.3): the Silver and Imperial Coliseums and the Grand Tournament +1 more, for a first career of 15–35% (docs/plan-v6-phase3.md).
 export const CIRCUITS = [
   { tier: 1, name: 'The Dirt Pits', oppPower: [6, 6, 7], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
   { tier: 2, name: 'The Bronze Arena', oppPower: [14, 15, 16], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
-  { tier: 3, name: 'The Silver Coliseum', oppPower: [21, 21, 22], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
-  { tier: 4, name: 'The Imperial Coliseum', oppPower: [30, 31, 32], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
+  { tier: 3, name: 'The Silver Coliseum', oppPower: [22, 22, 23], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
+  { tier: 4, name: 'The Imperial Coliseum', oppPower: [31, 32, 33], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
 ];
 
-export const GRAND = { name: 'The Grand Tournament', oppPower: 35, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
+export const GRAND = { name: 'The Grand Tournament', oppPower: 36, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
 
 // House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
 export const PRESTIGE_LEVELS = [
@@ -410,7 +443,7 @@ export const PERKS = {
 export const FORTUNE = {
   enabled: true, fromWeek: 4, cards: 3, maxRelics: 6, tagCap: 3,
   rarity: { common: 62, rare: 30, legendary: 8 },
-  kinds: { relic: 4, boon: 4, gear: 2, fighter: 2, wager: 1 },
+  kinds: { relic: 4, boon: 4, gear: 2, fighter: 2, wager: 1, legend: 1 }, // legend: a returning Hall legend (a Legacy unlock)
   reroll: [3, 6, 10], pass: 2,
   fighterPower: { common: 0, rare: 2, legendary: 4 }, legendRenown: 6,
   wager: { winGoldPerTier: 5, winRenown: 2, lossGoldPerTier: 3 },

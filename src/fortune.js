@@ -24,13 +24,13 @@ export const RELICS = {
   shell: { name: 'The Tortoise Shell', rarity: 'rare', tag: 'guarded', desc: '−4% chance to be injured for each Guarded perk (up to 3).', perTag: { guard: 4000 } },
   sandals: { name: "Mercury's Sandals", rarity: 'rare', tag: 'swift', desc: '+1 Speed for each Swift perk (up to 3).', perTag: { speed: 1 } },
   mask: { name: "The Showman's Mask", rarity: 'rare', tag: 'showman', desc: 'A win pays +1 Renown for each Showman perk (up to 3).', tagRenown: 1 },
-  scrolls: { name: 'The Scrolls of the Masters', rarity: 'rare', desc: '+1 XP from every fight.', fightXp: 1 },
+  scrolls: { name: 'The Scrolls of the Masters', rarity: 'rare', locked: true, desc: '+1 XP from every fight.', fightXp: 1 },
   referee: { name: 'A Bribed Referee', rarity: 'rare', desc: 'Capitulating costs no Favour or Renown.', towelFree: true },
-  dice: { name: 'The Loaded Dice', rarity: 'rare', desc: 'A won bet pays half the stake again.', betBonus: 0.5 },
+  dice: { name: 'The Loaded Dice', rarity: 'rare', locked: true, desc: 'A won bet pays half the stake again.', betBonus: 0.5 },
   spring: { name: "Aesculapius's Spring", rarity: 'rare', desc: 'The Medbay heals one more week each week.', heal: 1 },
-  eagle: { name: 'The Eagle Standard', rarity: 'legendary', desc: '+1 Power and +5% win chance in Boss fights.', fight: { power: 1, win: 5000, boss: true } },
-  laurel: { name: 'The Gilded Laurel', rarity: 'legendary', desc: 'A fighter with a Title: +1 Power in every round.', fight: { power: 1, titled: true } },
-  proserpina: { name: "Proserpina's Coin", rarity: 'legendary', desc: 'Once: a fighter who would die in a tournament is carried out alive. Then the coin is spent.', saveLife: true },
+  eagle: { name: 'The Eagle Standard', rarity: 'legendary', locked: true, desc: '+1 Power and +5% win chance in Boss fights.', fight: { power: 1, win: 5000, boss: true } },
+  laurel: { name: 'The Gilded Laurel', rarity: 'legendary', locked: true, desc: 'A fighter with a Title: +1 Power in every round.', fight: { power: 1, titled: true } },
+  proserpina: { name: "Proserpina's Coin", rarity: 'legendary', locked: true, desc: 'Once: a fighter who would die in a tournament is carried out alive. Then the coin is spent.', saveLife: true },
 };
 
 // Perk tags (pillar C): which relics a perk feeds. A repeatable perk taken twice counts twice.
@@ -103,7 +103,7 @@ export function gearLine(id) {
 export function fortuneTitle(card) {
   if (card.kind === 'relic') return RELICS[card.id].name;
   if (card.kind === 'gear') return GEAR[card.id].name;
-  if (card.kind === 'fighter') return card.fighter.name;
+  if (card.kind === 'fighter' || card.kind === 'legend') return card.fighter.name;
   if (card.kind === 'wager') return "The Fates' Wager";
   return BOONS[card.id].name;
 }
@@ -114,6 +114,10 @@ export function fortuneText(card) {
   if (card.kind === 'fighter') {
     const f = card.fighter;
     return `${f.legend ? 'A legend of the arena joins' : 'Joins'} for free: Power ${f.power}, Speed ${f.speed}, level ${f.level}${f.legend ? `, ${f.renown} Renown` : ''}.`;
+  }
+  if (card.kind === 'legend') { // version 6: a retired legend from an earlier career (PLACEHOLDER words)
+    const f = card.fighter;
+    return `An old champion of your house (${card.wins} win${card.wins === 1 ? '' : 's'}) offers to fight for you one last season: Power ${f.power}, Speed ${f.speed}, level ${f.level}${f.titles.length ? `, ${f.titles.join(', ')}` : ''}.`;
   }
   if (card.kind === 'wager') return `Win your top bout this month: +${card.winGold} Gold and +${card.winRenown} Renown. Lose or skip it: −${card.lossGold} Gold.`;
   const b = BOONS[card.id];
@@ -129,4 +133,4 @@ export function fortuneText(card) {
 }
 
 // What a card is, in one word (for its label).
-export const KIND_LABELS = { relic: 'Relic', boon: 'Boon', gear: 'Gear', fighter: 'Fighter', wager: 'Wager' };
+export const KIND_LABELS = { relic: 'Relic', boon: 'Boon', gear: 'Gear', fighter: 'Fighter', wager: 'Wager', legend: 'Legend' };

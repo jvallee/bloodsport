@@ -11,7 +11,7 @@ const tunables = args.includes('--tune') ? JSON.parse(args[args.indexOf('--tune'
 const pct = (x) => `${(x * 100).toFixed(0)}%`;
 const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
-const { gates, careful, reckless, split, rebel, loyalist, short } = await runGates({ careers: N, tunables });
+const { gates, careful, reckless, split, rebel, loyalist, short, legacy, meanXp } = await runGates({ careers: N, tunables });
 
 for (const [name, results] of [['CAREFUL', careful], ['RECKLESS', reckless]]) {
   const wins = results.filter((r) => r.won);
@@ -42,6 +42,7 @@ const endings = (rs) => Object.entries(rs.reduce((o, r) => ({ ...o, [r.run.endin
 console.log(`\nThe hidden plot (${rebel.length} careers each)\n  Rebel     ${endings(rebel)}\n  Loyalist  ${endings(loyalist)}`);
 const meanWeeks = (rs) => Math.round(rs.reduce((n, r) => n + r.weeks, 0) / Math.max(1, rs.length));
 console.log(`\nShort careers (${short.length}): won ${Math.round(100 * short.filter((r) => r.won).length / short.length)}%, ${meanWeeks(short)} weeks on average, ${meanWeeks(short.filter((r) => r.won))} when won (full careers: ${meanWeeks(careful)}, ${meanWeeks(careful.filter((r) => r.won))} when won)`);
+console.log(`\nLegacy: a first career earns ${meanXp.toFixed(0)} XP on average; with a full Legacy (${legacy.length} careers) careful wins ${Math.round(100 * legacy.filter((r) => r.won).length / legacy.length)}%`);
 console.log('\nGates');
 for (const g of gates) console.log(`  ${g.pass ? 'PASS' : 'FAIL'}  ${g.name}: ${fmt(g)}`);
 if (check && gates.some((g) => !g.pass)) {

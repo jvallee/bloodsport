@@ -3,6 +3,7 @@
 // Tunables are paths into src/data.js, e.g. '{"KINDS.basa.basePower": 5, "BET.cut": 0.85}'.
 // Example: node scripts/probes/bot-options.js '{"bet": false, "lounge": false}' '{}' 150 "no bets, no Lounge"
 import { runJobs, progress } from '../pool.js';
+import { careerXp } from '../../src/legacy.js';
 
 const [optsJson = '{}', tuneJson = '{}', n = '120', label = '', first = '1'] = process.argv.slice(2);
 const opts = JSON.parse(optsJson);
@@ -19,4 +20,4 @@ for (const r of results) {
   policies += r.run.log.filter((l) => /^The Senate passes/.test(l.text)).length;
 }
 const f = (x) => (x / N).toFixed(2);
-console.log(`${label || optsJson + ' ' + tuneJson}: careful win ${(100 * won / N).toFixed(0)}%  deaths ${f(deaths)}  weeks ${(weeks / N).toFixed(0)}  bets ${f(bets)} (net ${f(betGold)} Gold)  hosted ${f(hosted)}  policies ${f(policies)}`);
+console.log(`${label || optsJson + ' ' + tuneJson}: careful win ${(100 * won / N).toFixed(0)}%  deaths ${f(deaths)}  weeks ${(weeks / N).toFixed(0)}  bets ${f(bets)} (net ${f(betGold)} Gold)  hosted ${f(hosted)}  policies ${f(policies)}  Legacy XP ${(results.reduce((t, r) => t + careerXp(r.run).total, 0) / N).toFixed(0)}`);

@@ -2,6 +2,16 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 6.0.0-alpha.3: every career counts
+
+- **Legacy XP after every career, win or lose.** The end screen shows what you earned and why (a career, each arena climbed, each Boss beaten, kills, Titles, a win, how the plot ended), fills your **Legacy level** bar, and shows what the new level unlocks.
+- **The Legacy tree:** each level unlocks something for every career after it. Relics that a first career never sees (the Loaded Dice, the Scrolls, the Gilded Laurel, Proserpina's Coin, the Eagle Standard), **legends who return**, a starting **Oracle**, a new patron (**the Augur**: open the career with a pick of three rare relics), **a fourth Fortune card** each month, and **house colours**. The Codex's Legacy panel shows the whole tree and what's next.
+- **Heat** replaces the Emperor's Decrees: choose Heat 1–5 before a career, each adding one rule to the last (Harsh Judges, a Greedy Emperor, Iron Bosses, and two new ones: **Lean Fortunes**, one card fewer; **Hungry Lions**, every opponent +1 Power). Higher Heat: a higher score and +20% Legacy XP a level. **Win at Heat N to unlock Heat N+1.** Your first career win unlocks Heat 1.
+- **The Hall remembers:** once unlocked, a legend who retired in an earlier career can be dealt as a Fortune card, once, to fight for your house one last season.
+- **The Emperor's Challenge keeps a streak:** days in a row, shown when you start a career and at the end of a daily one. The daily career never uses unlocks or Heat, so it's the same for everyone.
+- Your Legacy from earlier versions counts: past careers it recorded are worth XP, and a past win unlocks Heat 1. A career started before this version plays on as a first career (it keeps its relics).
+- **The upper arenas are a little harder:** the Silver and Imperial Coliseums and the Grand Tournament fight with 1 more Power, so a first career is a real climb and the Legacy's unlocks matter.
+
 ## 6.0.0-alpha.2: Fortune's wheel
 
 - **Every month, Fortune deals three cards: take one.** A **relic** your house keeps for good, a **boon** (Gold, Prestige, Favour, XP, a surgeon's visit, a day at the baths…), a free piece of **gear**, a free **fighter** (sometimes a legend of the arena), or **the Fates' Wager** (win your top bout this month for a purse; lose it and pay). Cards are common, rare or legendary. Don't like them? **Spin again** for a little Gold, or let Fortune pass.

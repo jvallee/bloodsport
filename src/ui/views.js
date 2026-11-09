@@ -3,7 +3,7 @@
 import { MAX_CAREERS } from '../careers.js';
 import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
 import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR } from '../data.js';
-import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
+import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, unlockText, levelFor, nextUnlock, unlocksAt, heatUnlocked, houseColours, dailyStreak, returningFor, LEGACY_LEVELS, HEAT, HOUSE_COLOURS } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
@@ -137,7 +137,8 @@ export function endBanner(run, legacy = null) {
     <div>${esc(run.endReason)}</div>
     ${(run.epilogue ?? []).map((line) => `<p class="epilogue">${esc(line)}</p>`).join('')}
     ${plotAftermath(run)}
-    <div class="end-score">${run.setup?.daily ? `⚜ The Emperor's Challenge, ${run.setup.daily} · ` : run.setup?.short ? 'Short career · ' : ''}Score <b>${score}</b>${run.setup?.daily && legacy ? ` · your best today ${Math.max(legacy.daily?.[run.setup.daily] ?? 0, score)}` : ''}${legacy ? ` · best ever ${Math.max(legacy.best, score)} · career ${legacy.careers}` : ''}</div>
+    <div class="end-score">${run.setup?.daily ? `⚜ The Emperor's Challenge, ${run.setup.daily} · ` : run.setup?.short ? 'Short career · ' : ''}${run.setup?.heat ? `🔥 Heat ${run.setup.heat} · ` : ''}Score <b>${score}</b>${run.setup?.daily && legacy ? ` · your best today ${Math.max(legacy.daily?.[run.setup.daily] ?? 0, score)}` : ''}${legacy ? ` · best ever ${Math.max(legacy.best, score)} · career ${legacy.careers}` : ''}</div>
+    ${legacy ? legacyGain(legacy.past?.find((p) => p.seed === run.seed && p.weeks === run.week), legacy) : ''}
     <div class="end-grid">
       <div><div class="label">The career</div>${formatDate(run.week)}<br>${wins} won, ${fought.length - wins} lost · ${kills} kill${kills === 1 ? '' : 's'}<br>Top arena: ${esc(arenaName(run.topTier))}<br>House rank: #${rank} of ${standings(run).length} · Glory ${run.glory ?? 0}</div>
       ${best ? `<div class="end-best">${portrait(best, 64)}<div><div class="label">Best fighter</div><b>${esc(best.name)}</b> (${esc(KINDS[best.kind].name)})<br>${bestWins} win${bestWins === 1 ? '' : 's'} · Renown ${best.renown}${best.titles?.length ? `<br>🏆 ${esc(best.titles.join(', '))}` : ''}${best.alive ? '' : '<br>Fell in the arena'}</div></div>` : ''}
@@ -170,9 +171,22 @@ export function setupModal(legacy, choice) {
   const patrons = unlockedPatrons(legacy);
   const patronList = [['', { name: 'No patron', desc: 'Start as the game intends.' }], ...patrons.map((p) => [p, PATRONS[p]])]
     .map(([id, p]) => `<label class="opt"><input type="radio" name="patron" value="${id}" ${choice.patron === id ? 'checked' : ''}> <b>${esc(p.name)}</b> <small>${esc(p.desc)}</small></label>`).join('');
-  const decrees = decreesUnlocked(legacy)
-    ? Object.entries(DECREES).map(([id, d]) => `<label class="opt"><input type="checkbox" name="decree" value="${id}" ${choice.decrees.includes(id) ? 'checked' : ''}> <b>${esc(d.name)}</b> <small>${esc(d.desc)} (+${d.score} score if you win)</small></label>`).join('')
-    : '<p class="sub">Win a career to unlock the Emperor\'s Decrees: harder rules for a higher score.</p>';
+  // Version 6: Heat replaces the decree checkboxes. Heat N plays the first N decrees (docs/plan-v6-phase3.md).
+  const maxHeat = heatUnlocked(legacy);
+  const heatOpt = (h) => {
+    const d = h ? DECREES[HEAT.decrees[h - 1]] : null;
+    const score = HEAT.decrees.slice(0, h).reduce((t, id) => t + DECREES[id].score, 0);
+    return `<label class="opt"><input type="radio" name="heat" value="${h}" ${(choice.heat ?? 0) === h ? 'checked' : ''}> <b>${h ? `🔥 Heat ${h}: ${esc(d.name)}` : 'No Heat'}</b> <small>${h ? `${esc(d.desc)}${h > 1 ? ' And every rule below.' : ''} +${score} score if you win, +${Math.round(100 * HEAT.xpPerHeat * h)}% Legacy XP.` : 'The Emperor\'s usual rules.'}</small></label>`;
+  };
+  const heat = maxHeat
+    ? Array.from({ length: maxHeat + 1 }, (_, h) => heatOpt(maxHeat - h)).join('') + (maxHeat < HEAT.decrees.length ? `<p class="sub">Win at Heat ${maxHeat} to unlock Heat ${maxHeat + 1}.</p>` : '')
+    : '<p class="sub">Win a career to unlock Heat: harder rules for a higher score and more Legacy XP.</p>';
+  const colours = houseColours(legacy);
+  const colourList = colours.length > 1 ? `<div class="label">House colours</div><div class="colours">${colours.map((c) => `<label class="opt colour-opt house-${c}"><input type="radio" name="colour" value="${c}" ${(choice.colour ?? 'crimson') === c ? 'checked' : ''}> <span class="swatch"></span> ${esc(HOUSE_COLOURS[c])}</label>`).join('')}</div>` : '';
+  const { level } = levelFor(legacy.xp ?? 0);
+  const legends = returningFor(legacy).length;
+  const unlocks = unlocksAt(level);
+  const streak = dailyStreak(legacy, today());
   const classes = unlockedClasses(legacy);
   return `<div class="modal setup" role="dialog" aria-label="A new career"><div class="modal-body">
     <button class="close" data-action="setup-cancel" aria-label="Close">×</button>
@@ -180,10 +194,12 @@ export function setupModal(legacy, choice) {
     <div class="label">Career length</div>
     <label class="opt"><input type="radio" name="length" value="short" ${choice.short === false ? '' : 'checked'}> <b>A season</b> <small>Each arena: Tournament → Boss, with richer purses and a head start. About an hour.</small></label>
     <label class="opt"><input type="radio" name="length" value="full" ${choice.short === false ? 'checked' : ''}> <b>The Long Road</b> <small>Each arena: Tournament 1 → Tournament 2 → Boss. A few hours.</small></label>
-    <div class="daily"><b>⚜ The Emperor's Challenge</b> <small>Today's short career: the same seed for everyone today, no patron or decrees.${legacy.daily?.[today()] ? ` Your best today: <b>${legacy.daily[today()]}</b>.` : ''}</small>
+    <div class="daily"><b>⚜ The Emperor's Challenge</b>${streak ? ` <span class="chip streak">🔥 ${streak}-day streak</span>` : ''} <small>Today's short career: the same seed for everyone today, with no patron, Heat or Legacy unlocks.${legacy.daily?.[today()] ? ` Your best today: <b>${legacy.daily[today()]}</b>.` : ''}</small>
       <button class="btn small" data-action="daily-challenge">Take today's challenge</button></div>
     <div class="label">Patron</div>${patronList}
-    <div class="label">The Emperor's Decrees</div>${decrees}
+    <div class="label">Heat</div>${heat}
+    ${colourList}
+    ${unlocks.length ? `<p class="sub">Legacy level ${level}: ${unlocks.filter((u) => !u.id.startsWith('colour:')).map((u) => esc(u.name)).join(', ')}${legends && unlocks.some((u) => u.id === 'legends') ? ` (${legends} legend${legends > 1 ? 's' : ''} may return)` : ''}.</p>` : ''}
     ${classes.length ? `<p class="sub">Unlocked classes in the market: ${classes.map((c) => esc(CLASSES[c].name)).join(', ')}.</p>` : ''}
     <div class="row"><button class="btn primary" data-action="start-career">Begin</button><button class="btn" data-action="setup-cancel">Cancel</button></div>
   </div></div>`;
@@ -198,10 +214,43 @@ export function legacyPanel(legacy) {
   }).join('');
   const past = legacy.past.map((p) => `<li>${p.won ? '👑' : '⚰'} Seed ${p.seed}: score <b>${p.score}</b>, ${p.weeks} weeks${p.endReason ? ` · ${esc(p.endReason)}` : ''}</li>`).join('');
   const hall = (legacy.hall ?? []).map((l) => `<div class="legend" title="${esc((l.story ?? []).map((e) => e.text).join(' '))}">${portrait(l, 48)}<div><b>${esc(l.name)}</b><br><small>${l.wins} win${l.wins === 1 ? '' : 's'} · ${l.kills} kill${l.kills === 1 ? '' : 's'}${l.titles?.length ? ` · ${esc(l.titles.join(', '))}` : ''}</small></div></div>`).join('');
-  return `<section class="panel legacy"><h2>Legacy <small>${legacy.achievements.length}/${ACHIEVEMENTS.length} · ${legacy.careers} career${legacy.careers === 1 ? '' : 's'} · best score ${legacy.best}</small></h2>
-    <p class="sub">Achievements carry over between careers and unlock patrons, new classes and the Emperor's Decrees.</p>
+  const { level } = levelFor(legacy.xp ?? 0);
+  const tree = LEGACY_LEVELS.map((u, i) => `<li class="${level >= i + 2 ? 'got' : ''}"><b>${level >= i + 2 ? '★' : '☆'} Level ${i + 2}: ${esc(u.name)}</b> <small>${esc(u.desc)}</small></li>`).join('');
+  return `<section class="panel legacy"><h2>Legacy <small>level ${level} · ${legacy.achievements.length}/${ACHIEVEMENTS.length} achievements · ${legacy.careers} career${legacy.careers === 1 ? '' : 's'} · best score ${legacy.best}${heatUnlocked(legacy) ? ` · Heat ${heatUnlocked(legacy)} unlocked` : ''}</small></h2>
+    ${legacyBar(legacy.xp ?? 0)}
+    <p class="sub">Every career earns Legacy XP, win or lose, and every level unlocks something for the careers after it. Achievements unlock patrons and classes.</p>
+    <h3 class="mini">The Legacy tree</h3><ul class="achievements tree">${tree}</ul>
  ${hall ? `<h3 class="mini">Hall of Champions</h3><div class="hall">${hall}</div>` : ''}
     <ul class="achievements">${rows}</ul>${past ? `<h3 class="mini">Past careers</h3><ul class="past">${past}</ul>` : ''}</section>`;
+}
+
+// Version 6: the Legacy level bar. `from` (XP before this career) animates the fill from where it was.
+export function legacyBar(xp, from = null) {
+  const now = levelFor(xp);
+  const before = from === null ? null : levelFor(from);
+  const start = before && before.level === now.level ? before.into / before.need : 0;
+  const next = nextUnlock({ xp });
+  return `<div class="legacy-bar" style="--from:${(100 * start).toFixed(1)}%;--to:${(100 * now.into / now.need).toFixed(1)}%">
+    <div class="legacy-level">Legacy level <b>${now.level}</b></div>
+    <div class="bar"><div class="fill"></div></div>
+    <small>${now.into}/${now.need} XP${next ? ` · next, at level ${next.level}: <b>${esc(next.name)}</b>` : ''}</small></div>`;
+}
+
+// Version 6: what this career gave the Legacy (the end screen). `entry` is its record from recordCareer.
+function legacyGain(entry, legacy) {
+  if (!entry?.xp) return '';
+  const unlocked = (entry.unlocked ?? []).map((id) => LEGACY_LEVELS.find((u) => u.id === id)).filter(Boolean);
+  const xpAfter = entry.xpBefore + entry.xp;
+  const streak = entry.daily ? dailyStreak(legacy, entry.daily) : 0;
+  return `<div class="legacy-gain">
+    <div class="label">Legacy</div>
+    <div class="xp-lines">${entry.xpLines.map((l) => `<span>${esc(l.label)} <b>+${l.xp}</b></span>`).join('')}</div>
+    <div class="xp-total">+${entry.xp} Legacy XP${streak > 1 ? ` · 🔥 ${streak}-day streak` : ''}</div>
+    ${legacyBar(xpAfter, entry.xpBefore)}
+    ${entry.to > entry.from ? `<div class="level-up">Legacy level ${entry.to}!</div>` : ''}
+    ${unlocked.map((u) => `<div class="unlock-new">New: <b>${esc(u.name)}</b>. ${esc(u.desc)}</div>`).join('')}
+    ${entry.newHeat ? `<div class="unlock-new">New: <b>🔥 Heat ${entry.newHeat}</b>, ${esc(DECREES[HEAT.decrees[entry.newHeat - 1]].name)}. Harder rules, a higher score and more XP.</div>` : ''}
+  </div>`;
 }
 
 // A notice when something is earned mid-career.
@@ -797,6 +846,7 @@ export function helpModal() {
       <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favour</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
       <li><b>Take Fortune's card.</b> Each month offers three: a <b>relic</b> the house keeps (up to 6, and some count a perk's tag, like Brute or Swift), a boon, gear, a fighter, or a wager. Spin again for Gold if none suit.</li>
+      <li><b>Every career counts.</b> Win or lose, a career earns <b>Legacy XP</b>, and each Legacy level unlocks something for the careers after it: relics, a patron, house colours, legends who return. Win a career to unlock <b>Heat</b>: harder rules, a higher score, more XP.</li>
     </ol>
     <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or plays one week · T goes to fight day · 1–4 switch tabs · ? opens this page.</p>
     <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>
@@ -929,7 +979,7 @@ const KIND_ICON = { relic: '🏺', boon: '✨', gear: '⚔', fighter: '👤', wa
 const RARITY_LABEL = { common: 'Common', rare: 'Rare', legendary: 'Legendary' };
 
 function fortuneFace(card) {
-  if (card.kind === 'fighter') return portrait(card.fighter, 64);
+  if (card.kind === 'fighter' || card.kind === 'legend') return portrait(card.fighter, 64);
   return `<span class="fortune-icon">${KIND_ICON[card.kind]}</span>`;
 }
 
@@ -938,7 +988,7 @@ export function fortunePanel(run) {
   if (!run.fortune || run.mercy || run.event) return '';
   const cards = run.fortune.cards.map((c, i) => {
     const why = fortuneBlocker(run, i);
-    const kindLine = c.kind === 'relic' && RELICS[c.id].tag ? `${KIND_LABELS[c.kind]} · ${TAGS[RELICS[c.id].tag].name}` : c.kind === 'fighter' && c.fighter.legend ? 'Legendary fighter' : KIND_LABELS[c.kind];
+    const kindLine = c.kind === 'relic' && RELICS[c.id].tag ? `${KIND_LABELS[c.kind]} · ${TAGS[RELICS[c.id].tag].name}` : c.kind === 'fighter' && c.fighter.legend ? 'Legendary fighter' : c.kind === 'legend' ? 'From the Hall of Champions' : KIND_LABELS[c.kind];
     return `<div class="fortune-card rarity-${c.rarity}" style="--i:${i}">
       <div class="fortune-rarity">${RARITY_LABEL[c.rarity]} · ${esc(kindLine)}</div>
       <div class="fortune-face">${fortuneFace(c)}</div>
@@ -948,6 +998,12 @@ export function fortunePanel(run) {
     </div>`;
   }).join('');
   const full = run.relics.length >= FORTUNE.maxRelics ? ` Your house holds ${FORTUNE.maxRelics} relics: no more are dealt.` : '';
+  if (run.fortune.augur) { // version 6: the Augur's opening gift (PLACEHOLDER words)
+    return `<section class="panel fortune-draft augur">
+    <div class="label">Your patron</div><h2>The Augur reads the birds</h2>
+    <p class="sub">Choose one relic for your house, before the first week.</p>
+    <div class="fortune-cards">${cards}</div></section>`;
+  }
   return `<section class="panel fortune-draft" data-rolls="${run.fortune.rerolls}">
     <div class="label">This month</div><h2>Fortune's wheel turns</h2>
     <p class="sub">Choose one. Relics stay with the house (${run.relics.length}/${FORTUNE.maxRelics}); boons, gear and fighters are yours at once.${full}</p>

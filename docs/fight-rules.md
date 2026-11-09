@@ -704,3 +704,31 @@ All numbers PLACEHOLDER (`FORTUNE` in src/data.js; relics and boons in src/fortu
 
   Levers tried on short careers (150 each): purse ×2 (54%, 82 weeks), +35 starting Gold (43%, 85 weeks), training ×1.5 (97%, 50 weeks: whole points make it +2 Power a week), and a Boss rematch next month instead of a new circuit (5%, 47 weeks: back-to-back Boss losses drain Favour). None kept the win rate, so the game stays as it is and the gate now compares **won** careers (a won season 96 weeks against a won Long Road 134: 72%; it was 68% in 5.4.3).
 - **A test updated for the rule change:** `tests/ludus.test.js` pinned the Bronze Boss at Power 13; it now pins 16.
+
+## 6.0.0-alpha.3: Legacy XP, the unlock tree and Heat (design: docs/plan-v6-phase3.md)
+
+All numbers PLACEHOLDER (`LEGACY`, `LEGACY_LEVELS`, `HEAT` in src/data.js; `careerXp` and the rest in src/legacy.js).
+
+- **Legacy XP** for every finished career: 10 for taking part; 10 per arena above the Dirt Pits; 5 per arena whose Boss you beat (each once); 1 per kill (up to 10); 3 per distinct Title (up to 5); 40 for winning; the plot's endings 40 (coup) / 25 (martyr) / 20 (the loyalist's road); then +20% of that per Heat level. A returning legend's old kills and Titles don't count again. First draft counted every Boss win and every Title: careful careers earned about 140 XP (7 Boss wins and 6–7 Titles each), so each now counts once.
+- **Levels:** level 2 at 70 XP, each level after costing 10 more (70, 80, 90…). Level N unlocks `LEGACY_LEVELS[N − 2]`, levels 2–13: The Hall Remembers (legend cards), the Loaded Dice, Imperial Purple, A Seer in the House (a starting Oracle), the Scrolls of the Masters, the Augur (patron), the Gilded Laurel, Verdigris, A Generous Wheel (four Fortune cards), Proserpina's Coin, the Eagle Standard, Imperial Gold. Levels past 13 unlock nothing new.
+- **Locked relics:** the Loaded Dice, the Scrolls, the Gilded Laurel, Proserpina's Coin and the Eagle Standard (`locked` in `RELICS`) are never dealt until their level is reached. The Eagle Standard still comes to a house that betrays the plot (`PLOT.betrayRelic`), so in a first career only the Emperor's friends carry it.
+- **A career stores its Legacy** in `run.setup` (`unlocks`, `legends`, `heat`, `colour`), so careers replay from their seed and setup. The daily challenge never uses them. A career saved before alpha.3 loads as a first career.
+- **The Augur:** the career opens with three different rare or legendary relics from the unlocked pool (patron stream, deriveSeed 7), chosen before week 1; it can't be re-spun (passing pays the usual 2 Gold).
+- **Legend cards** (Fortune kind `legend`, weight 1): only with the Hall unlock, and only for the up to 6 Hall legends in the career's setup who haven't returned before (`legacy.returned`). Always legendary: a fighter at the Market's strength + 4 Power, seasoned like a recruit, with the legend's name, kind, class, Titles, kills and Renown (at least 6). Each legend returns once.
+- **Heat** (`HEAT.decrees`): Heat N plays the first N of Harsh Judges (+5 Favour lost on a Boss loss, score +20), a Greedy Emperor (tribute ×1.5, +20), Iron Bosses (+1 Boss Power, +30), Lean Fortunes (one Fortune card fewer, +25) and Hungry Lions (every opponent +1 Power, +40). Winning a career at Heat N unlocks N + 1 (up to 5); a first win unlocks Heat 1. An old Legacy with the champion achievement starts at Heat 1.
+- **Migration:** a Legacy from before alpha.3 gets XP once for the careers it recorded: 10 + 10 per arena above the first + 40 for a win (what the records still say), and 10 for each older career beyond the last 10.
+- **The daily streak:** consecutive days with a daily career, counting today or, while today is unplayed, up to yesterday.
+- **Rebalancing for the first career.** Locking the five relics alone left a first career at 37% (the plan's target is 15–35%). Measured with the probe (150 careful careers, seeds from 1000, `oddsSamples` 100); "full" is every unlock and the Augur as patron:
+
+  | Variant | First career | Full Legacy | First-career XP |
+  |---|---|---|---|
+  | Four relics locked, the Eagle in the pool | 39% | 53% | |
+  | A: the Eagle locked too | 37% | 53% | 80 |
+  | B: A + every Boss +1 (Grand 36) | 35% | 51% | 75 |
+  | C: A + every opponent from Bronze up +1 (Grand 36) | 21% | 30% | 60 |
+  | D: A + Bronze and Silver +1 | 21% | 34% | 60 |
+  | **E: A + Silver, Imperial and the Grand +1 (chosen)** | 28% | 44% | 72 |
+
+  So the Silver Coliseum fights at 22/22/23, the Imperial at 31/32/33 and the Grand Tournament at 36. Bronze and the Dirt Pits are unchanged.
+- **Gates:** the careful, reckless, plot and short groups play a first career. "Careful career win rate 20–45%" became **"First career: careful 15–35%"** (the plan's target). New: **"Full Legacy: careful 40–60%"** (150 careers with every unlock and the Augur) and **"Unlock cadence: each of the first five levels takes 1–2 careers"** (the first five levels' average cost over the careful bot's average first-career XP).
+- **Tests updated for the rule change:** `tests/ui.test.js` checked the decree checkboxes; it now checks the Heat choices.

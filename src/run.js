@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, SPY, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, SUMMONS, FEAR, FORTUNE, deltaRow,
+  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, SUMMONS, FEAR, FORTUNE, HEAT, LEGACY, deltaRow,
 } from './data.js';
 import { RELICS, BOONS, hasRelic, relicSum, relicFight, tagCount, fortuneTitle, fortuneText } from './fortune.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
@@ -118,6 +118,10 @@ export function crownChampion(f, tier) {
 // Harsh Judges (a decree) makes every Boss loss cost 5 more.
 export const bossLossFavor = (tier, run = null) => FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1] - (hasDecree(run, 'harshJudges') ? 5 : 0);
 export const hasDecree = (run, id) => Boolean(run?.setup?.decrees?.includes(id));
+// Version 6: what the Legacy had unlocked when this career started (docs/plan-v6-phase3.md). None for a first career.
+export const hasUnlock = (run, id) => Boolean(run?.setup?.unlocks?.includes(id));
+export const heatDecrees = (heat) => HEAT.decrees.slice(0, Math.max(0, heat ?? 0));
+const lionsPower = (run) => (hasDecree(run, 'hungryLions') ? 1 : 0);
 // A Patron Lounge policy in force (fun idea #7).
 export const hasPolicy = (run, id) => Boolean(run?.policies?.some((p) => p.id === id && p.until > run.week));
 
@@ -134,7 +138,7 @@ export function boutFor(run, tier = run.topTier) {
   const below = run.topTier - tier;
   const arena = run.arenas[tier];
   if (tier === GRAND_TIER) {
-    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: GRAND.oppPower + (hasDecree(run, 'ironBosses') ? 1 : 0), oppDecor: GRAND.oppDecor, debuff: arena.debuff, conquered: false };
+    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: GRAND.oppPower + (hasDecree(run, 'ironBosses') ? 1 : 0) + lionsPower(run), oppDecor: GRAND.oppDecor, debuff: arena.debuff, conquered: false };
   }
   const c = CIRCUITS[tier - 1];
   const s = arena.stage;
@@ -155,7 +159,7 @@ export function boutFor(run, tier = run.topTier) {
     winPrestige: Math.round(Math.max(below ? ECONOMY.lowerArenaMinPrestige : 0, Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below)) * (fest?.prestige ?? 1) * (isShort(run) ? SHORT.prestige : 1) * (s === 2 && hasPolicy(run, 'unleashLions') ? 2 : 1)),
     festival: fest?.id ?? null,
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
-    lossGold: c.lossGold, oppPower: c.oppPower[s] + (s === 2 && hasDecree(run, 'ironBosses') ? 1 : 0) + (s === 2 && hasPolicy(run, 'unleashLions') ? 1 : 0), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
+    lossGold: c.lossGold, oppPower: c.oppPower[s] + lionsPower(run) + (s === 2 && hasDecree(run, 'ironBosses') ? 1 : 0) + (s === 2 && hasPolicy(run, 'unleashLions') ? 1 : 0), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
     conquered: arena.conquered,
   };
 }
@@ -1363,7 +1367,11 @@ export function createRun(seed = randomSeed(), setup = {}) {
   const run = {
     version: SAVE_VERSION,
     seed,
-    setup: { patron: setup.patron ?? null, decrees: [...(setup.decrees ?? [])], classes: [...(setup.classes ?? [])], short: Boolean(setup.short), daily: setup.daily ?? null },
+    setup: {
+      patron: setup.patron ?? null, decrees: [...(setup.heat ? heatDecrees(setup.heat) : setup.decrees ?? [])], classes: [...(setup.classes ?? [])], short: Boolean(setup.short), daily: setup.daily ?? null,
+      // Version 6 (docs/plan-v6-phase3.md): the Heat level, the Legacy's unlocks, Hall legends who may return, the house colour.
+      heat: setup.heat ?? 0, unlocks: [...(setup.unlocks ?? [])], legends: [...(setup.legends ?? [])], colour: setup.colour ?? null,
+    },
     gold: ECONOMY.startGold + (setup.short ? SHORT.startGold : 0),
     prestige: ECONOMY.startPrestige + (setup.short ? SHORT.startPrestige : 0),
     prestigeLevel: prestigeLevelFor(ECONOMY.startPrestige + (setup.short ? SHORT.startPrestige : 0), 1), // a short career's head start is House level 2 (playtest #9)
@@ -1407,6 +1415,7 @@ export function createRun(seed = randomSeed(), setup = {}) {
     event: null, // this week's event card: { id, f, g } (fighter ids), decided before the week can end
   };
   for (const type of STARTING_BUILDINGS) run.buildings.push({ id: newId(run, 'b'), type, level: 1 });
+  if (hasUnlock(run, 'oracle')) run.buildings.push({ id: newId(run, 'b'), type: 'oracle', level: 1 }); // a Legacy unlock
   openArena(run, 1);
   refreshMarket(run);
   log(run, `You take charge of a bottom-tier Ludus in ${arenaName(1)}.`);
@@ -1432,6 +1441,13 @@ function applyPatron(run) {
     else Object.assign(f, { renown: 5, origin: pick(rng, run.houses).name });
     run.roster.push(f);
     chronicle(run, f, p === 'veteran' ? 'A veteran sent by your patron.' : `Defected from ${f.origin}.`);
+  }
+  if (p === 'augur') { // version 6: the career opens with a pick of three rare relics
+    const pool = Object.keys(RELICS).filter((r) => RELICS[r].rarity !== 'common' && relicInPool(run, r));
+    const cards = [];
+    while (cards.length < FORTUNE.cards && pool.length) cards.push({ kind: 'relic', id: pool.splice(int(rng, 0, pool.length - 1), 1)[0] });
+    for (const c of cards) c.rarity = RELICS[c.id].rarity;
+    run.fortune = { cards, rerolls: 0, augur: true };
   }
   if (p === 'liberator') { // v6: friends of a past rising send one of their own
     const f = createFighter(rng, { id: newId(run, 'f'), takenNames: takenNames(run), classes: run.setup.classes });
@@ -1842,11 +1858,13 @@ function fortuneCard(run, rng, table) {
   if (run.relics.length >= FORTUNE.maxRelics) kinds.relic = 0;
   if (run.roster.length >= rosterCap(run)) kinds.fighter = 0;
   if (isWinter(run.week) || run.wager || table.some((c) => c.kind === 'wager')) kinds.wager = 0;
+  const legends = returningLegends(run).filter((l) => !table.some((c) => c.id === legendKey(l)));
+  if (!legends.length || run.roster.length >= rosterCap(run)) kinds.legend = 0;
   for (const k of Object.keys(kinds)) if (table.filter((c) => c.kind === k).length >= 2) kinds[k] = 0; // variety: at most two of a kind
   const kind = weighted(rng, kinds);
   const tier = fortuneTier(run);
   if (kind === 'relic') {
-    const id = pickOf(rng, Object.keys(RELICS).filter((r) => !run.relics.includes(r)), (r) => RELICS[r].rarity, rarity, taken);
+    const id = pickOf(rng, Object.keys(RELICS).filter((r) => !run.relics.includes(r) && relicInPool(run, r)), (r) => RELICS[r].rarity, rarity, taken);
     if (id) return { kind, id, rarity: RELICS[id].rarity };
   }
   if (kind === 'gear') {
@@ -1859,6 +1877,14 @@ function fortuneCard(run, rng, table) {
     season(run, rng, f);
     if (rarity === 'legendary') Object.assign(f, { legend: true, renown: FORTUNE.legendRenown, origin: 'A legend of the arena' });
     return { kind, id: f.id, rarity, fighter: f };
+  }
+  if (kind === 'legend') {
+    const l = pick(rng, legends);
+    const f = createFighter(rng, { id: newId(run, 'f'), kind: KINDS[l.kind] ? l.kind : undefined, bonusPower: circuitInfo(run).marketPower + FORTUNE.fighterPower.legendary, classes: run.setup?.classes });
+    season(run, rng, f);
+    Object.assign(f, { name: l.name, humor: l.humor ?? f.humor, titles: [...(l.titles ?? [])], kills: l.kills ?? 0, renown: Math.max(l.renown ?? 0, FORTUNE.legendRenown), legend: true, returned: legendKey(l), carried: { kills: l.kills ?? 0, titles: l.titles?.length ?? 0 }, origin: 'Returned from the Hall of Champions' });
+    if (CLASSES[l.cls]) Object.assign(f, { cls: l.cls, weapon: l.cls === 'fighter' ? f.weapon ?? pick(rng, WEAPON_IDS) : null });
+    return { kind, id: legendKey(l), rarity: 'legendary', fighter: f, wins: l.wins ?? 0 };
   }
   if (kind === 'wager') {
     const w = FORTUNE.wager;
@@ -1880,10 +1906,18 @@ function fortuneCard(run, rng, table) {
   return card;
 }
 
+// Version 6: what the Legacy unlocks or Heat changes about the draft (docs/plan-v6-phase3.md).
+export const relicInPool = (run, id) => !RELICS[id].locked || hasUnlock(run, `relic:${id}`);
+export const fortuneCards = (run) => FORTUNE.cards + (hasUnlock(run, 'fourCards') ? 1 : 0) - (hasDecree(run, 'leanFortune') ? 1 : 0);
+export const legendKey = (l) => `legend:${l.seed}:${l.id}`;
+// Hall legends this career may still deal: unlocked, in the setup's snapshot, and not already returned in this career.
+export const returningLegends = (run) => (hasUnlock(run, 'legends') ? run.setup.legends ?? [] : [])
+  .filter((l) => ![...run.roster, ...run.fallen, ...(run.retired ?? [])].some((f) => f.returned === legendKey(l)));
+
 function drawFortune(run) {
   const rng = fortuneRng(run);
   const cards = [];
-  for (let i = 0; i < FORTUNE.cards; i++) cards.push(fortuneCard(run, rng, cards));
+  for (let i = 0; i < fortuneCards(run); i++) cards.push(fortuneCard(run, rng, cards));
   return cards;
 }
 
@@ -1905,7 +1939,7 @@ export function fortuneBlocker(run, index) {
   if (idle) return idle;
   const card = run.fortune?.cards[index];
   if (!card) return 'No Fortune card there.';
-  if (card.kind === 'fighter' && run.roster.length >= rosterCap(run)) return `Your quarters are full (${rosterCap(run)} fighters).`;
+  if ((card.kind === 'fighter' || card.kind === 'legend') && run.roster.length >= rosterCap(run)) return `Your quarters are full (${rosterCap(run)} fighters).`;
   if (card.kind === 'relic' && run.relics.length >= FORTUNE.maxRelics) return `The house already holds ${FORTUNE.maxRelics} relics.`;
   if (card.fighterId && !findFighter(run, card.fighterId)) return `${card.name} is no longer in the house.`;
   return null;
@@ -1922,12 +1956,17 @@ export function chooseFortune(run, index) {
   } else if (card.kind === 'gear') {
     run.inventory.gear.push(card.id);
     log(run, `Fortune: a ${title} for the storeroom.`, 'good');
-  } else if (card.kind === 'fighter') {
+  } else if (card.kind === 'fighter' || card.kind === 'legend') {
     const f = card.fighter;
     run.roster.push(f);
     remember(run, f);
-    chronicle(run, f, f.legend ? 'Came to the Ludus by Fortune: a legend of the arena.' : 'Came to the Ludus by Fortune.');
-    log(run, `Fortune: ${f.name} joins the Ludus${f.legend ? ', a legend of the arena' : ''}.`, 'good');
+    if (f.returned) {
+      chronicle(run, f, 'Came back from the Hall of Champions for one last season.');
+      log(run, `Fortune: ${f.name} returns from the Hall of Champions to fight for your house one last season.`, 'good');
+    } else {
+      chronicle(run, f, f.legend ? 'Came to the Ludus by Fortune: a legend of the arena.' : 'Came to the Ludus by Fortune.');
+      log(run, `Fortune: ${f.name} joins the Ludus${f.legend ? ', a legend of the arena' : ''}.`, 'good');
+    }
     joinPlot(run, f);
   } else if (card.kind === 'wager') {
     run.wager = { winGold: card.winGold, winRenown: card.winRenown, lossGold: card.lossGold };
@@ -1962,6 +2001,7 @@ export function rerollBlocker(run) {
   const idle = idleBlocker(run);
   if (idle) return idle;
   if (!run.fortune) return 'No Fortune to reroll.';
+  if (run.fortune.augur) return "The Augur's gift can't be re-spun.";
   if (run.gold < rerollPrice(run)) return `Needs ${rerollPrice(run)} Gold.`;
   return null;
 }
@@ -2579,7 +2619,7 @@ export function retire(run, id) {
   run.roster = run.roster.filter((x) => x !== f);
   run.prestige += RETIRE.prestige;
   for (const x of run.roster) bumpMorale(x, RETIRE.morale);
-  const legend = { name: f.name, kind: f.kind, humor: f.humor, id: f.id, cls: f.cls, titles: f.titles, kills: f.kills ?? 0, renown: f.renown, level: f.level, wins: winsOf(run, f), story: f.story, seed: run.seed };
+  const legend = { name: f.name, kind: f.kind, humor: f.humor, id: f.id, cls: f.cls, titles: f.titles, kills: f.kills ?? 0, renown: f.renown, level: f.level, wins: winsOf(run, f), story: f.story, seed: run.seed, ...(f.returned ? { returned: f.returned, carried: f.carried } : {}) };
   run.retired = [...(run.retired ?? []), legend];
   log(run, `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good');
   return legend;
@@ -3326,6 +3366,10 @@ export function deserialize(text) {
   run.relics ??= []; // saves from before version 6's relics
   run.fortune ??= null;
   run.setup ??= { patron: null, decrees: [], classes: [] };
+  run.setup.heat ??= 0; // version 6: careers from before Heat and the Legacy's unlocks play as a first career
+  run.setup.unlocks ??= [];
+  run.setup.legends ??= [];
+  run.setup.colour ??= null;
   if (!run.houses) { // saves from before rival houses
     run.rng.houses = createRng(deriveSeed(run.seed, 6));
     run.houses = makeHouses(run.rng.houses);

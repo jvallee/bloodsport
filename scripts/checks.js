@@ -4,6 +4,7 @@
 import { CIRCUITS, TRAIN_GAIN } from '../src/data.js';
 import { estimateOdds } from '../src/odds.js';
 import { createFighter } from '../src/run.js';
+import { careerXp, levelCost, ALL_UNLOCKS } from '../src/legacy.js';
 import { createRng } from '../src/rng.js';
 import { createMatch, autoPlay, suggestTactic } from '../src/fight.js';
 
@@ -83,6 +84,8 @@ export function gateJobs({ careers = 200, quick = false } = {}) {
     ...group('rebel', plotN, 'careful', { plot: 'rebel' }),
     ...group('loyalist', plotN, 'careful', { plot: 'loyalist' }),
     ...group('short', plotN, 'careful', { setup: { short: true } }), // fun idea #2: winnable, and quicker than a full one
+    // Version 6 (docs/plan-v6-phase3.md): every group above plays a first career; this one has every Legacy unlock.
+    ...group('legacy', plotN, 'careful', { setup: { unlocks: ALL_UNLOCKS, patron: 'augur' } }),
   ];
 }
 
@@ -94,10 +97,10 @@ export async function runGates({ careers = 200, quick = false, tunables = {} } =
   bar.expect(jobs);
   const results = await runJobs(jobs, { tunables, onDone: bar.tick });
   const of = (g) => results.filter((_, i) => jobs[i].group === g);
-  return gatesFrom({ careful: of('careful'), reckless: of('reckless'), rebel: of('rebel'), loyalist: of('loyalist'), short: of('short'), split: of('split')[0], tactics: of('tactics')[0] });
+  return gatesFrom({ careful: of('careful'), reckless: of('reckless'), rebel: of('rebel'), loyalist: of('loyalist'), short: of('short'), legacy: of('legacy'), split: of('split')[0], tactics: of('tactics')[0] });
 }
 
-export function gatesFrom({ careful, reckless, rebel, loyalist, short, split, tactics }) {
+export function gatesFrom({ careful, reckless, rebel, loyalist, short, legacy, split, tactics }) {
   const rate = (rs) => rs.filter((r) => r.won).length / rs.length;
   const deaths = (rs) => avg(rs.map((r) => r.deaths));
   const curve = bossCurve(careful);
@@ -106,8 +109,14 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, short, split, ta
   // Version 6: how long a WON career takes. Harder arenas end losing careers sooner, which made the all-careers average
   // say little about how quick a season is (docs/fight-rules.md, 6.0.0-alpha.2).
   const winWeeks = (rs) => { const won = rs.filter((r) => r.won); return won.length ? avg(won.map((r) => r.weeks)) : weeks(rs); };
+  // Unlock cadence: careers per Legacy level over the first five levels, from the careful bot's first-career XP.
+  const meanXp = avg(careful.map((r) => careerXp(r.run).total));
+  const perLevel = [1, 2, 3, 4, 5].reduce((s, l) => s + levelCost(l), 0) / 5 / meanXp;
   const gates = [
-    { name: 'Careful career win rate is 20–45%', value: rate(careful), pass: rate(careful) >= 0.2 && rate(careful) <= 0.45, fmt: 'pct' },
+    // Version 6, phase 3: the careful bot plays a first career (no unlocks); 20–45% became 15–35% (docs/plan-v6-one-more-career.md).
+    { name: 'First career: careful win rate is 15–35%', value: rate(careful), pass: rate(careful) >= 0.15 && rate(careful) <= 0.35, fmt: 'pct' },
+    { name: 'Full Legacy: careful win rate is 40–60%', value: rate(legacy), pass: rate(legacy) >= 0.4 && rate(legacy) <= 0.6, fmt: 'pct' },
+    { name: 'Unlock cadence: each of the first five Legacy levels takes 1–2 careers', value: perLevel, pass: perLevel >= 1 && perLevel <= 2, fmt: 'num' },
     { name: 'Careful wins at least as often as reckless', value: rate(careful) - rate(reckless), pass: rate(careful) >= rate(reckless), fmt: 'pctDiff' },
     { name: 'Careful loses clearly fewer fighters than reckless', value: deaths(careful) / Math.max(0.01, deaths(reckless)), pass: deaths(careful) <= 0.5 * deaths(reckless), fmt: 'ratio' },
     { name: 'Reckless loses 1–4 fighters per career', value: deaths(reckless), pass: deaths(reckless) >= 1 && deaths(reckless) <= 4, fmt: 'num' },
@@ -121,5 +130,5 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, short, split, ta
     { name: 'Short careers are winnable (careful 20–55%) and a won one is at least a fifth quicker', value: rate(short), pass: rate(short) >= 0.2 && rate(short) <= 0.55 && winWeeks(short) <= 0.8 * winWeeks(careful), fmt: 'pct' },
     { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
   ];
-  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, short };
+  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, short, legacy, meanXp };
 }

@@ -889,3 +889,16 @@ Version 6's new words. Rules text (numbers) must stay accurate; names and flavou
 | [src/fortune.js](../src/fortune.js) `fortuneText` | What each card says ("Joins for free: …", "A legend of the arena joins…", the Fates' Wager terms). |
 | [src/ui/views.js](../src/ui/views.js) `fortunePanel` | "This month" / "Fortune's wheel turns" / "Choose one. Relics stay with the house…" / "↻ Spin again" / "Let it pass". |
 | [src/run.js](../src/run.js) `chooseFortune`, `settleWager`, `loseWager`, `finishMatch` | House log: "Fortune: … joins the house's relics.", "the Fates' wager is made…", "The Fates pay…", "The Fates collect…", "… falls, but is carried out alive. Proserpina's Coin is spent.", chronicle "Came to the Ludus by Fortune." |
+
+**Legacy XP, the unlock tree and Heat** (6.0.0-alpha.3)
+
+| Where | Text |
+|---|---|
+| [src/data.js](../src/data.js) `LEGACY_LEVELS` | The 12 unlock names and lines (The Hall Remembers, A Seer in the House, A Generous Wheel, the colours…). |
+| [src/data.js](../src/data.js) `HOUSE_COLOURS`, `PATRONS.augur`, `DECREES.leanFortune`, `DECREES.hungryLions` | Colour names; the Augur; Lean Fortunes; Hungry Lions. |
+| [src/legacy.js](../src/legacy.js) `careerXp` | The XP reasons on the end screen: "A career", "arenas climbed", "Bosses beaten", "Master of the Games", "The tyrant fell", "Remembered", "The Emperor's friend", "Heat N". |
+| [src/ui/views.js](../src/ui/views.js) `legacyGain`, `legacyBar`, `legacyPanel` | "+N Legacy XP", "Legacy level N!", "New: …", "next, at level N: …", "Every career earns Legacy XP, win or lose…", "The Legacy tree". |
+| [src/ui/views.js](../src/ui/views.js) `setupModal` | Heat choices ("No Heat", "The Emperor's usual rules.", "Win at Heat N to unlock Heat N+1."), "House colours", the streak chip "🔥 N-day streak". |
+| [src/ui/views.js](../src/ui/views.js) `fortunePanel` | The Augur's gift: "Your patron" / "The Augur reads the birds" / "Choose one relic for your house, before the first week." |
+| [src/fortune.js](../src/fortune.js) `fortuneText`, [src/run.js](../src/run.js) `chooseFortune` | The returning legend: "An old champion of your house… offers to fight for you one last season", the log line and chronicle "Came back from the Hall of Champions for one last season." |
+| [src/ui/views.js](../src/ui/views.js) `helpModal` | The How to play line "Every career counts." |
