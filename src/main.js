@@ -15,6 +15,7 @@ import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progre
 import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
 import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene } from './dialogue.js';
 import { DEMANDS, DEMAND, CIRCUITS, SUMMONS } from './data.js';
+import { snapshot, monthDigest } from './digest.js';
 import { fightView, DICE_TIME, revealTime, roundEndTime } from './ui/fightView.js';
 import { roundSounds, setSound, sfx } from './ui/sound.js';
 
@@ -43,6 +44,8 @@ let codex = loadCodex(null);
 let codexShownNew = []; // entries highlighted as new while the Codex tab is open
 let scene = null; // the dialogue scene showing: { id, beat } (src/dialogue.js)
 let stewardNotes = []; // the steward's news this week (new buildings, new stock): notes at the top, cleared each week
+let scrollAfterRender = null; // a selector to bring into view after the next render
+let monthBefore = null; // before To fight day: { snap, mark } for the month's digest
 let eventResult = null; // after an event card's choice: { title, lines } shown in a popup
 let logMark = 0; // the house log's length before an event choice
 let legacy = loadLegacy(null);
@@ -247,6 +250,10 @@ function render() {
     }
   }
   clickAnchor = null;
+  if (scrollAfterRender) {
+    document.querySelector(scrollAfterRender)?.scrollIntoView({ block: 'start' });
+    scrollAfterRender = null;
+  }
   // The tutorial month: make the button to press glow.
   if (guide?.focus && tab === guide.tab) for (const el of app.querySelectorAll(guide.focus)) if (!el.disabled) el.classList.add('tut-focus');
   renderFight();
@@ -309,7 +316,8 @@ function scheduleAuto() {
 
 // `opening: false` when the opening has just played (before the patron choice).
 // Every new career gets its own save; the one before stays in the Careers list.
-function newRun(seed, setup = { classes: unlockedClasses(legacy) }, { opening = true } = {}) {
+// Version 6: a new career is a season (the short shape) unless the player chooses the Long Road.
+function newRun(seed, setup = { classes: unlockedClasses(legacy), short: true }, { opening = true } = {}) {
   run = createRun(seed ?? undefined, setup);
   careerId = freshId(careers, Date.now());
   achieved = [];
@@ -407,6 +415,7 @@ const actions = {
     gameAction('advance');
   },
   'careers-open': () => { careersOpen = true; showHelp = false; },
+  'jump-bout': () => { scrollAfterRender = '.panel.bout'; }, // a phone, fight day: scrolled to once the page is redrawn
   'careers-close': () => { careersOpen = false; },
   'career-load': (d) => {
     careersOpen = false;
@@ -532,9 +541,20 @@ const before = {
     if (at.length) { overtrainWarn = at.map((f) => ({ id: f.id, name: f.name, stress: f.stress })); return false; }
     summaries = []; achieved = []; stewardNotes = []; return true;
   },
-  'advance-tournament': () => { summaries = []; achieved = []; stewardNotes = []; return true; },
+  'advance-tournament': () => {
+    summaries = []; achieved = []; stewardNotes = [];
+    monthBefore = { snap: snapshot(run), mark: run.log.length }; // for the month's digest (version 6)
+    return true;
+  },
 };
 const after = {
+  // Version 6, the month is the turn: what the weeks did, in one popup (training summed, news kept).
+  'advance-tournament': () => {
+    if (!monthBefore) return;
+    const lines = monthDigest(monthBefore.snap, run, run.log.slice(monthBefore.mark));
+    monthBefore = null;
+    if (lines.length) eventResult = { title: run.bouts ? 'The month, to fight day' : 'The month so far', lines };
+  },
   fight: () => {
     ui.animateRound = 0;
     ui.auto = false; // every match starts paused: auto-play covers one match (the designer, 5.4.0)

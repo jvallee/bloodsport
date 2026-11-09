@@ -8,7 +8,7 @@ import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFesti
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker,
+  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker,
   isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
 } from '../run.js';
 import {
@@ -68,11 +68,20 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
       <div class="track" title="Arena tiers">${tiers}</div>
       <div class="spacer"></div>
       <button class="btn small sound" data-action="toggle-sound" title="${sound ? 'Sound on: click to mute' : 'Sound off: click to turn on'}" aria-label="${sound ? 'Mute sound' : 'Turn sound on'}">${sound ? '🔊' : '🔇'}</button>
-      <button class="btn small" data-action="help">How to play</button>
-      <button class="btn small" data-action="bug-open" title="Something wrong or confusing? Send the developer a report they can replay.">Report a bug</button>
-      <button class="btn small" data-action="careers-open" title="Your saved careers: switch between them, or delete one">Careers</button>
-      <button class="btn small" data-action="new-run" title="Start another career (this one stays in Careers)">New career</button>
+      <span class="top-actions">
+        <button class="btn small" data-action="help">How to play</button>
+        <button class="btn small" data-action="bug-open" title="Something wrong or confusing? Send the developer a report they can replay.">Report a bug</button>
+        <button class="btn small" data-action="careers-open" title="Your saved careers: switch between them, or delete one">Careers</button>
+        <button class="btn small" data-action="new-run" title="Start another career (this one stays in Careers)">New career</button>
+      </span>
+      <details class="top-menu"><summary class="btn small" aria-label="Menu">☰</summary><div class="top-menu-list">
+        <button class="btn small" data-action="help">How to play</button>
+        <button class="btn small" data-action="careers-open">Careers</button>
+        <button class="btn small" data-action="new-run">New career</button>
+        <button class="btn small" data-action="bug-open">Report a bug</button>
+      </div></details>
     </header>
+    ${run.bouts && run.boutPending && tab === 'ludus' ? '<button class="jump-bout" data-action="jump-bout">⚔ Fight day ↓</button>' : ''}
     <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
 }
 
@@ -168,8 +177,8 @@ export function setupModal(legacy, choice) {
     <button class="close" data-action="setup-cancel" aria-label="Close">×</button>
     <h2>A new career</h2>
     <div class="label">Career length</div>
-    <label class="opt"><input type="radio" name="length" value="full" ${choice.short ? '' : 'checked'}> <b>Full career</b> <small>Each arena: Tournament 1 → Tournament 2 → Boss. A few hours.</small></label>
-    <label class="opt"><input type="radio" name="length" value="short" ${choice.short ? 'checked' : ''}> <b>Short career</b> <small>Each arena: Tournament → Boss, with richer purses and a head start. Quicker to the Grand.</small></label>
+    <label class="opt"><input type="radio" name="length" value="short" ${choice.short === false ? '' : 'checked'}> <b>A season</b> <small>Each arena: Tournament → Boss, with richer purses and a head start. About an hour.</small></label>
+    <label class="opt"><input type="radio" name="length" value="full" ${choice.short === false ? 'checked' : ''}> <b>The Long Road</b> <small>Each arena: Tournament 1 → Tournament 2 → Boss. A few hours.</small></label>
     <div class="daily"><b>⚜ The Emperor's Challenge</b> <small>Today's short career: the same seed for everyone today, no patron or decrees.${legacy.daily?.[today()] ? ` Your best today: <b>${legacy.daily[today()]}</b>.` : ''}</small>
       <button class="btn small" data-action="daily-challenge">Take today's challenge</button></div>
     <div class="label">Patron</div>${patronList}
@@ -355,8 +364,9 @@ function weekPanel(run) {
       ${run.summons ? `<div class="demand summons">⚜ <b>The Emperor's summons:</b> on this month's fight day, send one of your fighters to the Imperial Coliseum against one of its regulars (Power ${CIRCUITS[SUMMONS.tier - 1].oppPower[0]}), or refuse him and lose ${-SUMMONS.refuseFavor} Favour.</div>` : ''}
       ${run.demand ? `<div class="demand${demandMet(run) ? ' met' : ''}">⚜ <b>The Emperor demands:</b> ${esc(DEMANDS[run.demand.id].goal)}, by the end of this month's fight day. ${demandMet(run) ? '✔ Done: he will be pleased.' : `Reward: +${DEMAND.favor} Favour and Gold; missing it costs ${-DEMAND.missFavor} Favour.`}</div>` : ''}
       <div class="row">
-        ${button('End week', 'advance', {}, blocked, 'btn primary')}
-        ${button('Skip to tournament', 'advance-tournament', {}, blocked, 'btn')}
+        ${run.bouts ? button('End week', 'advance', {}, blocked, 'btn primary') : `${button(`⚔ To fight day <small>(${weeksUntilTournament(run.week)} wk${weeksUntilTournament(run.week) === 1 ? '' : 's'})</small>`, 'advance-tournament', {}, blocked, 'btn primary')}
+        ${button('One week', 'advance', {}, blocked, 'btn')}`}
+        ${run.roster.length ? button('📋 Steward\'s plan', 'steward-plan', {}, stewardPlanBlocker(run), 'btn', 'Sets everyone\'s job: the hurt to the Medbay, the tired to Rest, the rest to training while there are rooms.') : ''}
       </div>
       ${blocked && !run.boutPending ? `<div class="why-not">${esc(blocked)}</div>` : ''}
       <p class="sub">Each fighter does their job once per week. Jobs stay set until you change them.
@@ -501,6 +511,10 @@ function compareTable(run) {
 }
 
 function rosterPanel(run) {
+  // "Can't train this week" reasons: one shared by several resting fighters is said once, above the cards.
+  const noTrain = (f) => (f.job === 'rest' && jobBlocker(run, f.id, 'trainPower') && jobBlocker(run, f.id, 'trainSpeed') ? jobBlocker(run, f.id, 'trainPower') : null);
+  const reasons = run.roster.map(noTrain).filter(Boolean);
+  const shared = [...new Set(reasons)].filter((r) => reasons.filter((x) => x === r).length > 1);
   const cards = run.roster.map((f) => {
     const jobs = Object.keys(JOB_LABELS).map((job) => {
       const reason = f.job === job ? null : jobBlocker(run, f.id, job);
@@ -513,7 +527,7 @@ function rosterPanel(run) {
       <div class="segs">${jobs}</div>
       ${spareGearPrompt(run, f)}
       ${f.injuries.length > 1 ? `<div class="treat"><span class="label">Medbay treats first:</span> <select class="treat-select" data-change="treat-first" data-id="${f.id}" aria-label="Which injury the Medbay treats first">${f.injuries.map((inj, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${esc(INJURY_BY_TAG[inj.tag].name)} (${inj.weeksLeft} week${inj.weeksLeft === 1 ? '' : 's'})</option>`).join('')}</select></div>` : ''}
-      ${f.job === 'rest' && jobBlocker(run, f.id, 'trainPower') && jobBlocker(run, f.id, 'trainSpeed') ? `<div class="why-not">Can't train this week: ${esc(jobBlocker(run, f.id, 'trainPower'))}</div>` : ''}
+      ${noTrain(f) && !shared.includes(noTrain(f)) ? `<div class="why-not">Can't train this week: ${esc(noTrain(f))}</div>` : ''}
       <details class="more" data-key="room-${f.id}"><summary>Room &amp; decor${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f).room}</details>
       <details class="more" data-key="gear-${f.id}"><summary>Gear${f.gear.weapon || f.gear.armor ? ` <small>(${[f.gear.weapon, f.gear.armor].filter(Boolean).map((k) => esc(GEAR[k].name)).join(', ')})</small>` : run.inventory.gear.length ? ' <small>(spare gear in the storeroom)</small>' : ''}</summary>${roomPanel(run, f).gear}</details>
       ${f.story?.length ? `<details class="more" data-key="story-${f.id}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
@@ -531,6 +545,7 @@ function rosterPanel(run) {
     <section class="panel roster">
       <h2>Your gladiators <small>${run.roster.length}/${rosterCap(run)}</small></h2>
       ${compareTable(run)}
+      ${shared.map((r) => `<div class="why-not">The resting fighters can't train this week: ${esc(r)}</div>`).join('')}
       ${storeroomLine(run)}
       ${unequipAllBlocker(run) === null ? `<div class="row">${button('Unequip all gear', 'unequip-all', {}, null, 'btn small')}<small class="sub">Takes every fighter's gear off, back to the storeroom, ready to hand out afresh.</small></div>` : ''}
       <div class="cards">${cards || '<div class="empty">No gladiators yet. Recruit some in the <button class="link" data-action="tab" data-tab="market">Market</button>.</div>'}</div>
@@ -768,7 +783,7 @@ export function helpModal() {
       <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favour</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
     </ol>
-    <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or ends the week · T skips to the tournament · 1–4 switch tabs · ? opens this page.</p>
+    <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or plays one week · T goes to fight day · 1–4 switch tabs · ? opens this page.</p>
     <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>
     <div class="row"><button class="btn small" data-action="intro-replay">Replay the intro</button><button class="btn small" data-action="tutorial-replay">Restart the tutorial</button><button class="btn small" data-action="tab" data-tab="codex">Open the Codex</button></div>
     <div class="row"><button class="btn small" data-action="export-save" title="Download your career, Codex and Legacy as one file">Export save</button><button class="btn small" data-action="import-save" title="Load a save file as a new career (your other careers are kept)">Import save</button></div>

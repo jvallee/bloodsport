@@ -26,9 +26,9 @@ export const BUILDING_ICON = {
   bed: '🛏', lyre: '🎭', dumbbell: '🏋', cross: '⚕', eye: '👁', chain: '⛓', anvil: '⚒', paw: '🐾', temple: '🏛', swords: '⚔', goblet: '🍷', forge: '🔥',
 };
 
-export function button(label, action, data = {}, blocker = null, cls = 'btn small') {
+export function button(label, action, data = {}, blocker = null, cls = 'btn small', help = null) {
   const attrs = Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ');
-  return `<button class="${cls}" data-action="${action}" ${attrs} ${blocker ? `disabled title="${esc(blocker)}"` : ''}>${label}</button>`;
+  return `<button class="${cls}" data-action="${action}" ${attrs} ${blocker ? `disabled title="${esc(blocker)}"` : help ? `title="${esc(help)}"` : ''}>${label}</button>`;
 }
 
 // A button that, when blocked, says why on the page (not only on hover: touchscreens can't hover).

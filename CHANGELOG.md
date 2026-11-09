@@ -2,6 +2,17 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 6.0.0-alpha.1: the month is the turn
+
+Version 6's brief: make the game as addictive and fun as possible (the plan: `docs/plan-v6-one-more-career.md`). 5.4.3 stays playable at `/v5/`. This first step is about pace.
+
+- **⚔ To fight day is the main button:** a month is one turn. Set the jobs, shop, decide, then go. "One week" is still there when you want it.
+- **The month's digest:** going to fight day shows one short summary of the month (each fighter's Power, Speed, healing, Stress and Morale changes, then the month's news) instead of a scroll of weekly lines.
+- **📋 The steward's plan:** one click sets everyone's job: the hurt to the Medbay, the tired to Rest, the rest to training while there are rooms.
+- **A new career is a season by default** (each arena: Tournament → Boss, about an hour). The old length is still there as "The Long Road".
+- **On a phone:** a floating "⚔ Fight day" button on tournament weeks takes you straight to the bouts, and the top bar's extra buttons fold into a ☰ menu.
+- **Fewer repeated lines:** when several resting fighters can't train for the same reason, it's said once above the cards.
+
 ## 5.4.3
 
 - **Quarter- and Semi-final wins can take the loser's gear** (35%, like any other win). They never could, so from the Silver Coliseum two of every three wins dropped nothing.

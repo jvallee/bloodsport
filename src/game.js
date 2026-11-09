@@ -6,7 +6,7 @@ import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom, pray, reanimate, exhibition, host, enact,
   assignDecor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
   recordMatchProgress, buyItem, useItem, placeBet, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy, checkQuests,
-  answerSummons, refuseSummons, rite,
+  answerSummons, refuseSummons, rite, stewardPlan,
 } from './run.js';
 
 // A finished match is settled at once (the fight screen shows the full report). Returns the summary when it settles.
@@ -49,7 +49,8 @@ export const GAME_ACTIONS = {
   // The Emperor's summons (5.4.2): a dropdown sends a fighter with an order (index: 'yield' or 'death'); a button refuses.
   summons: ({ run }, d) => { answerSummons(run, d.id, d.index); },
   'refuse-summons': ({ run }) => { refuseSummons(run); },
-  rite: ({ run }, d) => { rite(run, d.id); }, // the Temple of Fortuna lifts an Afeared scar (5.4.2)
+  rite: ({ run }, d) => { rite(run, d.id); },
+  'steward-plan': ({ run }) => { stewardPlan(run); }, // version 6: everyone's job in one click // the Temple of Fortuna lifts an Afeared scar (5.4.2)
   surgeon: ({ run }, d) => { surgeon(run, d.id, Number(d.index)); },
   build: ({ run }, d) => { buildRoom(run, d.type); },
   upgrade: ({ run }, d) => { upgradeRoom(run, d.id); },

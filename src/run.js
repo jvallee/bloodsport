@@ -1549,6 +1549,26 @@ export function jobBlocker(run, id, job) {
   return null;
 }
 
+// The steward's plan (version 6): a sensible job for everyone in one click. The hurt go to the Medbay, the tired rest
+// (another training week would overtrain them), the rest train Power while they can (Speed when Power is capped).
+// Earlier fighters in the roster get the Trainer Rooms and Medbay beds first. Returns the jobs set: [{ id, job }].
+export function stewardPlanBlocker(run) {
+  return idleBlocker(run) ?? (run.roster.length ? null : 'No gladiators to plan for.');
+}
+export function stewardPlan(run) {
+  assertOk(stewardPlanBlocker(run));
+  for (const f of run.roster) if (f.job !== 'rest' && !jobBlocker(run, f.id, 'rest')) f.job = 'rest'; // free every room first
+  const out = [];
+  for (const f of run.roster) {
+    const hurt = f.injuries.some((i) => i.weight > 0);
+    const wants = hurt ? ['medbay', 'rest'] : f.stress + STRESS.train >= STRESS.overtrained ? ['rest'] : ['trainPower', 'trainSpeed', 'rest'];
+    const job = wants.find((j) => j === 'rest' || !jobBlocker(run, f.id, j));
+    if (job !== f.job) setJob(run, f.id, job);
+    out.push({ id: f.id, job });
+  }
+  return out;
+}
+
 export function setJob(run, id, job) {
   assertOk(jobBlocker(run, id, job));
   const f = findFighter(run, id);

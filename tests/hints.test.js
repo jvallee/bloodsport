@@ -25,12 +25,12 @@ test('an injured fighter not in the Medbay is flagged before anything routine', 
   assert.doesNotMatch(nextHint(run).text, /injured/);
 });
 
-test('a resting fighter who could train is suggested; otherwise it says to end the week', () => {
+test('a resting fighter who could train is suggested; otherwise it says to go to fight day (v6: the month is the turn)', () => {
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
   assert.match(nextHint(run).text, /could train/);
   setJob(run, f.id, 'trainPower');
-  assert.match(nextHint(run).text, /End the week/);
+  assert.match(nextHint(run).text, /fight day/);
 });
 
 test('no hint once the career is over', () => {
