@@ -722,3 +722,45 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
   .top-menu { display: block; }
   .jump-bout { display: block; position: fixed; right: 14px; bottom: 16px; z-index: 25; padding: 10px 16px; border-radius: 99px; border: 1px solid var(--gold); background: var(--panel-2); color: var(--gold); font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,0.5); }
 }
+
+/* Version 6: the Fortune draft and relics. */
+.fortune-draft { border-color: var(--gold); margin-bottom: 12px; }
+.fortune-draft h2 { margin: 2px 0 4px; }
+.fortune-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 10px 0; }
+.fortune-card { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2);
+  animation: fortune-in 0.45s ease-out both; animation-delay: calc(var(--i) * 0.12s); transform-origin: 50% 80%; }
+.fortune-card h3 { font-size: 16px; }
+.fortune-card p { margin: 0; color: var(--muted); font-size: 13px; flex: 1; }
+.fortune-card .btn-why { display: flex; flex-direction: column; }
+.fortune-card .btn { width: 100%; }
+.fortune-rarity { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.fortune-face { height: 64px; display: flex; align-items: center; }
+.fortune-icon { font-size: 40px; line-height: 1; }
+.fortune-card.rarity-rare { border-color: var(--speed); }
+.fortune-card.rarity-rare .fortune-rarity { color: var(--speed); }
+.fortune-card.rarity-legendary { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(217, 180, 90, 0.35); }
+.fortune-card.rarity-legendary .fortune-rarity { color: var(--gold); }
+@keyframes fortune-in { from { opacity: 0; transform: translateY(14px) rotateX(35deg); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .fortune-card { animation: none; } }
+.relics { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.relics .label { margin-right: 4px; }
+.relic-chip { position: relative; font-size: 12px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); cursor: help; }
+.relic-chip small { display: none; }
+.relic-chip:hover small, .relic-chip:focus small { display: block; position: absolute; z-index: 5; left: 0; top: 100%; margin-top: 4px; width: 220px; padding: 6px 8px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font-size: 12px; }
+.relic-chip.rarity-rare { border-color: var(--speed); }
+.relic-chip.rarity-legendary { border-color: var(--gold); color: var(--gold); }
+.tag-chip { font-size: 10px; padding: 0 5px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-weight: 400; vertical-align: middle; }
+.tag-chip.tag-brute { color: var(--blood); border-color: var(--blood-dim); }
+.tag-chip.tag-guarded { color: var(--good); border-color: var(--good-dim); }
+.tag-chip.tag-swift { color: var(--speed); }
+.tag-chip.tag-showman { color: var(--b); }
+@media (max-width: 600px) {
+  .fortune-cards { gap: 8px; }
+  .fortune-card { display: grid; grid-template-columns: 48px 1fr; column-gap: 10px; row-gap: 3px; padding: 10px; }
+  .fortune-card > * { grid-column: 2; }
+  .fortune-card .fortune-face { grid-column: 1; grid-row: 1 / span 3; height: auto; align-items: flex-start; }
+  .fortune-card .fortune-face > * { max-width: 48px; max-height: 48px; }
+  .fortune-card .btn-why { grid-column: 1 / -1; }
+  .fortune-icon { font-size: 30px; }
+}

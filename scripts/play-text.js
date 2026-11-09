@@ -8,15 +8,16 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
+import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
+import { RELICS, TAGS, perkTags, fortuneTitle, fortuneText } from '../src/fortune.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk, signatureOf, useSignature, opponentHasSignature } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed, chooseFortune, fortuneBlocker, rerollFortune, rerollPrice, passFortune,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
   bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardRewardText, risingProgress, archrival, checkQuests, answerSummons, refuseSummons, rite,
 } from '../src/run.js';
@@ -79,6 +80,8 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   augment <id> <injury#>        cyborg surgery on a Maimed or Blinded wound (Medbay level 2+)
   withdraw <tier>               leave a three-match tournament between matches (counts as capitulating)
   choose <n>                    decide this week's event (the week can't end until you do)
+  fortune <n> | spin | pass     this month's Fortune: take card n, spin again for Gold, or let it pass for a little Gold
+  relics                        the house's relics and what each does
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
   next [tactic] | capitulate    during a fight: play the next round with a tactic (steady, press, guard, feint; default: the suggestion), or capitulate ("towel" also works)
   math                          toggle the round-by-round math in fight narration
@@ -138,7 +141,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   function abilities(f) {
     const trait = f.kindTrait ? `${TRAITS[f.kindTrait].name}: ${TRAITS[f.kindTrait].desc}` : null;
     const desc = f.cls === 'fighter' ? WEAPONS[f.weapon].desc : CLASSES[f.cls]?.desc;
-    const perks = f.perks?.length ? `Perks: ${f.perks.map((p) => PERKS[p].name).join(', ')}` : null;
+    const perks = f.perks?.length ? `Perks: ${f.perks.map((p) => `${PERKS[p].name}${perkTags(p).length ? ` [${perkTags(p).map((t) => TAGS[t].name).join('/')}]` : ''}`).join(', ')}` : null;
     return [trait, f.cls ? `${classAbility(f)}: ${desc}` : null, perks].filter(Boolean).join(' | ');
   }
 
@@ -172,7 +175,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       ...extras(f).map((x) => `     ${x}`),
     ];
     f.pendingPerks.forEach((offer, i) => {
-      const opts = offer.map((p) => `${p} (${PERKS[p].name}: ${PERKS[p].desc})`).join(' | ');
+      const opts = offer.map((p) => `${p} (${PERKS[p].name}${perkTags(p).length ? ` [${perkTags(p).map((t) => TAGS[t].name).join('/')}]` : ''}: ${PERKS[p].desc})`).join(' | ');
       lines.push(`     ${i ? 'Then' : 'LEVEL UP! Choose with `perk ' + f.id + ' <perk>`'}: ${opts}`);
     });
     return lines.join('\n');
@@ -299,6 +302,10 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       const fought = run.history.filter((h) => !h.skipped && !h.forfeit);
       for (const line of run.epilogue ?? []) out.push(`\n${line}`);
       out.push(`\n*** CAREER OVER: ${run.endReason} ***\nSurvived ${plural(run.week, 'week')} · ${fought.filter((h) => h.won).length} wins, ${fought.filter((h) => !h.won).length} losses · top arena: ${arenaName(run.topTier)} · fallen: ${run.fallen.map((f) => f.name).join(', ') || 'none'}`);
+    }
+    if (run.relics?.length) out.push(`Relics (${run.relics.length}/${FORTUNE.maxRelics}): ${run.relics.map((id) => RELICS[id].name).join(', ')}`);
+    if (run.fortune && !run.event) {
+      out.push(`\n*** FORTUNE'S WHEEL TURNS: choose one (the month can't go on until you do) ***\n${run.fortune.cards.map((c, i) => `  fortune ${i}: [${c.rarity} ${c.kind}${c.kind === 'relic' && RELICS[c.id].tag ? `, ${TAGS[RELICS[c.id].tag].name}` : ''}] ${fortuneTitle(c)}: ${fortuneText(c)}${fortuneBlocker(run, i) ? ` (can't: ${fortuneBlocker(run, i)})` : ''}`).join('\n')}\n  spin: three new cards for ${rerollPrice(run)} Gold · pass: take nothing, +${FORTUNE.pass} Gold`);
     }
     if (run.event) {
       const e = EVENT_BY_ID[run.event.id];
@@ -721,6 +728,23 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       idle();
       return `${chooseEvent(run, Number(i))}\n\n${look()}`;
     },
+    fortune: ([i]) => {
+      need([i].filter(Boolean), 1, 'fortune <number>');
+      idle();
+      chooseFortune(run, Number(i));
+      return `${run.log.at(-1).text}\n\n${look()}`;
+    },
+    spin: () => {
+      idle();
+      rerollFortune(run);
+      return look();
+    },
+    pass: () => {
+      idle();
+      passFortune(run);
+      return `${run.log.at(-1).text}\n\n${look()}`;
+    },
+    relics: () => (run.relics?.length ? run.relics.map((id) => `${RELICS[id].name} (${RELICS[id].rarity}): ${RELICS[id].desc}`).join('\n') : 'The house holds no relics yet. One may come with Fortune at the start of a month.'),
     summons: ([id, order]) => {
       need([id, order].filter(Boolean), 2, 'summons <id> <yield|death>');
       idle();

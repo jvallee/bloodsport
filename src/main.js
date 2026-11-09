@@ -8,7 +8,7 @@ import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
 import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey } from './careers.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, unlockedPatrons, unlockedClasses, decreesUnlocked, dailySeed, dailySetup } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
@@ -234,7 +234,7 @@ function render() {
   };
   const scrolled = renderedTab === tab ? Object.fromEntries(scrollKeys().map(([k, el]) => [k, el.scrollTop])) : {};
   renderedTab = tab;
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab) : nextBar(nextHint(run))}${eventCard(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab) : nextBar(nextHint(run))}${eventCard(run)}${fortunePanel(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
   for (const [k, el] of scrollKeys()) if (scrolled[k]) el.scrollTop = scrolled[k];
@@ -525,6 +525,7 @@ function gameAction(name, data = {}) {
 // Game actions: the page's extras around each one (confirmations, animation, tabs).
 const before = {
   'event-choice': () => { logMark = run.log.length; return true; },
+  fortune: () => { logMark = run.log.length; return true; },
   release: () => confirm('Release this fighter for good?'),
   retire: () => confirm('Retire this fighter to the Hall of Champions? They leave your roster for good.'),
   forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favour than losing the fight.'),
@@ -571,6 +572,13 @@ const after = {
     if (lines.length) eventResult = { title: lines[0].text.split(':')[0], lines: lines.map((l, i) => ({ tone: l.tone, text: i ? l.text : l.text.slice(l.text.indexOf(':') + 1).trim() })) };
   },
   mercy: () => { sfx.cheer(0); },
+  // Version 6: the Fortune card taken, said once in a popup (its log lines, without the "Fortune: " prefix).
+  fortune: () => {
+    sfx.event();
+    const lines = run.log.slice(logMark).map((l) => ({ tone: l.tone, text: l.text.replace(/^Fortune: /, '') }));
+    if (lines.length) eventResult = { title: 'Fortune', lines };
+  },
+  'fortune-reroll': () => { sfx.event(); },
   withdraw: () => {
     match = null; // the withdrawal is settled: leave the fight screen
     ui.auto = false;

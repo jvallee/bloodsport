@@ -4,6 +4,7 @@
 import { next, rollE5, d100, d6, pick, createRng } from './rng.js';
 import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG, HYPE } from './data.js';
 import { Refused } from './errors.js';
+import { relicMods } from './fortune.js';
 
 const sum = (mods) => mods.reduce((s, m) => s + m.value, 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -139,6 +140,7 @@ export function computeSpeed(c, round) {
   if (c.riposteRound === round) mods.push({ source: 'Riposte', value: 3 });
   if (c.arena === 'rainyMud') mods.push({ source: 'Rainy Mud', value: -2 });
   for (const b of c.boosts ?? []) if (b.round === round && b.speed) mods.push({ source: b.name, value: b.speed });
+  for (const r of relicMods(c, round, effectiveInjuries(c.f) >= 1)) if (r.speed) mods.push({ source: r.name, value: r.speed });
   for (const g of gearOf(c.f)) if (g.speed) mods.push({ source: g.name, value: g.speed });
   if (tacticOf(c)?.speed) mods.push({ source: tacticOf(c).name, value: tacticOf(c).speed });
   if (humorOf(c)?.speed?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).speed[round] });
@@ -184,6 +186,7 @@ export function computePower(c, opp, round, raw = false) {
   if (c.challenger) mods.push({ source: 'Challenger', value: c.challenger });
   if (c.grudge) mods.push({ source: c.grudge > 0 ? 'Feud' : 'Owes you a life', value: c.grudge });
   for (const b of c.boosts ?? []) if (b.round === round && b.power) mods.push({ source: b.name, value: b.power });
+  for (const r of relicMods(c, round, effectiveInjuries(f) >= 1)) if (r.power) mods.push({ source: r.name, value: r.power });
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
   if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
   if (kindActive(c, 'nightborn', round) && round === 3) mods.push({ source: 'Nightborn', value: 1 });
@@ -248,6 +251,11 @@ export function computePhase2(c, opp, round, volley = {}) {
     if (b.win) win.push({ source: b.name, value: b.win });
     if (b.injure) enemy.push({ source: b.name, value: b.injure });
     if (b.self) self.push({ source: b.name, value: b.self });
+  }
+  for (const r of relicMods(c, round, eff >= 1)) { // version 6: the house's relics (src/fortune.js)
+    if (r.guard) self.push({ source: r.name, value: -r.guard });
+    if (r.win) win.push({ source: r.name, value: r.win });
+    if (r.injure) enemy.push({ source: r.name, value: r.injure });
   }
   // Gear.
   for (const g of gearOf(f)) {
@@ -401,7 +409,7 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
 // Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favourite boosts the opponent (B).
 const BOTH_SIDES = ['bloodMoon', 'crowdFavorite', 'lions', 'emperorsGaze'];
 
-export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0 }) {
+export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null }) {
   const m = {
     a: makeCombatant(a, 'A', debuff),
     b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
@@ -417,6 +425,9 @@ export function createMatch({ a, b, rng, debuff = null, overtrained = false, sco
   if (vengeance) m.a.vengeance = true;
   // v6: the coup Final, with the people you freed in the crowd.
   if (rebels) m.a.rebels = rebels;
+  // Version 6: the house's relics, for your fighter (a) and against the opponent (b).
+  if (relics?.a?.length) m.a.relics = relics.a;
+  if (relics?.b?.length) m.b.relics = relics.b;
   // Scouted: opponents who have studied your fighter fight them with extra Power.
   if (scouted) m.b.scouted = scouted;
   // Challenger: famous fighters draw tougher opponents in your top arena.

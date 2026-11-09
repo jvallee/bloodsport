@@ -663,3 +663,44 @@ Probe (`bronze.js`, a scratch copy of `scripts/probes/bot-options.js` that also 
   | **Both as in 5.4.2 (chosen: `RIVAL.oppShare` 0.07, `earlyAtFinal` true)** | 39% | +17 | 17% | 42% | 13/13 |
 
   So the rival champion fights at the Final's strength in whichever round it's drawn (it's the champion), and about 1 ordinary opponent in 14 comes from the archrival where other houses fight too.
+
+## 6.0.0-alpha.2: the Fortune draft, relics and perk tags (design: docs/plan-v6-one-more-career.md, pillars B and C)
+
+All numbers PLACEHOLDER (`FORTUNE` in src/data.js; relics and boons in src/fortune.js).
+
+- **The draft:** at the start of every month from week `FORTUNE.fromWeek` (4), three cards are dealt from their own stream (`rng.fortune`, deriveSeed 13). The month can't go on until one is taken (`advanceBlocker`). Each card's rarity: common 62 / rare 30 / legendary 8. Its kind: relic 4, boon 4, gear 2, fighter 2, wager 1 (weights). No relic once the house holds `maxRelics` (6), no fighter when the Quarters are full, no wager in winter or with one pending, and no more than two cards of one kind.
+- **Spin again:** 3, then 6, then 10 Gold (10 after that) for three new cards. **Let it pass:** +2 Gold.
+- **Cards:**
+  - **Relic:** joins the house for good (table below).
+  - **Gear:** free, of tier `arena − 2 + rarity` (common 0, rare 1, legendary 2), between 1 and 3.
+  - **Fighter:** free, at the Market's strength + 0 / 2 / 4 Power by rarity and seasoned like a Market recruit; a legendary one is "a legend of the arena" with 6 Renown.
+  - **Wager:** win your top bout this month for +5 Gold × tier and +2 Renown; lose or skip it and pay 3 Gold × tier (never below 0 Gold).
+  - **Boons:** a Purse of Coin (1 + 2 × tier Gold), a Day at the Baths (−30 Stress for everyone), a Trader's Crate (2 random items), a Senator's Nod (+5 Favour), Word in the Forum (1 + tier Prestige), a Visiting Champion (+2 XP each), a Greek Surgeon's Visit (every wound 2 weeks sooner; only dealt when someone is hurt), The Gods Smile (one named fighter +1 Power for good).
+- **Relics** (21): Mars's Whetstone (+1 Power in Round 1), the Lucky Knucklebone (+5% win in Round 3), the Bronze Aegis (−5% to be injured), a Patron's Purse (+2 Gold a month), the Drillmaster's Rod (training −5 Stress), the Trophy Wall (+1 Prestige a win), the Old Lanista's Ledger (fighters −2 Gold, never below 1); rare: the Butcher's Hook (+5% to injure, +2 Renown a kill), the Nets of Nemi (opponents −2 Speed), the Wolf's Pelt (+1 Power while hurt), the Scrolls of the Masters (+1 XP a fight), a Bribed Referee (capitulating costs no Favour or Renown), the Loaded Dice (a won bet pays half the stake more), Aesculapius's Spring (Medbay +1 week a week), and four tag relics; legendary: the Eagle Standard (+1 Power and +5% win in Boss fights), the Gilded Laurel (+1 Power for a fighter with a Title), Proserpina's Coin (once, a fighter who dies in a tournament is carried out alive; then it's spent).
+- **Perk tags** (`tags` in `PERKS`): Brute (Mighty, Killer Instinct, Bloodthirsty, Duelist, Juggernaut), Guarded (Thick Skin, Iron Constitution, Survivor, Iron Will, Juggernaut), Swift (Swift, Fast Starter, Tactician, Duelist), Showman (Closer, Crowd Pleaser, Merciful, Counterpuncher). Tag relics count a fighter's perks with the tag, a repeat twice, up to `tagCap` (3): the Brute's Chain +3% to injure each, the Tortoise Shell −4% to be injured each, Mercury's Sandals +1 Speed each, the Showman's Mask +1 Renown a win each. The bots take tagged perks first when they hold a tag relic.
+- **Rebalancing for the draft.** With the draft on and nothing else changed, careful careers won about 90% (39% without it). Every kind of card alone did it (boons only 77%, gear only 85%, relics only 93%): careful careers end only when Favour runs out, so a steady monthly gain decides them. The draft is meant to be the backbone of a career, so the arenas get harder instead. Measured first with the probe (90 careful careers, seeds from 1000, `oddsSamples` 60), then with the gates (`career-sim --check --tune`, 150 careers):
+
+  | Variant | Careful | Loyalist lead | Coup | Short | Gates |
+  |---|---|---|---|---|---|
+  | No draft (5.4.3) | 39% | +17 | 17% | 42% | 13/13 |
+  | Draft, first card values (probe) | 89% | | | | |
+  | Draft, trimmed boons (probe) | 91% | | | | |
+  | + tiers 2–4 +2 Power (probe) | 68% | | | | |
+  | + Boss win 10 Favour (probe) | 58% | | | | |
+  | D: tiers 2–4 and the Grand +3, Boss win 10 (300 careers) | 46% | +2 | 26% | 54% | 9/13 |
+  | E: +4, Boss win 10 | 27% | +3 | 9% | 39%, not a fifth quicker | 11/13 |
+  | F: +3, Boss win 8 | 42% | +2 | 28% | 41% | 11/13 |
+  | G/H: F with the Grand at 35, betrayal +40 Favour / +30 Gold × tier | 40% | +3–4 | 28% | 43% | 11/13 |
+  | **I: +3/+3/+4 (Imperial +4), the Grand 35, Boss win 8, and the Emperor's relic for the names (chosen)** | 39% | +5 | 20% | 39% | 13/13 |
+
+  So the arenas fight at Bronze 14/15/16, Silver 21/21/22, Imperial 30/31/32, the Grand Tournament 35; a Boss won in your top arena earns 8 Favour (was 15); and betraying the plot also brings the Emperor's gift, a relic (`PLOT.betrayRelic`: the Eagle Standard, if the house has room and doesn't hold it). The Dirt Pits are unchanged (the gentle start). Without the draft these arenas are nearly unwinnable (careful 0 of 40 in a probe): letting Fortune pass is a real sacrifice.
+- **Gate model change:** the "balanced fighter vs each Boss" gate (`speedSplit`, scripts/checks.js) models a trained fighter without gear or relics. With the Bosses 3–4 Power harder it scored 0/4 (no Speed split can matter that far behind). The model fighter now keeps the 5.4 gap to each Boss (it gets the Bosses' extra Power, standing in for the draft's gear and relics), so the gate asks the same question as before: 2/4.
+- **Gate measure change, short careers:** with I, every gate passed but "short careers at least a fifth quicker" (81 weeks against 99, 82%). Short careers were as quick as ever; the full careers' average fell because harder arenas end *losing* careers sooner (300 full and 150 short careful careers, seeds from 1000):
+
+  | | Short: all | Short: won | Full: all | Full: won | Full: lost |
+  |---|---|---|---|---|---|
+  | 5.4.3 | 83 | 96 | 113 | 141 | 95 |
+  | 6.0.0-alpha.2 | 81 | 96 | 99 | 134 | 78 |
+
+  Levers tried on short careers (150 each): purse ×2 (54%, 82 weeks), +35 starting Gold (43%, 85 weeks), training ×1.5 (97%, 50 weeks: whole points make it +2 Power a week), and a Boss rematch next month instead of a new circuit (5%, 47 weeks: back-to-back Boss losses drain Favour). None kept the win rate, so the game stays as it is and the gate now compares **won** careers (a won season 96 weeks against a won Long Road 134: 72%; it was 68% in 5.4.3).
+- **A test updated for the rule change:** `tests/ludus.test.js` pinned the Bronze Boss at Power 13; it now pins 16.

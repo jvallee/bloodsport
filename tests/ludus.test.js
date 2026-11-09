@@ -71,8 +71,8 @@ test('below the Silver Coliseum, training costs at most 2 Gold a fighter-week (t
   }
 });
 
-test('the Bronze Boss fights at Power 13 (the Bronze wall, 5.4.0)', () => {
-  assert.deepEqual(CIRCUITS[1].oppPower, [11, 12, 13]);
+test('the Bronze Boss fights at Power 16 (the Bronze wall, 5.4.0: 13; version 6 adds 3 to match the Fortune draft)', () => {
+  assert.deepEqual(CIRCUITS[1].oppPower, [14, 15, 16]);
 });
 
 test('Medbay Lv 2 heals 2 weeks per week; Lv 3 treats 3 fighters', () => {

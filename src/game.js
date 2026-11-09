@@ -6,7 +6,7 @@ import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom, pray, reanimate, exhibition, host, enact,
   assignDecor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
   recordMatchProgress, buyItem, useItem, placeBet, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy, checkQuests,
-  answerSummons, refuseSummons, rite, stewardPlan,
+  answerSummons, refuseSummons, rite, stewardPlan, chooseFortune, rerollFortune, passFortune,
 } from './run.js';
 
 // A finished match is settled at once (the fight screen shows the full report). Returns the summary when it settles.
@@ -50,7 +50,11 @@ export const GAME_ACTIONS = {
   summons: ({ run }, d) => { answerSummons(run, d.id, d.index); },
   'refuse-summons': ({ run }) => { refuseSummons(run); },
   rite: ({ run }, d) => { rite(run, d.id); },
-  'steward-plan': ({ run }) => { stewardPlan(run); }, // version 6: everyone's job in one click // the Temple of Fortuna lifts an Afeared scar (5.4.2)
+  'steward-plan': ({ run }) => { stewardPlan(run); }, // version 6: everyone's job in one click
+  // Version 6: the monthly Fortune draft (index: the card), a reroll for Gold, or letting it pass.
+  fortune: ({ run }, d) => { chooseFortune(run, Number(d.index)); },
+  'fortune-reroll': ({ run }) => { rerollFortune(run); },
+  'fortune-pass': ({ run }) => { passFortune(run); },
   surgeon: ({ run }, d) => { surgeon(run, d.id, Number(d.index)); },
   build: ({ run }, d) => { buildRoom(run, d.type); },
   upgrade: ({ run }, d) => { upgradeRoom(run, d.id); },

@@ -4,13 +4,13 @@
 import { createRng } from './rng.js';
 import { createMatch, autoPlay, suggestTactic } from './fight.js';
 
-export function estimateOdds(fighter, opponent, { debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, n = 500, seed = 12345 } = {}) {
+export function estimateOdds(fighter, opponent, { debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, n = 500, seed = 12345 } = {}) {
   const rng = createRng(seed);
   let win = 0;
   let hurt = 0;
   let death = 0;
   for (let i = 0; i < n; i++) {
-    const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger, festival, grudge, vengeance, boss, earlyRound, rebels });
+    const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger, festival, grudge, vengeance, boss, earlyRound, rebels, relics });
     autoPlay(m, suggestTactic); // odds assume the tactics auto-play would pick
     if (m.result.winner === 'A') win++;
     if (!m.a.f.alive) death++;

@@ -2,13 +2,13 @@
 
 import { MAX_CAREERS } from '../careers.js';
 import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
-import { REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR } from '../data.js';
+import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, decreesUnlocked, unlockText } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
   boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker,
+  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker, fortuneBlocker, rerollBlocker, rerollPrice,
   isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
 } from '../run.js';
 import {
@@ -21,6 +21,7 @@ import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON, mercyChoices,
 import { portrait, npcPortrait } from './portrait.js';
 import { SPEAKERS, tipSpeaker } from '../dialogue.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../events.js';
+import { RELICS, TAGS, KIND_LABELS, perkTags, fortuneTitle, fortuneText } from '../fortune.js';
 
 const JOB_LABELS = { rest: 'Rest', trainPower: '+1 Power', trainSpeed: '+3 Speed', medbay: 'Medbay' };
 const JOB_HELP = {
@@ -225,6 +226,8 @@ export function summaryBanner(s) {
   if (s.feud) bits.push(`⚔ ${s.feud}`);
   if (s.scar) bits.push(`🩹 ${s.fighter} is scarred: ${s.scar}`);
   if (s.eulogy) bits.push(`⚰ ${s.eulogy}`);
+  if (s.saved) bits.push(`🪙 ${s.fighter} fell, but Proserpina's Coin carried them out alive`);
+  if (s.wager) bits.push(s.wager.won ? `🎲 The Fates' Wager won: +${s.wager.gold} Gold` : `🎲 The Fates' Wager lost: ${s.wager.gold} Gold`);
   if (s.loot) bits.push(`⚒ Claimed a ${GEAR[s.loot].name}`);
   if (s.injuries?.length) bits.push(`🩸 ${s.fighter} is now ${s.injuries.join(' and ')}: send them to the Medbay`);
   if (s.crushing) bits.push('The crowd jeered the mismatch');
@@ -340,6 +343,13 @@ function questsPanel(run) {
   return `<details class="more quests" data-key="quests" open><summary>📜 Quests</summary><ul class="quest-list">${items.join('')}</ul>${gallery}</details>`;
 }
 
+// Version 6: the house's relics, one chip each (hover or tap for what it does).
+function relicStrip(run) {
+  if (!run.relics?.length) return '';
+  const chips = run.relics.map((id) => `<span class="relic-chip rarity-${RELICS[id].rarity}" title="${esc(RELICS[id].desc)}" tabindex="0">🏺 ${esc(RELICS[id].name)}<small>${esc(RELICS[id].desc)}</small></span>`).join('');
+  return `<div class="relics"><span class="label">Relics ${run.relics.length}/${FORTUNE.maxRelics}</span>${chips}</div>`;
+}
+
 function weekPanel(run) {
   const until = weeksUntilTournament(run.week);
   const status = run.boutPending
@@ -359,6 +369,7 @@ function weekPanel(run) {
       <h2>${formatDate(run.week)}</h2>
       ${status}
       ${scheduleStrip(run)}
+      ${relicStrip(run)}
       ${festivalNote(run)}
       ${tribute}
       ${run.summons ? `<div class="demand summons">⚜ <b>The Emperor's summons:</b> on this month's fight day, send one of your fighters to the Imperial Coliseum against one of its regulars (Power ${CIRCUITS[SUMMONS.tier - 1].oppPower[0]}), or refuse him and lose ${-SUMMONS.refuseFavor} Favour.</div>` : ''}
@@ -437,10 +448,13 @@ export function standingsTable(run) {
     <p class="sub">Year-end purse (start of winter): ${HOUSES.yearPurse.map((g, i) => `#${i + 1} ${g * dateOf(run.week).year}`).join(' · ')} Gold. You're #${standings(run).findIndex((h) => h.you) + 1}.</p>`;
 }
 
+// Version 6: a perk's tags, which relics like the Brute's Chain count.
+const perkTagChips = (p) => perkTags(p).map((t) => ` <small class="tag-chip tag-${t}">${esc(TAGS[t].name)}</small>`).join('');
+
 function perkChooser(run, f) {
   if (!f.pendingPerks.length) return '';
   const offer = f.pendingPerks[0].map((p) => `<button class="perk-opt" data-action="perk" data-id="${f.id}" data-perk="${p}" ${perkBlocker(run, f.id, p) ? 'disabled' : ''}>
-    <b>${esc(PERKS[p].name)}${PERKS[p].repeatable ? ' <small class="stacks">(stacks: can be taken again)</small>' : ''}${f.perks.includes(p) ? ` <small class="stacks">you have ×${f.perks.filter((x) => x === p).length}</small>` : ''}</b><small>${esc(PERKS[p].desc)}</small></button>`).join('');
+    <b>${esc(PERKS[p].name)}${perkTagChips(p)}${PERKS[p].repeatable ? ' <small class="stacks">(stacks: can be taken again)</small>' : ''}${f.perks.includes(p) ? ` <small class="stacks">you have ×${f.perks.filter((x) => x === p).length}</small>` : ''}</b><small>${esc(PERKS[p].desc)}</small></button>`).join('');
   const temple = maxLevel(run, 'temple') ? `<div class="row">${buttonWhy(`🏛 Pray to Fortuna for three new choices (${prayPrice(run)} Gold)`, 'pray', { id: f.id }, prayBlocker(run, f.id), 'btn small')}</div>` : '';
   return `<div class="perk-choice"><div class="label">⭐ Level ${f.level - f.pendingPerks.length + 1}! Choose a perk:</div><div class="perk-list">${offer}</div>${temple}</div>`;
 }
@@ -782,6 +796,7 @@ export function helpModal() {
       <li><b>Equip them</b> from the storeroom: decor and gear belong to the house and pass on when a fighter falls.</li>
       <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favour</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
+      <li><b>Take Fortune's card.</b> Each month offers three: a <b>relic</b> the house keeps (up to 6, and some count a perk's tag, like Brute or Swift), a boon, gear, a fighter, or a wager. Spin again for Gold if none suit.</li>
     </ol>
     <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or plays one week · T goes to fight day · 1–4 switch tabs · ? opens this page.</p>
     <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>
@@ -906,4 +921,38 @@ export function eventCard(run) {
   return `<section class="panel event-card"><div class="event-faces">${faces}</div><div class="event-body">
     <div class="label">This week</div><h2>${esc(e.title)}</h2><p>${esc(e.text(names))}</p>
     <div class="row event-choices">${choices}</div></div></section>`;
+}
+
+// ---------- The Fortune draft (version 6) ----------
+
+const KIND_ICON = { relic: '🏺', boon: '✨', gear: '⚔', fighter: '👤', wager: '🎲' };
+const RARITY_LABEL = { common: 'Common', rare: 'Rare', legendary: 'Legendary' };
+
+function fortuneFace(card) {
+  if (card.kind === 'fighter') return portrait(card.fighter, 64);
+  return `<span class="fortune-icon">${KIND_ICON[card.kind]}</span>`;
+}
+
+// Three cards, pick one; spin again for Gold, or let it pass. PLACEHOLDER words.
+export function fortunePanel(run) {
+  if (!run.fortune || run.mercy || run.event) return '';
+  const cards = run.fortune.cards.map((c, i) => {
+    const why = fortuneBlocker(run, i);
+    const kindLine = c.kind === 'relic' && RELICS[c.id].tag ? `${KIND_LABELS[c.kind]} · ${TAGS[RELICS[c.id].tag].name}` : c.kind === 'fighter' && c.fighter.legend ? 'Legendary fighter' : KIND_LABELS[c.kind];
+    return `<div class="fortune-card rarity-${c.rarity}" style="--i:${i}">
+      <div class="fortune-rarity">${RARITY_LABEL[c.rarity]} · ${esc(kindLine)}</div>
+      <div class="fortune-face">${fortuneFace(c)}</div>
+      <h3>${esc(fortuneTitle(c))}</h3>
+      <p>${esc(fortuneText(c))}</p>
+      ${buttonWhy('Take it', 'fortune', { index: i }, why, 'btn primary')}
+    </div>`;
+  }).join('');
+  const full = run.relics.length >= FORTUNE.maxRelics ? ` Your house holds ${FORTUNE.maxRelics} relics: no more are dealt.` : '';
+  return `<section class="panel fortune-draft" data-rolls="${run.fortune.rerolls}">
+    <div class="label">This month</div><h2>Fortune's wheel turns</h2>
+    <p class="sub">Choose one. Relics stay with the house (${run.relics.length}/${FORTUNE.maxRelics}); boons, gear and fighters are yours at once.${full}</p>
+    <div class="fortune-cards">${cards}</div>
+    <div class="row">${button(`↻ Spin again (${rerollPrice(run)} Gold)`, 'fortune-reroll', {}, rerollBlocker(run), 'btn small')}
+      ${button(`Let it pass (+${FORTUNE.pass} Gold)`, 'fortune-pass', {}, null, 'btn small')}</div>
+  </section>`;
 }

@@ -286,7 +286,7 @@ export const ECONOMY = {
 // Imperial Favour replaces v1's three Strikes. At 0 you're executed.
 export const FAVOR = {
   start: 50, max: 100, warning: 25,
-  bossWin: 15, upsetWin: 5, spectacleWin: 5,
+  bossWin: 8, upsetWin: 5, spectacleWin: 5,
   bossLoss: [-10, -15, -20, -25], forfeitExtra: -5, topTowel: -5, crushingWin: -2, championReturn: -3, unpaidTribute: -25,
 };
 
@@ -323,14 +323,15 @@ export const FESTIVAL_BY_ID = Object.fromEntries(Object.values(FESTIVALS).map((f
 export const STAGES = ['Tournament 1', 'Tournament 2', 'Boss Tournament'];
 
 // One circuit per tier: Tournament 1 → Tournament 2 → Boss. Arrays are per stage.
+// Version 6 (alpha.2): tiers 2–4 fight 3–4 Power harder (and the Grand Tournament 4), to match the Fortune draft (docs/fight-rules.md).
 export const CIRCUITS = [
   { tier: 1, name: 'The Dirt Pits', oppPower: [6, 6, 7], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
-  { tier: 2, name: 'The Bronze Arena', oppPower: [11, 12, 13], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
-  { tier: 3, name: 'The Silver Coliseum', oppPower: [18, 18, 19], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
-  { tier: 4, name: 'The Imperial Coliseum', oppPower: [26, 27, 28], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
+  { tier: 2, name: 'The Bronze Arena', oppPower: [14, 15, 16], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
+  { tier: 3, name: 'The Silver Coliseum', oppPower: [21, 21, 22], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
+  { tier: 4, name: 'The Imperial Coliseum', oppPower: [30, 31, 32], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
 ];
 
-export const GRAND = { name: 'The Grand Tournament', oppPower: 31, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
+export const GRAND = { name: 'The Grand Tournament', oppPower: 35, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
 
 // House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
 export const PRESTIGE_LEVELS = [
@@ -386,22 +387,33 @@ export const XP = { win: 3, loss: 1, bossMultiplier: 2, upsetBonus: 2, levels: [
 
 // `req(f)` gates combo perks; `stat` perks change the fighter once, the rest are checked in the engine or run.
 export const PERKS = {
-  mighty: { name: 'Mighty', desc: '+1 Power.', stat: { power: 1 }, repeatable: true },
-  swift: { name: 'Swift', desc: '+3 Speed.', stat: { speed: 3 }, repeatable: true },
-  thickSkin: { name: 'Thick Skin', desc: '−5% chance to be injured.' },
-  killer: { name: 'Killer Instinct', desc: '+5% chance to injure.' },
-  fastStart: { name: 'Fast Starter', desc: '+5% win chance in Round 1.' },
-  closer: { name: 'Closer', desc: '+5% win chance in Round 3.' },
-  ironConstitution: { name: 'Iron Constitution', desc: 'Training adds 10 less Stress.' },
-  crowdPleaser: { name: 'Crowd Pleaser', desc: '+1 extra Renown for every win.' },
-  merciful: { name: 'Merciful', desc: 'Sparing an opponent always wins the crowd over: the Renown and Morale bonus, even when they called for blood.' },
-  survivor: { name: 'Survivor', desc: 'Once injured: −10% chance to be injured; −20% at 2+ injuries.', req: (f) => f.level >= 3, reqText: 'Level 3+' },
-  duelist: { name: 'Duelist', desc: '+5% win chance and +5% chance to injure.', req: (f) => f.power >= 9 && f.speed >= 7, reqText: 'Power 9+ and Speed 7+' },
-  tactician: { name: 'Tactician', desc: 'Striking first is worth +15% instead of +10%.', req: (f) => f.speed >= 9 && f.power >= 8, reqText: 'Speed 9+ and Power 8+' },
-  bloodthirsty: { name: 'Bloodthirsty', desc: '+10% chance to injure an opponent who is already hurt.' },
-  counterpuncher: { name: 'Counterpuncher', desc: '+10% win chance in a round after losing one.' },
-  ironWill: { name: 'Iron Will', desc: 'The Death Gate opens one injury later.', req: (f) => f.level >= 4, reqText: 'Level 4+' },
-  juggernaut: { name: 'Juggernaut', desc: '+1 Power and −5% chance to be injured.', stat: { power: 1 }, req: (f) => f.power >= 12, reqText: 'Power 12+' },
+  mighty: { name: 'Mighty', desc: '+1 Power.', tags: ['brute'], stat: { power: 1 }, repeatable: true },
+  swift: { name: 'Swift', desc: '+3 Speed.', tags: ['swift'], stat: { speed: 3 }, repeatable: true },
+  thickSkin: { name: 'Thick Skin', desc: '−5% chance to be injured.', tags: ['guarded'] },
+  killer: { name: 'Killer Instinct', desc: '+5% chance to injure.', tags: ['brute'] },
+  fastStart: { name: 'Fast Starter', desc: '+5% win chance in Round 1.', tags: ['swift'] },
+  closer: { name: 'Closer', desc: '+5% win chance in Round 3.', tags: ['showman'] },
+  ironConstitution: { name: 'Iron Constitution', desc: 'Training adds 10 less Stress.', tags: ['guarded'] },
+  crowdPleaser: { name: 'Crowd Pleaser', desc: '+1 extra Renown for every win.', tags: ['showman'] },
+  merciful: { name: 'Merciful', desc: 'Sparing an opponent always wins the crowd over: the Renown and Morale bonus, even when they called for blood.', tags: ['showman'] },
+  survivor: { name: 'Survivor', desc: 'Once injured: −10% chance to be injured; −20% at 2+ injuries.', tags: ['guarded'], req: (f) => f.level >= 3, reqText: 'Level 3+' },
+  duelist: { name: 'Duelist', desc: '+5% win chance and +5% chance to injure.', tags: ['brute', 'swift'], req: (f) => f.power >= 9 && f.speed >= 7, reqText: 'Power 9+ and Speed 7+' },
+  tactician: { name: 'Tactician', desc: 'Striking first is worth +15% instead of +10%.', tags: ['swift'], req: (f) => f.speed >= 9 && f.power >= 8, reqText: 'Speed 9+ and Power 8+' },
+  bloodthirsty: { name: 'Bloodthirsty', desc: '+10% chance to injure an opponent who is already hurt.', tags: ['brute'] },
+  counterpuncher: { name: 'Counterpuncher', desc: '+10% win chance in a round after losing one.', tags: ['showman'] },
+  ironWill: { name: 'Iron Will', desc: 'The Death Gate opens one injury later.', tags: ['guarded'], req: (f) => f.level >= 4, reqText: 'Level 4+' },
+  juggernaut: { name: 'Juggernaut', desc: '+1 Power and −5% chance to be injured.', tags: ['brute', 'guarded'], stat: { power: 1 }, req: (f) => f.power >= 12, reqText: 'Power 12+' },
+};
+
+// Version 6: the monthly Fortune draft (src/fortune.js). `rarity` weights; `kinds` weights for what a card is; rerolls cost
+// Gold, rising each time in a month; `pass` is the Gold for taking nothing. PLACEHOLDER numbers (docs/fight-rules.md).
+export const FORTUNE = {
+  enabled: true, fromWeek: 4, cards: 3, maxRelics: 6, tagCap: 3,
+  rarity: { common: 62, rare: 30, legendary: 8 },
+  kinds: { relic: 4, boon: 4, gear: 2, fighter: 2, wager: 1 },
+  reroll: [3, 6, 10], pass: 2,
+  fighterPower: { common: 0, rare: 2, legendary: 4 }, legendRenown: 6,
+  wager: { winGoldPerTier: 5, winRenown: 2, lossGoldPerTier: 3 },
 };
 
 // Bloodied Victory: winning with 2+ injuries (on top of FAVOR.spectacleWin).
@@ -607,5 +619,5 @@ export const PLOT = {
   confessTrust: 3,
   suspicion: { perPrisoner: 1, perContact: 1, decay: 2, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
   // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
-  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30, betrayGold: 20, // betrayGold: the Emperor's purse for the names, × tier
+  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30, betrayGold: 20, betrayRelic: 'eagle', // betrayGold: the Emperor's purse for the names, × tier
 };

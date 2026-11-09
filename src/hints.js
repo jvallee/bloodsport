@@ -12,6 +12,7 @@ export function nextHint(run) {
       : { text: 'No gladiators and not enough Gold: build a Liaison or wait for cheaper offers.', tone: 'bad' };
   }
   if (run.event) return { text: 'Something has happened in the Ludus: make your choice on the card below.', tone: 'event' };
+  if (run.fortune) return { text: 'Fortune\'s wheel turns: take one of the three cards below (or spin again).', tone: 'event' };
   const levelled = run.roster.find((f) => f.pendingPerks.length);
   if (levelled) return { text: `${levelled.name} levelled up: pick a perk on their card.`, tone: 'event' };
   if (run.boutPending) {

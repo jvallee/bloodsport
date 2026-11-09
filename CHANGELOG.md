@@ -2,6 +2,15 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 6.0.0-alpha.2: Fortune's wheel
+
+- **Every month, Fortune deals three cards: take one.** A **relic** your house keeps for good, a **boon** (Gold, Prestige, Favour, XP, a surgeon's visit, a day at the baths…), a free piece of **gear**, a free **fighter** (sometimes a legend of the arena), or **the Fates' Wager** (win your top bout this month for a purse; lose it and pay). Cards are common, rare or legendary. Don't like them? **Spin again** for a little Gold, or let Fortune pass.
+- **21 relics, up to 6 at once**, each bending one rule: Mars's Whetstone (+1 Power in Round 1), the Nets of Nemi (opponents −2 Speed), a Bribed Referee (capitulating costs nothing), the Eagle Standard (stronger in Boss fights), Proserpina's Coin (once, a fighter who dies is carried out alive)… They're on the Ludus page under the calendar.
+- **Perk tags:** every perk is Brute, Guarded, Swift or Showman, shown when you choose one. Some relics count them: the Brute's Chain adds injure chance for each Brute perk, Mercury's Sandals Speed for each Swift one. Build around them.
+- **The arenas are harder to match:** from the Bronze Arena up, opponents fight with 3 more Power (4 in the Imperial Coliseum and the Grand Tournament), and a Boss win earns 8 Favour (was 15). Fortune's cards are how you keep up.
+- **Betraying the plot** now also brings a gift from the palace: the Eagle Standard relic.
+- **Fight results** say when Proserpina's Coin saved a life and how the Fates' Wager went.
+
 ## 6.0.0-alpha.1: the month is the turn
 
 Version 6's brief: make the game as addictive and fun as possible (the plan: `docs/plan-v6-one-more-career.md`). 5.4.3 stays playable at `/v5/`. This first step is about pace.

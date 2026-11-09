@@ -7,8 +7,9 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, SPY, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, SUMMONS, FEAR, deltaRow,
+  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, SUMMONS, FEAR, FORTUNE, deltaRow,
 } from './data.js';
+import { RELICS, BOONS, hasRelic, relicSum, relicFight, tagCount, fortuneTitle, fortuneText } from './fortune.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
 import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, stewardAlready, WANTS, REBEL_QUESTS, RIVAL_LINES, BOND_LINES, SUMMONS_LINES, LIAISON_LINES } from './quests.js';
 import { createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, computePower, deathGateAt, hypeOf, playRound, throwTowel, canThrowTowel, mortalDanger, suggestTactic } from './fight.js';
@@ -75,6 +76,8 @@ const takenNames = (run, extra = []) =>
   [...run.roster, ...run.market, ...run.fallen, ...allOpponents(run), ...(run.liaisonOffers ?? []), ...(run.nemeses ?? []), ...(run.rivalChampion ? [run.rivalChampion.f] : []), ...extra].map((f) => f.name).concat(run.graveyard ?? [], run.recentNames ?? [], (run.retired ?? []).map((l) => l.name));
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const clampStress = (n) => clamp(n, 0, STRESS.max);
+// The Stress a week of training adds (Iron Constitution and the Drillmaster's Rod take some off).
+export const trainStress = (run, f) => Math.max(0, STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0) - relicSum(run, 'trainStress'));
 const log = (run, text, tone = 'info') => run.log.push({ week: run.week, text, tone });
 const findFighter = (run, id) => run.roster.find((f) => f.id === id);
 export const effectiveSpeed = (f) => f.speed + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].speed ?? 0), 0);
@@ -450,7 +453,7 @@ export function answerSummons(run, id, order) {
   // The fighter's own state counts as in any bout: overtrained, the festival, a feud or debt with the opponent's house.
   const house = houseOf(run, opp);
   const m = createMatch({ a: fighter, b: opp, rng: r, overtrained: fighter.stress >= STRESS.overtrained, festival: festivalOn(run.week)?.id ?? null,
-    grudge: house?.feud > 0 ? 1 : house?.owed > 0 ? -1 : 0, vengeance: house?.vengeance > 0 });
+    grudge: house?.feud > 0 ? 1 : house?.owed > 0 ? -1 : 0, vengeance: house?.vengeance > 0, relics: relicFight(run, fighter) });
   while (!m.over) {
     if (order === 'yield' && canThrowTowel(m) && mortalDanger(m.a)) throwTowel(m);
     else playRound(m, { stance: suggestTactic(m) });
@@ -942,6 +945,7 @@ export function matchOptions(run, f, tier = run.topTier) {
     vengeance: Boolean(run.arenas[tier]) && houseOf(run, opponentFor(run, tier))?.vengeance > 0,
     // v6: in the coup Final, the people you freed are voices in the crowd for your champion.
     rebels: tier === GRAND_TIER && run.plot?.coup && !run.plot.ended && f.id === run.plot.champion ? coupBonus(run) : 0,
+    relics: relicFight(run, f, { boss: boutFor(run, tier).boss }), // version 6
   };
 }
 
@@ -952,7 +956,7 @@ export const isShort = (run) => Boolean(run.setup?.short);
 export const marketPrice = (run) => circuitInfo(run).price;
 // What a fighter costs: the Liaison's own price, or the Market's plus RECRUIT.perLevel per level above 1.
 export const liaisonOffer = (run, id) => (run.liaisonOffers ?? []).find((f) => f.id === id) ?? null;
-export const recruitPrice = (run, f) => (liaisonOffer(run, f.id) ? f.price : marketPrice(run) + RECRUIT.perLevel * ((f.level ?? 1) - 1));
+export const recruitPrice = (run, f) => Math.max(1, (liaisonOffer(run, f.id) ? f.price : marketPrice(run) + RECRUIT.perLevel * ((f.level ?? 1) - 1)) - relicSum(run, 'recruitDiscount'));
 
 // A seasoned recruit: arrives at a level from RECRUIT.levels for this arena tier, with a perk chosen for each level.
 function season(run, rng, f) {
@@ -1243,6 +1247,12 @@ function betray(run) {
     run.gold += purse;
     log(run, `A purse of ${purse} Gold arrives from the palace, with the Emperor's thanks.`, 'event');
   }
+  // Version 6: the Emperor's own gift, a relic for the house (if it has room and doesn't hold it already).
+  const gift = PLOT.betrayRelic;
+  if (gift && !hasRelic(run, gift) && run.relics.length < FORTUNE.maxRelics) {
+    run.relics.push(gift);
+    log(run, `With the purse comes a gift from the palace: ${RELICS[gift].name}. ${RELICS[gift].desc}`, 'event');
+  }
   run.epilogue = [...(run.epilogue ?? []), victims.length ? `Executed on your word: ${victims.join(', ')}.` : 'You gave the Emperor names. He made sure they were the right ones.'];
   endPlot(run, 'loyalist');
 }
@@ -1387,7 +1397,10 @@ export function createRun(seed = randomSeed(), setup = {}) {
       events: createRng(deriveSeed(seed, 5)),
       houses: housesRng,
       plot: createRng(deriveSeed(seed, 8)), // v6: the hidden plot draws only from here
+      fortune: createRng(deriveSeed(seed, 13)), // version 6: the Fortune draft
     },
+    relics: [], // version 6: the house's relics (src/fortune.js)
+    fortune: null, // version 6: this month's Fortune cards, until one is chosen: { cards, rerolls }
     plot: null, // v6: the hidden plot's state, once a political prisoner joins (docs/roadmap-v6.md)
     houses: makeHouses(housesRng),
     glory: 0,
@@ -1561,7 +1574,7 @@ export function stewardPlan(run) {
   const out = [];
   for (const f of run.roster) {
     const hurt = f.injuries.some((i) => i.weight > 0);
-    const wants = hurt ? ['medbay', 'rest'] : f.stress + STRESS.train >= STRESS.overtrained ? ['rest'] : ['trainPower', 'trainSpeed', 'rest'];
+    const wants = hurt ? ['medbay', 'rest'] : f.stress + trainStress(run, f) >= STRESS.overtrained ? ['rest'] : ['trainPower', 'trainSpeed', 'rest'];
     const job = wants.find((j) => j === 'rest' || !jobBlocker(run, f.id, j));
     if (job !== f.job) setJob(run, f.id, job);
     out.push({ id: f.id, job });
@@ -1589,7 +1602,7 @@ function switchToRest(run, f, reason) {
 // A fighter switched to Rest goes back to training when it can happen and won't overtrain them next week.
 function resumeTraining(run, f) {
   if (f.trained >= trainCap(run)) { delete f.resume; return; }
-  const gain = STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0);
+  const gain = trainStress(run, f);
   if (f.stress + gain >= STRESS.overtrained) return;
   if (run.roster.filter((x) => x !== f && isTraining(x.job)).length >= trainerRooms(run)) return; // every Trainer Room is taken (bug report: two trained in one room)
   f.job = f.resume;
@@ -1631,6 +1644,7 @@ export function advanceBlocker(run) {
   const idle = idleBlocker(run);
   if (idle) return idle;
   if (run.event) return `Decide this week's event first: "${EVENT_BY_ID[run.event.id].title}".`;
+  if (run.fortune) return 'Choose this month\'s Fortune first.';
   const midBracket = Object.entries(run.brackets ?? {}).find(([t, b]) => b.fighterId && b.round > 0 && run.bouts?.[t] === 'open');
   if (midBracket) return `${findFighter(run, midBracket[1].fighterId)?.name ?? 'Your fighter'} is through to the ${BRACKET.rounds[midBracket[1].round]} in ${arenaName(Number(midBracket[0]))}: fight on, or withdraw.`;
   if (run.summons && run.bouts) return 'The Emperor\'s summons: send a fighter to the Imperial Coliseum, or refuse him.';
@@ -1658,11 +1672,11 @@ export function advanceWeek(run) {
       f.trained += 1;
       if (stat === 'power') f.trainedPower = (f.trainedPower ?? 0) + gain;
       run.gold -= cost;
-      f.stress = clampStress(f.stress + STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0));
+      f.stress = clampStress(f.stress + trainStress(run, f));
       log(run, `${f.name} trains: +${gain} ${stat === 'power' ? 'Power' : 'Speed'}.`, 'good');
     }
     if (f.job === 'medbay') {
-      let heal = healRate(run);
+      let heal = healRate(run) + relicSum(run, 'heal');
       while (heal > 0 && f.injuries.length) {
         const inj = f.injuries[0];
         const used = Math.min(heal, inj.weeksLeft);
@@ -1728,6 +1742,7 @@ export function advanceWeek(run) {
   if (run.bouts) for (const tier of unlockedTiers(run)) if (tier < run.topTier && run.bouts[tier] === 'open') arenaMovesOn(run, tier);
   // The month's demand is judged now, before a new month can issue the next one (playtest #9: it was issued and judged at once).
   if (tournamentEnds) judgeDemand(run);
+  if (tournamentEnds && run.wager) loseWager(run, 'the house never fought its top bout');
   rivalPoach(run); // the archrival buys the fighter it eyed, at the end of the month's first week (5.4.0)
   run.bouts = null;
   run.brackets = {};
@@ -1744,6 +1759,7 @@ export function advanceWeek(run) {
     wantsMonth(run); // 5.4.0: quests (docs/plan-5.4-quests.md)
     rivalMonth(run);
     rebelQuestsMonth(run);
+    fortuneMonth(run);
   }
   if (run.plot?.hidden && --run.plot.hidden <= 0) { delete run.plot.hidden; log(run, 'The stranger in the Medbay slipped away before dawn.', 'event'); }
   if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) if (!tributePaid(run)) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
@@ -1786,7 +1802,7 @@ export function advanceToTournament(run) {
   let weeks = 0;
   const guard = () => {
     for (const f of run.roster) {
-      const gain = STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0);
+      const gain = trainStress(run, f);
       if (isTraining(f.job) && f.stress + gain >= STRESS.overtrained) switchToRest(run, f, `another week of training would overtrain them (Stress ${f.stress}).`);
     }
   };
@@ -1797,6 +1813,196 @@ export function advanceToTournament(run) {
   }
   if (run.boutPending) guard(); // and fight week too, now that a rested trainee goes back to training (playtest #10)
   return weeks;
+}
+
+// ---------- The Fortune draft (version 6, src/fortune.js) ----------
+
+const fortuneRng = (run) => (run.rng.fortune ??= createRng(deriveSeed(run.seed, 13)));
+const fortuneTier = (run) => Math.min(run.topTier, CIRCUITS.length);
+
+// A key from { key: weight }, skipping zero weights (null when every weight is zero).
+function weighted(rng, weights) {
+  const entries = Object.entries(weights).filter(([, w]) => w > 0);
+  let roll = next(rng) * entries.reduce((s, [, w]) => s + w, 0);
+  for (const [k, w] of entries) if ((roll -= w) < 0) return k;
+  return entries.at(-1)?.[0] ?? null;
+}
+
+// From `ids`, one of this rarity if any (else any), not already on the table.
+function pickOf(rng, ids, rarityOf, rarity, taken) {
+  const free = ids.filter((id) => !taken.includes(id));
+  const same = free.filter((id) => rarityOf(id) === rarity);
+  return (same.length ? pick(rng, same) : free.length ? pick(rng, free) : null);
+}
+
+function fortuneCard(run, rng, table) {
+  const rarity = weighted(rng, FORTUNE.rarity);
+  const kinds = { ...FORTUNE.kinds };
+  const taken = table.map((c) => c.id);
+  if (run.relics.length >= FORTUNE.maxRelics) kinds.relic = 0;
+  if (run.roster.length >= rosterCap(run)) kinds.fighter = 0;
+  if (isWinter(run.week) || run.wager || table.some((c) => c.kind === 'wager')) kinds.wager = 0;
+  for (const k of Object.keys(kinds)) if (table.filter((c) => c.kind === k).length >= 2) kinds[k] = 0; // variety: at most two of a kind
+  const kind = weighted(rng, kinds);
+  const tier = fortuneTier(run);
+  if (kind === 'relic') {
+    const id = pickOf(rng, Object.keys(RELICS).filter((r) => !run.relics.includes(r)), (r) => RELICS[r].rarity, rarity, taken);
+    if (id) return { kind, id, rarity: RELICS[id].rarity };
+  }
+  if (kind === 'gear') {
+    const gearTier = clamp(tier - 2 + ['common', 'rare', 'legendary'].indexOf(rarity), 1, 3); // mostly a tier below your arena
+    const id = pickOf(rng, Object.keys(GEAR).filter((g) => GEAR[g].tier === gearTier), () => rarity, rarity, taken);
+    if (id) return { kind, id, rarity };
+  }
+  if (kind === 'fighter') {
+    const f = createFighter(rng, { id: newId(run, 'f'), bonusPower: circuitInfo(run).marketPower + FORTUNE.fighterPower[rarity], takenNames: takenNames(run, table.map((c) => c.fighter).filter(Boolean)), classes: run.setup?.classes });
+    season(run, rng, f);
+    if (rarity === 'legendary') Object.assign(f, { legend: true, renown: FORTUNE.legendRenown, origin: 'A legend of the arena' });
+    return { kind, id: f.id, rarity, fighter: f };
+  }
+  if (kind === 'wager') {
+    const w = FORTUNE.wager;
+    return { kind, id: 'wager', rarity: 'rare', tier: run.topTier, winGold: w.winGoldPerTier * tier, winRenown: w.winRenown, lossGold: w.lossGoldPerTier * tier };
+  }
+  // A boon (also the fallback when nothing else is left to draw).
+  const hurt = run.roster.some((f) => f.injuries.length);
+  const id = pickOf(rng, Object.keys(BOONS).filter((b) => BOONS[b].needs !== 'hurt' || hurt), (b) => BOONS[b].rarity, rarity, taken) ?? 'gold';
+  const b = BOONS[id];
+  const card = { kind: 'boon', id, rarity: b.rarity };
+  if (b.gold) card.gold = b.gold + b.goldPerTier * tier;
+  if (b.prestige) card.prestige = b.prestige + b.prestigePerTier * tier;
+  if (b.items) card.items = Array.from({ length: b.items }, () => pick(rng, Object.keys(CONSUMABLES)));
+  if (b.one) {
+    const f = pick(rng, run.roster);
+    if (!f) return { kind: 'boon', id: 'gold', rarity: 'common', gold: BOONS.gold.gold + BOONS.gold.goldPerTier * tier };
+    Object.assign(card, { fighterId: f.id, name: f.name });
+  }
+  return card;
+}
+
+function drawFortune(run) {
+  const rng = fortuneRng(run);
+  const cards = [];
+  for (let i = 0; i < FORTUNE.cards; i++) cards.push(fortuneCard(run, rng, cards));
+  return cards;
+}
+
+// At the start of every month (from FORTUNE.fromWeek): the Patron's Purse pays, and three Fortune cards are dealt.
+function fortuneMonth(run) {
+  const purse = relicSum(run, 'monthGold');
+  if (purse) {
+    run.gold += purse;
+    log(run, `${RELICS.purse.name}: +${purse} Gold.`, 'good');
+  }
+  if (!FORTUNE.enabled || run.week < FORTUNE.fromWeek || run.status !== 'active') return;
+  run.fortune = { cards: drawFortune(run), rerolls: 0 };
+}
+
+export const rerollPrice = (run) => FORTUNE.reroll[Math.min(run.fortune?.rerolls ?? 0, FORTUNE.reroll.length - 1)];
+
+export function fortuneBlocker(run, index) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const card = run.fortune?.cards[index];
+  if (!card) return 'No Fortune card there.';
+  if (card.kind === 'fighter' && run.roster.length >= rosterCap(run)) return `Your quarters are full (${rosterCap(run)} fighters).`;
+  if (card.kind === 'relic' && run.relics.length >= FORTUNE.maxRelics) return `The house already holds ${FORTUNE.maxRelics} relics.`;
+  if (card.fighterId && !findFighter(run, card.fighterId)) return `${card.name} is no longer in the house.`;
+  return null;
+}
+
+export function chooseFortune(run, index) {
+  assertOk(fortuneBlocker(run, index));
+  const card = run.fortune.cards[index];
+  run.fortune = null;
+  const title = fortuneTitle(card);
+  if (card.kind === 'relic') {
+    run.relics.push(card.id);
+    log(run, `Fortune: ${title} joins the house's relics. ${RELICS[card.id].desc}`, 'good');
+  } else if (card.kind === 'gear') {
+    run.inventory.gear.push(card.id);
+    log(run, `Fortune: a ${title} for the storeroom.`, 'good');
+  } else if (card.kind === 'fighter') {
+    const f = card.fighter;
+    run.roster.push(f);
+    remember(run, f);
+    chronicle(run, f, f.legend ? 'Came to the Ludus by Fortune: a legend of the arena.' : 'Came to the Ludus by Fortune.');
+    log(run, `Fortune: ${f.name} joins the Ludus${f.legend ? ', a legend of the arena' : ''}.`, 'good');
+    joinPlot(run, f);
+  } else if (card.kind === 'wager') {
+    run.wager = { winGold: card.winGold, winRenown: card.winRenown, lossGold: card.lossGold };
+    log(run, `Fortune: the Fates' wager is made. Win your top bout this month: +${card.winGold} Gold and +${card.winRenown} Renown. Lose or skip it: −${card.lossGold} Gold.`, 'event');
+  } else applyBoon(run, card, title);
+  return card;
+}
+
+function applyBoon(run, card, title) {
+  const b = BOONS[card.id];
+  if (card.gold) run.gold += card.gold;
+  if (card.prestige) {
+    run.prestige += card.prestige;
+    run.prestigeLevel = prestigeLevelFor(run.prestige, run.prestigeLevel);
+  }
+  if (b.favor) changeFavor(run, b.favor, title);
+  for (const k of card.items ?? []) run.inventory.items[k] += 1;
+  for (const f of run.roster) {
+    if (b.one && f.id !== card.fighterId) continue;
+    if (b.stress) f.stress = clampStress(f.stress + b.stress);
+    if (b.power) f.power += b.power;
+    if (b.heal) {
+      for (const inj of f.injuries) inj.weeksLeft -= b.heal;
+      f.injuries = f.injuries.filter((i) => i.weeksLeft > 0);
+    }
+  }
+  for (const f of run.roster) if (b.xp) gainXp(run, f, b.xp);
+  log(run, `Fortune: ${title}. ${fortuneText(card)}`, 'good');
+}
+
+export function rerollBlocker(run) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!run.fortune) return 'No Fortune to reroll.';
+  if (run.gold < rerollPrice(run)) return `Needs ${rerollPrice(run)} Gold.`;
+  return null;
+}
+
+export function rerollFortune(run) {
+  assertOk(rerollBlocker(run));
+  run.gold -= rerollPrice(run);
+  run.fortune = { cards: drawFortune(run), rerolls: run.fortune.rerolls + 1 };
+}
+
+export function passFortune(run) {
+  assertOk(idleBlocker(run) ?? (run.fortune ? null : 'No Fortune to pass.'));
+  run.fortune = null;
+  run.gold += FORTUNE.pass;
+  log(run, `You let Fortune pass: +${FORTUNE.pass} Gold.`);
+}
+
+// What the house's relics add to a won (or any) bout, before the purse is paid.
+function relicRewards(run, fighter, won, summary) {
+  if (!won) return;
+  summary.prestige += relicSum(run, 'winPrestige');
+  if (summary.kill) summary.renown += relicSum(run, 'killRenown');
+  if (hasRelic(run, 'mask')) summary.renown += RELICS.mask.tagRenown * tagCount(fighter, 'showman');
+}
+
+function settleWager(run, won, summary) {
+  if (!won) return loseWager(run, 'the top bout was lost', summary);
+  const w = run.wager;
+  delete run.wager;
+  summary.gold += w.winGold;
+  summary.renown += w.winRenown;
+  summary.wager = { won: true, gold: w.winGold, renown: w.winRenown };
+  log(run, `The Fates pay: +${w.winGold} Gold and +${w.winRenown} Renown.`, 'good');
+}
+
+function loseWager(run, why, summary = null) {
+  const loss = Math.min(run.gold, run.wager.lossGold);
+  delete run.wager;
+  run.gold -= loss;
+  if (summary) summary.wager = { won: false, gold: -loss };
+  log(run, `The Fates collect: −${loss} Gold (${why}).`, 'bad');
 }
 
 // ---------- Weekly events (src/events.js) ----------
@@ -2499,6 +2705,12 @@ function settleBet(run, match, won, summary) {
   if (won) {
     summary.gold += match.bet.payout;
     log(run, `The bookmakers pay out ${match.bet.payout} Gold on your ${match.bet.stake} Gold bet: +${match.bet.payout - match.bet.stake} profit.`, 'good');
+    const dice = Math.floor(match.bet.stake * relicSum(run, 'betBonus'));
+    if (dice) {
+      summary.gold += dice;
+      summary.bet.dice = dice;
+      log(run, `The Loaded Dice: +${dice} Gold more.`, 'good');
+    }
   } else log(run, `The ${match.bet.stake} Gold bet is lost.`, 'bad');
 }
 
@@ -2582,6 +2794,11 @@ export function finishMatch(run, match) {
   const newInjuries = match.a.f.injuries.filter((i) => i.weeksLeft === undefined).map((i) => INJURY_BY_TAG[i.tag].name);
   fighter.injuries = match.a.f.injuries.map(({ suppressed, ...i }) => ({ ...i, weeksLeft: i.weeksLeft ?? HEAL_WEEKS[i.tag] }));
   fighter.alive = match.a.f.alive;
+  const coin = !fighter.alive && hasRelic(run, 'proserpina'); // version 6: the coin pays the ferryman once
+  if (coin) {
+    fighter.alive = true;
+    run.relics = run.relics.filter((id) => id !== 'proserpina');
+  }
   fighter.stress = clampStress(fighter.stress + STRESS.fight + (match.stressAfter ?? 0));
 
   const won = match.result.winner === 'A';
@@ -2605,8 +2822,12 @@ export function finishMatch(run, match) {
     week: run.week, tier, name: bout.name, boss: bout.boss, top: bout.top, won, reason: match.result.reason,
     fighter: fighter.name, fighterId: fighter.id, died: !fighter.alive, gold: 0, prestige: -bout.buyIn, bloodFaith: false,
     title: null, favor: 0, xp: 0, renown: 0, loot: null, levelUp: null, crushing, champion: won && champion,
-    injuries: fighter.alive ? newInjuries : [], morale: 0, levels: 0, bloodied, kill: false, mark: null, festival: bout.festival ?? null,
+    injuries: fighter.alive ? newInjuries : [], morale: 0, levels: 0, bloodied, kill: false, mark: null, festival: bout.festival ?? null, saved: coin,
   };
+  if (coin) {
+    chronicle(run, fighter, `Fell in ${bout.name} and was carried out alive: Proserpina took the coin instead.`);
+    log(run, `${fighter.name} falls, but is carried out alive. Proserpina's Coin is spent.`, 'event');
+  }
   const favorBefore = run.favor;
 
   if (won) {
@@ -2660,7 +2881,7 @@ export function finishMatch(run, match) {
   } else {
     summary.gold = bout.lossGold;
     bumpMorale(fighter, match.result.reason === 'towel' ? MORALE.towel : MORALE.loss);
-    const bribed = match.bribe && match.result.reason === 'towel';
+    const bribed = (match.bribe || hasRelic(run, 'referee')) && match.result.reason === 'towel';
     summary.bribed = Boolean(bribed);
     if (match.result.reason === 'towel' && !bribed) summary.renown = RENOWN.towel;
     if (!fighter.alive && kindActive(match.a, 'bloodFaith', match.round)) {
@@ -2714,6 +2935,8 @@ export function finishMatch(run, match) {
   }
   settleBet(run, match, won, summary);
   payHype(run, match, won, tier, summary);
+  relicRewards(run, fighter, won, summary);
+  if (bout.top && run.wager) settleWager(run, won, summary);
   if (fighter.risen) { // a Revenant's first fight back (the crowd's chant is in the hype)
     delete fighter.risen;
     summary.risen = true;
@@ -2725,7 +2948,7 @@ export function finishMatch(run, match) {
   run.gold += summary.gold;
   run.prestige += summary.prestige + bout.buyIn; // buy-in was already paid in startMatch
   fighter.renown = Math.max(0, fighter.renown + summary.renown);
-  summary.xp = xpFor(won, bout.boss, upset) + (bloodied ? BLOODIED.xp : 0);
+  summary.xp = xpFor(won, bout.boss, upset) + (bloodied ? BLOODIED.xp : 0) + relicSum(run, 'fightXp');
 
   // The chronicle, scars and a eulogy.
   if (won) {
@@ -2830,6 +3053,8 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
     if (kill) rivalChampionKilled(run, opp.name);
   }
   settleBet(run, match, true, summary);
+  relicRewards(run, fighter, true, summary);
+  summary.xp += relicSum(run, 'fightXp');
   run.gold += summary.gold;
   run.prestige += summary.prestige;
   fighter.renown += summary.renown;
@@ -3098,6 +3323,8 @@ export function deserialize(text) {
   run.rng.plot ??= createRng(deriveSeed(run.seed, 8)); // saves from before v6's hidden plot
   run.plot ??= null;
   run.event ??= null;
+  run.relics ??= []; // saves from before version 6's relics
+  run.fortune ??= null;
   run.setup ??= { patron: null, decrees: [], classes: [] };
   if (!run.houses) { // saves from before rival houses
     run.rng.houses = createRng(deriveSeed(run.seed, 6));

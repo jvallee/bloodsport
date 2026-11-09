@@ -13,6 +13,9 @@ const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 // each split by: win chance − 0.5 × injury chance − 5 × death chance (injuries cost Medbay weeks; deaths cost fighters).
 export function speedSplit({ n = 3000 } = {}) {
   const caps = [3, 5, 8, 13];
+  // Version 6: the Bosses fight harder to match the Fortune draft's gear and relics, which this model fighter doesn't have.
+  // It keeps the 5.4 gap to each Boss instead (the draft's share is the difference), so the question stays the same.
+  const v5Boss = [7, 13, 19, 28];
   const rows = CIRCUITS.map((c, i) => {
     const points = caps[i];
     const titles = i;
@@ -24,7 +27,7 @@ export function speedSplit({ n = 3000 } = {}) {
     for (let k = 0; k <= points; k++) {
       const f = createFighter(rng, { id: 'p', kind: 'human' });
       f.kindTrait = null; f.cls = null; f.weapon = null;
-      f.power = 5 + (c.marketPower ?? 0) + titles + (points - k) * TRAIN_GAIN.power; // a fighter bought at this tier starts stronger
+      f.power = 5 + (c.marketPower ?? 0) + titles + (c.oppPower[2] - v5Boss[i]) + (points - k) * TRAIN_GAIN.power; // a fighter bought at this tier starts stronger
       f.speed = 3 + k * TRAIN_GAIN.speed;
       const o = estimateOdds(f, opp, { n, seed: 900 + k });
       splits.push({ speedPoints: k, share: k / points, ...o, value: o.win - 0.5 * o.injury - 5 * o.death });
@@ -100,6 +103,9 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, short, split, ta
   const curve = bossCurve(careful);
   const ending = (rs, e) => rs.filter((r) => r.run.ending === e).length / rs.length;
   const weeks = (rs) => avg(rs.map((r) => r.weeks));
+  // Version 6: how long a WON career takes. Harder arenas end losing careers sooner, which made the all-careers average
+  // say little about how quick a season is (docs/fight-rules.md, 6.0.0-alpha.2).
+  const winWeeks = (rs) => { const won = rs.filter((r) => r.won); return won.length ? avg(won.map((r) => r.weeks)) : weeks(rs); };
   const gates = [
     { name: 'Careful career win rate is 20–45%', value: rate(careful), pass: rate(careful) >= 0.2 && rate(careful) <= 0.45, fmt: 'pct' },
     { name: 'Careful wins at least as often as reckless', value: rate(careful) - rate(reckless), pass: rate(careful) >= rate(reckless), fmt: 'pctDiff' },
@@ -112,7 +118,7 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, short, split, ta
     { name: 'Tough finish: the Grand Tournament is 10+ points harder than the first Boss', value: (curve[1] ?? 0) - (curve[5] ?? 1), pass: (curve[1] ?? 0) - (curve[5] ?? 1) >= 0.1, fmt: 'pctDiff' },
     { name: 'The evil road is easier: the loyalist wins 5–20 points more often than careful', value: rate(loyalist) - rate(careful), pass: rate(loyalist) - rate(careful) >= 0.05 && rate(loyalist) - rate(careful) <= 0.2, fmt: 'pctDiff' },
     { name: 'The coup is rare but real: 5–25% of rebel careers', value: ending(rebel, 'coup'), pass: ending(rebel, 'coup') >= 0.05 && ending(rebel, 'coup') <= 0.25, fmt: 'pct' },
-    { name: 'Short careers are winnable (careful 20–55%) and at least a fifth quicker', value: rate(short), pass: rate(short) >= 0.2 && rate(short) <= 0.55 && weeks(short) <= 0.8 * weeks(careful), fmt: 'pct' },
+    { name: 'Short careers are winnable (careful 20–55%) and a won one is at least a fifth quicker', value: rate(short), pass: rate(short) >= 0.2 && rate(short) <= 0.55 && winWeeks(short) <= 0.8 * winWeeks(careful), fmt: 'pct' },
     { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
   ];
   return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, short };

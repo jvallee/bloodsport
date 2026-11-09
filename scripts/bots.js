@@ -16,19 +16,42 @@ import {
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom, recruitPrice,
   buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, resolveMercy,
   betOdds, betCap, betBlocker, placeBet, hostBlocker, host, enactBlocker, enact, raisable, reanimateBlocker, reanimate,
-  summonsBlocker, answerSummons, refuseSummons, effectivePower,
+  summonsBlocker, answerSummons, refuseSummons, effectivePower, chooseFortune, fortuneBlocker, passFortune,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
+import { RELICS, perkTags } from '../src/fortune.js';
 
 const PERK_PRIORITY = ['tactician', 'duelist', 'juggernaut', 'mighty', 'killer', 'thickSkin', 'survivor', 'closer', 'fastStart', 'swift', 'ironConstitution', 'crowdPleaser'];
 
+// Version 6: a house holding a tag relic (src/fortune.js) takes perks with that tag first.
 function pickPerks(run) {
+  if (run.status !== 'active') return; // a summons can end a career (and a finished career takes no choices)
+  const tags = (run.relics ?? []).map((id) => RELICS[id]?.tag).filter(Boolean);
   for (const f of run.roster) {
     while (f.pendingPerks.length) {
       const offer = f.pendingPerks[0];
-      choosePerk(run, f.id, PERK_PRIORITY.find((p) => offer.includes(p)) ?? offer[0]);
+      const tagged = PERK_PRIORITY.find((p) => offer.includes(p) && perkTags(p).some((t) => tags.includes(t)));
+      choosePerk(run, f.id, tagged ?? PERK_PRIORITY.find((p) => offer.includes(p)) ?? offer[0]);
     }
   }
+}
+
+// Version 6: the Fortune draft. Both bots take the card they value most: a fighter while the house is small, a relic
+// (the rarer the better), then gear, then boons; the reckless bot loves the Fates' Wager, the careful one avoids it.
+const RARITY_BONUS = { common: 0, rare: 1, legendary: 3 };
+function fortuneScore(run, c, strategy) {
+  if (c.kind === 'fighter') return run.roster.length < 3 ? 9 : 3 + RARITY_BONUS[c.rarity];
+  if (c.kind === 'relic') return 6 + RARITY_BONUS[c.rarity];
+  if (c.kind === 'gear') return 3 + GEAR[c.id].tier;
+  if (c.kind === 'wager') return strategy === 'careful' ? 1 : 8;
+  if (c.id === 'surgeon') return run.roster.some((f) => f.injuries.length > 1) ? 7 : 3;
+  if (c.id === 'favour') return run.favor < 40 ? 8 : 3;
+  return { gold: 4, prestige: 5, sparring: 4, calm: 2, items: 2, blessing: 9 }[c.id] ?? 2;
+}
+function draftFortune(run, strategy) {
+  const best = run.fortune.cards.map((c, i) => ({ i, score: fortuneBlocker(run, i) ? -1 : fortuneScore(run, c, strategy) })).sort((a, b) => b.score - a.score)[0];
+  if (best.score >= 0) chooseFortune(run, best.i);
+  else passFortune(run);
 }
 
 // Value of a gear item to this bot: Power counts most, then injure/armor, then Speed.
@@ -310,6 +333,12 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
   let bouts = 0;
   while (run.status === 'active' && run.week < maxWeeks) {
     onWeek?.(run);
+    if (run.fortune) {
+      if (opts.fortune === false) passFortune(run);
+      else draftFortune(run, strategy);
+      pickPerks(run); // a Visiting Champion may level someone up
+      continue;
+    }
     // Events: the careful bot takes the cautious (first) choice it can afford; the reckless one the boldest.
     if (run.event) {
       const n = EVENT_BY_ID[run.event.id].choices.length;
