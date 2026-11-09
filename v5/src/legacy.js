@@ -1,7 +1,7 @@
 // Legacy (roadmap v3, phase D): what carries over between careers. Achievements unlock patrons (starting options),
 // legacy classes in the market, and the Emperor's Decrees (harder rules). Stored apart from the career save, like the Codex. Pure.
 
-import { standings, effectivePower } from './run.js';
+import { standings, effectivePower, winsOf } from './run.js';
 import { PATRONS, DECREES } from './data.js';
 
 export { PATRONS, DECREES };
@@ -18,6 +18,11 @@ export const ACHIEVEMENTS = [
   { id: 'topHouse', name: 'First Among Houses', desc: 'Top the house standings.', check: (run) => run.glory > 0 && standings(run)[0].you, unlock: { patron: 'defector' } },
   { id: 'imperial', name: 'Imperial Ambitions', desc: 'Reach the Imperial Coliseum.', check: (run) => run.topTier >= 4, unlock: { cls: 'samnite' } },
   { id: 'champion', name: 'Master of the Games', desc: 'Win a career.', check: (run) => run.status === 'won', unlock: { decrees: true } },
+  // v6, the hidden plot: secret until earned (the Legacy panel shows them as ???).
+  { id: 'chalk', secret: true, name: 'Chalk on the Door', desc: 'Answer the sign.', check: (run) => Boolean(run.plot) && (run.plot.trust > 0 || run.plot.stage !== 'mark'), unlock: null },
+  { id: 'coup', secret: true, name: 'Sic Semper Tyrannis', desc: 'Bring down the Emperor.', check: (run) => run.ending === 'coup', unlock: { patron: 'liberator' } },
+  { id: 'martyr', secret: true, name: 'Remembered', desc: 'Rise, and fall.', check: (run) => run.ending === 'martyr', unlock: { patron: 'liberator' } },
+  { id: 'loyalist', secret: true, name: 'Thirty Pieces', desc: 'Give the Emperor the names he wanted.', check: (run) => run.plot?.ended === 'loyalist', unlock: null },
 ];
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 
@@ -40,7 +45,7 @@ export function checkAchievements(legacy, run) {
   return fresh;
 }
 
-const unlocked = (legacy, key) => ACHIEVEMENTS.filter((a) => legacy.achievements.includes(a.id) && a.unlock?.[key]).map((a) => a.unlock[key]);
+const unlocked = (legacy, key) => [...new Set(ACHIEVEMENTS.filter((a) => legacy.achievements.includes(a.id) && a.unlock?.[key]).map((a) => a.unlock[key]))];
 export const unlockedPatrons = (legacy) => unlocked(legacy, 'patron');
 export const unlockedClasses = (legacy) => unlocked(legacy, 'cls');
 export const decreesUnlocked = (legacy) => unlocked(legacy, 'decrees').length > 0;
@@ -57,21 +62,28 @@ export function unlockText(a) {
 export function careerScore(run) {
   const decrees = (run.setup?.decrees ?? []).reduce((s, d) => s + (DECREES[d]?.score ?? 0), 0);
   const wins = run.history.filter((h) => h.won).length;
-  return (run.glory ?? 0) + 25 * (run.topTier - 1) + 10 * (run.prestigeLevel - 1) + 2 * wins + (run.status === 'won' ? 200 + decrees : 0);
+  return (run.glory ?? 0) + 25 * (run.topTier - 1) + 10 * (run.prestigeLevel - 1) + 2 * wins + (run.status === 'won' ? 200 + decrees : 0) + (run.ending === 'coup' ? 100 : 0);
 }
 
 // The career's best fighter: most wins, then Renown.
 export function bestFighter(run) {
-  const wins = (f) => run.history.filter((h) => h.won && h.fighterId === f.id).length;
+  const wins = (f) => winsOf(run, f);
   return [...allFighters(run)].sort((a, b) => wins(b) - wins(a) || b.renown - a.renown || effectivePower(b) - effectivePower(a))[0] ?? null;
 }
 
 // Record a finished career (once).
+// The daily Emperor's Challenge (fun idea #2): everyone gets the same short career on a given day. `day` is "YYYY-MM-DD".
+export function dailySeed(day) {
+  return [...`emperor:${day}`].reduce((h, ch) => Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0, 2166136261) % 2147483647 || 1;
+}
+export const dailySetup = (day) => ({ patron: null, decrees: [], classes: [], short: true, daily: day });
+
 export function recordCareer(legacy, run) {
   if (run.status === 'active' || legacy.past.some((p) => p.seed === run.seed && p.weeks === run.week)) return null;
-  const entry = { seed: run.seed, weeks: run.week, won: run.status === 'won', score: careerScore(run), endReason: run.endReason, topTier: run.topTier };
+  const entry = { seed: run.seed, weeks: run.week, won: run.status === 'won', score: careerScore(run), endReason: run.endReason, topTier: run.topTier, short: Boolean(run.setup?.short), daily: run.setup?.daily ?? null };
   legacy.careers += 1;
   legacy.best = Math.max(legacy.best, entry.score);
+  if (entry.daily) legacy.daily = { ...(legacy.daily ?? {}), [entry.daily]: Math.max(legacy.daily?.[entry.daily] ?? 0, entry.score) };
   legacy.past = [entry, ...legacy.past].slice(0, 10);
   return entry;
 }

@@ -114,7 +114,8 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .card.kind-orc { --kind: #c0632c; }
 .card.dead { opacity: 0.45; filter: grayscale(1); }
 .card.danger { border-color: var(--blood); box-shadow: 0 0 0 1px var(--blood), 0 0 18px rgba(192, 54, 44, 0.35); }
-.card-tag { position: absolute; top: -10px; left: 12px; font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); padding: 1px 8px; border-radius: 99px; color: var(--muted); }
+/* On the card's top edge, but in the flow: a tag that wraps pushes the card down instead of covering its name (the designer, 5.4.2). */
+.card-tag { position: relative; display: block; width: fit-content; max-width: 100%; margin: -22px 0 4px; font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); padding: 1px 8px; border-radius: 99px; color: var(--muted); }
 /* The name never hides behind the Power/Speed badges: when it needs the room, the badges drop to their own line. */
 .card-head { display: flex; justify-content: space-between; gap: 8px; row-gap: 6px; align-items: start; flex-wrap: wrap; }
 .card-head h3 { font-size: 17px; display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
@@ -550,3 +551,162 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .chip.small { font-size: 0.75em; padding: 1px 6px; }
 .fight-bracket ol { justify-content: center; margin: 6px 0; }
 .bracket li.next { border-color: var(--gold); background: rgba(217, 180, 90, 0.08); }
+
+/* v6: the hidden plot */
+.record { margin: 6px 0; padding: 6px 8px; border-left: 2px solid var(--line); font-size: 13px; font-style: italic; color: var(--muted); }
+.record .label { font-style: normal; }
+.epilogue { font-style: italic; color: var(--muted); margin: 6px 0; }
+
+/* Dialogue: characters who speak to you (src/dialogue.js) */
+.dialogue .dialogue-body { max-width: 560px; width: 100%; border-color: var(--gold); }
+.dialogue-speaker { display: flex; gap: 14px; align-items: center; margin-bottom: 10px; }
+.dialogue-name { font-family: var(--display, inherit); color: var(--gold); font-size: 18px; letter-spacing: 0.04em; }
+.dialogue-speaker h2 { margin: 2px 0 0; }
+.dialogue-text { font-size: 16px; line-height: 1.55; }
+.dialogue-text p { margin: 0 0 8px; }
+.speaker-emperor { border-color: #9a4fa0; box-shadow: 0 0 40px rgba(154, 79, 160, 0.25); }
+.speaker-emperor .dialogue-name { color: #d6a3dc; }
+.speaker-emperor .dialogue-text { font-style: italic; }
+.dialogue-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.dialogue-actions .dots i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--line); margin-right: 4px; }
+.dialogue-actions .dots i.on { background: var(--gold); }
+.dialogue.tutorial { background: rgba(0, 0, 0, 0.45); }
+.tip.tutorial .portrait { flex-shrink: 0; }
+
+/* Event choices line up as equal columns (playtest: 'The prefect's offer' was ragged). */
+.event-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: start; }
+.event-choice { max-width: none; }
+.event-choice .btn { width: 100%; text-align: center; }
+
+.result-lines { list-style: none; padding: 0; margin: 0; }
+.result-lines li { padding: 3px 0; }
+.result-lines li.good { color: var(--good, #8fc98f); }
+.result-lines li.bad { color: var(--bad, #e07a6a); }
+
+/* Touch screens: help text on tap (src/main.js) */
+.touch-tip { position: absolute; z-index: 60; max-width: 280px; background: var(--panel); color: var(--text, #eee); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.4; box-shadow: 0 6px 24px rgba(0,0,0,0.5); white-space: pre-line; }
+@media (hover: none) { [title] { -webkit-tap-highlight-color: rgba(217, 180, 90, 0.2); } }
+
+/* The tutorial month: the steward docked at the top, and the button to press glowing */
+.guide { display: flex; gap: 12px; align-items: center; border: 1px solid var(--gold); border-radius: var(--radius); background: linear-gradient(90deg, #2b2416, var(--panel-2)); padding: 10px 14px; margin-bottom: 14px; }
+.guide .portrait { flex-shrink: 0; }
+.guide-body { flex: 1; }
+.guide-name { color: var(--gold); font-size: 13px; letter-spacing: 0.04em; }
+.guide-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+@media (max-width: 600px) { .guide { flex-wrap: wrap; } .guide-actions { flex-direction: row; width: 100%; justify-content: space-between; } }
+.tut-focus { box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(217, 180, 90, 0.7); animation: tut-pulse 1.4s ease-in-out infinite; }
+@keyframes tut-pulse { 50% { box-shadow: 0 0 0 2px var(--gold), 0 0 4px rgba(217, 180, 90, 0.2); } }
+@media (prefers-reduced-motion: reduce) { .tut-focus { animation: none; } }
+.steward-note { align-items: center; justify-content: flex-start; padding: 8px 12px; }
+.dialogue-you { color: var(--muted); font-size: 13px; }
+.replies { gap: 8px; flex-wrap: wrap; }
+.btn.reply { font-style: italic; }
+
+/* Fight day: room between the bracket's Withdraw button and the opponent's card tag */
+.arena-block .bracket + .card, .arena-block .bracket ~ .card { margin-top: 20px; }
+.bracket .btn.danger { margin-bottom: 6px; }
+/* A gamble's result leads the popup */
+.outcome { font-size: 18px; font-weight: 700; margin: 0 0 8px; }
+.outcome.good { color: var(--good, #8fc98f); }
+.outcome.bad { color: var(--bad, #e07a6a); }
+
+/* Thumbs up or down: the crowd's wish, then two aligned choices */
+.mercy-box { text-align: left; }
+.crowd-wish { display: inline-flex; gap: 8px; align-items: baseline; padding: 4px 12px; border-radius: 99px; font-weight: 700; margin: 6px 0 12px; border: 1px dashed currentColor; }
+.crowd-wish .label { font-weight: 400; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.crowd-wish.blood { color: #f1b3ad; }
+.crowd-wish.mercy { color: var(--good, #8fc98f); }
+.verdicts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: stretch; }
+@media (max-width: 520px) { .verdicts { grid-template-columns: 1fr; } }
+.verdict { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--panel); }
+.verdict .btn { width: 100%; }
+.verdict-tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.verdict-tag.with { color: var(--gold); }
+.verdict-tag.against { color: var(--muted); }
+.verdict-effects { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+.mercy .mercy-title { text-align: center; }
+
+/* The Codex (playtest #8 redesign) */
+.codex-tools { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; position: sticky; top: 0; background: var(--panel); padding: 6px 0; z-index: 2; }
+#codex-search { width: 100%; max-width: 480px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; }
+.codex-jump .chip { text-decoration: none; cursor: pointer; }
+.codex-group { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; background: var(--panel-2); }
+.codex-group > summary { cursor: pointer; list-style: none; padding: 10px 0; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.codex-group > summary::-webkit-details-marker { display: none; }
+.codex-group > summary h3 { margin: 0; font-size: 16px; color: var(--gold); }
+.codex-group > summary h3::before { content: '▸ '; }
+.codex-group[open] > summary h3::before { content: '▾ '; }
+.codex-sub { flex-basis: 100%; color: var(--muted); font-size: 13px; }
+.codex .entries { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; padding-bottom: 12px; }
+.codex .entry { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--panel); }
+.codex .entry h4 { margin: 0 0 4px; font-size: 15px; }
+.codex .entry p { margin: 0 0 6px; line-height: 1.45; font-size: 14px; }
+.codex .entry .lore { font-style: italic; color: var(--muted); font-size: 13px; }
+.codex .entry.fresh { border-color: var(--gold); }
+.codex-locked { margin: 0 0 12px; }
+.verdict:has(.verdict-tag.with) { border-color: var(--gold); }
+.nemesis-note { margin: 6px 0 14px; }
+.setup .daily { border: 1px solid var(--gold); border-radius: 8px; padding: 8px 10px; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.demand { border: 1px solid #9a4fa0; border-radius: 8px; padding: 6px 10px; margin: 8px 0; background: rgba(154, 79, 160, 0.1); }
+.demand.met { border-color: var(--good, #8fc98f); }
+.hype { display: flex; align-items: center; gap: 6px; justify-content: center; margin: 6px 0; font-size: 13px; }
+.hypebar { display: inline-block; width: 140px; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.hypebar > span { display: block; height: 100%; background: linear-gradient(90deg, #d9b45a, #e0603c); }
+.lean-loyalist { color: #d6a3dc; } .lean-reformist { color: var(--good, #8fc98f); } .lean-neutral { color: var(--muted); }
+.panel.lounge { margin-top: 14px; }
+
+/* The Careers dialog (5.4.0): every saved career */
+.modal.careers .modal-body { width: min(640px, 100%); box-sizing: border-box; }
+.career-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.career-row small { display: block; color: var(--muted); margin-top: 2px; }
+.career-row.current b { color: var(--gold); }
+.career-row .row { flex-shrink: 0; gap: 6px; }
+@media (max-width: 560px) { .career-row { flex-direction: column; align-items: flex-start; } }
+/* The steward asks before End week overtrains someone (5.4.0) */
+.dialogue.ask .ask-choices { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* The Ludus on a wide screen: Your gladiators and Fight day scroll on their own (the designer, 5.4.0), below the sticky
+   top bar and tabs. On narrow screens the columns stack and the page scrolls as before. */
+@media (min-width: 761px) {
+  /* No overscroll containment: a column scrolled to its end hands the wheel to the page, which brings the column's foot into view
+     (the designer: from the top of the page a column's bottom was out of reach). */
+  .grid.ludus > .panel.roster, .grid.ludus > .panel.bout { position: sticky; top: 100px; max-height: calc(100vh - 116px); overflow-y: auto; }
+}
+
+/* Fewer words on the cards (a phone playtester, 5.4.0): chips that explain something carry ⓘ (tap or hover for the
+   description); the full descriptions fold into "ⓘ What they do". */
+.chip.tip::after { content: 'ⓘ'; font-size: 10px; color: var(--muted); margin-left: 2px; }
+.card-more { margin-top: 6px; }
+.card-more > summary { font-size: 12px; }
+.card[id] { scroll-margin-top: 12px; }
+
+/* Compare your gladiators */
+.compare > summary { font-size: 13px; }
+.compare-wrap { overflow-x: auto; margin: 6px 0 10px; }
+.compare-table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.compare-table th, .compare-table td { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+.compare-table th:first-child, .compare-table td:first-child { text-align: left; }
+.compare-table th { color: var(--muted); font-weight: 600; cursor: help; }
+.compare-table td small { color: var(--muted); margin-left: 6px; }
+.compare-table a { color: var(--gold); text-decoration: none; }
+.compare-table .bad { color: var(--blood); font-weight: 600; }
+.compare-table .good { color: var(--gold); }
+@media (max-width: 420px) {
+  .compare-table th, .compare-table td { padding: 4px 3px; }
+  .compare-table td small { display: none; }
+}
+
+/* Quests (5.4.0) */
+.quests > summary { font-size: 13px; }
+.quest-list { list-style: none; padding: 0; margin: 6px 0; font-size: 13px; }
+.quest-list li { padding: 4px 0; border-bottom: 1px solid var(--line); }
+.quest-list small { color: var(--muted); }
+.gallery-readout { font-size: 13px; padding: 8px; border: 1px solid #5a4a6a; border-radius: 8px; background: #140f17; margin: 6px 0; }
+.gallery-readout small { color: var(--muted); }
+.susbar { display: block; height: 6px; background: #241b29; border-radius: 3px; margin: 6px 0; overflow: hidden; }
+.susbar span { display: block; height: 100%; background: linear-gradient(90deg, #6a8a5a, #c0a040 40%, #c0362c 80%); }
+.chip.want { border-color: #8a7a4a; }
+.speaker-rival { border-color: #b5543c; }
+.speaker-rival .dialogue-name { color: #e08a6a; }
+.chip.spy { border-color: #7a4a4a; }
+.spare-gear { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

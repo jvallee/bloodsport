@@ -29,12 +29,13 @@ export function deltaRow(delta) {
 export const INJURY_ROLL = { perInjury: 25, perPowerGap: 5 }; // v5: was 20 (the user asked for more deaths)
 
 export const INJURIES = [
-  { tier: 1, min: 1, max: 25, tag: 'distracted', name: 'Distracted', weight: 1, desc: 'Disables 1 random trait or class ability for the rest of the match.' },
+  // Playtest #8: Distracted is a passing daze (it doesn't count toward the Death Gate); Maimed and Senseless count as two, like Poisoned.
+  { tier: 1, min: 1, max: 25, tag: 'distracted', name: 'Distracted', weight: 0, desc: 'A passing daze: disables 1 random trait or class ability for the rest of the match. Doesn\'t count toward the Death Gate.' },
   { tier: 2, min: 26, max: 45, tag: 'fleshWound', name: 'Flesh Wound', weight: 1, desc: '−10% chance to injure the opponent.' },
   { tier: 3, min: 46, max: 60, tag: 'concussed', name: 'Concussed', weight: 1, desc: 'Always strikes second.' },
   { tier: 4, min: 61, max: 74, tag: 'poisoned', name: 'Poisoned', weight: 2, desc: 'Counts as two injuries.' },
-  { tier: 5, min: 75, max: 84, tag: 'maimed', name: 'Maimed', weight: 1, desc: 'Disables 1 random trait or ability per effective injury for the rest of the match.' },
-  { tier: 6, min: 85, max: 92, tag: 'senseless', name: 'Senseless', weight: 1, desc: '+10% chance to be injured per effective injury.' },
+  { tier: 5, min: 75, max: 84, tag: 'maimed', name: 'Maimed', weight: 2, desc: 'Counts as two injuries. Disables 1 random trait or ability per effective injury for the rest of the match.' },
+  { tier: 6, min: 85, max: 92, tag: 'senseless', name: 'Senseless', weight: 2, desc: 'Counts as two injuries. +10% chance to be injured per effective injury.' },
   { tier: 7, min: 93, max: 99, tag: 'blinded', name: 'Blinded', weight: 1, desc: '−2 Power; disables First Volley, Bow and Gun.' },
   { tier: 8, min: 100, max: Infinity, tag: 'death', name: 'Immediate Death', weight: 0, desc: 'Dies in the arena.' },
 ];
@@ -47,15 +48,15 @@ export function injuryForScore(score) {
 
 export const TRAITS = {
   hateful: { name: 'Hateful', desc: '+10% chance to injure the opponent.' },
-  masochist: { name: 'Masochist', desc: '+1 Power per effective injury.' },
+  masochist: { name: 'Masochist', desc: '+1 Power per effective injury. Injuries never switch this trait off.' },
   quantumAnalyzer: { name: 'Quantum Analyzer', desc: 'Each round lost gives +1 Power for the rest of the match.' },
-  alloyedSkin: { name: 'Alloyed Skin', desc: 'Armor: −10% chance to be injured.' },
+  alloyedSkin: { name: 'Alloyed Skin', desc: 'Armour: −10% chance to be injured.' },
   perpetualMotion: { name: 'Perpetual Motion Machine', desc: 'After winning a round: +10% win chance and +5% chance to be injured next round.' },
   firebug: { name: 'Firebug', desc: '+1 Power per Fire Brazier in quarters.' },
   footwork: { name: 'Footwork', desc: 'Strikes first automatically when faster than the opponent.' },
-  egoArmour: { name: 'Ego Armour', desc: 'While uninjured: +5% win chance and armor −10% chance to be injured.' },
+  egoArmour: { name: 'Ego Armour', desc: 'While uninjured: +5% win chance and armour −10% chance to be injured.' },
   elvenEyes: { name: 'Elven Eyes', desc: 'When an injury check against this fighter misses by 50%+, makes a free 15% counter-injury check.' },
-  bloodFaith: { name: 'Blood Faith', desc: 'If this fighter dies in a match, the Prestige buy-in is refunded.' },
+  bloodFaith: { name: 'Blood Faith', desc: 'If this fighter dies in a match, the Prestige buy-in is refunded, and their clan pays the house 5 Gold per arena tier.' },
   underdog: { name: 'Underdog', desc: '+2 Power when the opponent has 2 or more Power more.' },
   unbreakable: { name: 'Unbreakable', desc: 'The Death Gate opens at 3 injuries instead of 2.' },
   bloodlust: { name: 'Bloodlust', desc: '+1 Power once the opponent is injured.' },
@@ -63,9 +64,13 @@ export const TRAITS = {
   bloodDrinker: { name: 'Blood Drinker', desc: 'Wounding the opponent heals this fighter\'s newest light wound (Flesh Wound or Distracted) taken this match.' },
   nightborn: { name: 'Nightborn', desc: '+1 Power in Round 3.' },
   mesmerize: { name: 'Mesmerize', desc: '+5% win chance in Round 1.' },
-  thickHide: { name: 'Thick Hide', desc: 'Armor: −10% chance to be injured.' },
+  thickHide: { name: 'Thick Hide', desc: 'Armour: −10% chance to be injured.' },
   pounce: { name: 'Pounce', desc: '+3 Speed in Round 1.' },
   rampage: { name: 'Rampage', desc: 'Each round won gives +1 Power for the rest of the match.' },
+  // 5.3.0: Revenants, raised by the Unnatural Temple of Vulcan.
+  deathless: { name: 'Deathless', desc: 'Already died once: the Death Gate opens one injury later.' },
+  graveChill: { name: 'Grave Chill', desc: 'The opponent has −5% win chance every round: nobody wants to fight the dead.' },
+  cinderHeart: { name: 'Cinder Heart', desc: '+1 Power in Rounds 2 and 3: the forge-fire inside wakes slowly.' },
 };
 
 // Tactics: chosen before each round. Press beats Feint, Feint beats Guard, Guard beats Press (+10% win chance to the counter).
@@ -111,33 +116,40 @@ export const HOUSES = {
 // Patrons: one per career, chosen when it starts.
 export const PATRONS = {
   veteran: { name: 'The Old Veteran', desc: 'Start with a level-3 veteran in your roster.' },
-  friend: { name: 'A Friend at Court', desc: 'Start with +15 Imperial Favor.' },
+  friend: { name: 'A Friend at Court', desc: 'Start with +15 Imperial Favour.' },
   purse: { name: "A Merchant's Purse", desc: 'Start with +10 Gold.' },
   warChest: { name: 'The War Chest', desc: 'Start with 2 War Paint and a Blessed Bandage.' },
   defector: { name: 'A Defector', desc: 'A strong fighter from a rival house joins you at the start (Power +3).' },
+  liberator: { name: 'Friends of the Rising', desc: 'Start with a political prisoner in your roster. The rebels remember your house.' }, // v6, secret
 };
 
 // Emperor's Decrees: optional harder rules for a career, after your first win. Each adds to the score.
 export const DECREES = {
   ironBosses: { name: 'Iron Bosses', desc: 'Every Boss fights with +1 Power.', score: 30 },
   greedyEmperor: { name: 'A Greedy Emperor', desc: 'Tribute costs 50% more.', score: 20 },
-  harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favor.', score: 20 },
+  harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favour.', score: 20 },
 };
 
 // Fighter stories (roadmap v3, phase C). Scars come from surviving severe wounds (`vs`: 'melee' or 'ranged', the style
 // of the opponent who caused it); Battle-Hardened from a Bloodied Victory. Values: power, enemy (to injure), self (to be injured).
 export const SCARS = {
-  afeared: { name: 'Afeared', desc: 'Against this style: −1 Power and −10% chance to injure, but fights warily (−10% chance to be injured).', power: -1, enemy: -10000, self: -10000 },
+  afeared: { name: 'Afeared', desc: 'Against this style: −1 Power and −10% chance to injure, but fights warily (−10% chance to be injured). Two wins against the style they fear conquer it; the Temple of Fortuna can lift it for Gold.', power: -1, enemy: -10000, self: -10000 },
   enraged: { name: 'Enraged', desc: 'Against this style: +1 Power and +15% chance to injure, but reckless (+15% chance to be injured).', power: 1, enemy: 15000, self: 15000 },
   hardened: { name: 'Battle-Hardened', desc: 'Won bloodied and lived: −5% chance to be injured.', self: -5000 },
 };
 export const SCAR_CHANCE = 0.5; // chance a survived severe wound (Concussed or worse) leaves a scar
+// The chance a scar is Afeared, by humour (else Enraged). 5.4.0, the designer: Afeared was half of all scars, then about 1 in 5;
+// 5.4.2 (the designer again): about 1 in 10.
+export const SCAR_AFEARED = { choleric: 0, melancholic: 0.25, other: 0.05 };
+// Overcoming Afeared (5.4.2): `conquerWins` wins against the style they fear, or a rite at the Temple of Fortuna
+// (`ritePrice` + `ritePerTier` × arena tier Gold).
+export const FEAR = { conquerWins: 2, ritePrice: 6, ritePerTier: 2 };
 export const SEVERE = ['concussed', 'poisoned', 'maimed', 'senseless', 'blinded'];
 
 // Cyborg surgery (Medbay Lv 2+): replace a Maimed limb or Blinded eye. The crowd distrusts machines.
 export const AUGMENTS = {
   arm: { name: 'Cyborg Arm', from: 'maimed', desc: '+1 Power. Replaces a Maimed limb.', power: 1 },
-  eye: { name: 'Cyborg Eye', from: 'blinded', desc: '+1 Power, and can never be Blinded again. Replaces a Blinded eye.', power: 1 },
+  eye: { name: 'Cyborg Eye', from: 'blinded', desc: 'Replaces a Blinded eye. +1 Power in every fight, and a blow that would Blind becomes only a Flesh Wound.', power: 1 },
 };
 export const SURGERY = { cost: 10, perTier: 4, renown: -1, medbay: 2 }; // playtest #3: was 15 + 5/tier and −2 Renown, never worth it
 
@@ -151,8 +163,9 @@ export const RETIRE = { level: 4, prestige: 5, morale: 10 };
 // lost Final ~9. Playtest #6's "brackets pay nothing" is answered with Gold instead (purse 2 → 3).
 // A Championship also crowns every arena below it (playtest #7). cascadePower: Power for each lower Title gained that way.
 export const TITLES = { cascade: true, cascadePower: 1 };
-export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 3, prestige: 0, earlyBossLoss: 0.5 };
-// prestige: × tier for each early win (swept: 1 took careful careers from 41% to 54%, so it's off); earlyBossLoss: share of the Boss-loss Favor for losing before the Final. // swept: -3/-2 took careful careers to 22%, -4/-3 to 28%
+// bossFinalRefund (5.4.0, the designer's request): the share of its Prestige buy-in a lost Boss Final returns (not the Grand).
+export const BRACKET = { fromTier: 3, rounds: ['Quarter-final', 'Semi-final', 'Final'], power: [-4, -3, 0], purse: 3, prestige: 1, prestigeTopOnly: false, earlyBossLoss: 0.5, bossFinalRefund: 1 };
+// prestige: × tier for each early win (swept: 1 took careful careers from 41% to 54%, so it's off); earlyBossLoss: share of the Boss-loss Favour for losing before the Final. // swept: -3/-2 took careful careers to 22%, -4/-3 to 28%
 
 // Kill marks: earned for opponents killed in the arena (fighters keep a tally).
 // Underdog (Human trait): +2 Power when the opponent has at least `gap` more (playtest #6: at 0 a cheap Human was the best fighter).
@@ -169,8 +182,11 @@ export const KINDS = {
   elf: { name: 'Elf', basePower: 5, traits: ['firebug', 'footwork', 'egoArmour', 'elvenEyes'] },
   orc: { name: 'Orc', basePower: 6, traits: ['bloodFaith', 'unbreakable', 'bloodlust'] },
   vampire: { name: 'Vampire', basePower: 5, traits: ['bloodDrinker', 'nightborn', 'mesmerize'] },
-  // Exotic: only from the Stables.
-  basa: { name: 'Basa', basePower: 6, traits: ['thickHide', 'pounce', 'rampage'], exotic: true },
+  // 5.3.0: in the Market like everyone (was only from the Stables), at base Power 5 (was 6): their traits are already among the
+  // best (scripts/probes/kind-value.js: 52% at equal Power; at 6 they won 61% against a Power-5 field, the Orc 58%).
+  basa: { name: 'Basa', basePower: 5, traits: ['thickHide', 'pounce', 'rampage'] },
+  // Exotic: never in the Market. A fighter killed in the arena, raised by the Unnatural Temple of Vulcan (REANIMATE).
+  revenant: { name: 'Revenant', basePower: 5, traits: ['deathless', 'graveChill', 'cinderHeart'], exotic: true },
 };
 
 export const CLASSES = {
@@ -210,7 +226,7 @@ export const SIGNATURES = {
 // (the crowd's will is law); killing against its wishes does.
 // Going against the crowd is a real choice: sparing a fighter it wanted dead ends their house's feud and makes the house
 // owe you a life (−1 Power against you for HOUSES.feudMonths); killing one it wanted spared adds infamy (+Renown) and a feud.
-// Sparing gives Favor only in your top arena (only it affects Favor).
+// Sparing gives Favour only in your top arena (only it affects Favour).
 export const MERCY = { minInjuries: 1, spareFavor: 2, killRenown: 2, infamyRenown: 2, crowdRenown: 1, crowdMorale: 5 };
 
 export const WEAPONS = {
@@ -219,14 +235,16 @@ export const WEAPONS = {
   bow: { name: 'Bow', ability: 'Pin at Range', desc: 'Rounds 1–2: +1 Power against melee-only opponents (unless Blinded).' },
   spear: { name: 'Spear', ability: 'First-Strike Reach', desc: "Round 1: +3 Speed. Negates the opponent's Bow bonus." },
   sword: { name: 'Sword', ability: 'Riposte', desc: '20% chance to parry an injury; a parry gives +3 Speed next round.' },
-  flail: { name: 'Flail', ability: 'Shield-Breaker', desc: 'Injury checks ignore enemy parries and armor.' },
-  gun: { name: 'Gun', ability: 'Armor-Piercing Volley', desc: 'Rounds 1 and 3 (unless Blinded): +15% injure chance, ignores armor.' },
+  flail: { name: 'Flail', ability: 'Shield-Breaker', desc: 'Injury checks ignore enemy parries and armour.' },
+  gun: { name: 'Gun', ability: 'Armour-Piercing Volley', desc: 'Rounds 1 and 3 (unless Blinded): +15% injure chance, ignores armour.' },
   axe: { name: 'Axe', ability: 'Cleave', desc: 'Wounds they inflict are worse: +15 on the injury roll.' },
   dagger: { name: 'Dagger', ability: 'Backstab', desc: 'Striking first: +10% chance to injure that round.' },
 };
 
 // Decor only helps specific builds (for now). `helps` says whether a fighter gets anything from it.
 // Every decor item adds comfort (Morale). Birds and Fire Braziers also calm (−Stress a week) and help specific builds in combat.
+// Comfort per item scales with its price (playtest #8: every item gave +5, so a 1-Gold Bird was the best Morale buy).
+export const decorComfort = (d) => 2 + d.price;
 export const DECOR = {
   bird: { price: 1, calm: 5, name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale and −5 Stress a week. Ornitharius fighters also get +5% injure chance per Bird once injured (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
   fireBrazier: { price: 1, calm: 5, name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale and −5 Stress a week. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
@@ -250,6 +268,8 @@ export const ECONOMY = {
   skipGold: 2, // reward for skipping Tournament 1 or 2
   skipStressRelief: 20,
   lowerArenaPrestige: 0.5, // Prestige from a win shrinks by half for each tier below your top arena
+  bloodFaithGold: 5, // an Orc with Blood Faith who dies in a match: their clan pays this × arena tier in Gold
+  lowerArenaMinPrestige: 1, // ...but a win there always earns at least this much (playtest: a win that earned nothing felt like a loss)
   lowerArenaGold: 0.5, // and so does the purse (v5 economy pass: late careers were drowning in Gold from the lower arenas)
   lowerWinOverLoss: 2, // ...but a lower-arena win always pays at least the loss stipend + this
   crushingGap: 3, // a win with this much more Power than the opponent is a "crushing" win
@@ -263,7 +283,7 @@ export const ECONOMY = {
   scoutedMax: 1, // opponents gain +1 Power per consecutive top-arena month a fighter has fought, up to this (swept: 2+ is too punishing)
 };
 
-// Imperial Favor replaces v1's three Strikes. At 0 you're executed.
+// Imperial Favour replaces v1's three Strikes. At 0 you're executed.
 export const FAVOR = {
   start: 50, max: 100, warning: 25,
   bossWin: 15, upsetWin: 5, spectacleWin: 5,
@@ -279,7 +299,9 @@ export const REVOLT = { morale: 20, weeks: 4 };
 // Speed trains three times as fast as Power: Speed's edge levels off, so it needs to be cheap to be worth a week (tuned with the balanced-fighter gate).
 export const TRAIN_GAIN = { power: 1, speed: 3 };
 
-export const STRESS = { train: 20, fight: 15, rest: -40, medbay: -10, overtrained: 50, max: 100 };
+// decorCalm (5.4.0, the designer, from a bug report): a room's calming decor lowers Stress by at most this much a week (it was
+// uncapped, and a furnished room took 80 a week, so training never built up Stress).
+export const STRESS = { train: 20, fight: 15, rest: -40, medbay: -10, overtrained: 50, max: 100, decorCalm: 30 };
 
 // Weeks an injury takes to heal in the Medbay (Medbay Lv 2+ heals 2 weeks per week).
 export const HEAL_WEEKS = { distracted: 1, fleshWound: 1, concussed: 2, poisoned: 2, maimed: 3, senseless: 2, blinded: 3 };
@@ -290,10 +312,10 @@ export const CALENDAR = { weeksPerMonth: 4, winterWeeks: 4 };
 // Gods' Days (roadmap v3, phase B2): festivals on some months' tournament week. Each favours a style or pays out more.
 export const FESTIVALS = {
   Maius: { id: 'floralia', name: 'Floralia', god: 'Flora', desc: 'Flowers, wine and a generous crowd: wins pay +50% Gold.', gold: 1.5 },
-  Quintilis: { id: 'apollo', name: 'Ludi Apollinares', god: 'Apollo', desc: 'Games for the archer god: ranged fighters (Sagittarius, or a Bow, Gun or Spear) get +1 Power.', ranged: 1 },
+  Quintilis: { id: 'apollo', name: 'Ludi Apollinares', god: 'Apollo', desc: 'Games for the archer god: ranged fighters (Sagittarius, or a Fighter armed with a Bow, Gun or Spear) get +1 Power.', ranged: 1 },
   September: { id: 'romani', name: 'Ludi Romani', god: 'Jupiter', desc: 'The great games of Rome: wins pay +50% Prestige.', prestige: 1.5 },
   October: { id: 'mars', name: 'Armilustrium', god: 'Mars', desc: 'The god of war loves aggression: fighters who Press get +5% win chance, and every win earns +1 Renown.', tactic: { press: 5000 }, renown: 1 },
-  November: { id: 'plebeii', name: 'Ludi Plebeii', god: 'Fortuna', desc: "The people's games, blessed by Fortuna: an upset win pays double Gold and double Favor.", upset: 2 },
+  November: { id: 'plebeii', name: 'Ludi Plebeii', god: 'Fortuna', desc: "The people's games, blessed by Fortuna: an upset win pays double Gold and double Favour.", upset: 2 },
   December: { id: 'saturnalia', name: 'Saturnalia', god: 'Saturn', desc: 'The world turned upside down: no buy-ins this tournament week.', freeEntry: true },
 };
 export const FESTIVAL_BY_ID = Object.fromEntries(Object.values(FESTIVALS).map((f) => [f.id, f]));
@@ -303,33 +325,46 @@ export const STAGES = ['Tournament 1', 'Tournament 2', 'Boss Tournament'];
 // One circuit per tier: Tournament 1 → Tournament 2 → Boss. Arrays are per stage.
 export const CIRCUITS = [
   { tier: 1, name: 'The Dirt Pits', oppPower: [6, 6, 7], buyIn: [1, 1, 2], winGold: [6, 8, 12], winPrestige: [2, 3, 5], lossGold: 2, oppDecor: 1, marketPower: 0, price: 3 },
-  { tier: 2, name: 'The Bronze Arena', oppPower: [11, 12, 14], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
+  { tier: 2, name: 'The Bronze Arena', oppPower: [11, 12, 13], buyIn: [2, 2, 4], winGold: [10, 13, 18], winPrestige: [4, 6, 10], lossGold: 4, oppDecor: 2, marketPower: 2, price: 5 },
   { tier: 3, name: 'The Silver Coliseum', oppPower: [18, 18, 19], buyIn: [3, 3, 6], winGold: [14, 18, 25], winPrestige: [6, 9, 15], lossGold: 6, oppDecor: 3, marketPower: 4, price: 7 },
-  { tier: 4, name: 'The Imperial Coliseum', oppPower: [25, 26, 27], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
+  { tier: 4, name: 'The Imperial Coliseum', oppPower: [26, 27, 28], buyIn: [4, 4, 8], winGold: [18, 23, 32], winPrestige: [8, 12, 20], lossGold: 8, oppDecor: 3, marketPower: 6, price: 9 },
 ];
 
-export const GRAND = { name: 'The Grand Tournament', oppPower: 30, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
+export const GRAND = { name: 'The Grand Tournament', oppPower: 31, buyIn: 10, winGold: 40, winPrestige: 30, lossGold: 10, oppDecor: 3 };
 
 // House Prestige levels: Fibonacci room plots, doubling roster caps (design doc Tab 7). A level, once reached, is kept.
 export const PRESTIGE_LEVELS = [
   { level: 1, at: 0, plots: 3, maxFighters: 4 },
-  { level: 2, at: 10, plots: 5, maxFighters: 6 },
-  { level: 3, at: 25, plots: 8, maxFighters: 12 },
-  { level: 4, at: 50, plots: 13, maxFighters: 24 },
-  { level: 5, at: 90, plots: 21, maxFighters: 48 },
+  // Playtest #8: thresholds raised (were 10 / 25 / 50 / 90) to offset the +1 Prestige for every tournament win.
+  { level: 2, at: 12, plots: 5, maxFighters: 6 },
+  { level: 3, at: 30, plots: 8, maxFighters: 12 },
+  { level: 4, at: 60, plots: 13, maxFighters: 24 },
+  { level: 5, at: 110, plots: 21, maxFighters: 48 },
 ];
+
+// The Bronze wall (5.4.0): training costs at most `cheapFee` Gold a fighter-week until your top arena is tier `fullFeeFrom`
+// (the Silver Coliseum). Measured with the Bronze Boss at 13: see docs/fight-rules.md, "5.4.0".
+export const TRAINING = { fullFeeFrom: 3, cheapFee: 2 };
 
 // cost[i] / req[i]: Gold and Prestige level to reach level i + 1 (cost[0] = build). `per` = effect per level.
 // `unique`: only one per estate, because only the best one counts.
 export const BUILDINGS = {
   quarters: { name: 'Fighter Quarters', dept: 'housing', icon: 'bed', cost: [6, 6, 10], req: [1, 1, 3], per: [2, 4, 5], effect: (n) => `Houses ${n} fighters`, extra: (lv) => `Decor up to ${lv} of each item` },
   entertainment: { unique: true, name: 'Entertainment Room', dept: 'housing', icon: 'lyre', cost: [8, 12], req: [2, 3], per: [15, 30], effect: (n) => `All fighters −${n} Stress each week` },
-  trainer: { name: 'Trainer Room', dept: 'training', icon: 'dumbbell', cost: [8, 10, 16, 26, 40], req: [1, 2, 3, 4, 5], per: [3, 5, 8, 13, 21], effect: (n) => `Trains 1 fighter a week; each fighter can train up to ${n} points in total`, extra: (lv) => `Training costs ${lv} Gold per fighter-week (your best Trainer Room sets the cap and the fee)` },
+  trainer: { name: 'Trainer Room', dept: 'training', icon: 'dumbbell', cost: [8, 10, 16, 26, 40], req: [1, 2, 3, 4, 5], per: [3, 5, 8, 13, 21], effect: (n) => `Trains 1 fighter a week; each fighter can train up to ${n} points in total`, extra: (lv) => `Training costs ${lv} Gold per fighter-week${lv > TRAINING.cheapFee ? ` (${TRAINING.cheapFee} until you reach the Silver Coliseum)` : ''}; your best Trainer Room sets the cap and the fee` },
   medbay: { name: 'Medbay', dept: 'medical', icon: 'cross', cost: [8, 8, 14], req: [1, 2, 4], per: [1, 2, 3], effect: (n) => `Treats ${n} fighter${n > 1 ? 's' : ''} at a time`, extra: (lv) => (lv >= 2 ? 'Heals 2 weeks of injury per week' : 'Heals 1 week of injury per week') },
   oracle: { unique: true, name: 'Oracle', dept: 'scouting', icon: 'eye', cost: [8, 12], req: [2, 3], per: [1, 2], effect: (n) => (n >= 2 ? 'Exact odds and next Boss debuff' : 'Odds to the nearest 10%') },
   armourer: { unique: true, name: 'Armourer', dept: 'training', icon: 'anvil', cost: [10, 16, 24], req: [2, 3, 4], per: [5, 6, 8], effect: (n) => `Sells ${n} pieces of gear each month, and buys your spare gear back at half price`, extra: (lv) => (lv >= 3 ? 'Stocks Imperial (tier 3) gear' : lv >= 2 ? 'Stocks fine (tier 2) gear' : 'Stocks basic (tier 1) gear') },
-  stables: { unique: true, name: 'Stables', dept: 'scouting', icon: 'paw', cost: [9, 14], req: [2, 3], per: [1, 2], effect: (n) => `${n} exotic Basa fighter${n === 1 ? '' : 's'} in the Market each month` },
-  liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly 1-Gold condemned convict') },
+  // Playtest #8: pray for different perk choices; and exhibition bouts between your own fighters on tournament day.
+  temple: { unique: true, name: 'Temple of Fortuna', dept: 'training', icon: 'temple', cost: [8, 12], req: [2, 3], per: [3, 1], effect: (n) => `Pray for a fighter's level-up perks: ${n} Gold for three new choices` },
+  // Fun idea #7: host the Senate for Influence, and spend it on policies.
+  lounge: { unique: true, name: 'Patron Lounge', dept: 'scouting', icon: 'goblet', cost: [12, 18], req: [3, 4], per: [1, 2], effect: (n) => `Host the Senate once a month for Influence; up to ${n} polic${n > 1 ? 'ies' : 'y'} in force at a time` },
+  // secret: only shown once the resistance asks for it (5.4.0). The name is the designer's to change.
+  gallery: { unique: true, secret: true, name: 'Whispering Gallery', dept: 'scouting', icon: 'eye', cost: [10], req: [2], per: [2], effect: (n) => `Shows how much the palace suspects your house and how close the rising is; suspicion −${n} a month` },
+  exhibition: { unique: true, name: 'Exhibition Ring', dept: 'training', icon: 'swords', cost: [10], req: [2], per: [1], effect: () => 'On tournament day, two fighters who aren\'t competing can fight an exhibition bout: XP for both, Renown and Gold for the winner, and no risk of death' },
+  // 5.3.0: replaces the Stables (a save with Stables gets this at the same level). Name and words are PLACEHOLDER for the designer.
+  vulcan: { unique: true, name: 'Unnatural Temple of Vulcan', dept: 'medical', icon: 'forge', cost: [10, 16], req: [2, 3], per: [4, 12], effect: (n) => `Raises a fighter killed in the arena as a Revenant, up to ${n} weeks after their death`, extra: (lv) => (lv >= 2 ? 'Revenants come back with all their strength' : 'Revenants come back with 1 less Power') },
+  liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly cheap condemned convict'), note: () => 'Read their prison records: not every prisoner is what the guards say.' },
 };
 
 export const DEPARTMENTS = {
@@ -359,6 +394,7 @@ export const PERKS = {
   closer: { name: 'Closer', desc: '+5% win chance in Round 3.' },
   ironConstitution: { name: 'Iron Constitution', desc: 'Training adds 10 less Stress.' },
   crowdPleaser: { name: 'Crowd Pleaser', desc: '+1 extra Renown for every win.' },
+  merciful: { name: 'Merciful', desc: 'Sparing an opponent always wins the crowd over: the Renown and Morale bonus, even when they called for blood.' },
   survivor: { name: 'Survivor', desc: 'Once injured: −10% chance to be injured; −20% at 2+ injuries.', req: (f) => f.level >= 3, reqText: 'Level 3+' },
   duelist: { name: 'Duelist', desc: '+5% win chance and +5% chance to injure.', req: (f) => f.power >= 9 && f.speed >= 7, reqText: 'Power 9+ and Speed 7+' },
   tactician: { name: 'Tactician', desc: 'Striking first is worth +15% instead of +10%.', req: (f) => f.speed >= 9 && f.power >= 8, reqText: 'Speed 9+ and Power 8+' },
@@ -374,12 +410,12 @@ export const BLOODIED = { renown: 2, xp: 2, morale: 5 };
 // Renown (fame) and Morale. Comfort raises Morale; expectations grow with Renown.
 export const RENOWN = { win: 2, bossWin: 3, upset: 1, towel: -1, goldPer: 5 }; // +1 Gold per 5 Renown on wins
 export const MORALE = {
-  start: 60, drift: 10, base: 40, perQuartersLevel: 10, perDecor: 5, perEntertainmentLevel: 10, expectationPerRenown: 2, maxExpectation: 60,
+  start: 60, drift: 10, driftDown: 3, base: 40, perQuartersLevel: 10, perDecor: 5, perEntertainmentLevel: 10, expectationPerRenown: 2, maxExpectation: 60,
   win: 10, loss: -5, towel: -5, allyDeath: -10, crowdJeers: -10,
   inspired: 80, restless: 40, mutinous: 20, inspiredWin: 5000,
 };
 
-// Gear: one weapon and one armor slot per fighter. `guard` lowers the chance to be injured (counts as armor).
+// Gear: one weapon and one armour slot per fighter. `guard` lowers the chance to be injured (counts as armour).
 // Consumables: single-use, one per fight, used between rounds. `boost` lasts the next round only.
 export const CONSUMABLES = {
   warPaint: { name: 'War Paint', price: 4, desc: '+1 Power next round.', boost: { power: 1 } },
@@ -390,7 +426,7 @@ export const CONSUMABLES = {
   berserkerMushroom: { name: 'Berserker Mushroom', price: 4, desc: '+2 Power next round, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
   throwingNet: { name: 'Throwing Net', price: 4, desc: 'The opponent has −3 Speed next round.', foe: { speed: -3 } },
   smellingSalts: { name: 'Smelling Salts', price: 3, desc: 'Clears a Distracted or Concussed wound for the rest of this fight (it still needs healing after).', salts: true },
-  crowdBribe: { name: 'Crowd Bribe', price: 6, desc: 'If you capitulate this fight, the crowd forgives it: no Favor or Renown lost for capitulating (losing a Boss still counts).', bribe: true },
+  crowdBribe: { name: 'Crowd Bribe', price: 6, desc: 'If you capitulate this fight, the crowd forgives it: no Favour or Renown lost for capitulating (losing a Boss still counts).', bribe: true },
 };
 
 export const GEAR = {
@@ -415,19 +451,19 @@ export const GEAR = {
 export const BOSS_DEBUFFS = {
   firstInjuryDouble: { name: 'First Blood Counts Double', desc: 'The first injury your fighter takes counts as two, opening the Death Gate at once.' },
   rainyMud: { name: 'Rainy Mud', desc: 'Your fighter has −2 Speed every round.' },
-  noArmor: { name: 'Stripped of Armor', desc: "Your fighter's armor doesn't work: Alloyed Skin, Ego Armour and armor gear. Speed evasion still does." },
+  noArmor: { name: 'Stripped of Armour', desc: "Your fighter's armour doesn't work: Alloyed Skin, Ego Armour and armour gear. Speed evasion still does." },
   ironRules: { name: 'Iron Rules', desc: 'Room decor gives no bonus to your fighter.' },
   bloodMoon: { name: 'Blood Moon', desc: 'Both fighters have +10% chance to be injured.' },
-  crowdFavorite: { name: 'Crowd Favorite', desc: 'The champion fights with +1 Power.' },
+  crowdFavorite: { name: 'Crowd Favourite', desc: 'The champion fights with +1 Power.' },
   lions: { name: 'Lions in the Arena', desc: 'Hungry lions roam the sand: the Death Gate opens one injury earlier for both fighters.' },
   emperorsGaze: { name: "The Emperor's Gaze", desc: 'The Emperor is watching: no capitulating in this fight.' },
 };
 
 // Weapon and style matchups (v5): a fighter's style is their weapon if they're a Fighter, otherwise their class.
-// `vs` lists opposing styles (or 'armor': any armor gear). win/injure apply to the first fighter.
+// `vs` lists opposing styles (or 'armor': any armour gear). win/injure apply to the first fighter.
 export const MATCHUPS = [
   { style: 'spear', vs: ['cestus', 'fists', 'dagger'], win: 5000, why: 'Reach keeps brawlers at bay' },
-  { style: 'club', vs: ['armor'], injure: 10000, why: 'Crushes armor' },
+  { style: 'club', vs: ['armor'], injure: 10000, why: 'Crushes armour' },
   { style: 'axe', vs: ['samnite', 'armor'], injure: 5000, why: 'Splits shields and plate' },
   { style: 'sword', vs: ['dagger', 'club'], win: 5000, why: 'Outfences short and clumsy weapons' },
   { style: 'dagger', vs: ['retiarius', 'sagittarius'], win: 5000, why: 'Inside their guard' },
@@ -439,7 +475,7 @@ export const MATCHUPS = [
 export const NAMES = [
   'Aurelia', 'Brutus', 'Cassia', 'Drusus', 'Flamma', 'Gaius', 'Hilarus', 'Ixa', 'Juno', 'Krell',
   'Livia', 'Marcus', 'Nyx', 'Octavia', 'Priscus', 'Quintus', 'Rusta', 'Spiculus', 'Tigris', 'Ursa',
-  'Varro', 'Vex', 'Xanthe', 'Zorak', 'Carpophorus', 'Verus', 'Thraxa', 'Sol-9', 'Unit Kappa', 'Grosh',
+  'Verres', 'Vex', 'Xanthe', 'Zorak', 'Carpophorus', 'Verus', 'Thraxa', 'Sol-9', 'Unit Kappa', 'Grosh',
   'Aelia', 'Bellona', 'Crixus', 'Decima', 'Eppia', 'Fulvia', 'Gannicus', 'Hector', 'Iulia', 'Kaeso',
   'Lucilla', 'Mevia', 'Naevius', 'Oenomaus', 'Pugnax', 'Rufa', 'Sabina', 'Tetraites', 'Ulfa', 'Vibia',
   'Agron', 'Barca', 'Cato', 'Duma', 'Ennia', 'Felix', 'Glabra', 'Hostus', 'Ilithya', 'Kroth',
@@ -449,4 +485,127 @@ export const NAMES = [
   'Kastra', 'Lepida', 'Maximus', 'Nonia', 'Orbilia', 'Pollux', 'Quarta', 'Remus', 'Scaeva', 'Tullia',
   'Urgulania', 'Valens', 'Gorrak', 'Hessa', 'Mordra', 'Skarn', 'Thessaly', 'Vael', 'Ysolde', 'Zarek',
   'Unit Theta', 'Unit Omega', 'Sol-4', 'Ferrum', 'Calyx', 'Nyssa', 'Ruun', 'Ghast', 'Lirien', 'Corvax',
+  // Playtest #8: 60 more, so names don't come round again so soon.
+  'Albia', 'Bassus', 'Caelia', 'Dentatus', 'Egnatia', 'Fabius', 'Gratia', 'Herennius', 'Iunia', 'Lentulus',
+  'Marcia', 'Novius', 'Opimia', 'Pertinax', 'Rutila', 'Servius', 'Tertia', 'Varus', 'Vipsania', 'Aemilius',
+  'Bragga', 'Drogga', 'Hruk', 'Kulgra', 'Murr', 'Rakka', 'Sorg', 'Thokk', 'Urza', 'Vrask',
+  'Aeris', 'Caelan', 'Ithil', 'Liora', 'Maelis', 'Nimue', 'Sylvar', 'Thalen', 'Vaelin', 'Ysra',
+  'Unit Lambda', 'Unit Zeta', 'Unit Rho', 'Sol-2', 'Sol-7', 'Cobalt', 'Gearwright', 'Tessel', 'Vanta', 'Axiom',
+  'Morwen', 'Sanguis', 'Vesper', 'Nocturne', 'Draven', 'Ilsa', 'Corvina', 'Hesper', 'Lucan', 'Sabra',
 ];
+
+// ---- v6: the hidden plot (docs/roadmap-v6.md). Placeholder numbers; record changes in docs/fight-rules.md ----
+
+// Political prisoners among the Liaison's offers. guaranteeYear: from this year on, the first offer is always political
+// if none has been offered yet (so every career gets a chance at the plot). priceCut: they come cheap (someone paid).
+// The Liaison's monthly prisoner (playtest #7). A convict: Market-strength, wounded, cheap. A prisoner of war (Lv 2): the
+// top arena's Power + elitePower, priced elitePrice + elitePerTier × tier. Political prisoners come cheaper still.
+// Seasoned recruits (playtest #8: "people in the Market don't need to be level 1 later"). levels: the levels a Market
+// fighter (or a prisoner of war) can arrive at in each arena tier; perLevel: Gold added to their price per level above 1.
+export const RECRUIT = { levels: [[1], [1, 2], [2], [2, 3]], perLevel: 2 };
+// Exhibition bouts (Exhibition Ring): XP for each fighter, the winner's Renown and Gold (× top arena tier), and the loser's
+// chance of a Flesh Wound. One bout per tournament week; never deadly.
+// Nemeses (fun idea #1): an opponent who beats one of yours comes back, stronger and with a name for it. returnChance: per
+// new non-Boss opponent once minWeeks have passed since they were last seen; +powerPerWin per win over you (up to maxBonus).
+// Beating one pays Renown, Gold (× tier) and Favour. max: how many your house can have at once (the most recent are kept).
+// A short career (fun idea #2): each arena's circuit is Tournament → Boss (no Tournament 2), and purses and Prestige pay
+// more to make up for the fewer fights. The daily Emperor's Challenge is a short career on the day's seed.
+// Betting on your own fighter (fun idea #3), before Round 1. The payout is the stake × 0.9 / chance to win (the bookmaker's
+// cut), up to `maxOdds` ×; a stake can be up to `perTier` × arena tier Gold. `stakes`: the buttons offered.
+// The Emperor's demands (fun idea #4): some months he sets a goal for that month's fight day. Met: Favour and Gold × tier.
+// Missed: a little Favour. `chance` per month, from `fromWeek` on. Words are PLACEHOLDER for the designer.
+// Bonds between fighters (fun idea #5): formed by sparring in the Exhibition Ring, or by both winning on the same fight
+// day. A bond adds comfort while the partner is in the house; a partner `mentorGap`+ levels higher teaches the other
+// `mentorXp` XP a week; a partner's death leaves the survivor grieving (`grief` Morale for MOOD_WEEKS).
+// The crowd's hype (fun idea #6): drama fills a meter during a fight (0–100), paid out at the end. A win earns Renown
+// (1 per `renownPer`) and Gold (tier × 1 per `goldPer`); a loss earns Renown (1 per `lossRenownPer`) for a fight they loved.
+// The Patron Lounge (fun idea #7). Hosting costs hostGold × tier, once a month; it earns 1 Influence, plus 1 for every
+// `renownPer` Renown of your most famous fighter (up to `maxInfluence`). Policies last `weeks`. A loyalist policy calms
+// the Emperor's suspicion (v6 plot); a reformist one draws his eye. Words are PLACEHOLDER for the designer.
+export const LOUNGE = {
+  hostGold: 3, renownPer: 10, maxInfluence: 3, weeks: 16, loyalistSuspicion: -10, reformistSuspicion: 5,
+  policies: {
+    breadAndCircuses: { name: 'Bread and Circuses', cost: 3, lean: 'loyalist', desc: 'Every purse pays 25% more.' },
+    edictOfMercy: { name: 'Edict of Mercy', cost: 2, lean: 'reformist', desc: 'Sparing a beaten opponent earns Favour in every arena, not just your top one.' },
+    lowerTribute: { name: 'Lower the Tribute', cost: 4, lean: 'reformist', desc: 'This year\'s tribute is 30% lower.' },
+    unleashLions: { name: 'Unleash the Lions', cost: 3, lean: 'loyalist', desc: 'Bosses fight with +1 Power, but beating one pays double Prestige.' },
+    grainToLudus: { name: 'Grain to the Ludus', cost: 2, lean: 'neutral', desc: '+5 comfort for every fighter.' },
+    purgePrisons: { name: 'Purge the Prisons', cost: 2, lean: 'loyalist', desc: 'No political prisoners are offered while it lasts.' },
+    amnesty: { name: 'Amnesty', cost: 2, lean: 'reformist', desc: 'Political prisoners are twice as common while it lasts.' },
+  },
+};
+// The Unnatural Temple of Vulcan (5.3.0): the smith-god's forbidden rite rebuilds a fighter killed in the arena, in brass and
+// stitched flesh. Price: price + perTier × your top arena's tier, in Gold. bodyWeeks: the Temple's level sets how long a body
+// keeps (BUILDINGS.vulcan.per). power: what a level-1 Temple's rite costs them. A Revenant keeps their name, class, weapon,
+// level, perks, titles and kills; they get a Revenant trait instead of their old one, and they feel nothing: Morale holds at
+// `morale` whatever the room (never Inspired, never Discontented). The same body can't be raised twice.
+export const REANIMATE = { price: 6, perTier: 4, power: -1, morale: 50 };
+// risen: a Revenant's first fight back, when the crowd chants the name it buried (fun idea, 5.3.0).
+export const HYPE = { risen: 20, upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 5, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
+export const BOND = { comfort: 8, mentorGap: 3, mentorXp: 1, grief: -20 };
+// bloodiedKills (5.4.0, the designer): a win where the opponent dies also meets the Bloodied Victory demand.
+export const DEMAND = { bloodiedKills: true, chance: 0.5, fromWeek: 8, favor: 2, goldPerTier: 2, missFavor: -4 }; // 5.3.0: was +4 / 4 Gold × tier / −2 (swept once demands worked: see docs/fight-rules.md)
+export const DEMANDS = {
+  topWin: { goal: 'Win a match in your top arena', say: 'My guests are bored, Lanista. Give them a victory in your top arena this month.' },
+  bloodied: { goal: 'Win a Bloodied Victory (a win with 2+ injuries, or one where your opponent dies)', say: 'I want to see blood on a winner. Win me a bloody victory this month.' },
+  kill: { goal: 'Finish a beaten opponent (thumbs down)', say: 'The crowd grows soft. Give them a death this month.' },
+  spare: { goal: 'Spare a beaten opponent (thumbs up)', say: 'The Senate calls me cruel. Show them my clemency: spare someone in the arena this month.' },
+  twoArenas: { goal: 'Win in two different arenas on fight day', say: 'Show me the depth of your house. Win in two of my arenas this month.' },
+};
+export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] };
+// Swept (100 short careers each): ×1.5 purses 13% won; ×2 purses and ×2.5 Prestige 49% (92 weeks); a head start (+20 Gold, House
+// level 2) 30%; both 44% in 82 weeks (full careers 109); ×2 training 99% (too easy). `train` must keep Power whole.
+// 5.3.0: purses ×2 → ×1.75 once demands worked and the head start became House level 2 (short careers 59% → 43% in probes).
+export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 1 };
+export const NEMESIS = {
+  returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
+  epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],
+};
+export const EXHIBITION = { xpWin: 2, xpLoss: 1, renown: 1, goldPerTier: 1, woundChance: 0.15 }; // playtest #8: was XP 3/2, Gold 2 × tier (too rich every month)
+// offers: prisoners on offer each month, by Liaison level (the designer, 5.4.2: one was too few). At most one is political.
+export const LIAISON = { convictPrice: 2, elitePrice: 3, elitePerTier: 2, elitePower: -1, offers: [2, 3] };
+export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClue: 0.25 };
+// The thread. gap: weeks between plot cards. cause/ready: trust needed for each stage (cause also needs this House level).
+// suspicion: hidden 0–100, its monthly drift and the levels where its signs show. contactWin: win chance per contact in the
+// coup Final (×1000 = %), up to contactMax.
+// Quests (5.4.0, the designer's request; words in src/quests.js). The steward's first assignment comes in this week.
+// goldScale: × each assignment's Gold in src/quests.js (a balance lever).
+// talkPerWeek: at most this many quest, want, rival and friendship scenes a week; the rest wait for the next weeks.
+// prestige: Prestige for each of the steward's assignments done.
+export const QUESTS = { stewardFromWeek: 4, goldScale: 0.2, prestige: 0, talkPerWeek: 2 };
+// What fighters want: a new want some months (its own dice), at most `max` at a time. Met: a mood of +metMorale for 4 weeks,
+// Renown and XP. Lapsed: a mood of missMorale. Room wants ask for one of `roomItems`. A Championship want needs the fighter
+// within `titleReach` Power of the arena's Boss.
+export const FIGHTER_WANTS = { chance: 0.35, max: 2, metMorale: 10, metRenown: 2, metXp: 2, missMorale: -10, roomItems: ['bathhouse', 'shrine', 'trophy'], titleReach: 3 };
+// The rival house (your archrival climbs with you). Its champion is named once your top arena is `championFrom`, and comes back
+// as a top-arena opponent (not a Boss) after `minWeeks`, `chance` a time, at the bout's Power + `power` + 1 per win over you
+// (up to `maxBonus`); from the Silver Coliseum they're drawn into any round of the bracket, at the Final's strength in any round
+// (`earlyAtFinal`: the champion is dangerous wherever you meet them). Only `oppShare` of the ordinary opponents in an arena
+// come from the archrival when other houses fight there too (playtest LLM-11: 73% did; 5.4.3: 0.07, see fight-rules). Beating them: `beatGold` × tier Gold, `beatRenown` Renown, and `beatGlory` Glory taken from their house.
+// `poachChance`: some months the house buys the Market's best fighter at the end of the first week. `monthGlory`: × tier.
+export const RIVAL = { championFrom: 2, minWeeks: 12, chance: 0.35, power: 1, maxBonus: 2, beatGold: 4, beatRenown: 3, beatGlory: 5, winGlory: 3, poachChance: 0.15, monthGlory: 2, oppShare: 0.07, earlyAtFinal: true };
+// The resistance's requests: trust when met (gallery and lobby), trust lost when they lapse; asked this many weeks after the Mark.
+// Trust that would go past the cap lowers suspicion by `overflowSuspicion` a point instead.
+export const REBEL_QUEST = { galleryTrust: 1, lobbyTrust: 2, missTrust: -1, afterMark: 4, overflowSuspicion: 5 };
+
+// The Emperor's summons (the designer, 5.4.2): once a career, from `fromWeek` until the Imperial Coliseum is open, a month may
+// begin (`chance`, its own dice) with the Emperor ordering one of your fighters onto the Imperial sand on that month's fight
+// day, against a regular of the Imperial Coliseum. Send someone (told to yield at the Death Gate, or to fight to the death),
+// or refuse (`refuseFavor`). Survived three rounds: `surviveFavor`, `surviveRenown`. Won: `winFavor`, `winRenown`.
+// Yielded: `yieldFavor`. Died: a body the Temple of Vulcan can raise.
+export const SUMMONS = { fromWeek: 5, chance: 0.1, refuseFavor: -40, surviveFavor: 5, surviveRenown: 3, winFavor: 15, winRenown: 8, yieldFavor: -5, tier: 4 };
+
+// The Emperor's spy (5.4.0): executing them lowers the hidden plot's suspicion by `suspicion`; keeping them raises it.
+export const SPY = { suspicion: 15, perMonth: 2 }; // perMonth: suspicion each month while a spy you kept is in the house
+
+export const PLOT = {
+  gap: [3, 6], firstGap: [1, 3], refusalsToCold: 2, survivesAt: 2,
+  // cause: trust, favours done and weeks since the Mark it takes (playtest #7: Acts 1–2 were over in 7 weeks); offerAfter: the
+  // prefect's offer waits this long into the Cause, so betrayal has something to cost. maxTrust: trust stops piling up here.
+  cause: { trust: 4, favours: 3, weeks: 12, houseLevel: 3 }, ready: { trust: 6 }, offerAfter: 16, maxTrust: 10, priestMorale: 5,
+  // confessTrust (5.4.0, the designer: the rebel told everything the week they arrived): the confession waits for this much trust.
+  confessTrust: 3,
+  suspicion: { perPrisoner: 1, perContact: 1, decay: 2, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
+  // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
+  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30, betrayGold: 20, // betrayGold: the Emperor's purse for the names, × tier
+};

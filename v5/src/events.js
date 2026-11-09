@@ -2,9 +2,11 @@
 //
 // `who`: which fighters the event is about: 'any' (random), 'famous' (most Renown), 'green' (lowest level),
 //   'pair' (two different fighters). `f` and `g` in text are their names.
-// `when(run)`: extra condition. Effects: { gold, favor, morale, stress, renown, xp, injury, item, chance: { p, win, lose } }.
+// `when(run)`: extra condition. Effects: { gold, favour, morale, stress, renown, xp, injury, item, chance: { p, win, lose } }.
 //   morale/stress/renown/xp/injury apply to `to`: 'f', 'g', 'both' or 'all' (the whole roster).
 // The first choice is the cautious one (the careful bot takes it). A choice with `cost` needs that much Gold.
+
+import { PLOT_EVENTS } from './plot.js';
 
 export const EVENT_CHANCE = { season: 0.25, winter: 0.2 }; // v5: was 0.3 (playtest #5: too many)
 // Event Morale is a mood that shifts where Morale is heading for this many weeks (a one-off bump would drift away in a week).
@@ -17,14 +19,14 @@ export const EVENTS = [
     id: 'brawl', who: 'pair', title: 'Brawl in the barracks',
     text: ({ f, g }) => `${f} and ${g} came to blows over a bunk. The whole Ludus is watching to see what you do.`,
     choices: [
-      { label: 'Throw a feast to make peace', cost: 4, effects: { gold: -4, morale: { to: 'both', n: 5 } } },
+      { label: 'Throw a feast to make peace (4 Gold)', cost: 4, effects: { gold: -4, morale: { to: 'both', n: 5 } } },
       { label: 'Punish them both', effects: { morale: { to: 'both', n: -10 }, stress: { to: 'both', n: -10 } } },
       { label: 'Let them settle it in the yard', effects: { chance: { p: 0.5, win: { renown: { to: 'f', n: 1 }, injury: { to: 'g', tag: 'fleshWound' } }, lose: { renown: { to: 'g', n: 1 }, injury: { to: 'f', tag: 'fleshWound' } } } } },
     ],
   },
   {
     id: 'senator', who: 'famous', title: 'A senator\'s offer',
-    text: ({ f }) => `A senator's slave brings a purse: his patron wants ${f} to dine at his villa, and to praise him to the crowd. The Emperor's spies are everywhere.`,
+    text: ({ f }) => `A senator's slave brings a purse. His master wants ${f} to dine at his villa and praise him to the crowd. The Emperor's spies are everywhere.`,
     choices: [
       { label: 'Decline politely', effects: { favor: 2 } },
       { label: 'Accept the purse', effects: { gold: 10, chance: { p: 0.35, win: {}, lose: { favor: -8 } } } },
@@ -34,7 +36,7 @@ export const EVENTS = [
     id: 'plague', title: 'Fever in the city',
     text: () => 'A fever is spreading through the city. Physicians are expensive this week.',
     choices: [
-      { label: 'Pay the physicians', cost: 5, effects: { gold: -5 } },
+      { label: 'Pay the physicians (5 Gold)', cost: 5, effects: { gold: -5 } },
       { label: 'Trust to the gods', effects: { chance: { p: 0.5, win: {}, lose: { injury: { to: 'f', tag: 'distracted' }, stress: { to: 'all', n: 10 } } } } },
     ],
     who: 'any',
@@ -43,7 +45,7 @@ export const EVENTS = [
     id: 'trainer', who: 'green', title: 'A wandering lanista',
     text: ({ f }) => `A retired lanista passing through offers a week of lessons for ${f}. He's old, but he has seen everything.`,
     choices: [
-      { label: 'Pay him for lessons', cost: 6, effects: { gold: -6, xp: { to: 'f', n: 4 } } },
+      { label: 'Pay him for lessons (6 Gold)', cost: 6, effects: { gold: -6, xp: { to: 'f', n: 4 } } },
       { label: 'Send him on his way', effects: {} },
     ],
   },
@@ -69,7 +71,7 @@ export const EVENTS = [
     text: () => 'A caravan from the east stops at your gate, selling War Paint at half price.',
     choices: [
       { label: 'Not today', effects: {} },
-      { label: 'Buy War Paint (5 Gold)', cost: 5, effects: { gold: -5, item: 'warPaint' } },
+      { label: 'Buy War Paint (2 Gold)', cost: 2, effects: { gold: -2, item: 'warPaint' } },
     ],
     who: 'any',
   },
@@ -102,7 +104,7 @@ export const EVENTS = [
   },
   {
     id: 'injuredDog', who: 'any', title: 'A stray at the gate',
-    text: ({ f }) => `${f} has found a half-starved war dog at the gate and wants to keep it.`,
+    text: ({ f }) => `${f} found a half-starved war dog at the gate and wants to keep it.`,
     choices: [
       { label: 'Let them keep it (2 Gold of meat)', cost: 2, effects: { gold: -2, morale: { to: 'f', n: 15 }, stress: { to: 'f', n: -10 } } },
       { label: 'Turn it away', effects: { morale: { to: 'f', n: -5 } } },
@@ -145,11 +147,29 @@ export const EVENTS = [
     id: 'healer', who: 'any', title: 'A wandering healer',
     text: ({ f }) => `A healer from the eastern provinces offers to treat ${f}'s wounds with herbs and hot iron.`,
     choices: [
-      { label: 'No thank you', effects: {} },
+      { label: 'No, thank you', effects: {} },
       { label: 'Pay the healer (5 Gold)', cost: 5, effects: { gold: -5, heal: { to: 'f' } } },
     ],
     when: (run) => run.roster.some((x) => x.injuries.length),
     target: (run) => run.roster.filter((x) => x.injuries.length),
+  },
+  // The Emperor's spy (the designer, 5.4.0): once a career, once a rebel is in the house. One of your fighters has been reporting on your
+  // house. Execute them (their body is kept, so the Temple of Vulcan can raise it), or let them be. PLACEHOLDER words.
+  {
+    id: 'emperorsSpy', who: 'any', title: "The Emperor's spy",
+    text: ({ f }) => `Your steward brings you a letter he found sewn into ${f}'s bedroll, addressed to the Praetorian prefect. ${f} has been reporting on your house to the palace.`,
+    choices: [
+      { label: 'Let them be, and mind what you say', effects: { favor: 3, spy: 'keep' } },
+      { label: 'Execute ${f}', effects: { spy: 'execute', morale: { to: 'all', n: -5 } } },
+    ],
+    // Only once a rebel is in place (the designer, 5.4.0): the hidden plot runs and a political prisoner is in the house.
+    when: (run) => Boolean(run.plot) && !run.plot.ended && run.roster.some((x) => x.political) && !run.spyFound && run.roster.filter((x) => !x.political).length >= 2,
+    // Not your most famous fighter (playtest LLM-11: executing the house's star made "keep" the only sane choice).
+    target: (run) => {
+      const pool = run.roster.filter((x) => !x.political && x.id !== run.plot?.champion);
+      const star = [...pool].sort((a, b) => b.renown - a.renown || b.power - a.power)[0];
+      return pool.length > 1 ? pool.filter((x) => x !== star) : pool;
+    },
   },
   {
     id: 'onlookers', who: 'any', title: 'Crowds at the training yard',
@@ -169,19 +189,19 @@ export const EVENTS = [
   },
 ];
 
-export const EVENT_BY_ID = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
+export const EVENT_BY_ID = Object.fromEntries([...EVENTS, ...PLOT_EVENTS].map((e) => [e.id, e])); // plot cards are looked up here, but never drawn as ordinary events
 
 // A choice's label with the fighter names filled in.
-export const choiceLabel = (choice, names) => choice.label.replace('${f}', names.f ?? '').replace('${g}', names.g ?? '');
+export const choiceLabel = (choice, names) => choice.label.replace(/\$\{(\w+)\}/g, (_, k) => names[k] ?? '');
 
 // A choice's stakes in plain words, e.g. "−2 Gold; them: +15 Morale for 4 weeks, −10 Stress".
 const WHO = { f: 'them', g: 'the other', both: 'both', all: 'everyone' };
 const sign = (n) => (n > 0 ? `+${n}` : `−${-n}`);
 const INJURY_NAMES = { fleshWound: 'Flesh Wound', distracted: 'Distracted', concussed: 'Concussed' };
-export function stakesText(eff, sep = '; ') {
+export function stakesText(eff, sep = '; ', names = {}) {
   const house = [];
   if (eff.gold) house.push(`${sign(eff.gold)} Gold`);
-  if (eff.favor) house.push(`${sign(eff.favor)} Favor`);
+  if (eff.favor) house.push(`${sign(eff.favor)} Favour`);
   if (eff.item) house.push(`+1 ${eff.item === 'warPaint' ? 'War Paint' : eff.item}`);
   const people = {};
   const add = (to, text) => { (people[to] ??= []).push(text); };
@@ -191,11 +211,26 @@ export function stakesText(eff, sep = '; ') {
   if (eff.xp) add(eff.xp.to, `${sign(eff.xp.n)} XP`);
   if (eff.injury) add(eff.injury.to, INJURY_NAMES[eff.injury.tag] ?? eff.injury.tag);
   if (eff.heal) add(eff.heal.to, 'their newest wound healed');
-  const parts = [house.join(', '), ...Object.entries(people).map(([to, list]) => `${WHO[to]}: ${list.join(', ')}`)].filter(Boolean);
+  // v6 plot cards: what anyone could see happen (trust and suspicion stay hidden).
+  if (eff.freeAsker) add('f', 'leaves your house for good');
+  if (eff.execute) add(eff.execute, 'executed');
+  if (eff.spy === 'execute') { add('f', 'executed; the body is kept'); house.push('the palace loses its eyes in your house'); }
+  // Playtest LLM-11: keeping them hid its cost. Say it in words (the numbers stay hidden).
+  if (eff.spy === 'keep') { add('f', 'stays, and keeps writing'); house.push('the palace hears whatever your house hides, every month they stay'); }
+  if (eff.hide) house.push(`one Medbay bed taken for ${eff.hide} weeks`);
+  if (eff.giveGear) house.push(`${eff.giveGear} pieces of gear handed over`);
+  if (eff.contact === 'new') house.push('a prisoner goes free');
+  if (eff.coup) house.push('there is no turning back');
+  if (eff.champion) add(eff.champion, 'joins the cause');
+  if (eff.betray) house.push('your political prisoners and everyone you freed are executed; the Emperor rewards you');
+  const parts = [house.join(', '), ...Object.entries(people).map(([to, list]) => `${names[to] ?? WHO[to]}: ${list.join(', ')}`)].filter(Boolean);
   if (eff.chance) {
-    const win = stakesText(eff.chance.win, ', ');
-    const lose = stakesText(eff.chance.lose, ', ');
-    parts.push(`${Math.round(eff.chance.p * 100)}%: ${win === 'Nothing happens' ? 'nothing' : win}; otherwise: ${lose === 'Nothing happens' ? 'nothing' : lose}`);
+    const win = stakesText(eff.chance.win, ', ', names);
+    const lose = stakesText(eff.chance.lose, ', ', names);
+    // A plot card's odds can depend on the fighter (a function); its hidden effects never show, so say it's a gamble.
+    const odds = typeof eff.chance.p === 'function' ? 'A chance' : `${Math.round(eff.chance.p * 100)}%`;
+    if (win === 'Nothing happens' && lose === 'Nothing happens') parts.push(`A gamble${typeof eff.chance.p === 'function' ? '' : ` (${odds})`}`);
+    else parts.push(`${odds}: ${win === 'Nothing happens' ? 'nothing' : win}; otherwise: ${lose === 'Nothing happens' ? 'nothing' : lose}`);
   }
   return parts.length ? parts.join(sep) : 'Nothing happens';
 }

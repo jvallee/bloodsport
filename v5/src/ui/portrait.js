@@ -18,9 +18,10 @@ const SKIN = {
   android: ['#a9b4bf', '#c2c8cf', '#8e99a4'],
   vampire: ['#e8e4ec', '#d9d2e0', '#cfc9d8'],
   basa: ['#9a6b3a', '#7d5530', '#b08050'],
+  revenant: ['#9aa394', '#8a9188', '#a7a398'], // 5.3.0: grave-grey, raised by the Temple of Vulcan
 };
 const HAIR = ['#1f1612', '#3a2618', '#6b4426', '#a8742f', '#d8c08a', '#8b2b22', '#cfcfcf'];
-const BG = { human: '#3a2a20', elf: '#26332a', orc: '#2f2a1d', android: '#22283a', vampire: '#2a1a2a', basa: '#2e2414' };
+const BG = { human: '#3a2a20', elf: '#26332a', orc: '#2f2a1d', android: '#22283a', vampire: '#2a1a2a', basa: '#2e2414', revenant: '#1e1a16' };
 
 // Brows and mouth by humor: Choleric scowls, Sanguine grins, Melancholic frowns, Phlegmatic is unreadable.
 const FACE = {
@@ -78,6 +79,8 @@ export function portrait(f, size = 48) {
     parts.push(`<path d="${face.mouth}" stroke="#5a2a22" stroke-width="2" stroke-linecap="round" fill="none"/>`);
     if (kind === 'orc') parts.push('<path d="M25 47 L24 41 L27 46Z M39 47 L40 41 L37 46Z" fill="#f2ead2"/>');
     if (kind === 'vampire') parts.push('<path d="M28 47 L29 51 L30 47Z M34 47 L35 51 L36 47Z" fill="#fff"/><circle cx="24" cy="32" r="1.7" fill="#c0362c"/><circle cx="40" cy="32" r="1.7" fill="#c0362c"/>');
+    // A Revenant: a brass plate over half the jaw, stitches across the brow, and forge-fire in the eyes.
+    if (kind === 'revenant') parts.push('<path d="M32 38 L48 34 Q48 50 32 53Z" fill="#b5883a" opacity="0.92"/><circle cx="41" cy="44" r="1.2" fill="#6b4a1e"/><circle cx="36" cy="49" r="1.2" fill="#6b4a1e"/><path d="M19 21 L45 21 M22 19 L22 23 M28 19 L28 23 M34 19 L34 23 M40 19 L40 23" stroke="#3a2e28" stroke-width="1.2"/><circle cx="24" cy="32" r="1.9" fill="#ff8a2a"/><circle cx="40" cy="32" r="1.9" fill="#ff8a2a"/>');
     if (kind === 'basa') parts.push('<path d="M14 22 L10 8 L22 16Z M50 22 L54 8 L42 16Z" fill="#5a3d20"/><path d="M26 40 L32 44 L38 40" stroke="#2a1d16" stroke-width="2" fill="none"/>');
   }
   parts.push(classGear(f));
@@ -86,4 +89,41 @@ export function portrait(f, size = 48) {
   (f.injuries ?? []).slice(0, 3).forEach((_, i) => parts.push(`<path d="${slashes[i]}" stroke="#c0362c" stroke-width="2" stroke-linecap="round"/>`));
   if (!f.alive) parts.push('<rect width="64" height="64" rx="10" fill="#000" opacity="0.55"/><path d="M20 22 L28 30 M28 22 L20 30 M36 22 L44 30 M44 22 L36 30" stroke="#ddd" stroke-width="2.5"/>');
   return `<svg class="portrait" viewBox="0 0 64 64" width="${size}" height="${size}" role="img" aria-label="Portrait of ${String(f.name).replace(/[<>&"]/g, '')}">${parts.join('')}</svg>`;
+}
+
+// Characters who speak to you (src/dialogue.js): hand-drawn rather than generated.
+const NPC = {
+  // Silbannacus: imperial purple, a golden laurel, a hard stare.
+  emperor: `<rect width="64" height="64" rx="10" fill="#3a1d3f"/>
+    <path d="M8 64 Q12 50 32 52 Q52 50 56 64Z" fill="#6b2a6e"/><path d="M22 54 L32 62 L42 54" stroke="#d9b45a" stroke-width="2" fill="none"/>
+    <path d="M24 46 L24 54 Q32 58 40 54 L40 46Z" fill="#d9a47c"/>
+    <path d="M16 30 Q16 12 32 12 Q48 12 48 30 Q48 48 32 51 Q16 48 16 30Z" fill="#d9a47c"/>
+    <path d="M17 24 Q20 12 32 11 Q44 12 47 24 Q42 17 32 17 Q22 17 17 24Z" fill="#cfcfcf"/>
+    <path d="M14 25 Q18 13 27 10 M50 25 Q46 13 37 10" stroke="#d9b45a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M15 20 l4 -2 M17 15 l4 -1 M49 20 l-4 -2 M47 15 l-4 -1" stroke="#d9b45a" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M20 27 L28 29 M44 27 L36 29" stroke="#2a1d16" stroke-width="2.2" stroke-linecap="round"/>
+    <ellipse cx="25" cy="32" rx="3" ry="2" fill="#fff"/><ellipse cx="39" cy="32" rx="3" ry="2" fill="#fff"/>
+    <circle cx="25" cy="32" r="1.5" fill="#2a1d16"/><circle cx="39" cy="32" r="1.5" fill="#2a1d16"/>
+    <path d="M32 34 L30 41 L33 41" stroke="rgba(0,0,0,0.3)" stroke-width="1.3" fill="none"/>
+    <path d="M26 46 Q32 44 38 46" stroke="#5a2a22" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+  // The steward: grey, bald, ink-stained and unbothered.
+  steward: `<rect width="64" height="64" rx="10" fill="#2b2a24"/>
+    <path d="M8 64 Q12 52 32 54 Q52 52 56 64Z" fill="#5a5446"/>
+    <path d="M24 47 L24 55 Q32 59 40 55 L40 47Z" fill="#c9a07c"/>
+    <path d="M16 30 Q16 12 32 12 Q48 12 48 30 Q48 49 32 52 Q16 49 16 30Z" fill="#c9a07c"/>
+    <path d="M16 31 Q15 22 19 19 M48 31 Q49 22 45 19" stroke="#9a9a92" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="25" cy="32" r="5" fill="none" stroke="#3b3a33" stroke-width="1.5"/><circle cx="39" cy="32" r="5" fill="none" stroke="#3b3a33" stroke-width="1.5"/>
+    <path d="M30 32 L34 32" stroke="#3b3a33" stroke-width="1.5"/>
+    <circle cx="25" cy="32" r="1.4" fill="#2a1d16"/><circle cx="39" cy="32" r="1.4" fill="#2a1d16"/>
+    <path d="M20 25 L29 25 M35 25 L44 25" stroke="#7a7a72" stroke-width="2" stroke-linecap="round"/>
+    <path d="M27 45 L37 45" stroke="#5a2a22" stroke-width="2" stroke-linecap="round"/>`,
+  // The narrator: the portal's shimmer.
+  narrator: `<rect width="64" height="64" rx="10" fill="#141a2e"/>
+    <circle cx="32" cy="32" r="20" fill="none" stroke="#6fd3ff" stroke-width="2" opacity="0.8"/>
+    <circle cx="32" cy="32" r="13" fill="none" stroke="#a98bff" stroke-width="2" opacity="0.8"/>
+    <circle cx="32" cy="32" r="6" fill="#e9f6ff" opacity="0.9"/>`,
+};
+
+export function npcPortrait(id, size = 64) {
+  return `<svg class="portrait" viewBox="0 0 64 64" width="${size}" height="${size}" role="img" aria-label="${id}">${NPC[id] ?? NPC.narrator}</svg>`;
 }

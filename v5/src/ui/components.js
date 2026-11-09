@@ -7,6 +7,7 @@ import { effectiveInjuries, mortalDanger, deathGateAt, killMarks, signatureOf, o
 import { classAbility } from '../narrate.js';
 import { portrait } from './portrait.js';
 import { powerParts } from '../run.js';
+import { WANTS } from '../quests.js';
 
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -22,7 +23,7 @@ export const ICON = {
 };
 
 export const BUILDING_ICON = {
-  bed: '🛏', lyre: '🎭', dumbbell: '🏋', cross: '⚕', eye: '👁', chain: '⛓', anvil: '⚒', paw: '🐾',
+  bed: '🛏', lyre: '🎭', dumbbell: '🏋', cross: '⚕', eye: '👁', chain: '⛓', anvil: '⚒', paw: '🐾', temple: '🏛', swords: '⚔', goblet: '🍷', forge: '🔥',
 };
 
 export function button(label, action, data = {}, blocker = null, cls = 'btn small') {
@@ -82,16 +83,16 @@ function signatureChip(f, opponent = null) {
 const signedNum = (n) => (n >= 0 ? `+${n}` : `−${-n}`);
 
 // In a fight, `fresh` wounds (the newest injuries) appear only at `freshAt` seconds, when the story reaches the blow.
-export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true } = {}) {
+export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true, notes = '', anchor = false } = {}) {
   const off = (slot) => (combatant?.disabled.includes(slot) ? ' off' : '');
   const trait = f.kindTrait ? TRAITS[f.kindTrait] : null;
   const clsName = f.cls ? CLASSES[f.cls].name + (f.weapon ? ` · ${WEAPONS[f.weapon].name}` : '') : '';
   const abilityDesc = f.cls === 'fighter' ? WEAPONS[f.weapon].desc : CLASSES[f.cls]?.desc;
   const injuries = f.injuries.map((i, n) => {
     const def = INJURY_BY_TAG[i.tag];
-    const weeks = i.weeksLeft ? ` · ${i.weeksLeft}w` : '';
+    const weeks = i.weeksLeft ? ` · ${Math.ceil(i.weeksLeft)}w` : '';
     const held = fresh && n >= f.injuries.length - fresh ? ` late" style="animation-delay:${freshAt}s` : '';
-    return `<span class="chip injury${held}" title="${esc(def.desc)}${i.weeksLeft ? ` Heals in ${i.weeksLeft} Medbay week(s).` : ''}">${ICON.injury}${def.name}${i.weight > 1 ? ' ×' + i.weight : ''}${weeks}</span>`;
+    return `<span class="chip injury${held}" title="${esc(def.desc)}${i.weeksLeft ? ` Heals in ${Math.ceil(i.weeksLeft)} Medbay week(s)${i.tag === 'fleshWound' ? ', or twice that on Rest' : ''}.` : ''}">${ICON.injury}${def.name}${i.weight > 1 ? ' ×' + i.weight : ''}${weeks}</span>`;
   }).join('');
   const decor = Object.entries(f.decor).filter(([, n]) => n > 0)
     .map(([k, n]) => `<span class="chip decor" title="${esc(DECOR[k].effect)}">${DECOR[k].name} ×${n}</span>`).join('');
@@ -107,9 +108,12 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
   const winsBy = Object.entries(f.arenaWins ?? {}).filter(([, n]) => n > 0);
   const totalWins = winsBy.reduce((n, [, w]) => n + w, 0) + ((f.titles ?? []).includes('Master of the Games') ? 1 : 0);
   const wins = totalWins ? `<span class="chip wins" title="Wins by arena: ${esc(winsBy.map(([t, n]) => `${CIRCUITS[t - 1]?.name ?? 'Grand Tournament'}: ${n}`).join(' · '))}">🏅 ${totalWins} win${totalWins === 1 ? '' : 's'}</span>` : '';
+  const want = f.want && WANTS[f.want.id] ? `<span class="chip want tip" title="${esc(`They want: ${WANTS[f.want.id].goal(f.want)}. Met: their spirits lift, +2 Renown and +2 XP; left too long, they sulk. The Quests panel shows the time left.`)}">💬 ${esc(WANTS[f.want.id].label(f.want))}</span>` : '';
+  const spy = f.spy ? `<span class="chip spy tip" title="The Emperor's spy you chose to keep. Whatever your house hides, the palace hears.">👁 Writes to the palace</span>` : '';
+  const bond = f.bond ? `<span class="chip bond" title="Bonded with ${esc(f.bond.name)}: +8 comfort while both are in the house. A partner 3+ levels higher teaches 1 XP a week. If one dies, the other grieves.">🤝 ${esc(f.bond.name)}</span>` : '';
   const kills = f.kills ? `<span class="chip kills" title="Opponents killed in the arena. ${KILL_MARKS.map((k) => `${k.at} kills: ${k.name} (${k.desc})`).join(' ')}">💀 ${f.kills}</span>` : '';
   return `
-    <article class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
+    <article ${anchor ? `id="card-${esc(f.id)}" ` : ''}class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
       ${tag ? `<div class="card-tag">${tag}</div>` : ''}
       <div class="card-head">
         <div class="id-row">${portrait(f, compact ? 44 : 52)}<div class="who"><h3><span class="nm">${esc(f.name)}</span></h3><div class="kind">${levelLine} ${KINDS[f.kind].name} · ${clsName}</div></div></div>
@@ -119,13 +123,13 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
         </div>
       </div>
       <div class="traits">
-        ${trait ? `<span class="chip trait${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
-        ${f.cls ? `<span class="chip ability${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
+        ${trait ? `<span class="chip trait tip${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
+        ${f.cls ? `<span class="chip ability tip${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
         ${signatureChip(f, opponent)}
-        ${f.humor ? `<span class="chip humor" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
-        ${wins}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
+        ${f.humor ? `<span class="chip humor tip" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
+        ${want}${spy}${wins}${bond}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
       </div>
-      ${compact ? '' : `<div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div>`}
+      ${compact ? '' : `<details class="more card-more" data-key="what-${esc(f.id)}"><summary>ⓘ What they do</summary><div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div></details>`}
       ${f.notice ? `<div class="notice">⚠ ${esc(f.notice)}</div>` : ''}
       <div class="status-row">
         <span class="gate-wrap">Death Gate ${deathGate(f)}</span>
@@ -134,7 +138,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
         ${f.renown ? `<span class="renown" title="Renown: fame from wins. +1 Gold per 5 on wins, but famous fighters expect better rooms.">★ ${f.renown}</span>` : ''}
       </div>
       ${injuries || decor ? `<div class="chips">${injuries}${decor}</div>` : ''}
-      ${actions}
+      ${notes}${actions}
     </article>`;
 }
 
@@ -151,18 +155,36 @@ function gearSummary(g) {
 // before a fighter turns Discontented (and stops training).
 function moraleChip(f, info = null) {
   const state = f.morale >= MORALE.inspired ? ['inspired', 'Inspired: +5% win chance'] : f.morale < MORALE.mutinous ? ['mutinous', 'Mutinous: refuses to fight'] : f.morale < MORALE.restless ? ['restless', "Discontented: won't train"] : ['content', 'Content'];
-  const why = info
-    ? ` Heading to ${info.target}: base ${MORALE.base}, comfort +${info.comfort} (Quarters +${MORALE.perQuartersLevel} a level, each decor item +${MORALE.perDecor}, Entertainment Room +${MORALE.perEntertainmentLevel} a level), fame expects −${info.expects} (${MORALE.expectationPerRenown} per Renown).`
+  const why = info?.revenant
+    ? ` A Revenant feels nothing: Morale settles at ${info.target} whatever the room.`
+    : info
+    ? ` Heading to ${info.target}: base ${MORALE.base}, comfort +${info.comfort} (Quarters +${MORALE.perQuartersLevel} a level, each decor item +3 to +7 by price, Entertainment Room +${MORALE.perEntertainmentLevel} a level), fame expects −${info.expects} (${MORALE.expectationPerRenown} per Renown).`
     : ' Comfort (Quarters, decor, Entertainment Room) raises it; fame raises expectations.';
   const sliding = info && f.morale >= MORALE.restless && info.target < MORALE.restless;
   return `<span class="morale ${state[0]}${sliding ? ' sliding' : ''}" title="Morale ${f.morale}/100. ${state[1]}.${why}${sliding ? ' Sliding towards Discontented: more comfort needed.' : ''}">☺ ${f.morale}${info && info.target !== f.morale ? ` → ${info.target}` : ''} <small>${sliding ? '⚠ Discontented soon' : state[1].split(':')[0]}</small></span>`;
 }
 
-const gearSpd = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].speed ?? 0), 0);
-// Gear effects that the badges don't show: injure chance and armor.
+export const gearSpd = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].speed ?? 0), 0);
+// Gear effects that the badges don't show: injure chance and armour.
 function gearBonus(f) {
   const items = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => GEAR[k]);
   const injure = items.reduce((n, g) => n + (g.injure ?? 0), 0);
   const guard = items.reduce((n, g) => n + (g.guard ?? 0), 0);
-  return [injure ? `+${injure / 1000}% to injure` : '', guard ? `−${guard / 1000}% to be injured (armor)` : ''].filter(Boolean).join(', ');
+  return [injure ? `+${injure / 1000}% to injure` : '', guard ? `−${guard / 1000}% to be injured (armour)` : ''].filter(Boolean).join(', ');
+}
+
+// Thumbs up or down (playtest #8: "more aligned, and tell the crowd's suggestion apart from your choices"): the crowd's
+// wish as a banner, then the two choices in equal columns, each with exactly what it does, marked with or against the crowd.
+export function mercyChoices({ title, blood, spare, kill }) {
+  const col = (choice, label, cls, effects) => {
+    const withCrowd = (choice === 'kill') === blood;
+    return `<div class="verdict ${cls}"><div class="verdict-tag ${withCrowd ? 'with' : 'against'}">${withCrowd ? 'The crowd\'s choice' : 'Against the crowd'}</div>
+      <button class="btn big ${cls === 'spare' ? 'good' : 'danger'}" data-action="mercy" data-choice="${choice}">${label}</button>
+      <ul class="verdict-effects">${effects.map((e) => `<li>${esc(e)}</li>`).join('')}</ul></div>`;
+  };
+  return `<div class="mercy-box">
+    <div class="mercy-title">${title}</div>
+    <div class="crowd-wish ${blood ? 'blood' : 'mercy'}"><span class="label">The crowd wants</span> ${blood ? '👎 Blood' : '👍 Mercy'}</div>
+    <div class="verdicts">${col('spare', '👍 Spare them', 'spare', spare)}${col('kill', '👎 Finish them', 'kill', kill)}</div>
+  </div>`;
 }

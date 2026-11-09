@@ -43,7 +43,7 @@ export function buildReport(run, match, error = null, context = {}) {
 
 export function parseReport(text) {
   const report = JSON.parse(text);
-  if (report?.kind !== REPORT_KIND) throw new Error('This is not a Bloodsport bug report.');
+  if (report?.kind !== REPORT_KIND) throw new Error('This is not a Blood and Circus bug report.');
   if (report.format > REPORT_FORMAT) throw new Error(`Report format ${report.format} is newer than this replayer (${REPORT_FORMAT}).`);
   return report;
 }

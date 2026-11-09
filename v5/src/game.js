@@ -3,9 +3,10 @@
 
 import { playRound, throwTowel, useSignature } from './fight.js';
 import {
-  boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom,
+  boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom, pray, reanimate, exhibition, host, enact,
   assignDecor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
-  recordMatchProgress, buyItem, useItem, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy,
+  recordMatchProgress, buyItem, useItem, placeBet, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy, checkQuests,
+  answerSummons, refuseSummons, rite,
 } from './run.js';
 
 // A finished match is settled at once (the fight screen shows the full report). Returns the summary when it settles.
@@ -28,6 +29,8 @@ export const GAME_ACTIONS = {
   'buy-decor': ({ run }, d) => { buyDecor(run, d.item); },
   'buy-item': ({ run }, d) => { buyItem(run, d.item); },
   'use-item': ({ run, match }, d) => { useItem(run, match, d.item); },
+  // Actions that settle no match return nothing: the page reads any result as a match summary (bug report: the Exhibition Ring crashed).
+  bet: ({ run, match }, d) => { placeBet(run, match, Number(d.amount)); },
   signature: ({ match }) => { useSignature(match); },
   mercy: ({ run }, d) => { resolveMercy(run, d.choice); },
   'assign-decor': ({ run }, d) => { assignDecor(run, d.id, d.item); },
@@ -38,6 +41,15 @@ export const GAME_ACTIONS = {
   unequip: ({ run }, d) => { unequip(run, d.id, d.slot); },
   'unequip-all': ({ run }) => { unequipAll(run); },
   perk: ({ run }, d) => { choosePerk(run, d.id, d.perk); },
+  pray: ({ run }, d) => { pray(run, d.id); },
+  reanimate: ({ run }, d) => { reanimate(run, d.id); },
+  host: ({ run }) => { host(run); },
+  enact: ({ run }, d) => { enact(run, d.policy); },
+  exhibition: ({ run }, d) => { exhibition(run, d.id, d.index); },
+  // The Emperor's summons (5.4.2): a dropdown sends a fighter with an order (index: 'yield' or 'death'); a button refuses.
+  summons: ({ run }, d) => { answerSummons(run, d.id, d.index); },
+  'refuse-summons': ({ run }) => { refuseSummons(run); },
+  rite: ({ run }, d) => { rite(run, d.id); }, // the Temple of Fortuna lifts an Afeared scar (5.4.2)
   surgeon: ({ run }, d) => { surgeon(run, d.id, Number(d.index)); },
   build: ({ run }, d) => { buildRoom(run, d.type); },
   upgrade: ({ run }, d) => { upgradeRoom(run, d.id); },
@@ -81,5 +93,7 @@ export const isGameAction = (name) => Object.hasOwn(GAME_ACTIONS, name);
 export function applyGameAction(state, name, data = {}) {
   const d = Object.fromEntries(Object.entries(data).filter(([k, v]) => k !== 'action' && v !== undefined).map(([k, v]) => [k, String(v)]));
   state.run.actions?.push(Object.keys(d).length ? [name, d] : [name]);
-  return GAME_ACTIONS[name](state, d);
+  const result = GAME_ACTIONS[name](state, d);
+  checkQuests(state.run); // a quest done by this action is noticed at once (5.4.0)
+  return result;
 }
