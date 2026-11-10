@@ -692,7 +692,9 @@ export function wantFor(run, f, id) {
     const g = run.roster.find((x) => x !== f && x.level >= 4 && !x.bond && x.kind !== 'revenant' && !(won.has(f.id) && won.has(x.id)));
     return g ? { name: g.name, of: g.id } : null;
   }
-  if (id === 'retire') return f.level >= 5 && (f.titles ?? []).length >= 2 && !retireBlocker(run, f.id) ? {} : null;
+  // Not the house's strongest: a champion mid-climb can't say yes, so the ask was no choice (playtest LLM-13).
+  if (id === 'retire') return f.level >= 5 && (f.titles ?? []).length >= 2 && !retireBlocker(run, f.id)
+    && run.roster.some((x) => x !== f && effectivePower(x) >= effectivePower(f)) ? {} : null;
   return null;
 }
 // At a month's start, perhaps a new want (its own dice, so nothing else shifts).
@@ -1761,7 +1763,7 @@ export function advanceWeek(run) {
   if (run.bouts) for (const tier of unlockedTiers(run)) if (tier < run.topTier && run.bouts[tier] === 'open') arenaMovesOn(run, tier);
   // The month's demand is judged now, before a new month can issue the next one (playtest #9: it was issued and judged at once).
   if (tournamentEnds) judgeDemand(run);
-  if (tournamentEnds && run.wager) loseWager(run, 'the house never fought its top bout');
+  if (tournamentEnds && run.wager) loseWager(run, 'the house never fought its top-arena tournament');
   rivalPoach(run); // the archrival buys the fighter it eyed, at the end of the month's first week (5.4.0)
   run.bouts = null;
   run.brackets = {};
@@ -1890,6 +1892,7 @@ function fortuneCard(run, rng, table) {
     season(run, rng, f);
     if (rarity === 'legendary') Object.assign(f, { legend: true, renown: FORTUNE.legendRenown, origin: 'A legend of the arena' });
     keepUp(run, f, rarity);
+    remember(run, f); // dealt, not only taken: a card passed over must not come back as an opponent (playtest LLM-13)
     return { kind, id: f.id, rarity, fighter: f };
   }
   if (kind === 'legend') {
@@ -1990,7 +1993,7 @@ export function chooseFortune(run, index, drop = null) {
     joinPlot(run, f);
   } else if (card.kind === 'wager') {
     run.wager = { winGold: card.winGold, winRenown: card.winRenown, lossGold: card.lossGold };
-    log(run, `Fortune: the Fates' wager is made. Win your top bout this month: +${card.winGold} Gold and +${card.winRenown} Renown. Lose or skip it: −${card.lossGold} Gold.`, 'event');
+    log(run, `Fortune: the Fates' wager is made. Win this month's top-arena tournament: +${card.winGold} Gold and +${card.winRenown} Renown. Lose or skip it: −${card.lossGold} Gold.`, 'event');
   } else applyBoon(run, card, title);
   return card;
 }
@@ -2048,7 +2051,7 @@ function relicRewards(run, fighter, won, summary) {
 }
 
 function settleWager(run, won, summary) {
-  if (!won) return loseWager(run, 'the top bout was lost', summary);
+  if (!won) return loseWager(run, 'the top-arena tournament was lost', summary);
   const w = run.wager;
   delete run.wager;
   summary.gold += w.winGold;
