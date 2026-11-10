@@ -7,6 +7,7 @@
 
 import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
+import { isMonthStart, isWinter } from '../src/calendar.js';
 import { coupBonus } from '../src/plot.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic, effectiveInjuries, signatureBlocker, useSignature } from '../src/fight.js';
 import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap, plotsFree } from '../src/ludus.js';
@@ -331,8 +332,21 @@ function answerSummonsBot(run, strategy) {
 export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxWeeks = 400, onWeek = null, ...opts } = {}) {
   const run = createRun(seed, opts.setup ?? {});
   let bouts = 0;
+  // Version 6 (phase 5): dead months, the enemy of "one more turn". A fight month is dead when it ends with nothing new:
+  // no match fought, no fighter, relic, gear, item, level, perk or building gained (Gold and Stress don't count).
+  const stamp = () => JSON.stringify([
+    run.history.filter((h) => !h.skipped && !h.forfeit).length, run.relics ?? [], run.roster.map((f) => [f.id, f.level ?? 1, f.perks?.length ?? 0, f.gear]),
+    run.buildings.map((b) => [b.type, b.level]), run.inventory, run.fallen.length,
+  ]);
+  let months = 0, deadMonths = 0, monthStamp = null, stampWeek = -1;
   while (run.status === 'active' && run.week < maxWeeks) {
     onWeek?.(run);
+    // Stamped once a month, after the month's draft and event are settled.
+    if (isMonthStart(run.week) && !isWinter(run.week) && !run.fortune && !run.event && !run.bouts && stampWeek !== run.week) {
+      if (monthStamp !== null) { months++; if (stamp() === monthStamp) deadMonths++; }
+      monthStamp = stamp();
+      stampWeek = run.week;
+    }
     if (run.fortune) {
       if (opts.fortune === false) passFortune(run);
       else draftFortune(run, strategy);
@@ -374,6 +388,10 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
     bouts,
     fought: fought.length,
     deaths: run.fallen.length,
+    months,
+    deadMonths,
+    fightMonths: Array.from({ length: run.week }, (_, w) => !isWinter(w)).filter(Boolean).length / 4, // the career's length in fight months
+    relics: [...(run.relics ?? [])],
     favor: run.favor,
     tier: run.topTier,
     endReason: run.endReason,

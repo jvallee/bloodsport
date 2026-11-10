@@ -1,12 +1,13 @@
 // Text interface to a Blood and Circus career: drives the pure modules in src/ with no DOM, one command per line.
-// Usage: node scripts/play-text.js [--seed N] [--short] [--daily YYYY-MM-DD] [--last N] < commands.txt
-//   --short   a short career (Tournament → Boss in each arena). --daily DAY: that day's Emperor's Challenge.
+// Usage: node scripts/play-text.js [--seed N] [--long] [--legacy] [--heat N] [--patron ID] [--daily YYYY-MM-DD] [--last N] < commands.txt
+//   A season by default (Tournament → Boss in each arena); --long: the Long Road. --daily DAY: that day's Emperor's Challenge.
+//   --legacy: every Legacy unlock (the relics, legends, the Oracle, the fourth Fortune card); --heat N: Heat 1–5; --patron ID.
 //   --seed N  career seed (default 1). Careers replay exactly, so a player can append commands and re-run.
 //   --last N  print only the output of the last N commands (earlier ones still run, unrendered).
 // Type `help` for the command list.
 
 import { createInterface } from 'node:readline';
-import { dailySeed, dailySetup } from '../src/legacy.js';
+import { dailySeed, dailySetup, ALL_UNLOCKS } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
 import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
@@ -833,7 +834,10 @@ async function main() {
   };
   const dailyAt = argv.indexOf('--daily');
   const day = dailyAt >= 0 ? argv[dailyAt + 1] : null;
-  const session = day ? createSession(dailySeed(day), { setup: dailySetup(day) }) : createSession(opt('--seed', 1), { setup: { short: argv.includes('--short') } });
+  const str = (name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : null);
+  // Version 6: a season by default, as in the game (--long for the Long Road); --legacy plays with every Legacy unlock.
+  const setup = { short: !argv.includes('--long'), heat: opt('--heat', 0), patron: str('--patron'), ...(argv.includes('--legacy') ? { unlocks: ALL_UNLOCKS } : {}) };
+  const session = day ? createSession(dailySeed(day), { setup: dailySetup(day) }) : createSession(opt('--seed', 1), { setup });
   const last = opt('--last', Infinity);
   const lines = [];
   for await (const line of createInterface({ input: process.stdin })) {

@@ -70,6 +70,8 @@ export function bossCurve(results) {
   return Object.fromEntries(Object.entries(by).map(([t, v]) => [t, v.w / v.n]));
 }
 
+const SEASON = { short: true };
+
 // Every career and simulation the gates need, as jobs for scripts/pool.js (all seeded: the order of play doesn't matter).
 export function gateJobs({ careers = 200, quick = false } = {}) {
   // v6, the hidden plot: bots that play it (half as many careers, to keep the check quick). Short careers likewise.
@@ -79,13 +81,15 @@ export function gateJobs({ careers = 200, quick = false } = {}) {
     // The two long simulations first, so they don't finish last on their own.
     { type: 'split', group: 'split', opts: { n: quick ? 800 : 3000 } },
     { type: 'tactics', group: 'tactics', opts: { n: quick ? 1500 : 4000 } },
-    ...group('careful', careers, 'careful'),
-    ...group('reckless', careers, 'reckless'),
-    ...group('rebel', plotN, 'careful', { plot: 'rebel' }),
-    ...group('loyalist', plotN, 'careful', { plot: 'loyalist' }),
-    ...group('short', plotN, 'careful', { setup: { short: true } }), // fun idea #2: winnable, and quicker than a full one
+    // Version 6, phase 5 (docs/plan-v6-phase5.md): every group plays a season, the career a player starts by default;
+    // the 'long' group plays the Long Road. Until alpha.4 the groups played the Long Road and 'short' played seasons.
+    ...group('careful', careers, 'careful', { setup: SEASON }),
+    ...group('reckless', careers, 'reckless', { setup: SEASON }),
+    ...group('rebel', plotN, 'careful', { plot: 'rebel', setup: SEASON }),
+    ...group('loyalist', plotN, 'careful', { plot: 'loyalist', setup: SEASON }),
+    ...group('long', plotN, 'careful', { setup: { short: false } }),
     // Version 6 (docs/plan-v6-phase3.md): every group above plays a first career; this one has every Legacy unlock.
-    ...group('legacy', plotN, 'careful', { setup: { unlocks: ALL_UNLOCKS, patron: 'augur' } }),
+    ...group('legacy', plotN, 'careful', { setup: { ...SEASON, unlocks: ALL_UNLOCKS, patron: 'augur' } }),
   ];
 }
 
@@ -97,10 +101,10 @@ export async function runGates({ careers = 200, quick = false, tunables = {} } =
   bar.expect(jobs);
   const results = await runJobs(jobs, { tunables, onDone: bar.tick });
   const of = (g) => results.filter((_, i) => jobs[i].group === g);
-  return gatesFrom({ careful: of('careful'), reckless: of('reckless'), rebel: of('rebel'), loyalist: of('loyalist'), short: of('short'), legacy: of('legacy'), split: of('split')[0], tactics: of('tactics')[0] });
+  return gatesFrom({ careful: of('careful'), reckless: of('reckless'), rebel: of('rebel'), loyalist: of('loyalist'), long: of('long'), legacy: of('legacy'), split: of('split')[0], tactics: of('tactics')[0] });
 }
 
-export function gatesFrom({ careful, reckless, rebel, loyalist, short, legacy, split, tactics }) {
+export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, split, tactics }) {
   const rate = (rs) => rs.filter((r) => r.won).length / rs.length;
   const deaths = (rs) => avg(rs.map((r) => r.deaths));
   const curve = bossCurve(careful);
@@ -112,6 +116,14 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, short, legacy, s
   // Unlock cadence: careers per Legacy level over the first five levels, from the careful bot's first-career XP.
   const sameSeeds = careful.slice(0, loyalist.length); // careful's careers on the loyalist's seeds (1000 + i, in order)
   const meanXp = avg(careful.map((r) => careerXp(r.run).total));
+  // Version 6, phase 5: a won season's length in fight months; dead months; the most common relic among won careers.
+  const wonMonths = careful.filter((r) => r.won).length ? avg(careful.filter((r) => r.won).map((r) => r.fightMonths)) : 99;
+  const dead = careful.reduce((n, r) => n + r.deadMonths, 0) / Math.max(1, careful.reduce((n, r) => n + r.months, 0));
+  const wins = [...careful, ...legacy].filter((r) => r.won);
+  const relicCount = {};
+  for (const r of wins) for (const id of new Set(r.relics)) relicCount[id] = (relicCount[id] ?? 0) + 1;
+  const [topRelic, topN] = Object.entries(relicCount).sort((a, b) => b[1] - a[1])[0] ?? ['none', 0];
+  const topShare = wins.length ? topN / wins.length : 0;
   const perLevel = [1, 2, 3, 4, 5].reduce((s, l) => s + levelCost(l), 0) / 5 / meanXp;
   const gates = [
     // Version 6, phase 3: the careful bot plays a first career (no unlocks); 20–45% became 15–35% (docs/plan-v6-one-more-career.md).
@@ -129,8 +141,13 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, short, legacy, s
     // Version 6, alpha.3: on the same seeds (the plot groups play the first half of careful's seeds), so seed luck cancels out.
     { name: 'The evil road is easier: the loyalist wins 5–20 points more often than careful (same seeds)', value: rate(loyalist) - rate(sameSeeds), pass: rate(loyalist) - rate(sameSeeds) >= 0.05 && rate(loyalist) - rate(sameSeeds) <= 0.2, fmt: 'pctDiff' },
     { name: 'The coup is rare but real: 5–25% of rebel careers', value: ending(rebel, 'coup'), pass: ending(rebel, 'coup') >= 0.05 && ending(rebel, 'coup') <= 0.25, fmt: 'pct' },
-    { name: 'Short careers are winnable (careful 20–55%) and a won one is at least a fifth quicker', value: rate(short), pass: rate(short) >= 0.2 && rate(short) <= 0.55 && winWeeks(short) <= 0.8 * winWeeks(careful), fmt: 'pct' },
+    // Phase 5: was "Short careers are winnable (careful 20–55%) and a won one is at least a fifth quicker" (seasons against
+    // the Long Road). Seasons are now the main group, so the Long Road keeps a gate of its own; the speed test is unchanged.
+    { name: 'The Long Road is winnable (careful 15–45%) and a won season is at least a fifth quicker', value: rate(long), pass: rate(long) >= 0.15 && rate(long) <= 0.45 && winWeeks(careful) <= 0.8 * winWeeks(long), fmt: 'pct' },
+    { name: 'Season length: a won season takes 12–20 fight months', value: wonMonths, pass: wonMonths >= 12 && wonMonths <= 20, fmt: 'num' },
+    { name: 'Dead turns: under 15% of fight months end with nothing new', value: dead, pass: dead < 0.15, fmt: 'pct' },
+    { name: `Builds: no relic in over 50% of won careers (top: ${topRelic})`, value: topShare, pass: topShare <= 0.5, fmt: 'pct' },
     { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
   ];
-  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, short, legacy, meanXp };
+  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, long, legacy, meanXp, wonMonths, dead };
 }

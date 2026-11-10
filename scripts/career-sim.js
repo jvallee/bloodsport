@@ -11,7 +11,7 @@ const tunables = args.includes('--tune') ? JSON.parse(args[args.indexOf('--tune'
 const pct = (x) => `${(x * 100).toFixed(0)}%`;
 const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
-const { gates, careful, reckless, split, rebel, loyalist, short, legacy, meanXp } = await runGates({ careers: N, tunables });
+const { gates, careful, reckless, split, rebel, loyalist, long, legacy, meanXp, wonMonths, dead } = await runGates({ careers: N, tunables });
 
 for (const [name, results] of [['CAREFUL', careful], ['RECKLESS', reckless]]) {
   const wins = results.filter((r) => r.won);
@@ -41,7 +41,9 @@ const fmt = (g) => ({ pct: pct(g.value), pctDiff: `${g.value >= 0 ? '+' : ''}${(
 const endings = (rs) => Object.entries(rs.reduce((o, r) => ({ ...o, [r.run.ending ?? (r.won ? 'won' : 'lost')]: (o[r.run.ending ?? (r.won ? 'won' : 'lost')] ?? 0) + 1 }), {})).map(([k, n]) => `${k} ${Math.round((100 * n) / rs.length)}%`).join(', ');
 console.log(`\nThe hidden plot (${rebel.length} careers each)\n  Rebel     ${endings(rebel)}\n  Loyalist  ${endings(loyalist)}`);
 const meanWeeks = (rs) => Math.round(rs.reduce((n, r) => n + r.weeks, 0) / Math.max(1, rs.length));
-console.log(`\nShort careers (${short.length}): won ${Math.round(100 * short.filter((r) => r.won).length / short.length)}%, ${meanWeeks(short)} weeks on average, ${meanWeeks(short.filter((r) => r.won))} when won (full careers: ${meanWeeks(careful)}, ${meanWeeks(careful.filter((r) => r.won))} when won)`);
+// Version 6, phase 5: the groups above play seasons (the default career); the Long Road is a group of its own.
+console.log(`\nSeasons: ${meanWeeks(careful)} weeks on average, ${meanWeeks(careful.filter((r) => r.won))} when won (${wonMonths.toFixed(1)} fight months); dead months ${(100 * dead).toFixed(1)}%`);
+console.log(`The Long Road (${long.length}): won ${Math.round(100 * long.filter((r) => r.won).length / long.length)}%, ${meanWeeks(long)} weeks on average, ${meanWeeks(long.filter((r) => r.won))} when won`);
 console.log(`\nLegacy: a first career earns ${meanXp.toFixed(0)} XP on average; with a full Legacy (${legacy.length} careers) careful wins ${Math.round(100 * legacy.filter((r) => r.won).length / legacy.length)}%`);
 console.log('\nGates');
 for (const g of gates) console.log(`  ${g.pass ? 'PASS' : 'FAIL'}  ${g.name}: ${fmt(g)}`);
