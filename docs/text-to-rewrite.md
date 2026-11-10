@@ -910,5 +910,15 @@ Version 6's new words. Rules text (numbers) must stay accurate; names and flavou
 | [src/data.js](../src/data.js) `TACTICS.allIn` | "All In" and its description ("Only at the Death Gate: … The crowd loves it."). |
 | [src/ui/fightView.js](../src/ui/fightView.js) `TELLS` | The Oracle's tells: "… rolls their shoulders and edges forward: they mean to Press.", "…'s eyes flick to your off side: they mean to Feint.", "… settles low behind their guard: they mean to Guard.", and "Your Oracle reads it right about N times in 10." |
 | [src/ui/fightView.js](../src/ui/fightView.js) `hypeMeter` | "📣 The crowd is with …: +1 Power this round. Guarding will cool them." |
-| [src/ui/fightView.js](../src/ui/fightView.js) `controls`, `allInButton` | The Death Gate line "Or go 🔥 All In: a better chance to take the round, a worse one to walk out.", "about N% death". |
+| [src/ui/fightView.js](../src/ui/fightView.js) `controls`, `allInButton` | The Death Gate line "Or go 🔥 All In: a better chance to take the round, but lose it and they fall.", "about N% death". |
 | [src/ui/fightView.js](../src/ui/fightView.js) `roundBanner`, `fightView` | The decider: "Decider!", "Everything on one blow…". |
+
+**Balance and playtest fixes** (6.0.0-beta)
+
+| Where | Text |
+|---|---|
+| [src/ui/fightView.js](../src/ui/fightView.js) `tacticPicker` | The tell's forecast: "Weighing the tell against their temper: about N% they Press." (the text port says the same). |
+| [src/narrate.js](../src/narrate.js) `VERB.allIn`, the `c.allIn` lines | "goes All In"; the fall: "All In: … lost the round, and with it everything. … falls." and "… gave everything, and it was not enough. … falls and does not rise." |
+| [src/ui/views.js](../src/ui/views.js) `fortunePanel` | The relic swap: "Your house holds 6 relics. Lay one down for it:", "Lay down …". |
+| [src/run.js](../src/run.js) `chooseFortune` | House log: "Fortune: … is laid down." |
+| [src/tutorial.js](../src/tutorial.js) steps `jobs`, `endweek` | The training gain now follows the career ("+2 Power" in a season, "+1 Power" on the Long Road); the words around it are unchanged. |
