@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## 6.0.0-alpha.4 (in progress): fights with a crowd
+## 6.0.0-alpha.4: fights with a crowd
 
 - **The crowd is live.** Press and drama fill the hype meter (Press fills it three times faster than before), and now **Guard drains it**. When a round starts with the crowd past the mark on the meter, your fighter fights it with **the crowd behind them: +1 Power**, and the meter glows.
 - **Reading the opponent:** with an Oracle, the opponent gives away what they mean to do each round (a tell). It's usually right (7 in 10; 8–9 in 10 with a better Oracle), never always. Auto-play's suggestion weighs it.

@@ -593,7 +593,7 @@ export const REANIMATE = { price: 6, perTier: 4, power: -1, morale: 50 };
 // risen: a Revenant's first fight back, when the crowd chants the name it buried (fun idea, 5.3.0).
 // Version 6 (phase 4): the meter is live. Guard drains it (never below 0) and All In fills it; at `favour` or more when a
 // round starts, the crowd is with your fighter: +`favourPower` Power that round. Press 5 → 15 (alpha.4; table in docs/fight-rules.md).
-export const HYPE = { risen: 20, upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 15, guard: -10, allIn: 25, favour: 30, favourPower: 1, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
+export const HYPE = { risen: 20, upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 15, guard: -10, allIn: 25, favour: 35, favourPower: 1, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
 // Version 6 (phase 4): the opponent's tell. With an Oracle you see what they mean to do this round; it is right with
 // `accuracy[Oracle level]` (a false tell names one of the other two tactics).
 export const INTENT = { accuracy: [0, 0.7, 0.85] };

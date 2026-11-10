@@ -738,7 +738,7 @@ All numbers PLACEHOLDER (`LEGACY`, `LEGACY_LEVELS`, `HEAT` in src/data.js; `care
 ## 6.0.0-alpha.4: the crowd, tells, All In (design: docs/plan-v6-phase4.md)
 
 **The crowd (`HYPE`).** Hype is read from the rounds (`hypeOf`), floored at 0 after each round. Guard: −10. All In: +25.
-Press: 5 → **15**. At **30** or more (`HYPE.favour`) when a round starts, your fighter has **+1 Power** that round
+Press: 5 → **15**. At **35** or more (`HYPE.favour`) when a round starts, your fighter has **+1 Power** that round
 (`m.a.roar`, set at the end of each round; "The crowd" in the Power mods). The end-of-fight payout is unchanged.
 
 Measured on 3,000 fights between Market fighters (opponents with humors), share of Round 2 and 3 starts with the crowd's
@@ -754,8 +754,20 @@ favour, and your fighter's match wins:
 | 15 / 35 / +2 | 21%, 55.3% | 4%, 60.3% | |
 | 15 / 30 / +2 | 49%, 59.7% | 12%, 62.2% | |
 
-Chosen: pressing wins the crowd in half of later rounds, which is worth it (+5 points over Steady) without making
-"always Press" as good as reading the opponent. +2 Power made always-Press nearly match the suggestion.
+First choice: 15 / 30 / +1 (pressing wins the crowd in half of later rounds, +5 points over Steady, still below reading
+the opponent; +2 Power made always-Press nearly match the suggestion). It passed the check, but with the careful first
+career at 35%, the top of its gate. Whole careers (300 careful first careers, seeds 1000+, probe settings, which read a few
+points high):
+
+| Favour mark | Careful wins |
+|---|---|
+| no crowd bonus (+0) | 30% |
+| 30 | 40% |
+| **35 (chosen)** | 32% |
+| 40 | 32% |
+
+Chosen: **35**. The crowd is still a real reward for pressing (about 1 in 5 later rounds when always pressing), and the
+first career keeps room under its ceiling.
 
 **The opponent's intent and tells (`INTENT`).** The opponent's tactic for the coming round is drawn before you choose
 (`opponentIntent`), with the same draw from the fight's dice at the same point as before, so fights without an Oracle play
@@ -780,3 +792,8 @@ counter triangle, never an opponent's pick, never suggested. Bots don't use it. 
 
 With a small self cost, All In beat Steady on both counts (it wins more rounds, so fewer losses to die in). Chosen: a real
 gamble between Guard (30% / 6%), All In (44% / 15%) and capitulating (0% / 0%).
+
+**The check (alpha.4, 300 careers, 150 per plot, short and full-Legacy groups):** first career 32%, full Legacy 50% (was 41%:
+the Oracle's tells help the Legacy group, which starts with an Oracle), cadence 1.17 careers a level (77 XP a first career),
+reading the opponent +8 over Steady and +6 over always-Press, loyalist +14 on the same seeds, coup 17%, treason 0%, short
+careers 37% (a won season 105 weeks against 147), reckless 0% with 3.23 deaths: 15/15.
