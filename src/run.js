@@ -19,7 +19,7 @@ import { EVENTS, EVENT_BY_ID, EVENT_CHANCE, MOOD_WEEKS, EVENT_MEMORY, choiceLabe
 import { isTournamentWeek, isMonthStart, formatDate, dateOf, WEEKS_PER_YEAR, festivalOn, weeksUntilTournament, isWinter } from './calendar.js';
 import {
   prestigeLevelFor, rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, healRate, decorCap, liaisonLevel, stressRelief,
-  maxLevel, effectAt, build, upgrade,
+  maxLevel, effectAt, build, upgrade, oracleLevel,
 } from './ludus.js';
 
 export const SAVE_VERSION = 3;
@@ -950,6 +950,7 @@ export function matchOptions(run, f, tier = run.topTier) {
     // v6: in the coup Final, the people you freed are voices in the crowd for your champion.
     rebels: tier === GRAND_TIER && run.plot?.coup && !run.plot.ended && f.id === run.plot.champion ? coupBonus(run) : 0,
     relics: relicFight(run, f, { boss: boutFor(run, tier).boss }), // version 6
+    oracle: oracleLevel(run), // version 6 (phase 4): the opponent's tells
   };
 }
 

@@ -2,6 +2,12 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 6.0.0-alpha.4 (in progress): fights with a crowd
+
+- **The crowd is live.** Press and drama fill the hype meter, and now **Guard drains it**. When a round starts with the crowd at half or more, your fighter fights it with **the crowd behind them: +1 Power**.
+- **Reading the opponent:** with an Oracle, the opponent gives away what they mean to do each round (a tell). It's usually right, never always. Auto-play's suggestion weighs it.
+- **All In** at the Death Gate: a last-ditch round with a big bonus to win and wound, at a higher risk of being wounded. (Coming to the fight screen next.)
+
 ## 6.0.0-alpha.3: every career counts
 
 - **Legacy XP after every career, win or lose.** The end screen shows what you earned and why (a career, each arena climbed, each Boss beaten, kills, Titles, a win, how the plot ended), fills your **Legacy level** bar, and shows what the new level unlocks.

@@ -79,7 +79,12 @@ export const TACTICS = {
   press: { name: 'Press', icon: '🗡', desc: '+3% win chance and +5% chance to injure, but +7.5% chance to be injured.', win: 3000, injure: 5000, self: 7500 },
   guard: { name: 'Guard', icon: '🛡', desc: '−15% chance to be injured, −5% win chance.', win: -5000, self: -15000 },
   feint: { name: 'Feint', icon: '↯', desc: '+10% win chance if you strike first this round (faster fighters strike first more often).', firstStrike: 10000 },
+  // Version 6 (phase 4): the clutch choice, offered only at the Death Gate. Outside the counter triangle; never an opponent's
+  // pick, never suggested. Words are PLACEHOLDER for the designer.
+  allIn: { name: 'All In', icon: '🔥', clutch: true, desc: 'Only at the Death Gate: +15% win chance and +10% chance to injure, but +10% chance to be injured. The crowd loves it.', win: 15000, injure: 10000, self: 10000 },
 };
+// The tactics of the counter triangle (what the picker offers every round, and what opponents choose from).
+export const ROUND_TACTICS = Object.keys(TACTICS).filter((k) => !TACTICS[k].clutch);
 export const COUNTERS = { press: 'feint', feint: 'guard', guard: 'press' }; // key beats value
 export const COUNTER = { win: 10000 }; // win chance for the side whose tactic counters the other's
 
@@ -586,7 +591,12 @@ export const LOUNGE = {
 // `morale` whatever the room (never Inspired, never Discontented). The same body can't be raised twice.
 export const REANIMATE = { price: 6, perTier: 4, power: -1, morale: 50 };
 // risen: a Revenant's first fight back, when the crowd chants the name it buried (fun idea, 5.3.0).
-export const HYPE = { risen: 20, upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 5, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
+// Version 6 (phase 4): the meter is live. Guard drains it (never below 0) and All In fills it; at `favour` or more when a
+// round starts, the crowd is with your fighter: +`favourPower` Power that round.
+export const HYPE = { risen: 20, upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 5, guard: -10, allIn: 25, favour: 50, favourPower: 1, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
+// Version 6 (phase 4): the opponent's tell. With an Oracle you see what they mean to do this round; it is right with
+// `accuracy[Oracle level]` (a false tell names one of the other two tactics).
+export const INTENT = { accuracy: [0, 0.7, 0.85] };
 export const BOND = { comfort: 8, mentorGap: 3, mentorXp: 1, grief: -20 };
 // bloodiedKills (5.4.0, the designer): a win where the opponent dies also meets the Bloodied Victory demand.
 export const DEMAND = { bloodiedKills: true, chance: 0.5, fromWeek: 8, favor: 2, goldPerTier: 2, missFavor: -4 }; // 5.3.0: was +4 / 4 Gold × tier / −2 (swept once demands worked: see docs/fight-rules.md)

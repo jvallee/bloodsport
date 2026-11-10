@@ -1,8 +1,8 @@
 // 3-Round Power-Delta fight engine (design doc Tab 4 & 6, docs/fight-rules.md).
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
-import { next, rollE5, d100, d6, pick, createRng } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG, HYPE } from './data.js';
+import { next, rollE5, d100, d6, pick, createRng, deriveSeed } from './rng.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG, HYPE, INTENT, ROUND_TACTICS } from './data.js';
 import { Refused } from './errors.js';
 import { relicMods } from './fortune.js';
 
@@ -80,6 +80,25 @@ export function opponentTactic(m, round) {
   return 'steady';
 }
 
+// Version 6 (phase 4): what the opponent means to do in the coming round, decided before you choose and kept on the match.
+// It is the same draw from the fight's dice at the same moment as before (nothing draws in between), so a fight replays
+// the same whether or not the screen reads it early. With an Oracle (`m.oracle`) there's a tell: right with
+// INTENT.accuracy, otherwise one of the other two tactics. Tells draw from their own stream (`m.tells`).
+export function opponentIntent(m, round = m.round + 1) {
+  if (m.b.intent?.round === round) return m.b.intent;
+  const stance = opponentTactic(m, round);
+  let tell = null;
+  if (m.tells && humorOf(m.b)) {
+    const others = ROUND_TACTICS.filter((k) => k !== 'steady' && k !== stance);
+    tell = next(m.tells) < tellAccuracy(m) ? stance : pick(m.tells, others);
+  }
+  m.b.intent = { round, stance, tell };
+  return m.b.intent;
+}
+export const tellAccuracy = (m) => INTENT.accuracy[Math.min(m.oracle ?? 0, INTENT.accuracy.length - 1)];
+// The tell for the coming round, or null (no Oracle, or an opponent without habits).
+export const opponentTell = (m) => (m.tells && !m.over ? opponentIntent(m).tell : null);
+
 // What the opponent is likely to do this round, as { tactic: probability }.
 export function opponentOdds(m) {
   const h = humorOf(m.b);
@@ -102,7 +121,7 @@ export function suggestTactic(m) {
   const round = m.round + 1;
   const fest = m.a.festival?.tactic ?? {};
   if (!humorOf(m.b)) return Object.keys(fest)[0] ?? 'steady'; // nothing to read: take the festival's favour, if any
-  const odds = opponentOdds(m);
+  const odds = withTell(opponentOdds(m), opponentTell(m), tellAccuracy(m));
   const faster = computeSpeed(m.a, round).total - computeSpeed(m.b, round).total;
   const pFirst = faster > 2 ? 0.8 : faster < -2 ? 0.2 : 0.5;
   const value = (k) => {
@@ -114,7 +133,15 @@ export function suggestTactic(m) {
     }
     return v;
   };
-  return Object.keys(TACTICS).reduce((best, k) => (value(k) > value(best) ? k : best), 'steady');
+  return ROUND_TACTICS.reduce((best, k) => (value(k) > value(best) ? k : best), 'steady');
+}
+
+// The opponent's habits, updated by a tell that is right with `acc` (Bayes: a false tell names one of the other two).
+export function withTell(odds, tell, acc) {
+  if (!tell) return odds;
+  const post = Object.fromEntries(Object.entries(odds).map(([k, p]) => [k, p * (k === tell ? acc : (1 - acc) / 2)]));
+  const total = Object.values(post).reduce((a, b) => a + b, 0);
+  return total > 0 ? Object.fromEntries(Object.entries(post).map(([k, p]) => [k, p / total])) : odds;
 }
 
 // Scars that apply against this opponent's style, and Battle-Hardened (always).
@@ -185,6 +212,7 @@ export function computePower(c, opp, round, raw = false) {
   if (c.scouted) mods.push({ source: 'Scouted', value: c.scouted });
   if (c.challenger) mods.push({ source: 'Challenger', value: c.challenger });
   if (c.grudge) mods.push({ source: c.grudge > 0 ? 'Feud' : 'Owes you a life', value: c.grudge });
+  if (c.roar) mods.push({ source: 'The crowd', value: HYPE.favourPower }); // version 6: the crowd's favour
   for (const b of c.boosts ?? []) if (b.round === round && b.power) mods.push({ source: b.name, value: b.power });
   for (const r of relicMods(c, round, effectiveInjuries(f) >= 1)) if (r.power) mods.push({ source: r.name, value: r.power });
   for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
@@ -409,7 +437,7 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
 // Debuffs hit your fighter (A); Blood Moon hits both; Crowd Favourite boosts the opponent (B).
 const BOTH_SIDES = ['bloodMoon', 'crowdFavorite', 'lions', 'emperorsGaze'];
 
-export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null }) {
+export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, oracle = 0 }) {
   const m = {
     a: makeCombatant(a, 'A', debuff),
     b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
@@ -428,6 +456,11 @@ export function createMatch({ a, b, rng, debuff = null, overtrained = false, sco
   // Version 6: the house's relics, for your fighter (a) and against the opponent (b).
   if (relics?.a?.length) m.a.relics = relics.a;
   if (relics?.b?.length) m.b.relics = relics.b;
+  // Version 6: an Oracle reads the opponent's tells, from a stream of its own (seeded without drawing from the fight's dice).
+  if (oracle > 0) {
+    m.oracle = oracle;
+    m.tells = createRng(deriveSeed(rng.state ?? 0, 41));
+  }
   // Scouted: opponents who have studied your fighter fight them with extra Power.
   if (scouted) m.b.scouted = scouted;
   // Challenger: famous fighters draw tougher opponents in your top arena.
@@ -437,6 +470,7 @@ export function createMatch({ a, b, rng, debuff = null, overtrained = false, sco
     m.a.overtrained = true;
     m.preMatch.push({ side: 'A', source: 'Overtrained', disabled: disableRandom(m.a, 1, rng) });
   }
+  m.a.roar = hypeOf(m) >= HYPE.favour; // a Revenant's chant alone isn't enough, but the rule is the same as every round's
   return m;
 }
 
@@ -514,15 +548,17 @@ const opponentUnleashes = (m, round) => opponentHasSignature(m.b.f, m.boss, m.ea
 
 export function playRound(m, { stance = 'steady' } = {}) {
   if (m.over) throw new Error('The match is over.');
+  if (TACTICS[stance]?.clutch && !mortalDanger(m.a)) throw new Refused(`${TACTICS[stance].name} is only for the Death Gate.`);
   const round = (m.round += 1);
   const { a: A, b: B, rng } = m;
   const r = { round, checks: [], endEffects: [] };
   if (opponentUnleashes(m, round)) applySignature(B, A, round);
   r.signatures = [A, B].filter((c) => c.sigRound === round).map((c) => ({ side: c.side, name: SIGNATURES[c.f.cls].name }));
 
-  // Step 0 — tactics: yours as chosen, the opponent's from its humor.
+  // Step 0 — tactics: yours as chosen, the opponent's from its humor (decided before you chose: opponentIntent).
   A.stance = TACTICS[stance] ? stance : 'steady';
-  B.stance = opponentTactic(m, round);
+  B.stance = opponentIntent(m, round).stance;
+  r.tell = m.b.intent.tell;
   r.stances = { A: A.stance, B: B.stance };
   r.counter = COUNTERS[A.stance] === B.stance ? 'A' : COUNTERS[B.stance] === A.stance ? 'B' : null;
 
@@ -582,6 +618,9 @@ export function playRound(m, { stance = 'steady' } = {}) {
   } else {
     applyRoundEnd(m, r);
   }
+  // Version 6: the crowd's favour for the coming round, from the hype so far.
+  m.a.roar = !m.over && hypeOf(m) >= HYPE.favour;
+  r.roar = m.a.roar;
   return r;
 }
 
@@ -591,6 +630,7 @@ export function deathRisk(m, stance = 'steady', n = 400) {
   if (m.over || !mortalDanger(m.a)) return 0;
   const { rng, ...rest } = m;
   const base = structuredClone(rest);
+  delete base.b.intent; // the risk is over what they might do, not what they will (a tell is no promise)
   const dice = createRng(9000 + m.round);
   let deaths = 0;
   for (let i = 0; i < n; i++) {
@@ -610,6 +650,9 @@ export function hypeOf(m) {
     for (const c of r.checks ?? []) if (c.attacker === 'A' && c.injury) h += c.injury.tag === 'death' ? HYPE.kill : HYPE.wound;
     if (r.signatures?.some((x) => x.side === 'A')) h += HYPE.signature;
     if (r.stances?.A === 'press') h += HYPE.press;
+    if (r.stances?.A === 'guard') h += HYPE.guard; // version 6: caution bores them
+    if (r.stances?.A === 'allIn') h += HYPE.allIn;
+    h = Math.max(0, h);
   }
   if (m.over && m.result?.winner === 'A' && m.rounds?.[0]?.winner === 'B') h += HYPE.comeback;
   return Math.min(HYPE.max, h);
