@@ -17,7 +17,7 @@ import {
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom, recruitPrice,
   buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, resolveMercy,
   betOdds, betCap, betBlocker, placeBet, hostBlocker, host, enactBlocker, enact, raisable, reanimateBlocker, reanimate,
-  summonsBlocker, answerSummons, refuseSummons, effectivePower, chooseFortune, fortuneBlocker, passFortune,
+  summonsBlocker, answerSummons, refuseSummons, effectivePower, chooseFortune, fortuneBlocker, passFortune, isChampionOf,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
 import { RELICS, perkTags } from '../src/fortune.js';
@@ -268,11 +268,12 @@ function carefulBouts(run, n, opts) {
     playMatch(run, best.f, top, opts.towel !== false, opts.items !== false, 'smart', opts.bet !== false);
   }
   if (run.status !== 'active' || opts.lowerArenas === false) return;
-  // Lower arenas: send free fighters where the fight is winnable but not a crushing mismatch.
+  // Lower arenas: send free fighters where the fight is winnable but not a crushing mismatch, and never that arena's
+  // champion (the crowd boos and the Emperor takes Favour: 201 times in 50 rebel seasons, 6.0.0-beta).
   for (const tier of unlockedTiers(run).filter((t) => t < run.topTier).sort((a, b) => b - a)) {
     pickPerks(run);
     const opp = opponentFor(run, tier);
-    const candidates = run.roster.filter((f) => !fightBlocker(run, f.id, tier) && f.power - opp.power < ECONOMY.crushingGap && f.injuries.length < 2);
+    const candidates = run.roster.filter((f) => !fightBlocker(run, f.id, tier) && !isChampionOf(f, tier) && f.power - opp.power < ECONOMY.crushingGap && f.injuries.length < 2);
     let pickF = null;
     for (const f of candidates) {
       const o = odds(f, tier);

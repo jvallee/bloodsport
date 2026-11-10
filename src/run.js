@@ -3320,8 +3320,8 @@ function advanceArena(run, tier, won, opp, beatYou = true) {
   } else {
     if (tier === run.topTier) {
       // The rival returns at the arena's Boss Power +1, however often they beat you: no compounding death spiral.
-      const basePower = arenaPower(run, tier);
-      arena.rival = { ...structuredClone(opp), power: basePower + 1, renown: opp.renown + 2, rival: true, injuries: [], alive: true };
+      const basePower = arenaPower(run, tier) + (isShort(run) ? SHORT.rival : 1); // SHORT.rival: a season's return (6.0.0-beta)
+      arena.rival = { ...structuredClone(opp), power: basePower, renown: opp.renown + 2, rival: true, injuries: [], alive: true };
       log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn');
     }
     // Version 6 (phase 5): in a season with SHORT.rematch, the lost Boss comes back next month (no new circuit).

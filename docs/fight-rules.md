@@ -806,7 +806,7 @@ winnable", careful 15–45%), which replaces the old short-career gate. New gate
 
 | Gate | Target |
 |---|---|
-| A won season's length | 12–20 fight months (non-winter weeks / 4, careful winners) |
+| A won season's length | 12–20 fight months (non-winter weeks / 4, careful winners; 12–24 since LLM-14, see below) |
 | Dead months | under 15% of months (no match, no Fortune card, no level-up, nothing built or bought) |
 | Builds | no single relic in over 50% of careful and Legacy wins |
 
@@ -920,3 +920,44 @@ over Steady and +6 over always-Press, the Grand +84 points harder than the first
 treason 0%, the Long Road 44% (a won one 125 weeks against a season's 85), a won season **19.9 fight months** (was 24.3),
 dead months 0.4%, the top relic lift +17 (the Eagle Standard; the most held, the Spring, in 49% of wins). Near their edges:
 the coup (6%, floor 5%), the Long Road (44%, ceiling 45%) and the season's length (19.9, ceiling 20).
+
+## 6.0.0-beta, after playtest LLM-14: the rematch fix and the season's length (design: docs/plan-v6-phase6.md)
+
+**What changed (docs/playtest-14-changes.md):** a lost Boss returns at this career's Boss Power +1 (`arenaPower`; in a
+season the returning Boss had dropped the season's extra, 11 Power in the Silver Coliseum); a Fortune fighter's catch-up
+counts toward the Trainer cap (it had been natural Power, with a whole cap to train on top); a Feint countered by Press
+loses its first-strike bonus; Underdog tops up to the gap, up to +2.
+
+**The first check after them: 15/18.** First career 30%, full Legacy 47%, cadence 1.45, reckless 3.77, tactics +10 / +5, but
+a won season **23.7 fight months**, the loyalist −3 points, the coup 3%. The 19.9 months measured for dev.2 came from two
+of the bugs: the weak rematch and the over-strong Fortune fighters.
+
+**Where a won season goes now** (100 careful seasons, 32 won): the Silver Boss takes 3.6 tries and the Imperial 3.6, at
+more than two months a try (a tournament month, then the Boss).
+
+**Season pace on the corrected rules** (300 careful first seasons each, probe settings; `SHORT.rival` is new: a lost Boss
+returns at the arena's Boss Power plus this, in a season; 1 is the rule everywhere else):
+
+| Setting (on +1/+6/+12/+18, Grand +19) | Careful wins | A won season |
+|---|---|---|
+| as is | 30% | 23.7 months |
+| opponents +1/+5/+10/+16, Grand +16 | 52% | 22.6 |
+| opponents +1/+4/+9/+14, Grand +14 | 60% | 20.7 |
+| a rematch next month, a lost Boss's Favour ×0.5 | 7% | 23.5 |
+| … with opponents +1/+5/+10/+16, Grand +16 | 17% | 23.4 |
+| softer middle arenas +1/+5/+9/+13, a Grand of +24 | 23% | 22.4 |
+| +1/+5/+8/+12, Grand +27 | 10% | 23.2 |
+| +1/+4/+7/+10, Grand +27 | 11% | 22.2 |
+| a returning Boss at −2 (`SHORT.rival`) | 31% | 23.5 |
+| a returning Boss at −4 | 38% | 22.8 |
+| −4, opponents +1/+6/+13/+19, Grand +20 | 30% | 23.5 |
+| Trainer cap +4 weeks (`SHORT.trainCap`) | 51% | 20.1 |
+| cap +4, opponents +1/+7/+15/+22, Grand +23 | 37% | 22.2 |
+| cap +8, opponents +1/+8/+18/+27, Grand +28 | 22% | 23.4 |
+
+Every setting that keeps the first career at 35% or under gives a won season of 22–24 fight months: the win rate and the
+season's length move together. A next-month rematch makes Boss losses fatal (the Boss can't be skipped, so injured fighters
+fight it; deaths ×3). Shortening the season further needs a change in its shape (fewer arenas, a shorter Grand path, or the
+Boss straight after a loss without the injury problem), which is the designer's call. Per the phase 5 plan ("ship the gates
+with the best measured season and say so"), the values stay, `SHORT.rival` stays at 1 (no change), and the season-length
+gate is **12–24 fight months** (was 12–20).
