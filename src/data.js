@@ -57,7 +57,7 @@ export const TRAITS = {
   egoArmour: { name: 'Ego Armour', desc: 'While uninjured: +5% win chance and armour −10% chance to be injured.' },
   elvenEyes: { name: 'Elven Eyes', desc: 'When an injury check against this fighter misses by 50%+, makes a free 15% counter-injury check.' },
   bloodFaith: { name: 'Blood Faith', desc: 'If this fighter dies in a match, the Prestige buy-in is refunded, and their clan pays the house 5 Gold per arena tier.' },
-  underdog: { name: 'Underdog', desc: '+2 Power when the opponent has 2 or more Power more.' },
+  underdog: { name: 'Underdog', desc: 'Against a stronger opponent, up to +2 Power to close the gap (+1 when they have 1 more Power, +2 when 2 or more).' },
   unbreakable: { name: 'Unbreakable', desc: 'The Death Gate opens at 3 injuries instead of 2.' },
   bloodlust: { name: 'Bloodlust', desc: '+1 Power once the opponent is injured.' },
   // v5 kinds

@@ -14,7 +14,13 @@ What changed from version to version, newest first. Each frozen version can stil
 - **A quicker season:** in a season, a training week gives double (+2 Power or +6 Speed) and the arenas' opponents grow to match, so a won season is about four to five months shorter. The Long Road keeps its pace.
 - **Legacy levels come at a steadier pace:** an arena climbed is worth 5 Legacy XP (was 10) and a Boss beaten 3 (was 5), while the first levels cost a little less (60 XP, then 15 more each level). Up to level 6 every level comes as soon as or sooner than before; later levels need a little more.
 - **The Emperor's purse for the names is a little richer** (22 Gold an arena, was 20), and in a season it pays like the season's other purses (×1.6).
-- Fixes: "undefined" when going All In; "87.999%"; "three cards" when four were dealt; "a Imperial"; a legendary label on a Dirt Pits vest; the Augur's relics are "rare or legendary"; the Wolf's Pelt and the Fates' Wager say what they do; the Boss card shows the halved Favour for an early loss.
+- **A Boss who beats you comes back stronger, as promised:** in a season, a lost Boss (and the whole rematch bracket) returned weaker than before. Fixed, along with the Emperor's summons and the Championship wants.
+- **Fortune's fighters arrive trained, not gifted:** a drafted fighter's catch-up to your house counts as training they've already done, so they can't train a whole Trainer cap on top and outgrow your own fighters.
+- **Reading a Feint pays:** a Feint countered by Press loses its first-strike bonus.
+- **Underdog never backfires:** it now closes the gap, up to +2 (+1 when the opponent has 1 more Power), so a +1 from the crowd or a relic can't switch it off.
+- **Fewer repeated names:** a fighter Fortune deals you and you pass over no longer turns up next month as someone else.
+- **"Retire with honour" is a real choice:** only a veteran behind your strongest fighter asks to retire, never your champion mid-climb.
+- Fixes: "undefined" when going All In; "87.999%"; "three cards" when four were dealt; "a Imperial"; a legendary label on a Dirt Pits vest; the Augur's relics are "rare or legendary"; the Wolf's Pelt and the Fates' Wager say what they do (its house log line too); the Boss card shows the halved Favour for an early loss.
 
 ## 6.0.0-alpha.4: fights with a crowd
 

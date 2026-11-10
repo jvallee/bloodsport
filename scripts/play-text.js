@@ -7,7 +7,7 @@
 // Type `help` for the command list.
 
 import { createInterface } from 'node:readline';
-import { dailySeed, dailySetup, ALL_UNLOCKS, careerXp } from '../src/legacy.js';
+import { dailySeed, dailySetup, ALL_UNLOCKS, careerXp, levelFor, LEGACY_LEVELS } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
 import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
@@ -306,6 +306,12 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       // LLM-13: the end of a career showed no Legacy XP in the text port (the game's end screen does).
       const xp = careerXp(run);
       out.push(`Legacy XP: +${xp.total} (${xp.lines.map((l) => `${l.label} +${l.xp}`).join(', ')}).`);
+      // LLM-14: and where it leaves a new Legacy (the game's end screen shows the level bar and what it unlocked).
+      if (!run.setup?.unlocks?.length) {
+        const lv = levelFor(xp.total);
+        const opened = LEGACY_LEVELS.slice(0, lv.level - 1).map((u) => u.name);
+        out.push(`Legacy level ${lv.level} (${lv.into}/${lv.need} XP to the next)${opened.length ? `. Unlocked: ${opened.join(', ')}` : ''}${LEGACY_LEVELS[lv.level - 1] ? `. Next: ${LEGACY_LEVELS[lv.level - 1].name}` : ''}.`);
+      }
     }
     if (run.relics?.length) out.push(`Relics (${run.relics.length}/${FORTUNE.maxRelics}): ${run.relics.map((id) => RELICS[id].name).join(', ')}`);
     if (run.fortune && !run.event) {

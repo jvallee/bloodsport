@@ -302,6 +302,8 @@ test('a drafted fighter keeps up with the house: at least FORTUNE.fighterBehind 
       seen++;
       const second = run.roster.map(effectivePower).sort((a, b) => b - a)[1] ?? run.roster.map(effectivePower)[0];
       assert.ok(effectivePower(c.fighter) >= second - FORTUNE.fighterBehind + FORTUNE.fighterPower[c.rarity]);
+      // The catch-up is training done elsewhere: it counts toward the Trainer cap (playtest LLM-14).
+      assert.ok(c.fighter.trainedPower > 0 && c.fighter.trained > 0, 'the catch-up counts as training');
     }
   }
   assert.ok(seen > 0, 'fighter cards were dealt');

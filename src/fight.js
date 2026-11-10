@@ -133,7 +133,7 @@ export function suggestTactic(m) {
   const pFirst = faster > 2 ? 0.8 : faster < -2 ? 0.2 : 0.5;
   const value = (k) => {
     const t = TACTICS[k];
-    let v = (t.win ?? 0) + 0.5 * (t.injure ?? 0) - 0.5 * (t.self ?? 0) + pFirst * (t.firstStrike ?? 0) + (fest[k] ?? 0);
+    let v = (t.win ?? 0) + 0.5 * (t.injure ?? 0) - 0.5 * (t.self ?? 0) + pFirst * (1 - (odds[beats(k)] ?? 0)) * (t.firstStrike ?? 0) + (fest[k] ?? 0);
     for (const [o, p] of Object.entries(odds)) {
       if (COUNTERS[k] === o) v += p * COUNTER.win;
       if (COUNTERS[o] === k) v -= p * COUNTER.win;
@@ -233,7 +233,10 @@ export function computePower(c, opp, round, raw = false) {
   if (c.festival?.ranged && !meleeOnly(c)) mods.push({ source: c.festival.name, value: c.festival.ranged });
   for (const sc of activeScars(c, opp)) if (sc.power) mods.push({ source: sc.label, value: sc.power });
   for (const a of f.augments ?? []) if (AUGMENTS[a]?.power) mods.push({ source: AUGMENTS[a].name, value: AUGMENTS[a].power });
-  if (!raw && kindActive(c, 'underdog', round) && computePower(opp, c, round, true).total >= f.power + sum(mods) + UNDERDOG.gap) mods.push({ source: 'Underdog', value: 2 });
+  // Underdog tops up to the gap, up to +2: a bonus that narrows the gap never costs Power (playtest LLM-14: the crowd's +1
+  // switched off a +2 at a gap of exactly 2).
+  const underdog = !raw && kindActive(c, 'underdog', round) ? Math.min(UNDERDOG.gap, computePower(opp, c, round, true).total - (f.power + sum(mods))) : 0;
+  if (underdog > 0) mods.push({ source: 'Underdog', value: underdog });
   return { base: f.power, mods, total: f.power + sum(mods) };
 }
 
@@ -590,9 +593,10 @@ export function playRound(m, { stance = 'steady' } = {}) {
   // First Strike: striking first is worth +10% to win the round (+15% with the Tactician perk).
   const firstStriker = sideOf(m, r.initiative.first).f;
   p2[r.initiative.first].win.push({ source: 'First Strike', value: FIRST_STRIKE + (hasPerk(firstStriker, 'tactician') ? 5000 : 0) });
-  // Feint pays off only for the side that strikes first (so it rewards Speed).
+  // Feint pays off only for the side that strikes first (so it rewards Speed), and not when it's read: a Press that
+  // counters it takes the bonus away (playtest LLM-14: a correct read against a faster Feinter gained nothing).
   const firstSide = sideOf(m, r.initiative.first);
-  if (tacticOf(firstSide)?.firstStrike) p2[r.initiative.first].win.push({ source: tacticOf(firstSide).name, value: tacticOf(firstSide).firstStrike });
+  if (tacticOf(firstSide)?.firstStrike && r.counter !== other(r.initiative.first)) p2[r.initiative.first].win.push({ source: tacticOf(firstSide).name, value: tacticOf(firstSide).firstStrike });
   r.win = { base: r.row.win, modsA: p2.A.win, modsB: p2.B.win };
   r.win.chance = clamp(r.row.win + sum(p2.A.win) - sum(p2.B.win), 1, 99999);
 

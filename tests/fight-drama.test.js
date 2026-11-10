@@ -185,3 +185,22 @@ test("the tell's forecast weighs the temper: a tell against a strong habit is le
   assert.ok(Math.min(...seen.with) > Math.max(...seen.against));
   assert.equal(tellForecast(match({ seed: 1 })), null, 'no Oracle, no forecast');
 });
+
+test('a Feint that is read (countered by Press) loses its first-strike bonus (playtest LLM-14)', () => {
+  let checked = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    const m = match({ b: { speed: 30 }, seed });
+    m.b.intent = { round: 1, stance: 'feint', tell: null };
+    const r = playRound(m, { stance: 'press' });
+    if (r.initiative.first !== 'B') continue;
+    checked++;
+    assert.equal(r.counter, 'A');
+    assert.ok(!r.win.modsB.some((x) => x.source === TACTICS.feint.name), 'no Feint bonus when it is read');
+  }
+  assert.ok(checked > 0);
+  // Unread, a faster Feinter keeps it.
+  const m = match({ b: { speed: 30 }, seed: 3 });
+  m.b.intent = { round: 1, stance: 'feint', tell: null };
+  const r = playRound(m, { stance: 'steady' });
+  if (r.initiative.first === 'B') assert.ok(r.win.modsB.some((x) => x.source === TACTICS.feint.name));
+});

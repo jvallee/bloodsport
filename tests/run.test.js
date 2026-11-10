@@ -736,6 +736,24 @@ test('a returning rival is the arena\'s Boss Power +1, never compounding', () =>
   }
 });
 
+test('in a season a lost Boss returns at the season\'s Boss Power +1, not the bare table\'s (playtest LLM-14)', async () => {
+  const { SHORT } = await import('../src/data.js');
+  const { arenaPower } = await import('../src/run.js');
+  const run = createRun(1, { short: true });
+  const f = recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  assert.equal(arenaPower(run, 1), CIRCUITS[0].oppPower[2] + SHORT.oppPower[0]);
+  run.prestige = 100;
+  run.favor = 100;
+  run.arenas[1].stage = 2;
+  run.bouts = { 1: 'open' };
+  run.boutPending = true;
+  run.history = [];
+  pickPerks(run);
+  playBout(run, f.id, { winner: 'B' });
+  assert.equal(run.arenas[1].rival.power, arenaPower(run, 1) + 1);
+});
+
 test('lower-arena Bosses drop gear only by chance; only the top Boss always drops', () => {
   const { run, a, b } = (() => {
     const r = createRun(3);

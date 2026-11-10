@@ -513,11 +513,15 @@ test('Challenger: the opponent gets +Power against a famous fighter', () => {
 
 // ---- Traits added after playtest 3 ----
 
-test('Underdog: +2 Power when the opponent has 2+ more Power (before Underdog)', () => {
+test('Underdog: tops up to the gap, up to +2 (before Underdog)', () => {
   const [A, B] = pair({ kindTrait: 'underdog', power: 6 }, { power: 8 });
   assert.deepEqual(sources(computePower(A, B, 1).mods), ['Underdog:2']);
+  // 6.0.0-beta (playtest LLM-14): was "a 1-Power gap is not enough" (playtest #6). A gap of 1 now gives +1, to level, so a
+  // +1 bonus that narrows a gap of 2 no longer switches off the +2. At equal Power still nothing (playtest #6's concern).
   const [C, D] = pair({ kindTrait: 'underdog', power: 7 }, { power: 8 });
-  assert.deepEqual(sources(computePower(C, D, 1).mods), [], 'a 1-Power gap is not enough (playtest #6)');
+  assert.deepEqual(sources(computePower(C, D, 1).mods), ['Underdog:1']);
+  const [G, H] = pair({ kindTrait: 'underdog', power: 8 }, { power: 8 });
+  assert.deepEqual(sources(computePower(G, H, 1).mods), [], 'at equal Power, no Underdog');
   // Two underdogs never trigger off each other (no recursion): at equal Power neither qualifies.
   const [E, F] = pair({ kindTrait: 'underdog' }, { kindTrait: 'underdog', power: 7 });
   assert.equal(computePower(E, F, 1).total, 7, 'the weaker one gets it, judged on raw Power');

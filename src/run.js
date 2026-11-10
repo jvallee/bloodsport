@@ -133,12 +133,20 @@ export const circuitInfo = (run) => CIRCUITS[Math.min(run.topTier, CIRCUITS.leng
 export const arenaName = (tier) => (tier === GRAND_TIER ? GRAND.name : CIRCUITS[tier - 1].name);
 
 // The bout an arena holds on tournament week: name, buy-in, rewards, opponent Power, debuff.
+// An arena opponent's Power in this career: the table's, plus a season's (SHORT), Hungry Lions and, for a Boss, Iron Bosses
+// and the Senate's lions. A lost Boss's return, the summons and the Championship want read this too (playtest LLM-14: they
+// read the bare table, so in a season a lost Boss came back 11 Power weaker).
+export function arenaPower(run, tier, stage = 2) {
+  if (tier === GRAND_TIER) return GRAND.oppPower + (hasDecree(run, 'ironBosses') ? 1 : 0) + lionsPower(run) + (isShort(run) ? SHORT.grandPower : 0);
+  return CIRCUITS[tier - 1].oppPower[stage] + lionsPower(run) + (isShort(run) ? SHORT.oppPower[tier - 1] ?? 0 : 0)
+    + (stage === 2 && hasDecree(run, 'ironBosses') ? 1 : 0) + (stage === 2 && hasPolicy(run, 'unleashLions') ? 1 : 0);
+}
 export function boutFor(run, tier = run.topTier) {
   const top = tier === run.topTier;
   const below = run.topTier - tier;
   const arena = run.arenas[tier];
   if (tier === GRAND_TIER) {
-    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: GRAND.oppPower + (hasDecree(run, 'ironBosses') ? 1 : 0) + lionsPower(run) + (isShort(run) ? SHORT.grandPower : 0), oppDecor: GRAND.oppDecor, debuff: arena.debuff, conquered: false };
+    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: arenaPower(run, GRAND_TIER), oppDecor: GRAND.oppDecor, debuff: arena.debuff, conquered: false };
   }
   const c = CIRCUITS[tier - 1];
   const s = arena.stage;
@@ -159,7 +167,7 @@ export function boutFor(run, tier = run.topTier) {
     winPrestige: Math.round(Math.max(below ? ECONOMY.lowerArenaMinPrestige : 0, Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below)) * (fest?.prestige ?? 1) * (isShort(run) ? SHORT.prestige : 1) * (s === 2 && hasPolicy(run, 'unleashLions') ? 2 : 1)),
     festival: fest?.id ?? null,
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
-    lossGold: c.lossGold, oppPower: c.oppPower[s] + lionsPower(run) + (isShort(run) ? SHORT.oppPower[tier - 1] ?? 0 : 0) + (s === 2 && hasDecree(run, 'ironBosses') ? 1 : 0) + (s === 2 && hasPolicy(run, 'unleashLions') ? 1 : 0), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
+    lossGold: c.lossGold, oppPower: arenaPower(run, tier, s), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
     conquered: arena.conquered,
   };
 }
@@ -448,7 +456,7 @@ export function answerSummons(run, id, order) {
   assertOk(summonsBlocker(run, id, order));
   const fighter = findFighter(run, id);
   const r = run.rng.summons ??= createRng(deriveSeed(run.seed, 12));
-  const bout = { tier: SUMMONS.tier, boss: false, oppPower: CIRCUITS[SUMMONS.tier - 1].oppPower[0] };
+  const bout = { tier: SUMMONS.tier, boss: false, oppPower: arenaPower(run, SUMMONS.tier, 0) };
   const opp = createFighter(r, { id: newId(run, 'o'), power: bout.oppPower, decorLevel: CIRCUITS[SUMMONS.tier - 1].oppDecor, takenNames: takenNames(run), classes: run.setup?.classes });
   opp.speed = opponentSpeed(run, bout);
   seasonOpponent(run, opp, bout);
@@ -677,7 +685,7 @@ export function wantFor(run, f, id) {
   }
   // Only a Championship within reach: no more than `titleReach` Power below the arena's Boss (playtest LLM-11).
   if (id === 'title') return f.level >= 3 && run.topTier <= CIRCUITS.length && !isChampionOf(f, run.topTier)
-    && effectivePower(f) >= CIRCUITS[run.topTier - 1].oppPower[2] - FIGHTER_WANTS.titleReach ? { tier: run.topTier, arena: championTitle(run.topTier).replace(/^Champion of /, '') } : null;
+    && effectivePower(f) >= arenaPower(run, run.topTier) - FIGHTER_WANTS.titleReach ? { tier: run.topTier, arena: championTitle(run.topTier).replace(/^Champion of /, '') } : null;
   if (id === 'room') {
     const missing = FIGHTER_WANTS.roomItems.filter((x) => !(f.decor[x] > 0));
     if (!missing.length) return null;
@@ -1007,7 +1015,7 @@ function refreshLiaison(run) {
     // A prisoner arrives at their arena's Power, but anything above a Market fighter's natural Power is training they
     // already did elsewhere: it counts toward the Trainer cap, so they can't train another full cap on top (playtest #7).
     const prior = Math.max(0, f.power - (KINDS[f.kind].basePower + circuitInfo(run).marketPower));
-    Object.assign(f, { trained: prior, trainedPower: prior });
+    Object.assign(f, { trained: Math.ceil(prior / trainGain(run, 'power')), trainedPower: prior }); // in training weeks (a season's give 2)
     f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
     f.stress = elite ? 30 : 40;
     f.morale = elite ? 40 : 30;
@@ -1857,12 +1865,18 @@ function pickOf(rng, ids, rarityOf, rarity, taken) {
 }
 
 // A drafted fighter keeps up with the house: at least FORTUNE.fighterBehind below your second-best fighter, plus the rarity bonus.
+// The catch-up is training they did elsewhere: it counts toward the Trainer cap, like a prisoner's (playtest LLM-14: as natural
+// Power it left a whole cap to train on top, so Fortune's fighters outgrew the house's own).
 function keepUp(run, f, rarity) {
   const ranked = run.roster.map(effectivePower).sort((a, b) => b - a);
   const second = ranked[1] ?? ranked[0];
   if (second === undefined) return;
   const floor = second - FORTUNE.fighterBehind + FORTUNE.fighterPower[rarity];
-  if (effectivePower(f) < floor) f.power += floor - effectivePower(f);
+  const gap = floor - effectivePower(f);
+  if (gap <= 0) return;
+  f.power += gap;
+  f.trainedPower = (f.trainedPower ?? 0) + gap;
+  f.trained = (f.trained ?? 0) + Math.ceil(gap / trainGain(run, 'power'));
 }
 
 function fortuneCard(run, rng, table) {
@@ -3306,7 +3320,7 @@ function advanceArena(run, tier, won, opp, beatYou = true) {
   } else {
     if (tier === run.topTier) {
       // The rival returns at the arena's Boss Power +1, however often they beat you: no compounding death spiral.
-      const basePower = tier === GRAND_TIER ? GRAND.oppPower : CIRCUITS[tier - 1].oppPower[2];
+      const basePower = arenaPower(run, tier);
       arena.rival = { ...structuredClone(opp), power: basePower + 1, renown: opp.renown + 2, rival: true, injuries: [], alive: true };
       log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn');
     }
