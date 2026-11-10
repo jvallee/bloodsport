@@ -116,7 +116,7 @@ export function crownChampion(f, tier) {
   return won;
 }
 // Harsh Judges (a decree) makes every Boss loss cost 5 more.
-export const bossLossFavor = (tier, run = null) => FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1] - (hasDecree(run, 'harshJudges') ? 5 : 0);
+export const bossLossFavor = (tier, run = null) => Math.round(FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1] * (isShort(run) ? SHORT.bossLoss : 1)) - (hasDecree(run, 'harshJudges') ? 5 : 0);
 export const hasDecree = (run, id) => Boolean(run?.setup?.decrees?.includes(id));
 // Version 6: what the Legacy had unlocked when this career started (docs/plan-v6-phase3.md). None for a first career.
 export const hasUnlock = (run, id) => Boolean(run?.setup?.unlocks?.includes(id));
@@ -957,7 +957,7 @@ export function matchOptions(run, f, tier = run.topTier) {
 // ---------- Market, Liaison, Armourer ----------
 
 // A short career (setup.short): Tournament → Boss in each arena, richer purses (SHORT).
-export const isShort = (run) => Boolean(run.setup?.short);
+export const isShort = (run) => Boolean(run?.setup?.short);
 export const marketPrice = (run) => circuitInfo(run).price;
 // What a fighter costs: the Liaison's own price, or the Market's plus RECRUIT.perLevel per level above 1.
 export const liaisonOffer = (run, id) => (run.liaisonOffers ?? []).find((f) => f.id === id) ?? null;

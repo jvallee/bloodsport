@@ -618,7 +618,7 @@ export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] }
 // Version 6, phase 5 (season pace levers, off by default until measured): `rematch` brings a lost top-arena Boss back the
 // next month instead of a new circuit; `trainCap` adds Trainer weeks per fighter; `oppPower` adds Power to every opponent of
 // that arena (Dirt Pits … Imperial), `grandPower` to the Grand Tournament's.
-export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 1, rematch: false, trainCap: 0, oppPower: [0, 0, 0, 0], grandPower: 0 };
+export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 1, rematch: false, trainCap: 0, oppPower: [0, 0, 0, 0], grandPower: 0, bossLoss: 1 }; // bossLoss: × a lost Boss's Favour in a season
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],
