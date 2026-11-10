@@ -26,7 +26,7 @@ import { build, upgrade, buildBlocker, buildingKnown, upgradeBlocker, plotCount,
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
 import { estimateOdds, describeOdds } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
-import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep } from '../src/tutorial.js';
+import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep, stepText } from '../src/tutorial.js';
 import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene, dueRebelStage, demandMetScene, demandMissedScene } from '../src/dialogue.js';
 import { WANTS, REBEL_QUESTS } from '../src/quests.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText, slotLabel } from '../src/codex.js';
@@ -118,7 +118,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     const step = currentStep();
     shownStep = step?.id ?? null;
     if (!step) return '';
-    return step.goal ? `-- Your steward (tutorial month) --\n${plain(step.text)}` : `-- Tutorial: ${step.title} (\`ok\` to dismiss) --\n${plain(step.body)}`;
+    return step.goal ? `-- Your steward (tutorial month) --\n${plain(stepText(step, run))}` : `-- Tutorial: ${step.title} (\`ok\` to dismiss) --\n${plain(step.body)}`;
   }
 
   // ---------- Views ----------

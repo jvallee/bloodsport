@@ -958,6 +958,8 @@ export function matchOptions(run, f, tier = run.topTier) {
 
 // A short career (setup.short): Tournament → Boss in each arena, richer purses (SHORT).
 export const isShort = (run) => Boolean(run?.setup?.short);
+// A training week's gain, in whole points: a season trains at SHORT.train × (version 6, phase 5).
+export const trainGain = (run, stat) => Math.round(TRAIN_GAIN[stat] * (isShort(run) ? SHORT.train : 1));
 export const marketPrice = (run) => circuitInfo(run).price;
 // What a fighter costs: the Liaison's own price, or the Market's plus RECRUIT.perLevel per level above 1.
 export const liaisonOffer = (run, id) => (run.liaisonOffers ?? []).find((f) => f.id === id) ?? null;
@@ -1684,7 +1686,7 @@ export function advanceWeek(run) {
     if (isTraining(f.job)) {
       const cost = trainCost(run);
       const stat = f.job === 'trainPower' ? 'power' : 'speed';
-      const gain = Math.round(TRAIN_GAIN[stat] * (isShort(run) ? SHORT.train : 1)); // whole points only
+      const gain = trainGain(run, stat);
       f[stat] += gain;
       f.trained += 1;
       if (stat === 'power') f.trainedPower = (f.trainedPower ?? 0) + gain;

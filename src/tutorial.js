@@ -1,7 +1,7 @@
 // Intro story and guided tutorial steps. Pure: picks the step to show from the game state.
 
 import { STRESS } from "./data.js";
-import { currentBout } from "./run.js";
+import { currentBout, trainGain } from "./run.js";
 import { trainCap as trainCapFor } from "./ludus.js";
 import { mortalDanger } from "./fight.js";
 
@@ -50,7 +50,7 @@ export const GUIDE = [
     goal: (r) => r.roster.some((f) => f.job === "trainPower" || f.job === "trainSpeed"),
     tab: "ludus",
     focus: '[data-action="job"][data-job="trainPower"]',
-    text: `Now the Ludus. Every fighter does one job a week. Give your strongest fighter <b>+1 Power</b>: training costs a little Gold and adds ${STRESS.train} Stress. Anyone else can <b>Rest</b> for now; one Trainer Room trains one fighter at a time.`,
+    text: (r) => `Now the Ludus. Every fighter does one job a week. Give your strongest fighter <b>+${trainGain(r, 'power')} Power</b>: training costs a little Gold and adds ${STRESS.train} Stress. Anyone else can <b>Rest</b> for now; one Trainer Room trains one fighter at a time.`,
   },
   {
     id: "endweek",
@@ -59,7 +59,7 @@ export const GUIDE = [
     tab: "ludus",
     focus: '[data-action="advance"]',
     // Designer's note (2026-11-01): make it explicit that someone must be training. PLACEHOLDER wording.
-    text: "Jobs are set. Make sure at least one fighter is training: only a fighter on <b>Train Power</b> (+1 Power) or <b>Train Speed</b> (+3 Speed) gets stronger, and an untrained house falls behind fast. Then press <b>End week</b> and the week plays out: training, rest and healing all happen at once.",
+    text: (r) => `Jobs are set. Make sure at least one fighter is training: only a fighter on <b>Train Power</b> (+${trainGain(r, 'power')} Power) or <b>Train Speed</b> (+${trainGain(r, 'speed')} Speed) gets stronger, and an untrained house falls behind fast. Then press <b>End week</b> and the week plays out: training, rest and healing all happen at once.`,
   },
   {
     id: "tofight",
@@ -170,6 +170,9 @@ export const FIGHT_STEPS = [
     body: 'Open <b>"Show the round-by-round math"</b> to see every number: Power, the gap, each bonus, and the roll. Nothing is hidden.',
   },
 ];
+
+// A step's text: some depend on the career (a season trains faster).
+export const stepText = (step, run) => (typeof step.text === 'function' ? step.text(run) : step.text);
 
 export function nextStep(steps, done, subject) {
   return steps.find((s) => !done.includes(s.id) && s.when(subject)) ?? null;

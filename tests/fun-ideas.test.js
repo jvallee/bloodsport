@@ -70,6 +70,25 @@ test('a short career goes straight from the tournament to the Boss, with richer 
   assert.ok(CIRCUITS.length);
 });
 
+test('a season trains faster and its arenas keep pace (version 6, phase 5: SHORT.train, oppPower, grandPower)', async () => {
+  const { SHORT, TRAIN_GAIN } = await import('../src/data.js');
+  const { boutFor, trainGain } = await import('../src/run.js');
+  const { ludusTab } = await import('../src/ui/views.js');
+  const full = createRun(4);
+  const short = createRun(4, { short: true });
+  assert.equal(trainGain(full, 'power'), TRAIN_GAIN.power);
+  assert.equal(trainGain(short, 'power'), Math.round(TRAIN_GAIN.power * SHORT.train));
+  assert.equal(trainGain(short, 'speed'), Math.round(TRAIN_GAIN.speed * SHORT.train));
+  assert.equal(boutFor(short, 1).oppPower, boutFor(full, 1).oppPower + SHORT.oppPower[0]);
+  // A training week adds the season's gain, and the job buttons say so.
+  const f = recruit(short, short.market[0].id);
+  const before = f.power;
+  f.job = 'trainPower';
+  advanceWeek(short);
+  assert.equal(f.power, before + trainGain(short, 'power'));
+  assert.match(ludusTab(short, () => ({ win: 0.5, injury: 0.3, death: 0, n: 1 })), new RegExp(`>\\+${trainGain(short, 'power')} Power</button>`));
+});
+
 test('the daily Emperor\'s Challenge: the same short career for everyone on a day, best score kept', async () => {
   const { dailySeed, dailySetup, createLegacy, recordCareer } = await import('../src/legacy.js');
   assert.equal(dailySeed('2026-11-01'), dailySeed('2026-11-01'));

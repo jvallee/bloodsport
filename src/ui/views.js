@@ -10,7 +10,9 @@ import {
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker, fortuneBlocker, rerollBlocker, rerollPrice,
   isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
+  trainGain,
 } from '../run.js';
+import { stepText } from '../tutorial.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, buildingKnown, upgradeBlocker, levelInfo, maxLevel, effectAt,
 } from '../ludus.js';
@@ -23,13 +25,15 @@ import { SPEAKERS, tipSpeaker } from '../dialogue.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../events.js';
 import { RELICS, TAGS, KIND_LABELS, perkTags, fortuneTitle, fortuneText } from '../fortune.js';
 
-const JOB_LABELS = { rest: 'Rest', trainPower: '+1 Power', trainSpeed: '+3 Speed', medbay: 'Medbay' };
-const JOB_HELP = {
+const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
+// A season trains faster (trainGain), so the training labels name this career's gain.
+const jobLabel = (run, job) => ({ rest: 'Rest', trainPower: `+${trainGain(run, 'power')} Power`, trainSpeed: `+${trainGain(run, 'speed')} Speed`, medbay: 'Medbay' })[job] ?? job;
+const jobHelp = (run, job) => ({
   rest: `Rest: −${-STRESS.rest} Stress.`,
-  trainPower: `Train Power: +1 Power this week, +${STRESS.train} Stress.`,
-  trainSpeed: `Train Speed: +3 Speed this week, +${STRESS.train} Stress. Speed decides who strikes first and makes you harder to wound.`,
+  trainPower: `Train Power: +${trainGain(run, 'power')} Power this week, +${STRESS.train} Stress.`,
+  trainSpeed: `Train Speed: +${trainGain(run, 'speed')} Speed this week, +${STRESS.train} Stress. Speed decides who strikes first and makes you harder to wound.`,
   medbay: 'Medbay: heals injuries over weeks.',
-};
+})[job];
 
 // ---------- Top bar ----------
 
@@ -567,7 +571,7 @@ function compareTable(run) {
     const wounds = f.injuries.length ? `<span class="bad" title="${esc(f.injuries.map((i) => INJURY_BY_TAG[i.tag].name).join(', '))}">${f.injuries.length}</span>` : '–';
     const stressCls = f.stress >= STRESS.overtrained ? ' class="bad"' : '';
     const moraleCls = f.morale < MORALE.restless ? ' class="bad"' : f.morale >= MORALE.inspired ? ' class="good"' : '';
-    return `<tr><td><a href="#card-${esc(f.id)}">${esc(f.name)}</a>${f.want ? ` <span title="${esc(WANTS[f.want.id].goal(f.want))}">💬</span>` : ''}<small>Lv ${f.level ?? 1}</small></td><td>${effectivePower(f)}</td><td>${f.speed + gearSpd(f)}</td><td${stressCls}>${f.stress}</td><td${moraleCls}>${f.morale}</td><td>${wounds}</td><td>${f.trained}/${trainCap(run)}</td><td>${JOB_LABELS[f.job] ?? f.job}</td></tr>`;
+    return `<tr><td><a href="#card-${esc(f.id)}">${esc(f.name)}</a>${f.want ? ` <span title="${esc(WANTS[f.want.id].goal(f.want))}">💬</span>` : ''}<small>Lv ${f.level ?? 1}</small></td><td>${effectivePower(f)}</td><td>${f.speed + gearSpd(f)}</td><td${stressCls}>${f.stress}</td><td${moraleCls}>${f.morale}</td><td>${wounds}</td><td>${f.trained}/${trainCap(run)}</td><td>${jobLabel(run, f.job)}</td></tr>`;
   }).join('');
   return `<details class="more compare" data-key="compare" open><summary>📊 Compare</summary>
     <div class="compare-wrap"><table class="compare-table"><thead><tr><th>Gladiator</th><th title="Power, with gear and Titles">Pow</th><th title="Speed, with gear">Spd</th><th title="Stress (50+: Overtrained)">Str</th><th title="Morale (under ${MORALE.restless}: won't train)">Mor</th><th title="Injuries">Inj</th><th title="Training points used of the Trainer cap">Trn</th><th>Job</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
@@ -579,9 +583,9 @@ function rosterPanel(run) {
   const reasons = run.roster.map(noTrain).filter(Boolean);
   const shared = [...new Set(reasons)].filter((r) => reasons.filter((x) => x === r).length > 1);
   const cards = run.roster.map((f) => {
-    const jobs = Object.keys(JOB_LABELS).map((job) => {
+    const jobs = JOBS.map((job) => {
       const reason = f.job === job ? null : jobBlocker(run, f.id, job);
-      return `<button class="seg${f.job === job ? ' on' : ''}" data-action="job" data-id="${f.id}" data-job="${job}" ${reason ? `disabled title="${esc(reason)}"` : `title="${esc(JOB_HELP[job])}"`}>${JOB_LABELS[job]}</button>`;
+      return `<button class="seg${f.job === job ? ' on' : ''}" data-action="job" data-id="${f.id}" data-job="${job}" ${reason ? `disabled title="${esc(reason)}"` : `title="${esc(jobHelp(run, job))}"`}>${jobLabel(run, job)}</button>`;
     }).join('');
     const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(inj.tag === 'fleshWound' ? 'Flesh Wound' : inj.tag)} (${surgeonPrice(run)}g)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
     const augments = f.injuries.map((inj, i) => (['maimed', 'blinded'].includes(inj.tag) ? buttonWhy(`Replace the ${inj.tag === 'maimed' ? 'Maimed limb' : 'Blinded eye'}: ${AUGMENTS[inj.tag === 'maimed' ? 'arm' : 'eye'].name}`, 'augment', { id: f.id, index: i }, augmentBlocker(run, f.id, i)) : '')).join('');
@@ -908,8 +912,8 @@ const TAB_NAMES = { ludus: 'Ludus', estate: 'Estate', market: 'Market', codex: '
 // One line of the steward's news, as a notice.
 export const stewardNote = (text) => `<div class="tip steward-note" role="status">${npcPortrait('steward', 36)}<div><span class="guide-name">Your steward:</span> ${esc(text)}</div></div>`;
 
-export function guideBar(step, onTab) {
-  return `<div class="guide" role="status">${npcPortrait('steward', 44)}<div class="guide-body"><div class="guide-name">Your steward</div><div>${step.text}</div></div>
+export function guideBar(step, onTab, run = null) {
+  return `<div class="guide" role="status">${npcPortrait('steward', 44)}<div class="guide-body"><div class="guide-name">Your steward</div><div>${stepText(step, run)}</div></div>
     <div class="guide-actions">${onTab ? '' : `<button class="btn small primary" data-action="tab" data-tab="${step.tab}">Go to the ${TAB_NAMES[step.tab]}</button>`}<button class="link small" data-action="tutorial-skip">Skip tutorial</button></div></div>`;
 }
 
