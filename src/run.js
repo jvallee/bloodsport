@@ -1557,7 +1557,7 @@ const isTraining = (job) => job === 'trainPower' || job === 'trainSpeed';
 
 // Why a fighter can't train this week (or null). Gold covers every trainee's fee, this one included.
 export function trainBlocker(run, f, { checkGold = true } = {}) {
-  if (f.trained >= trainCap(run)) return `Trainer cap reached (${trainCap(run)} points). Upgrade a Trainer Room.`;
+  if (f.trained >= trainCap(run)) return `Trainer cap reached (${trainCap(run)} training weeks). Upgrade a Trainer Room.`;
   if (f.morale < MORALE.restless) return `Discontented (Morale ${f.morale}): won't train. Raise their comfort.`;
   if (f.stress >= STRESS.overtrained) return `Stress ${f.stress}: must rest first.`;
   if (checkGold) {
