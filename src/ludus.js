@@ -1,6 +1,6 @@
 // The Ludus estate: room plots, buildings and what they provide. Pure.
 
-import { BUILDINGS, PRESTIGE_LEVELS, TRAINING } from './data.js';
+import { BUILDINGS, PRESTIGE_LEVELS, TRAINING, SHORT } from './data.js';
 import { Refused } from './errors.js';
 
 export const levelInfo = (level) => PRESTIGE_LEVELS[level - 1];
@@ -19,7 +19,7 @@ export const effectAt = (type, level) => (level ? BUILDINGS[type].per[level - 1]
 // Roster capacity: quarters capacity, capped by the Prestige level's fighter limit.
 export const rosterCap = (run) => Math.min(ofType(run, 'quarters').reduce((s, b) => s + effectAt('quarters', b.level), 0), levelInfo(run.prestigeLevel).maxFighters);
 export const trainerRooms = (run) => ofType(run, 'trainer').length;
-export const trainCap = (run) => effectAt('trainer', maxLevel(run, 'trainer'));
+export const trainCap = (run) => effectAt('trainer', maxLevel(run, 'trainer')) + (run.setup?.short && maxLevel(run, 'trainer') > 0 ? SHORT.trainCap : 0); // a season trains further (SHORT.trainCap)
 export const trainCost = (run) => {
   const fee = Math.max(1, maxLevel(run, 'trainer'));
   return run.topTier < TRAINING.fullFeeFrom ? Math.min(fee, TRAINING.cheapFee) : fee;

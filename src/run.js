@@ -138,7 +138,7 @@ export function boutFor(run, tier = run.topTier) {
   const below = run.topTier - tier;
   const arena = run.arenas[tier];
   if (tier === GRAND_TIER) {
-    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: GRAND.oppPower + (hasDecree(run, 'ironBosses') ? 1 : 0) + lionsPower(run), oppDecor: GRAND.oppDecor, debuff: arena.debuff, conquered: false };
+    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: GRAND.oppPower + (hasDecree(run, 'ironBosses') ? 1 : 0) + lionsPower(run) + (isShort(run) ? SHORT.grandPower : 0), oppDecor: GRAND.oppDecor, debuff: arena.debuff, conquered: false };
   }
   const c = CIRCUITS[tier - 1];
   const s = arena.stage;
@@ -159,7 +159,7 @@ export function boutFor(run, tier = run.topTier) {
     winPrestige: Math.round(Math.max(below ? ECONOMY.lowerArenaMinPrestige : 0, Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below)) * (fest?.prestige ?? 1) * (isShort(run) ? SHORT.prestige : 1) * (s === 2 && hasPolicy(run, 'unleashLions') ? 2 : 1)),
     festival: fest?.id ?? null,
     // The first Boss (the Dirt Pits) fights without an arena rule: a gentler first wall.
-    lossGold: c.lossGold, oppPower: c.oppPower[s] + lionsPower(run) + (s === 2 && hasDecree(run, 'ironBosses') ? 1 : 0) + (s === 2 && hasPolicy(run, 'unleashLions') ? 1 : 0), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
+    lossGold: c.lossGold, oppPower: c.oppPower[s] + lionsPower(run) + (isShort(run) ? SHORT.oppPower[tier - 1] ?? 0 : 0) + (s === 2 && hasDecree(run, 'ironBosses') ? 1 : 0) + (s === 2 && hasPolicy(run, 'unleashLions') ? 1 : 0), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
     conquered: arena.conquered,
   };
 }
@@ -3288,7 +3288,11 @@ function advanceArena(run, tier, won, opp, beatYou = true) {
       arena.rival = { ...structuredClone(opp), power: basePower + 1, renown: opp.renown + 2, rival: true, injuries: [], alive: true };
       log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn');
     }
-    restartCircuit(run, tier);
+    // Version 6 (phase 5): in a season with SHORT.rematch, the lost Boss comes back next month (no new circuit).
+    if (isShort(run) && SHORT.rematch && tier === run.topTier) {
+      arena.debuff = pick(run.rng.opponents, DEBUFF_IDS);
+      newOpponent(run, tier);
+    } else restartCircuit(run, tier);
   }
   checkLoss(run);
 }
