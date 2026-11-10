@@ -146,9 +146,9 @@ export const HEAT = { decrees: ['harshJudges', 'greedyEmperor', 'ironBosses', 'l
 // Version 6, Legacy XP and the unlock tree (src/legacy.js). Level 2 needs `first` XP; each level after needs `step` more.
 // Past level 12 a level still comes, but unlocks nothing new.
 export const LEGACY = {
-  first: 70, step: 10,
+  first: 60, step: 15, // 6.0.0-beta: was 70 and 10; the XP for each level through 6 is the same or lower (60/135/225/330/450 against 70/150/240/340/450)
   // Bosses and Titles count once each (every Boss win and every Title took careful careers to about 140 XP).
-  xp: { career: 10, arena: 10, boss: 5, kill: 1, maxKills: 10, title: 3, maxTitles: 5, won: 40, coup: 40, martyr: 25, loyalist: 20 },
+  xp: { career: 10, arena: 5, boss: 3, kill: 1, maxKills: 10, title: 3, maxTitles: 5, won: 40, coup: 40, martyr: 25, loyalist: 20 },
   legendsKept: 6, // how many Hall legends a career's setup may deal as Fortune cards
 };
 // One unlock a level (the index + 2 is the level). Past it, levels unlock nothing more. Names and words are PLACEHOLDER for the designer.
@@ -454,7 +454,7 @@ export const FORTUNE = {
   fighterPower: { common: 0, rare: 2, legendary: 4 }, legendRenown: 6,
   // Phase 5 (LLM-13: every fighter card was useless from Silver on): a drafted fighter arrives at least this far behind your
   // second-best fighter's Power, before the card's rarity bonus.
-  fighterBehind: 3,
+  fighterBehind: 2,
   wager: { winGoldPerTier: 5, winRenown: 2, lossGoldPerTier: 3 },
 };
 
@@ -618,7 +618,7 @@ export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] }
 // Version 6, phase 5 (season pace levers, off by default until measured): `rematch` brings a lost top-arena Boss back the
 // next month instead of a new circuit; `trainCap` adds Trainer weeks per fighter; `oppPower` adds Power to every opponent of
 // that arena (Dirt Pits … Imperial), `grandPower` to the Grand Tournament's.
-export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 1, rematch: false, trainCap: 0, oppPower: [0, 0, 0, 0], grandPower: 0, bossLoss: 1 }; // bossLoss: × a lost Boss's Favour in a season
+export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [1, 6, 12, 18], grandPower: 19, bossLoss: 1 }; // bossLoss: × a lost Boss's Favour in a season
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],
@@ -669,5 +669,5 @@ export const PLOT = {
   confessTrust: 3,
   suspicion: { perPrisoner: 1, perContact: 1, decay: 2, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
   // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
-  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30, betrayGold: 20, betrayRelic: 'eagle', // betrayGold: the Emperor's purse for the names, × tier
+  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30, betrayGold: 22, betrayRelic: 'eagle', // betrayGold: the Emperor's purse for the names, × tier
 };

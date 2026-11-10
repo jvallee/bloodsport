@@ -8,9 +8,12 @@ What changed from version to version, newest first. Each frozen version can stil
 - **All In is a true gamble:** +20% to take the round, but lose it and your fighter falls. The button shows that chance.
 - **Honest tells:** with an Oracle, the tell comes with one forecast that weighs it against the opponent's temper ("about 66% they Press").
 - **Relics never stop coming:** once your house holds six, a relic card can still be taken by laying down one you choose.
-- **Fortune's fighters keep up with your house:** a drafted fighter or returning legend arrives no more than a few Power behind your second-best fighter (more for rarer cards).
+- **Fortune's fighters keep up with your house:** a drafted fighter or returning legend arrives no more than 2 Power behind your second-best fighter (closer for rarer cards).
 - **Heat 1 bites:** under Harsh Judges, falling before a Boss Final costs the full Favour.
 - **Stripped of Armour** now switches your armour piece off entirely, as it says.
+- **A quicker season:** in a season, a training week gives double (+2 Power or +6 Speed) and the arenas' opponents grow to match, so a won season is about four to five months shorter. The Long Road keeps its pace.
+- **Legacy levels come at a steadier pace:** an arena climbed is worth 5 Legacy XP (was 10) and a Boss beaten 3 (was 5), while the first levels cost a little less (60 XP, then 15 more each level). Up to level 6 every level comes as soon as or sooner than before; later levels need a little more.
+- **The Emperor's purse for the names is a little richer** (22 Gold an arena, was 20), and in a season it pays like the season's other purses (×1.6).
 - Fixes: "undefined" when going All In; "87.999%"; "three cards" when four were dealt; "a Imperial"; a legendary label on a Dirt Pits vest; the Augur's relics are "rare or legendary"; the Wolf's Pelt and the Fates' Wager say what they do; the Boss card shows the halved Favour for an early loss.
 
 ## 6.0.0-alpha.4: fights with a crowd

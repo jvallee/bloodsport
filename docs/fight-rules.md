@@ -797,3 +797,126 @@ gamble between Guard (30% / 6%), All In (44% / 15%) and capitulating (0% / 0%).
 the Oracle's tells help the Legacy group, which starts with an Oracle), cadence 1.17 careers a level (77 XP a first career),
 reading the opponent +8 over Steady and +6 over always-Press, loyalist +14 on the same seeds, coup 17%, treason 0%, short
 careers 37% (a won season 105 weeks against 147), reckless 0% with 3.23 deaths: 15/15.
+
+## 6.0.0-beta: balance for seasons, playtests LLM-12 and LLM-13 (design: docs/plan-v6-phase5.md)
+
+**The gates measure seasons.** Players start a season by default (since alpha.1), so the careful, reckless, rebel,
+loyalist and Legacy groups now play a season. The Long Road has a group of its own and one gate ("the Long Road is
+winnable", careful 15–45%), which replaces the old short-career gate. New gates (`scripts/checks.js`):
+
+| Gate | Target |
+|---|---|
+| A won season's length | 12–20 fight months (non-winter weeks / 4, careful winners) |
+| Dead months | under 15% of months (no match, no Fortune card, no level-up, nothing built or bought) |
+| Builds | no single relic in over 50% of careful and Legacy wins |
+
+The baseline on seasons with no rule change: first career 38% (fail), cadence 0.99 careers a level (fail), a won season
+24.3 fight months (fail), dead months 0.1%, the top relic (the Rod) in 48% of wins.
+
+**Playtest fixes (`docs/playtest-12-changes.md`).** `HYPE.read` **10**: a round where your tactic counters the
+opponent's adds hype. All In: **+20%** to win the round, +10% to injure, no self-injury bonus; lose the round and your
+fighter falls (`TACTICS.allIn.fallOnLoss`), so its death risk is the chance of losing the round. A Fortune fighter (or a
+returning legend) arrives at most **3** Power behind your second-best fighter (`FORTUNE.fighterBehind`), plus the card's
+rarity bonus. Harsh Judges: no halving of the Favour for falling before a Boss Final. Stripped of Armour switches the
+armour piece off entirely.
+
+**Season pace (`SHORT`).** Where a won season's time went (80 careful winners, baseline): the Silver Boss took 3.15 tries
+and the Imperial 4.46, at two months a try, and every loss ended in execution for want of Favour. Levers probed (300
+careful first careers each, seeds 1000+, probe settings, which read a few points high; the first block ran before the
+playtest fixes, the second after):
+
+| Setting | Careful wins | A won season |
+|---|---|---|
+| baseline | 38% | 24.3 months |
+| a Boss rematch the next month | 1% | — |
+| training cap +2 | 48% | 22.3 |
+| training cap +4 | 56% | 20.9 |
+| training cap +4, opponents +0/0/1/2, Grand +2 | 44% | 22.7 |
+| training cap +6, opponents +0/1/2/3, Grand +3 | 42% | 21.4 |
+| training ×2 | 96% | 12.3 |
+| training ×2, opponents +0/1/2/3, Grand +3 | 96% | 13.5 |
+| training ×2, +0/2/5/8, Grand +8 | 76% | 15.6 |
+| training ×2, +0/3/7/11, Grand +11 | 59% | 16.9 |
+| training ×2, +1/4/9/14, Grand +14 | 39% | 19.0 |
+| training ×2, +1/5/11/17, Grand +17 | 30% | 19.4 |
+| *after the playtest fixes:* | | |
+| **training ×2, +1/5/11/17, Grand +17 (chosen)** | 34% | 19.6 |
+| … with a rematch | 9% | 17.8 |
+| … with a rematch, a lost Boss's Favour ×0.5 | 41% | 20.7 |
+| training ×2, +1/4/9/14, Grand +14, rematch, Favour ×0.5 | 54% | 19.9 |
+| training ×2, +0/3/7/11, Grand +11, rematch, Favour ×0.5 | 63% | 17.6 |
+
+A rematch costs a second Boss loss's Favour, and even with that halved it lengthens a won season. Chosen: in a season,
+**training gives double** (`SHORT.train` 2) and opponents fight with **+1 / +5 / +11 / +17** Power in the four arenas
+(`SHORT.oppPower`) and **+17** in the Grand Tournament (`SHORT.grandPower`): fighters grow twice as fast and the arenas
+keep pace, so a won season is about five months shorter at the same win rate. `SHORT.rematch`, `SHORT.trainCap` and
+`SHORT.bossLoss` stay off (false, 0, ×1). The Long Road is unchanged. (A first choice: the arenas moved to +1/+6/+12/+18
+and the Grand to +19 with the reckless fix below.)
+The training buttons and the tutorial name the career's gain (`trainGain`: +2 Power or +6 Speed in a season).
+
+**The first check on the new pace** (300 careers): 14/18. First career 34%, a won season 19.6 fight months, full Legacy
+56%, but: cadence 0.86 careers a level (105 XP a first career), reckless 4.01 deaths, the loyalist +5 (the edge), and
+the Nets of Nemi in 54% of wins.
+
+**Unlock cadence (`LEGACY`).** Nearly every first season now reaches the Imperial Coliseum, so the arenas climbed were 38 of
+a first career's 102 XP (60 careful seasons: a career 10, arenas 38, Bosses 20, Titles 12, kills 10, a win 11). An arena
+climbed: 10 → **5** XP; a Boss beaten: 5 → **3**. Level 2 needs **60** XP (was 70) and each level after **15** more (was 10).
+The XP for each level up to 6 is the same or lower than before (60/135/225/330/450 against 70/150/240/340/450), so a saved
+Legacy keeps every level it has; later levels need a little more. A first season that loses at the Imperial wall (about
+64 XP) still reaches level 2. Check: 78 XP a first career, cadence **1.16**.
+
+**Builds: the gate is changed.** Relic cards keep coming at the limit (the LLM-12 fix), so a winning house holds six
+relics, and four of them sat above 50% of won careers at once (Nets 60%, Spring 58%, Wolf's Pelt 56%, Referee 52%).
+Weakening the Nets (−2 → −1 Speed) only put the Spring on top (57%). What would make a relic dominant is being held far
+more often by winners than by losers, so the gate now reads **"no relic is held in 20+ points more of won careers than
+of lost ones"** (its lift; careful and Legacy careers). The most held relic is still printed. Lifts (300 careful seasons):
+the Purse +11, the Rod +8, the Nets +7. Check: the Gilded Laurel **+13** (a Legacy relic that needs a Title), the Nets the
+most held at 54%.
+
+**The loyalist (`PLOT.betrayGold`).** The loyalist's lead fell to +5 in seasons: the betrayal comes late (week 58 on
+average, of an 84-week won season) and most lost seasons end at the Grand Tournament for want of Favour. Probes, 150
+loyalist seasons against 33% careful on the same seeds:
+
+| Betrayal reward | Loyalist wins |
+|---|---|
+| 30 Favour, 20 Gold × tier (before) | 38% (+5) |
+| 40 Favour | 39% |
+| prefect's offer after 10 weeks (was 16) | 39% |
+| 60 Favour | 43% (+10) |
+| 30 Gold × tier | 43% (+10) |
+| 40 Gold × tier | 53% (+20) |
+| 45 Favour, 40 Gold × tier | 54% (+21) |
+
+The Gold is what counts. Chosen: in a season the Emperor's purse is multiplied by `SHORT.purse` (×1.6, like every other
+season purse). Check: **+12**. Across the next checks the lead read +12, +9, +5 and +9 (the loyalist group is 150 careers,
+so a few points of noise), so the purse also went from 20 to **22** Gold × tier (35 × tier in a season; the Long Road's
+loyalist gets 2 more Gold a tier).
+
+**Reckless deaths (`FORTUNE.fighterBehind`, `SHORT.oppPower`).** With the three fixes above the check was 17/18: the
+reckless bot lost 4.01 fighters a season (gate 1–4; 3.53 on the season baseline). A reckless house fights until it runs
+out of fighters, so its deaths follow how many usable fighters it gets and how long it lasts. Probes (300 seasons each;
+reckless deaths, careful wins on the same settings):
+
+| Setting | Reckless deaths | Careful wins |
+|---|---|---|
+| as checked (Fortune fighters ≤3 behind; +1/+5/+11/+17, Grand +17) | 4.01 | 34% |
+| injury roll: 4 per point of Power gap (was 5) | 3.93 | 42% |
+| injury roll: 23 per prior injury (was 25) | 4.02 | 33% |
+| Fortune fighters ≤5 behind | 4.28 | — |
+| opponents +1/+4/+10/+17 | 4.22 | 35% |
+| Fortune fighters ≤2 behind | 3.87 | 42% |
+| ≤2 behind, +1/+6/+12/+18, Grand +18 | 3.73 | 38% |
+| ≤2 behind, +1/+5/+12/+19, Grand +19 | 3.93 | 29% |
+| ≤2 behind, +1/+6/+12/+19, Grand +19 (full check) | 3.88 | 28% (18/18, but full Legacy 40%, the coup 6%, the Long Road 44%: three gates on their edge) |
+| **≤2 behind, +1/+6/+12/+18, Grand +19, the Emperor's purse 22 (chosen, full check)** | 3.74 | 31% |
+
+Chosen: a Fortune fighter (or a returning legend) arrives at most **2** Power behind your second-best fighter
+(`FORTUNE.fighterBehind`, was 3), and a season's opponents fight with **+1 / +6 / +12 / +18** Power in the four arenas and
+**+19** in the Grand Tournament. The same setting with the purse at 20 read the loyalist at +5 (a fail).
+
+**The check (6.0.0-beta, 300 careers, seasons): 18/18.** First career 31%, full Legacy 47%, cadence 1.19 careers a level (76
+XP a first career), careful +28 points over reckless, reckless 3.74 deaths (careful 0.30× that), reading the opponent +9
+over Steady and +6 over always-Press, the Grand +84 points harder than the first Boss, the loyalist +9, the coup 6%,
+treason 0%, the Long Road 44% (a won one 125 weeks against a season's 85), a won season **19.9 fight months** (was 24.3),
+dead months 0.4%, the top relic lift +17 (the Eagle Standard; the most held, the Spring, in 49% of wins). Near their edges:
+the coup (6%, floor 5%), the Long Road (44%, ceiling 45%) and the season's length (19.9, ceiling 20).

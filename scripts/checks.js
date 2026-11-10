@@ -119,11 +119,16 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, sp
   // Version 6, phase 5: a won season's length in fight months; dead months; the most common relic among won careers.
   const wonMonths = careful.filter((r) => r.won).length ? avg(careful.filter((r) => r.won).map((r) => r.fightMonths)) : 99;
   const dead = careful.reduce((n, r) => n + r.deadMonths, 0) / Math.max(1, careful.reduce((n, r) => n + r.months, 0));
-  const wins = [...careful, ...legacy].filter((r) => r.won);
-  const relicCount = {};
-  for (const r of wins) for (const id of new Set(r.relics)) relicCount[id] = (relicCount[id] ?? 0) + 1;
-  const [topRelic, topN] = Object.entries(relicCount).sort((a, b) => b[1] - a[1])[0] ?? ['none', 0];
-  const topShare = wins.length ? topN / wins.length : 0;
+  // Builds: a relic is dominant if it is held in many more won careers than lost ones (its lift). Since relic cards keep
+  // coming at the limit (playtest LLM-12), a winner holds six relics, so several sit above 50% of wins without any of them
+  // deciding a career; the gate was first "no relic in over 50% of won careers" (docs/fight-rules.md, 6.0.0-beta).
+  const pool = [...careful, ...legacy];
+  const wins = pool.filter((r) => r.won);
+  const losses = pool.filter((r) => !r.won);
+  const share = (rs, id) => (rs.length ? rs.filter((r) => r.relics.includes(id)).length / rs.length : 0);
+  const relicIds = [...new Set(wins.flatMap((r) => r.relics))];
+  const [topRelic, topShare] = relicIds.map((id) => [id, share(wins, id)]).sort((a, b) => b[1] - a[1])[0] ?? ['none', 0];
+  const [liftRelic, topLift] = relicIds.map((id) => [id, share(wins, id) - share(losses, id)]).sort((a, b) => b[1] - a[1])[0] ?? ['none', 0];
   const perLevel = [1, 2, 3, 4, 5].reduce((s, l) => s + levelCost(l), 0) / 5 / meanXp;
   const gates = [
     // Version 6, phase 3: the careful bot plays a first career (no unlocks); 20–45% became 15–35% (docs/plan-v6-one-more-career.md).
@@ -146,7 +151,7 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, sp
     { name: 'The Long Road is winnable (careful 15–45%) and a won season is at least a fifth quicker', value: rate(long), pass: rate(long) >= 0.15 && rate(long) <= 0.45 && winWeeks(careful) <= 0.8 * winWeeks(long), fmt: 'pct' },
     { name: 'Season length: a won season takes 12–20 fight months', value: wonMonths, pass: wonMonths >= 12 && wonMonths <= 20, fmt: 'num' },
     { name: 'Dead turns: under 15% of fight months end with nothing new', value: dead, pass: dead < 0.15, fmt: 'pct' },
-    { name: `Builds: no relic in over 50% of won careers (top: ${topRelic})`, value: topShare, pass: topShare <= 0.5, fmt: 'pct' },
+    { name: `No dominant relic: none is held in 20+ points more of won careers than of lost ones (top: ${liftRelic}; most held: ${topRelic}, ${Math.round(100 * topShare)}% of wins)`, value: topLift, pass: topLift < 0.2, fmt: 'pctDiff' },
     { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
   ];
   return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, long, legacy, meanXp, wonMonths, dead };

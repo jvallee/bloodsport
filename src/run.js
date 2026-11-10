@@ -1249,7 +1249,7 @@ function betray(run) {
   for (const c of p.freed) c.caught = true;
   p.executed = victims;
   changeFavor(run, PLOT.betrayFavor, 'you gave the Emperor the names he wanted');
-  const purse = PLOT.betrayGold * Math.min(run.topTier, CIRCUITS.length);
+  const purse = Math.round(PLOT.betrayGold * Math.min(run.topTier, CIRCUITS.length) * (isShort(run) ? SHORT.purse : 1)); // a season's purses pay more (6.0.0-beta)
   if (purse) {
     run.gold += purse;
     log(run, `A purse of ${purse} Gold arrives from the palace, with the Emperor's thanks.`, 'event');

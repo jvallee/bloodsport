@@ -27,5 +27,9 @@ const endings = {};
 for (const r of results) { const k = r.run.ending ?? r.run.plot?.ended ?? (r.won ? 'won' : 'lost'); endings[k] = (endings[k] ?? 0) + 1; }
 const relics = {};
 for (const r of wonR) for (const id of new Set(r.relics ?? [])) relics[id] = (relics[id] ?? 0) + 1;
+const lostR = results.filter((r) => !r.won);
+const share = (rs, id) => rs.filter((r) => (r.relics ?? []).includes(id)).length / Math.max(1, rs.length);
+const lift = Object.keys(relics).map((id) => [id, share(wonR, id) - share(lostR, id)]).sort((a, b) => b[1] - a[1]);
+console.log(`  lift (share in wins − share in losses): ${lift.slice(0, 4).map(([k, v]) => `${k} ${v >= 0 ? '+' : ''}${Math.round(100 * v)}`).join(', ') || '-'}`);
 console.log(`  relics in won careers: ${Object.entries(relics).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k} ${Math.round((100 * v) / Math.max(1, wonR.length))}%`).join(', ') || '-'}`);
 console.log(`  endings: ${Object.entries(endings).map(([k, v]) => `${k} ${Math.round((100 * v) / N)}%`).join(', ')}`);

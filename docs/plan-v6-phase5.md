@@ -24,7 +24,7 @@ Part of `docs/plan-v6-one-more-career.md` (section 4, "Measuring fun"). Ships as
 |---|---|---|
 | Career length | a won season in 12–20 fight months | non-winter weeks / 4, careful winners |
 | Dead turns | under 15% of months | a month with no match fought, no Fortune card taken, no level-up and nothing built or bought |
-| Builds | no single relic in over 50% of won careers | relics held at the end of careful and Legacy wins |
+| Builds | no single relic in over 50% of won careers (changed during the phase: no relic held in 20+ points more of wins than of losses; see `docs/fight-rules.md`, 6.0.0-beta) | relics held at the end of careful and Legacy careers |
 
 ### 3. Pace: a shorter season
 - Find what makes a won season long (Boss retries, the Silver/Imperial walls, months spent training) from the bots'

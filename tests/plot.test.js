@@ -270,6 +270,17 @@ test('raids: hand over a prisoner, pay, show a pass, or bar the gates and risk t
   assert.ok(treason);
 });
 
+test('in a season the Emperor\'s purse for the names pays like a season\'s purses (× SHORT.purse, 6.0.0-beta)', async () => {
+  const { SHORT } = await import('../src/data.js');
+  const { run } = withPrisoner();
+  run.setup = { ...run.setup, short: true };
+  run.plot.stage = 'cause';
+  const gold = run.gold;
+  card(run, 'theOffer', 1);
+  assert.equal(run.plot.ended, 'loyalist');
+  assert.equal(run.gold, gold + Math.round(PLOT.betrayGold * run.topTier * SHORT.purse));
+});
+
 test('the Loyalist: naming names executes the political prisoners and the freed, for a lot of Favour', () => {
   const { run, f } = withPrisoner();
   run.plot.stage = 'cause';
