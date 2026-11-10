@@ -1852,11 +1852,20 @@ function pickOf(rng, ids, rarityOf, rarity, taken) {
   return (same.length ? pick(rng, same) : free.length ? pick(rng, free) : null);
 }
 
+// A drafted fighter keeps up with the house: at least FORTUNE.fighterBehind below your second-best fighter, plus the rarity bonus.
+function keepUp(run, f, rarity) {
+  const ranked = run.roster.map(effectivePower).sort((a, b) => b - a);
+  const second = ranked[1] ?? ranked[0];
+  if (second === undefined) return;
+  const floor = second - FORTUNE.fighterBehind + FORTUNE.fighterPower[rarity];
+  if (effectivePower(f) < floor) f.power += floor - effectivePower(f);
+}
+
 function fortuneCard(run, rng, table) {
   const rarity = weighted(rng, FORTUNE.rarity);
   const kinds = { ...FORTUNE.kinds };
   const taken = table.map((c) => c.id);
-  if (run.relics.length >= FORTUNE.maxRelics) kinds.relic = 0;
+  // LLM-13: relic cards keep coming once the house holds its fill; taking one lays another down (chooseFortune's `drop`).
   if (run.roster.length >= rosterCap(run)) kinds.fighter = 0;
   if (isWinter(run.week) || run.wager || table.some((c) => c.kind === 'wager')) kinds.wager = 0;
   const legends = returningLegends(run).filter((l) => !table.some((c) => c.id === legendKey(l)));
@@ -1871,12 +1880,14 @@ function fortuneCard(run, rng, table) {
   if (kind === 'gear') {
     const gearTier = clamp(tier - 2 + ['common', 'rare', 'legendary'].indexOf(rarity), 1, 3); // mostly a tier below your arena
     const id = pickOf(rng, Object.keys(GEAR).filter((g) => GEAR[g].tier === gearTier), () => rarity, rarity, taken);
-    if (id) return { kind, id, rarity };
+    // LLM-13: the card is labelled by the item it holds (a Dirt Pits draw is always tier 1, whatever its luck).
+    if (id) return { kind, id, rarity: ['common', 'rare', 'legendary'][gearTier - 1] };
   }
   if (kind === 'fighter') {
     const f = createFighter(rng, { id: newId(run, 'f'), bonusPower: circuitInfo(run).marketPower + FORTUNE.fighterPower[rarity], takenNames: takenNames(run, table.map((c) => c.fighter).filter(Boolean)), classes: run.setup?.classes });
     season(run, rng, f);
     if (rarity === 'legendary') Object.assign(f, { legend: true, renown: FORTUNE.legendRenown, origin: 'A legend of the arena' });
+    keepUp(run, f, rarity);
     return { kind, id: f.id, rarity, fighter: f };
   }
   if (kind === 'legend') {
@@ -1885,6 +1896,7 @@ function fortuneCard(run, rng, table) {
     season(run, rng, f);
     Object.assign(f, { name: l.name, humor: l.humor ?? f.humor, titles: [...(l.titles ?? [])], kills: l.kills ?? 0, renown: Math.max(l.renown ?? 0, FORTUNE.legendRenown), legend: true, returned: legendKey(l), carried: { kills: l.kills ?? 0, titles: l.titles?.length ?? 0 }, origin: 'Returned from the Hall of Champions' });
     if (CLASSES[l.cls]) Object.assign(f, { cls: l.cls, weapon: l.cls === 'fighter' ? f.weapon ?? pick(rng, WEAPON_IDS) : null });
+    keepUp(run, f, 'legendary');
     return { kind, id: legendKey(l), rarity: 'legendary', fighter: f, wins: l.wins ?? 0 };
   }
   if (kind === 'wager') {
@@ -1935,28 +1947,33 @@ function fortuneMonth(run) {
 
 export const rerollPrice = (run) => FORTUNE.reroll[Math.min(run.fortune?.rerolls ?? 0, FORTUNE.reroll.length - 1)];
 
-export function fortuneBlocker(run, index) {
+export function fortuneBlocker(run, index, drop = null) {
   const idle = idleBlocker(run);
   if (idle) return idle;
   const card = run.fortune?.cards[index];
   if (!card) return 'No Fortune card there.';
   if ((card.kind === 'fighter' || card.kind === 'legend') && run.roster.length >= rosterCap(run)) return `Your quarters are full (${rosterCap(run)} fighters).`;
-  if (card.kind === 'relic' && run.relics.length >= FORTUNE.maxRelics) return `The house already holds ${FORTUNE.maxRelics} relics.`;
+  if (card.kind === 'relic' && run.relics.length >= FORTUNE.maxRelics && !run.relics.includes(drop)) return `The house holds ${FORTUNE.maxRelics} relics: choose one to lay down for it.`;
   if (card.fighterId && !findFighter(run, card.fighterId)) return `${card.name} is no longer in the house.`;
   return null;
 }
 
-export function chooseFortune(run, index) {
-  assertOk(fortuneBlocker(run, index));
+// `drop`: at the relic limit, the relic the house lays down to take a new one.
+export function chooseFortune(run, index, drop = null) {
+  assertOk(fortuneBlocker(run, index, drop));
   const card = run.fortune.cards[index];
   run.fortune = null;
   const title = fortuneTitle(card);
   if (card.kind === 'relic') {
+    if (run.relics.length >= FORTUNE.maxRelics) {
+      run.relics = run.relics.filter((id) => id !== drop);
+      log(run, `Fortune: ${RELICS[drop].name} is laid down.`);
+    }
     run.relics.push(card.id);
     log(run, `Fortune: ${title} joins the house's relics. ${RELICS[card.id].desc}`, 'good');
   } else if (card.kind === 'gear') {
     run.inventory.gear.push(card.id);
-    log(run, `Fortune: a ${title} for the storeroom.`, 'good');
+    log(run, `Fortune: ${/^[AEIOU]/i.test(title) ? 'an' : 'a'} ${title} for the storeroom.`, 'good');
   } else if (card.kind === 'fighter' || card.kind === 'legend') {
     const f = card.fighter;
     run.roster.push(f);
@@ -2939,7 +2956,7 @@ export function finishMatch(run, match) {
       log(run, `Reaching the Boss earns respect: ${refund === bout.buyIn ? `the ${refund} Prestige buy-in is` : `${refund} of the ${bout.buyIn} Prestige buy-in are`} returned.`, 'event');
     }
     // Losing a Boss bracket before its Final costs half (you never reached the Boss).
-    const early = bracket && bracket.round < 2;
+    const early = bracket && bracket.round < 2 && !hasDecree(run, 'harshJudges'); // Harsh Judges don't halve an early Boss loss (LLM-13)
     if (bout.top && bout.boss) changeFavor(run, early ? Math.round(bossLossFavor(tier, run) * BRACKET.earlyBossLoss) : bossLossFavor(tier, run), early ? `lost the ${BRACKET.rounds[bracket.round]} of ${bout.name}` : `lost ${bout.name}`);
     else if (bout.top && match.result.reason === 'towel' && !bribed) changeFavor(run, FAVOR.topTowel, 'capitulated in your top arena');
   }

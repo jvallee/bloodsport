@@ -994,10 +994,12 @@ export function fortunePanel(run) {
       <div class="fortune-face">${fortuneFace(c)}</div>
       <h3>${esc(fortuneTitle(c))}</h3>
       <p>${esc(fortuneText(c))}</p>
-      ${buttonWhy('Take it', 'fortune', { index: i }, why, 'btn primary')}
+      ${c.kind === 'relic' && run.relics.length >= FORTUNE.maxRelics
+    ? `<div class="swap"><small>Your house holds ${FORTUNE.maxRelics} relics. Lay one down for it:</small>${run.relics.map((id) => button(`Lay down ${RELICS[id].name}`, 'fortune', { index: i, drop: id }, null, 'btn small')).join('')}</div>`
+    : buttonWhy('Take it', 'fortune', { index: i }, why, 'btn primary')}
     </div>`;
   }).join('');
-  const full = run.relics.length >= FORTUNE.maxRelics ? ` Your house holds ${FORTUNE.maxRelics} relics: no more are dealt.` : '';
+  const full = run.relics.length >= FORTUNE.maxRelics ? ` Your house holds its ${FORTUNE.maxRelics} relics: a new one takes the place of one you lay down.` : '';
   if (run.fortune.augur) { // version 6: the Augur's opening gift (PLACEHOLDER words)
     return `<section class="panel fortune-draft augur">
     <div class="label">Your patron</div><h2>The Augur reads the birds</h2>

@@ -5,7 +5,7 @@
 //          freshly fallen fighter at the Unnatural Temple of Vulcan (building it then, if it must).
 // reckless: trains one star nonstop, heals only with the Surgeon, fights only the top arena, always Presses, never towels.
 
-import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE } from '../src/data.js';
+import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE, FORTUNE } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
 import { isMonthStart, isWinter } from '../src/calendar.js';
 import { coupBonus } from '../src/plot.js';
@@ -49,9 +49,19 @@ function fortuneScore(run, c, strategy) {
   if (c.id === 'favour') return run.favor < 40 ? 8 : 3;
   return { gold: 4, prestige: 5, sparring: 4, calm: 2, items: 2, blessing: 9 }[c.id] ?? 2;
 }
+// At the relic limit (LLM-13: relic cards keep coming), a bot lays down its least rare relic for a rarer one.
+const RANK = { common: 0, rare: 1, legendary: 2 };
+function swapFor(run, c) {
+  if (c.kind !== 'relic' || run.relics.length < FORTUNE.maxRelics) return null;
+  const worst = [...run.relics].sort((a, b) => RANK[RELICS[a].rarity] - RANK[RELICS[b].rarity])[0];
+  return RANK[c.rarity] > RANK[RELICS[worst].rarity] ? worst : undefined; // undefined: not worth a swap
+}
 function draftFortune(run, strategy) {
-  const best = run.fortune.cards.map((c, i) => ({ i, score: fortuneBlocker(run, i) ? -1 : fortuneScore(run, c, strategy) })).sort((a, b) => b.score - a.score)[0];
-  if (best.score >= 0) chooseFortune(run, best.i);
+  const best = run.fortune.cards.map((c, i) => {
+    const drop = swapFor(run, c);
+    return { i, drop, score: drop === undefined || fortuneBlocker(run, i, drop) ? -1 : fortuneScore(run, c, strategy) };
+  }).sort((a, b) => b.score - a.score)[0];
+  if (best.score >= 0) chooseFortune(run, best.i, best.drop);
   else passFortune(run);
 }
 

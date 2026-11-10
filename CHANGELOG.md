@@ -2,6 +2,17 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 6.0.0-beta (in progress): balance, and what two playtesters found
+
+- **The crowd loves a read:** a round where your tactic counters the opponent's now fills the hype meter too (+10), so good play can win the crowd, not only pressing.
+- **All In is a true gamble:** +20% to take the round, but lose it and your fighter falls. The button shows that chance.
+- **Honest tells:** with an Oracle, the tell comes with one forecast that weighs it against the opponent's temper ("about 66% they Press").
+- **Relics never stop coming:** once your house holds six, a relic card can still be taken by laying down one you choose.
+- **Fortune's fighters keep up with your house:** a drafted fighter or returning legend arrives no more than a few Power behind your second-best fighter (more for rarer cards).
+- **Heat 1 bites:** under Harsh Judges, falling before a Boss Final costs the full Favour.
+- **Stripped of Armour** now switches your armour piece off entirely, as it says.
+- Fixes: "undefined" when going All In; "87.999%"; "three cards" when four were dealt; "a Imperial"; a legendary label on a Dirt Pits vest; the Augur's relics are "rare or legendary"; the Wolf's Pelt and the Fates' Wager say what they do; the Boss card shows the halved Favour for an early loss.
+
 ## 6.0.0-alpha.4: fights with a crowd
 
 - **The crowd is live.** Press and drama fill the hype meter (Press fills it three times faster than before), and now **Guard drains it**. When a round starts with the crowd past the mark on the meter, your fighter fights it with **the crowd behind them: +1 Power**, and the meter glows.

@@ -52,7 +52,7 @@ export const GAME_ACTIONS = {
   rite: ({ run }, d) => { rite(run, d.id); },
   'steward-plan': ({ run }) => { stewardPlan(run); }, // version 6: everyone's job in one click
   // Version 6: the monthly Fortune draft (index: the card), a reroll for Gold, or letting it pass.
-  fortune: ({ run }, d) => { chooseFortune(run, Number(d.index)); },
+  fortune: ({ run }, d) => { chooseFortune(run, Number(d.index), d.drop ?? null); },
   'fortune-reroll': ({ run }) => { rerollFortune(run); },
   'fortune-pass': ({ run }) => { passFortune(run); },
   surgeon: ({ run }, d) => { surgeon(run, d.id, Number(d.index)); },

@@ -35,6 +35,8 @@ export function matchupsFor(c, opp) {
 export const killMarks = (f) => KILL_MARKS.filter((k) => (f.kills ?? 0) >= k.at);
 const hasMark = (f, id) => (f.kills ?? 0) >= KILL_MARKS.find((k) => k.id === id).at;
 export const gearOf = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => GEAR[k]);
+// The gear that works in this fight: Stripped of Armour switches off the armour piece entirely (LLM-13: its Power still counted).
+const gearFor = (c) => (c.arena === 'noArmor' ? [c.f.gear?.weapon].filter(Boolean).map((k) => GEAR[k]) : gearOf(c.f));
 
 // `arena` is the Boss debuff affecting this fighter (see BOSS_DEBUFFS in data.js).
 export function makeCombatant(fighter, side, arena = null) {
@@ -98,6 +100,11 @@ export function opponentIntent(m, round = m.round + 1) {
 export const tellAccuracy = (m) => INTENT.accuracy[Math.min(m.oracle ?? 0, INTENT.accuracy.length - 1)];
 // The tell for the coming round, or null (no Oracle, or an opponent without habits).
 export const opponentTell = (m) => (m.tells && !m.over ? opponentIntent(m).tell : null);
+// LLM-12/13: one honest number for the tell, weighed against the opponent's temper (a tell against it is less sure).
+export const tellForecast = (m) => {
+  const tell = opponentTell(m);
+  return tell ? Math.round(100 * withTell(opponentOdds(m), tell, tellAccuracy(m))[tell]) : null;
+};
 
 // What the opponent is likely to do this round, as { tactic: probability }.
 export function opponentOdds(m) {
@@ -168,7 +175,7 @@ export function computeSpeed(c, round) {
   if (c.arena === 'rainyMud') mods.push({ source: 'Rainy Mud', value: -2 });
   for (const b of c.boosts ?? []) if (b.round === round && b.speed) mods.push({ source: b.name, value: b.speed });
   for (const r of relicMods(c, round, effectiveInjuries(c.f) >= 1)) if (r.speed) mods.push({ source: r.name, value: r.speed });
-  for (const g of gearOf(c.f)) if (g.speed) mods.push({ source: g.name, value: g.speed });
+  for (const g of gearFor(c)) if (g.speed) mods.push({ source: g.name, value: g.speed });
   if (tacticOf(c)?.speed) mods.push({ source: tacticOf(c).name, value: tacticOf(c).speed });
   if (humorOf(c)?.speed?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).speed[round] });
   return { base: c.f.speed, mods, total: c.f.speed + sum(mods) };
@@ -215,7 +222,7 @@ export function computePower(c, opp, round, raw = false) {
   if (c.roar) mods.push({ source: 'The crowd', value: HYPE.favourPower }); // version 6: the crowd's favour
   for (const b of c.boosts ?? []) if (b.round === round && b.power) mods.push({ source: b.name, value: b.power });
   for (const r of relicMods(c, round, effectiveInjuries(f) >= 1)) if (r.power) mods.push({ source: r.name, value: r.power });
-  for (const g of gearOf(f)) if (g.power) mods.push({ source: g.name, value: g.power });
+  for (const g of gearFor(c)) if (g.power) mods.push({ source: g.name, value: g.power });
   if (kindActive(c, 'bloodlust', round) && effectiveInjuries(opp.f) >= 1) mods.push({ source: 'Bloodlust', value: 1 });
   if (kindActive(c, 'nightborn', round) && round === 3) mods.push({ source: 'Nightborn', value: 1 });
   if (kindActive(c, 'rampage', round) && c.rampage) mods.push({ source: 'Rampage', value: c.rampage });
@@ -286,7 +293,7 @@ export function computePhase2(c, opp, round, volley = {}) {
     if (r.injure) enemy.push({ source: r.name, value: r.injure });
   }
   // Gear.
-  for (const g of gearOf(f)) {
+  for (const g of gearFor(c)) {
     if (g.injure) enemy.push({ source: g.name, value: g.injure });
     if (g.guard) self.push({ source: g.name, value: -g.guard, armor: true });
     if (g.win) win.push({ source: g.name, value: g.win });
@@ -600,6 +607,11 @@ export function playRound(m, { stance = 'steady' } = {}) {
   const loser = sideOf(m, other(r.winner));
   if (A.f.alive && B.f.alive && classActive(loser, 'bloodBearer', round)) injuryCheck(m, loser, sideOf(m, r.winner), r, 'Off-hand strike', true);
 
+  // All In (version 6): lose the round and your fighter falls.
+  if (TACTICS[A.stance]?.fallOnLoss && r.winner === 'B' && A.f.alive) {
+    A.f.alive = false;
+    r.checks.push({ attacker: 'B', defender: 'A', label: 'All In', allIn: true, hit: true, mods: [], injury: { tag: 'death', name: 'Death' } });
+  }
   sideOf(m, r.winner).roundsWon += 1;
   m.rounds.push(r);
   for (const c of [A, B]) {
@@ -654,6 +666,7 @@ export function hypeOf(m) {
     if (r.stances?.A === 'press') h += HYPE.press;
     if (r.stances?.A === 'guard') h += HYPE.guard; // version 6: caution bores them
     if (r.stances?.A === 'allIn') h += HYPE.allIn;
+    if (r.counter === 'A') h += HYPE.read; // LLM-12/13: the crowd loves a fighter who reads the other
     h = Math.max(0, h);
   }
   if (m.over && m.result?.winner === 'A' && m.rounds?.[0]?.winner === 'B') h += HYPE.comeback;

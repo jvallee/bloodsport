@@ -81,7 +81,8 @@ export const TACTICS = {
   feint: { name: 'Feint', icon: '↯', desc: '+10% win chance if you strike first this round (faster fighters strike first more often).', firstStrike: 10000 },
   // Version 6 (phase 4): the clutch choice, offered only at the Death Gate. Outside the counter triangle; never an opponent's
   // pick, never suggested. Words are PLACEHOLDER for the designer.
-  allIn: { name: 'All In', icon: '🔥', clutch: true, desc: 'Only at the Death Gate: +15% win chance and +10% chance to injure, but +45% chance to be injured. The crowd loves it.', win: 15000, injure: 10000, self: 45000 },
+  // LLM-12/13: with only a wound risk it could be safer than fighting on; now losing the round is death (its risk is the loss chance).
+  allIn: { name: 'All In', icon: '🔥', clutch: true, fallOnLoss: true, desc: 'Only at the Death Gate: +20% win chance and +10% chance to injure, but lose the round and your fighter falls. The crowd loves it.', win: 20000, injure: 10000 },
 };
 // The tactics of the counter triangle (what the picker offers every round, and what opponents choose from).
 export const ROUND_TACTICS = Object.keys(TACTICS).filter((k) => !TACTICS[k].clutch);
@@ -126,14 +127,14 @@ export const PATRONS = {
   warChest: { name: 'The War Chest', desc: 'Start with 2 War Paint and a Blessed Bandage.' },
   defector: { name: 'A Defector', desc: 'A strong fighter from a rival house joins you at the start (Power +3).' },
   liberator: { name: 'Friends of the Rising', desc: 'Start with a political prisoner in your roster. The rebels remember your house.' }, // v6, secret
-  augur: { name: 'The Augur', desc: 'Open the career with a pick of three rare relics.' }, // version 6: a Legacy level unlock
+  augur: { name: 'The Augur', desc: 'Open the career with a pick of three rare or legendary relics.' }, // version 6: a Legacy level unlock
 };
 
 // Emperor's Decrees: optional harder rules for a career, after your first win. Each adds to the score.
 export const DECREES = {
   ironBosses: { name: 'Iron Bosses', desc: 'Every Boss fights with +1 Power.', score: 30 },
   greedyEmperor: { name: 'A Greedy Emperor', desc: 'Tribute costs 50% more.', score: 20 },
-  harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favour.', score: 20 },
+  harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favour, and falling before its Final costs the full amount.', score: 20 }, // phase 5 (LLM-13): the halving for an early loss made Heat 1 barely felt
   leanFortune: { name: 'Lean Fortunes', desc: 'Fortune deals one card fewer each month.', score: 25 }, // version 6
   hungryLions: { name: 'Hungry Lions', desc: 'Every opponent fights with +1 Power.', score: 40 }, // version 6
 };
@@ -157,7 +158,7 @@ export const LEGACY_LEVELS = [
   { id: 'colour:purple', name: 'Imperial Purple', desc: 'A house colour.' },
   { id: 'oracle', name: 'A Seer in the House', desc: 'Every career starts with an Oracle.' },
   { id: 'relic:scrolls', name: 'The Scrolls of the Masters', desc: 'Can now appear in your Fortune draft.' },
-  { id: 'patron:augur', name: 'The Augur', desc: 'A new patron: open the career with a pick of three rare relics.' },
+  { id: 'patron:augur', name: 'The Augur', desc: 'A new patron: open the career with a pick of three rare or legendary relics.' },
   { id: 'relic:laurel', name: 'The Gilded Laurel', desc: 'Can now appear in your Fortune draft.' },
   { id: 'colour:verdigris', name: 'Verdigris', desc: 'A house colour.' },
   { id: 'fourCards', name: 'A Generous Wheel', desc: 'Fortune deals four cards each month.' },
@@ -451,6 +452,9 @@ export const FORTUNE = {
   kinds: { relic: 4, boon: 4, gear: 2, fighter: 2, wager: 1, legend: 1 }, // legend: a returning Hall legend (a Legacy unlock)
   reroll: [3, 6, 10], pass: 2,
   fighterPower: { common: 0, rare: 2, legendary: 4 }, legendRenown: 6,
+  // Phase 5 (LLM-13: every fighter card was useless from Silver on): a drafted fighter arrives at least this far behind your
+  // second-best fighter's Power, before the card's rarity bonus.
+  fighterBehind: 3,
   wager: { winGoldPerTier: 5, winRenown: 2, lossGoldPerTier: 3 },
 };
 
@@ -593,7 +597,7 @@ export const REANIMATE = { price: 6, perTier: 4, power: -1, morale: 50 };
 // risen: a Revenant's first fight back, when the crowd chants the name it buried (fun idea, 5.3.0).
 // Version 6 (phase 4): the meter is live. Guard drains it (never below 0) and All In fills it; at `favour` or more when a
 // round starts, the crowd is with your fighter: +`favourPower` Power that round. Press 5 → 15 (alpha.4; table in docs/fight-rules.md).
-export const HYPE = { risen: 20, upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 15, guard: -10, allIn: 25, favour: 35, favourPower: 1, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
+export const HYPE = { risen: 20, upset: 25, wound: 15, kill: 40, comeback: 20, signature: 10, press: 15, guard: -10, allIn: 25, read: 10, favour: 35, favourPower: 1, max: 100, renownPer: 35, goldPer: 50, lossRenownPer: 50 };
 // Version 6 (phase 4): the opponent's tell. With an Oracle you see what they mean to do this round; it is right with
 // `accuracy[Oracle level]` (a false tell names one of the other two tactics).
 export const INTENT = { accuracy: [0, 0.7, 0.85] };

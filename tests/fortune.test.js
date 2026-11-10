@@ -5,6 +5,7 @@ import { FORTUNE, STRESS, FAVOR, GEAR } from '../src/data.js';
 import { RELICS, BOONS, relicFight, tagCount, fortuneTitle, fortuneText } from '../src/fortune.js';
 import { createMatch, computePower, computeSpeed, computePhase2 } from '../src/fight.js';
 import {
+  effectivePower,
   createRun, recruit, advanceWeek, advanceToTournament, advanceBlocker, chooseFortune, fortuneBlocker, rerollFortune, rerollBlocker, rerollPrice,
   passFortune, startMatch, finishMatch, skipBout, setJob, recruitPrice, serialize, deserialize, trainStress,
 } from '../src/run.js';
@@ -90,19 +91,30 @@ test('a reroll costs FORTUNE.reroll Gold, rising each time; passing pays FORTUNE
   assert.equal(run.fortune, null);
 }));
 
-test('a relic card adds the relic; a full house of relics is dealt none', on(() => {
+// Changed on purpose in phase 5 (playtest LLM-13): a full house of relics was dealt none, which flattened the draft for
+// the rest of a career. Relic cards now keep coming, and taking one lays down a relic the player names.
+test('a relic card adds the relic; at the relic limit, relic cards still come and taking one lays another down', on(() => {
   const run = atDraft(4);
   run.fortune.cards[0] = { kind: 'relic', id: 'aegis', rarity: 'common' };
   chooseFortune(run, 0);
   assert.deepEqual(run.relics, ['aegis']);
-  run.relics = Object.keys(RELICS).slice(0, FORTUNE.maxRelics);
+  run.relics = Object.keys(RELICS).filter((r) => r !== 'eagle').slice(0, FORTUNE.maxRelics);
   run.fortune = { cards: [{ kind: 'relic', id: 'eagle', rarity: 'legendary' }], rerolls: 0 };
-  assert.match(fortuneBlocker(run, 0), /relics/);
+  assert.match(fortuneBlocker(run, 0), /lay down/);
+  assert.match(fortuneBlocker(run, 0, 'nonsense'), /lay down/);
+  const dropped = run.relics[2];
+  assert.equal(fortuneBlocker(run, 0, dropped), null);
+  chooseFortune(run, 0, dropped);
+  assert.equal(run.relics.length, FORTUNE.maxRelics);
+  assert.ok(run.relics.includes('eagle') && !run.relics.includes(dropped));
   run.gold = 500;
-  for (let i = 0; i < 20; i++) {
+  let dealt = 0;
+  for (let i = 0; i < 30; i++) {
+    run.fortune = { cards: [], rerolls: 0 };
     rerollFortune(run);
-    assert.ok(!run.fortune.cards.some((c) => c.kind === 'relic'));
+    dealt += run.fortune.cards.filter((c) => c.kind === 'relic').length;
   }
+  assert.ok(dealt > 0, 'relic cards are still dealt at the limit');
 }));
 
 test('gear, fighter and boon cards', on(() => {
@@ -277,3 +289,20 @@ test('every relic and boon is described, with a known rarity', () => {
   assert.ok(Object.values(GEAR).some((g) => g.tier === 3));
   assert.ok(FAVOR.max > 0);
 });
+
+test('a drafted fighter keeps up with the house: at least FORTUNE.fighterBehind below the second-best, plus rarity (LLM-13)', on(() => {
+  const run = atDraft(6);
+  for (const [i, f] of run.roster.entries()) f.power = 30 - i * 2;
+  run.gold = 999;
+  let seen = 0;
+  for (let i = 0; i < 40 && seen < 5; i++) {
+    run.fortune = { cards: [], rerolls: 0 };
+    rerollFortune(run);
+    for (const c of run.fortune.cards.filter((x) => x.kind === 'fighter')) {
+      seen++;
+      const second = run.roster.map(effectivePower).sort((a, b) => b - a)[1] ?? run.roster.map(effectivePower)[0];
+      assert.ok(effectivePower(c.fighter) >= second - FORTUNE.fighterBehind + FORTUNE.fighterPower[c.rarity]);
+    }
+  }
+  assert.ok(seen > 0, 'fighter cards were dealt');
+}));

@@ -4,7 +4,10 @@ import { TRAITS, CLASSES, WEAPONS, TACTICS, deltaRow } from './data.js';
 
 export function fmtPct(e5) {
   const p = e5 / 1000;
-  return `${Number.isInteger(p) ? p : +p.toFixed(3)}%`;
+  // LLM-12/13: the 99.999% cap minus whole bonuses printed "87.999%"; within 0.01 of a whole number, show the whole number.
+  // Never 0% or 100%: the cap (99.999%) and the floor stay as they are, because no round is certain.
+  const whole = Math.round(p);
+  return `${Math.abs(p - whole) < 0.01 && whole > 0 && whole < 100 ? whole : +p.toFixed(3)}%`;
 }
 
 // A roll on a 1–100 scale, e.g. 5920 → "5.9", 55000 → "55".
@@ -22,7 +25,7 @@ export function slotName(f, slot) {
 }
 
 // "Aurelia Presses; Tigris Guards. Tigris reads it: Guard beats Press." (both narration modes)
-const VERB = { steady: 'holds steady', press: 'Presses', guard: 'Guards', feint: 'Feints' };
+const VERB = { steady: 'holds steady', press: 'Presses', guard: 'Guards', feint: 'Feints', allIn: 'goes All In' };
 function tacticText(m, r) {
   if (!r.stances) return null;
   const name = (side) => (side === 'A' ? m.a : m.b).f.name;
@@ -59,6 +62,10 @@ export function narrateRound(m, r) {
     const att = name(c.attacker);
     const def = name(c.defender);
     const prefix = c.counter ? `${c.label === 'Off-hand strike' ? 'Off-hand!' : 'Elven Eyes!'} ${att} counters` : `${att} strikes at ${def}`;
+    if (c.allIn) {
+      add('death', `All In: ${def} lost the round, and with it everything. ${def} falls.`);
+      continue;
+    }
     const pierce = c.pierced ? ' (armour pierced)' : '';
     add(c.hit ? 'hit' : 'miss', `${prefix}: needs ${roll100(c.chance)} or less to wound${pierce}, rolled ${roll100(c.roll)}. ${c.hit ? 'Hit!' : 'Miss.'}`);
     if (c.drained) add('effect', `${att} drinks deep: their own ${c.drained === 'fleshWound' ? 'Flesh Wound' : 'Distraction'} closes (Blood Drinker).`);
@@ -128,6 +135,10 @@ export function narrateStory(m, r) {
   for (const c of r.checks) {
     const att = name(c.attacker);
     const def = name(c.defender);
+    if (c.allIn) {
+      add('death', `${def} gave everything, and it was not enough. ${def} falls and does not rise.`);
+      continue;
+    }
     if (c.counter && c.hit) add('hit', c.label === 'Off-hand strike' ? `${att}'s off-hand blade finds a gap!` : `${att}'s elven eyes spot an opening: a swift counter!`);
     if (c.parry?.success) add('parry', `${def} parries ${att}'s blow and ripostes!`);
     const inj = c.injury;

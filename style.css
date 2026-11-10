@@ -830,3 +830,7 @@ body[data-house="gold"] { --blood: #c99a2e; --blood-dim: #4a3810; }
 @media (prefers-reduced-motion: reduce) {
   .legacy-bar .fill, .legacy-gain .level-up, .legacy-gain .unlock-new { animation: none; }
 }
+/* Phase 5 (LLM-13): at the relic limit, a relic card offers a swap for each relic the house holds. */
+.fortune-card .swap { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.fortune-card .swap small { color: var(--muted); }
+.fortune-card .swap .btn { white-space: normal; text-align: left; }

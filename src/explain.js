@@ -39,7 +39,7 @@ export function arenaStakes(run, tier) {
   }
   if (!bout.boss) return '';
   if (tier === GRAND_TIER) return `Win: the career. Lose: ${bossLossFavor(tier, run)} Favour and try again next month.`;
-  return `Win: the arena's Title (+1 Power) for a fighter who isn't its Champion yet, +${FAVOR.bossWin} Favour and the next arena. Lose: ${bossLossFavor(tier, run)} Favour${hasBracket(tier) && BRACKET.bossFinalRefund ? ' (lose the Final itself and the buy-in comes back)' : ''}. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour.`;
+  return `Win: the arena's Title (+1 Power) for a fighter who isn't its Champion yet, +${FAVOR.bossWin} Favour and the next arena. Lose: ${bossLossFavor(tier, run)} Favour${hasBracket(tier) && !run.setup?.decrees?.includes('harshJudges') ? ` (${Math.round(bossLossFavor(tier, run) * BRACKET.earlyBossLoss)} if you fall before the Final${BRACKET.bossFinalRefund ? '; lose the Final itself and the buy-in comes back' : ''})` : ''}. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour.`;
 }
 
 // The Power and Speed each side brings to the next round (everything included: gear, Titles,

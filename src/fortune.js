@@ -1,5 +1,5 @@
 // Version 6, phase 2: the Fortune draft and relics (docs/plan-v6-one-more-career.md, pillars B and C).
-// Every month the house picks one of three Fortune cards: a relic, a boon, a piece of gear, a fighter, or a wager.
+// Every month the house picks one of three (or four) Fortune cards: a relic, a boon, a piece of gear, a fighter, or a wager.
 // Relics are house-wide trophies (at most FORTUNE.maxRelics) that bend one rule each; some count perk tags, so perks and
 // relics build on each other. Pure: tables and small helpers, no dice (run.js draws the cards on its own stream).
 // All names and descriptions are PLACEHOLDER (docs/text-to-rewrite.md).
@@ -19,7 +19,7 @@ export const RELICS = {
   ledger: { name: "The Old Lanista's Ledger", rarity: 'common', desc: 'Fighters cost 2 Gold less.', recruitDiscount: 2 },
   hook: { name: "The Butcher's Hook", rarity: 'rare', desc: '+5% chance to injure; a kill pays +2 Renown.', fight: { injure: 5000 }, killRenown: 2 },
   nets: { name: 'The Nets of Nemi', rarity: 'rare', desc: 'Opponents fight at −2 Speed.', foe: { speed: -2 } },
-  wolfPelt: { name: "The Wolf's Pelt", rarity: 'rare', desc: '+1 Power while your fighter is hurt.', fight: { power: 1, when: 'hurt' } },
+  wolfPelt: { name: "The Wolf's Pelt", rarity: 'rare', desc: '+1 Power while your fighter has an injury that counts toward the Death Gate.', fight: { power: 1, when: 'hurt' } },
   chain: { name: "The Brute's Chain", rarity: 'rare', tag: 'brute', desc: '+3% chance to injure for each Brute perk (up to 3).', perTag: { injure: 3000 } },
   shell: { name: 'The Tortoise Shell', rarity: 'rare', tag: 'guarded', desc: '−4% chance to be injured for each Guarded perk (up to 3).', perTag: { guard: 4000 } },
   sandals: { name: "Mercury's Sandals", rarity: 'rare', tag: 'swift', desc: '+1 Speed for each Swift perk (up to 3).', perTag: { speed: 1 } },
@@ -119,7 +119,7 @@ export function fortuneText(card) {
     const f = card.fighter;
     return `An old champion of your house (${card.wins} win${card.wins === 1 ? '' : 's'}) offers to fight for you one last season: Power ${f.power}, Speed ${f.speed}, level ${f.level}${f.titles.length ? `, ${f.titles.join(', ')}` : ''}.`;
   }
-  if (card.kind === 'wager') return `Win your top bout this month: +${card.winGold} Gold and +${card.winRenown} Renown. Lose or skip it: −${card.lossGold} Gold.`;
+  if (card.kind === 'wager') return `Win this month's top-arena tournament: +${card.winGold} Gold and +${card.winRenown} Renown. Lose or skip it: −${card.lossGold} Gold.`;
   const b = BOONS[card.id];
   if (b.gold) return `+${card.gold} Gold.`;
   if (b.prestige) return `+${card.prestige} Prestige.`;

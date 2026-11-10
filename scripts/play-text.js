@@ -7,14 +7,14 @@
 // Type `help` for the command list.
 
 import { createInterface } from 'node:readline';
-import { dailySeed, dailySetup, ALL_UNLOCKS } from '../src/legacy.js';
+import { dailySeed, dailySetup, ALL_UNLOCKS, careerXp } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
 import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
 import { RELICS, TAGS, perkTags, fortuneTitle, fortuneText } from '../src/fortune.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk, signatureOf, useSignature, opponentHasSignature, hypeOf, opponentTell, tellAccuracy } from '../src/fight.js';
+import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk, signatureOf, useSignature, opponentHasSignature, hypeOf, opponentTell, tellForecast, opponentUnleashesNext, signatureBlocker } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
@@ -81,7 +81,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   augment <id> <injury#>        cyborg surgery on a Maimed or Blinded wound (Medbay level 2+)
   withdraw <tier>               leave a three-match tournament between matches (counts as capitulating)
   choose <n>                    decide this week's event (the week can't end until you do)
-  fortune <n> | spin | pass     this month's Fortune: take card n, spin again for Gold, or let it pass for a little Gold
+  fortune <n> [drop] | spin | pass  this month's Fortune: take card n (at the relic limit, name a relic id to lay down), spin again for Gold, or let it pass
   relics                        the house's relics and what each does
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
   next [tactic] | capitulate    during a fight: play the next round with a tactic (steady, press, guard, feint; default: the suggestion), or capitulate ("towel" also works)
@@ -251,7 +251,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     const blood = v.crowd === 'kill';
     const favor = spareFavorWhy(run) ?? `+${spareFavor(run)} Favour`;
     const owes = owedLeft(run);
-    const spare = blood ? `${favor}; ${owes ? `their house already owes you a life (${owes} months left): no new debt` : `their house will owe you a life (−1 Power against you for ${HOUSES.feudMonths} months)`}` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale`;
+    const spare = blood ? `${favor}; ${owes ? `their house already owes you a life (${plural(owes, 'month')} left): no new debt` : `their house will owe you a life (−1 Power against you for ${HOUSES.feudMonths} months)`}` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale`;
     const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${v.house ? '; their house swears a feud (+1 Power against you)' : ''}`;
     return `*** THUMBS UP OR DOWN: ${v.opp} lies beaten. ${blood ? 'The crowd roars for blood!' : 'The crowd chants for mercy.'} ***\n`
       + `  \`spare\`: ${spare}\n  \`kill\`: ${kill}\n  Nothing else can happen until you decide.`;
@@ -303,10 +303,13 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       const fought = run.history.filter((h) => !h.skipped && !h.forfeit);
       for (const line of run.epilogue ?? []) out.push(`\n${line}`);
       out.push(`\n*** CAREER OVER: ${run.endReason} ***\nSurvived ${plural(run.week, 'week')} · ${fought.filter((h) => h.won).length} wins, ${fought.filter((h) => !h.won).length} losses · top arena: ${arenaName(run.topTier)} · fallen: ${run.fallen.map((f) => f.name).join(', ') || 'none'}`);
+      // LLM-13: the end of a career showed no Legacy XP in the text port (the game's end screen does).
+      const xp = careerXp(run);
+      out.push(`Legacy XP: +${xp.total} (${xp.lines.map((l) => `${l.label} +${l.xp}`).join(', ')}).`);
     }
     if (run.relics?.length) out.push(`Relics (${run.relics.length}/${FORTUNE.maxRelics}): ${run.relics.map((id) => RELICS[id].name).join(', ')}`);
     if (run.fortune && !run.event) {
-      out.push(`\n*** FORTUNE'S WHEEL TURNS: choose one (the month can't go on until you do) ***\n${run.fortune.cards.map((c, i) => `  fortune ${i}: [${c.rarity} ${c.kind}${c.kind === 'relic' && RELICS[c.id].tag ? `, ${TAGS[RELICS[c.id].tag].name}` : ''}] ${fortuneTitle(c)}: ${fortuneText(c)}${fortuneBlocker(run, i) ? ` (can't: ${fortuneBlocker(run, i)})` : ''}`).join('\n')}\n  spin: three new cards for ${rerollPrice(run)} Gold · pass: take nothing, +${FORTUNE.pass} Gold`);
+      out.push(`\n*** FORTUNE'S WHEEL TURNS: choose one (the month can't go on until you do) ***\n${run.fortune.cards.map((c, i) => `  fortune ${i}: [${c.rarity} ${c.kind}${c.kind === 'relic' && RELICS[c.id].tag ? `, ${TAGS[RELICS[c.id].tag].name}` : ''}] ${fortuneTitle(c)}: ${fortuneText(c)}${c.kind === 'relic' && run.relics.length >= FORTUNE.maxRelics ? ` (lay one down: \`fortune ${i} <${run.relics.join('|')}>\`)` : fortuneBlocker(run, i) ? ` (can't: ${fortuneBlocker(run, i)})` : ''}`).join('\n')}\n  ${run.fortune.augur ? '' : `spin: ${run.fortune.cards.length} new cards for ${rerollPrice(run)} Gold · `}pass: take nothing, +${FORTUNE.pass} Gold`);
     }
     if (run.event) {
       const e = EVENT_BY_ID[run.event.id];
@@ -439,12 +442,14 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       const hype = hypeOf(match);
       lines.push(`  The crowd: ${hype}/${HYPE.max}. ${match.a.roar ? `The crowd is with ${match.a.f.name}: +${HYPE.favourPower} Power this round.` : `At ${HYPE.favour} the crowd is with your fighter (+${HYPE.favourPower} Power that round).`} Press and drama fill it; Guard drains it.`);
       const tell = opponentTell(match);
-      if (tell) lines.push(`  Your Oracle reads a tell: ${match.b.f.name} means to ${TACTICS[tell].name} (right about ${Math.round(tellAccuracy(match) * 10)} times in 10).`);
+      if (tell) lines.push(`  Your Oracle reads a tell: ${match.b.f.name} means to ${TACTICS[tell].name}. Weighing the tell against their temper: about ${tellForecast(match)}% they ${TACTICS[tell].name}.`);
+      if (opponentUnleashesNext(match)) lines.push(`  WARNING: ${match.b.f.name} is gathering for ${SIGNATURES[match.b.f.cls].name}: it comes this round.`);
       lines.push(`  ${match.b.f.name} is ${h ? `${h.name}: ${h.tell}` : 'without clear habits'}.${last ? ` Last round they chose ${last.stances.B}.` : ''} Suggested: ${suggestTactic(match)}.`);
       const usable = owned.filter(([k]) => !(match.itemsUsed ?? []).includes(k));
       if (match.itemsUsed?.length) lines.push(`  Items used this fight: ${match.itemsUsed.map((k) => CONSUMABLES[k].name).join(', ')}.`);
       const sig = signatureOf(match.a.f);
-      if (sig) lines.push(match.a.sigRound ? `  Signature move ${sig.name}: ${match.a.sigRound > match.round ? 'ready for the next round' : 'used this fight'}.` : `  Signature move (\`signature\`, once per fight): ${sig.name}. ${sig.desc}`);
+      // LLM-12: a signature the fighter can't use (its class ability is off) was offered as usable.
+      if (sig) lines.push(match.a.sigRound ? `  Signature move ${sig.name}: ${match.a.sigRound > match.round ? 'ready for the next round' : 'used this fight'}.` : signatureBlocker(match) ? `  Signature move ${sig.name}: can't be used (${signatureBlocker(match)})` : `  Signature move (\`signature\`, once per fight): ${sig.name}. ${sig.desc}`);
       else if (SIGNATURES[match.a.f.cls]) lines.push(`  Signature move ${SIGNATURES[match.a.f.cls].name} unlocks at level ${SIGNATURE.level}.`);
       lines.push(usable.length ? `  Items (one of each kind per fight, \`use <item>\`): ${usable.map(([k, n]) => `${k} ×${n} (${CONSUMABLES[k].desc})`).join('; ')}` : owned.length ? '  No other fight items to use.' : '  No fight items (the Apothecary in the `market` sells them).');
     }
@@ -470,6 +475,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (s.favor) bits.push(`${s.favor > 0 ? '+' : ''}${s.favor} Favour`);
     if (!s.died) bits.push(`+${s.xp} XP`);
     if (s.renown) bits.push(`${s.renown > 0 ? '+' : ''}${s.renown} Renown`);
+    if (s.hype?.hype) bits.push(`the crowd's hype ${s.hype.hype}${s.hype.renown ? `: +${s.hype.renown} Renown` : ''}${s.hype.gold ? `, +${s.hype.gold} Gold` : ''}`);
     if (s.bloodied) bits.push('Bloodied Victory (won with 2+ injuries)');
     if (s.kill) bits.push(`a kill${s.mark ? `: earns the mark ${s.mark}` : ''}`);
     if (s.loot) bits.push(`loot: ${GEAR[s.loot].name}`);
@@ -734,10 +740,10 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       idle();
       return `${chooseEvent(run, Number(i))}\n\n${look()}`;
     },
-    fortune: ([i]) => {
-      need([i].filter(Boolean), 1, 'fortune <number>');
+    fortune: ([i, drop]) => {
+      need([i].filter(Boolean), 1, 'fortune <number> [relic to lay down]');
       idle();
-      chooseFortune(run, Number(i));
+      chooseFortune(run, Number(i), drop ?? null);
       return `${run.log.at(-1).text}\n\n${look()}`;
     },
     spin: () => {
@@ -836,7 +842,12 @@ async function main() {
   const day = dailyAt >= 0 ? argv[dailyAt + 1] : null;
   const str = (name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : null);
   // Version 6: a season by default, as in the game (--long for the Long Road); --legacy plays with every Legacy unlock.
-  const setup = { short: !argv.includes('--long'), heat: opt('--heat', 0), patron: str('--patron'), ...(argv.includes('--legacy') ? { unlocks: ALL_UNLOCKS } : {}) };
+  // --legacy also brings a sample Hall of two retired legends, so legend cards can be dealt (LLM-13: they never could be).
+  const hall = [
+    { seed: 1, id: 'h1', name: 'Gaius the Elder', kind: 'human', cls: 'retiarius', humor: 'phlegmatic', titles: ['Champion of the Bronze Arena'], kills: 3, renown: 9, wins: 14 },
+    { seed: 2, id: 'h2', name: 'Velia Ironhand', kind: 'orc', cls: 'cestus', humor: 'choleric', titles: ['Champion of the Dirt Pits', 'Champion of the Silver Coliseum'], kills: 6, renown: 12, wins: 19 },
+  ];
+  const setup = { short: !argv.includes('--long'), heat: opt('--heat', 0), patron: str('--patron'), ...(argv.includes('--legacy') ? { unlocks: ALL_UNLOCKS, legends: hall } : {}) };
   const session = day ? createSession(dailySeed(day), { setup: dailySetup(day) }) : createSession(opt('--seed', 1), { setup });
   const last = opt('--last', Infinity);
   const lines = [];

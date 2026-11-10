@@ -126,3 +126,62 @@ test("the screen's warning: the opponent's signature move is announced for exact
   }
   assert.equal(opponentUnleashesNext(m), false, 'no warning once it is over');
 });
+
+test('Stripped of Armour switches off the armour piece entirely: its Power and win bonus too (LLM-13)', async () => {
+  const { GEAR } = await import('../src/data.js');
+  const armour = Object.keys(GEAR).find((k) => GEAR[k].slot === 'armor' && GEAR[k].power);
+  assert.ok(armour, 'an armour piece with Power');
+  const f = blank({ id: 'a', gear: { armor: armour } });
+  const strip = createMatch({ a: f, b: blank({ id: 'b' }), rng: createRng(1), debuff: 'noArmor' });
+  const plain = createMatch({ a: f, b: blank({ id: 'b' }), rng: createRng(1) });
+  assert.ok(computePower(plain.a, plain.b, 1).mods.some((x) => x.source === GEAR[armour].name));
+  assert.ok(!computePower(strip.a, strip.b, 1).mods.some((x) => x.source === GEAR[armour].name));
+});
+
+test('narration and percentages: All In has a verb; 87.999% reads 88% (LLM-12/13)', async () => {
+  const { fmtPct, narrateStory } = await import('../src/narrate.js');
+  assert.equal(fmtPct(87999), '88%');
+  assert.equal(fmtPct(45500), '45.5%');
+  const m = match({ a: { injuries: injuries('concussed', 'blinded') }, seed: 5 });
+  const r = playRound(m, { stance: 'allIn' });
+  assert.ok(!narrateStory(m, r).some((l) => /undefined/.test(l.text)));
+});
+
+test('All In: lose the round and your fighter falls; win it and they fight on (LLM-12/13: it must be a gamble)', () => {
+  let lost = 0, won = 0;
+  for (let seed = 1; seed <= 200; seed++) {
+    const m = match({ a: { injuries: injuries('concussed', 'blinded') }, seed });
+    const r = playRound(m, { stance: 'allIn' });
+    if (r.winner === 'B') {
+      lost++;
+      assert.equal(m.a.f.alive, false);
+      assert.equal(m.result.reason, 'death');
+      assert.ok(r.checks.some((c) => c.defender === 'A' && c.injury?.tag === 'death'), 'a death: All In, or a killing blow first');
+    } else won++;
+  }
+  assert.ok(lost > 0 && won > 0);
+  // Its death risk is never lower than fighting on at Steady.
+  for (let seed = 1; seed <= 20; seed++) {
+    const m = match({ a: { injuries: injuries('concussed', 'blinded') }, seed });
+    assert.ok(deathRisk(m, 'allIn', 200) >= deathRisk(m, 'steady', 200) - 0.02, `seed ${seed}`);
+  }
+});
+
+test('the crowd loves a read: a round where your tactic counters theirs adds HYPE.read', () => {
+  const round = (A, counter) => ({ winner: 'B', win: { chance: 50000 }, checks: [], stances: { A }, counter });
+  assert.equal(hypeOf({ rounds: [round('feint', 'A')] }), HYPE.read);
+  assert.equal(hypeOf({ rounds: [round('feint', 'B')] }), 0);
+  assert.equal(hypeOf({ rounds: [round('press', 'A')] }), HYPE.press + HYPE.read);
+});
+
+test("the tell's forecast weighs the temper: a tell against a strong habit is less sure than one with it", async () => {
+  const { tellForecast } = await import('../src/fight.js');
+  const seen = { with: [], against: [] };
+  for (let seed = 1; seed <= 300; seed++) {
+    const m = match({ seed, oracle: 1, humor: 'choleric' }); // loves to Press (70%)
+    const f = tellForecast(m);
+    (opponentTell(m) === 'press' ? seen.with : seen.against).push(f);
+  }
+  assert.ok(Math.min(...seen.with) > Math.max(...seen.against));
+  assert.equal(tellForecast(match({ seed: 1 })), null, 'no Oracle, no forecast');
+});

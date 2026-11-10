@@ -6,7 +6,7 @@ const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 
 // What this side actually brings to the coming round (everything applied), so the card never misleads.
 const statLine = (stats, side) => `<div class="round-stats" title="Power and Speed in Round ${stats.round}, with gear, Titles, items, injuries, Scouted, Challenger and arena rules applied">Round ${stats.round}: <b>Power ${stats[side].power}</b> · <b>Speed ${stats[side].speed}</b></div>`;
-import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf, signatureBlocker, hypeOf, opponentTell, tellAccuracy, opponentUnleashesNext } from '../fight.js';
+import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf, signatureBlocker, hypeOf, opponentTell, tellForecast, opponentUnleashesNext } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, fighterCard, mercyChoices } from './components.js';
 import { roundStats } from '../explain.js';
@@ -228,7 +228,7 @@ function tacticPicker(m) {
   const last = m.rounds.at(-1);
   const read = h ? `${esc(m.b.f.name)} is <b>${h.name}</b>: ${esc(h.tell)}.${last ? ` Last round they chose <b>${TACTICS[last.stances.B].name}</b>.` : ''}` : `${esc(m.b.f.name)} has no clear habits.`;
   const tell = opponentTell(m);
-  const tellLine = tell ? `<div class="tell">👁 ${esc(TELLS[tell](m.b.f.name))} <small>Your Oracle reads it right about ${Math.round(tellAccuracy(m) * 10)} times in 10.</small></div>` : '';
+  const tellLine = tell ? `<div class="tell">👁 ${esc(TELLS[tell](m.b.f.name))} <small>Weighing the tell against their temper: about ${tellForecast(m)}% they ${esc(TACTICS[tell].name)}.</small></div>` : '';
   const sig = opponentUnleashesNext(m) ? `<div class="tell warn">⚠ ${esc(m.b.f.name)} is gathering for ${esc(SIGNATURES[m.b.f.cls].name)}: it comes this round.</div>` : '';
   return `<div class="tactics"><div class="label">Round ${round}: choose your tactic</div>
     ${sig}${tellLine}
@@ -266,7 +266,7 @@ function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {
     return `${pre}${signatureRow(m)}${itemRow}${betRow(m)}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button><button class="btn big" data-action="skip-fight" title="Play the rest of the match at once with the suggested tactic. It stops at the Death Gate while you can still capitulate.">Skip to the result</button></div>`;
   }
   const danger = mortalDanger(m.a);
-  const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}. Or go 🔥 <b>All In</b>: a better chance to take the round, a worse one to walk out.</div>` : '';
+  const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}. Or go 🔥 <b>All In</b>: a better chance to take the round, but lose it and they fall.</div>` : '';
   const paused = ui.auto && danger ? '<div class="sub">Auto-play paused: your call.</div>' : '';
   return `${alert}${paused}
     <div>Score ${m.a.roundsWon}–${m.b.roundsWon}. First to two wins. Your call, Lanista.</div>
