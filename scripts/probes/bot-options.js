@@ -21,3 +21,6 @@ for (const r of results) {
 }
 const f = (x) => (x / N).toFixed(2);
 console.log(`${label || optsJson + ' ' + tuneJson}: careful win ${(100 * won / N).toFixed(0)}%  deaths ${f(deaths)}  weeks ${(weeks / N).toFixed(0)}  bets ${f(bets)} (net ${f(betGold)} Gold)  hosted ${f(hosted)}  policies ${f(policies)}  Legacy XP ${(results.reduce((t, r) => t + careerXp(r.run).total, 0) / N).toFixed(0)}`);
+const endings = {};
+for (const r of results) { const k = r.run.ending ?? r.run.plot?.ended ?? (r.won ? 'won' : 'lost'); endings[k] = (endings[k] ?? 0) + 1; }
+console.log(`  endings: ${Object.entries(endings).map(([k, v]) => `${k} ${Math.round((100 * v) / N)}%`).join(', ')}`);

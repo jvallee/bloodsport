@@ -110,6 +110,7 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, short, legacy, s
   // say little about how quick a season is (docs/fight-rules.md, 6.0.0-alpha.2).
   const winWeeks = (rs) => { const won = rs.filter((r) => r.won); return won.length ? avg(won.map((r) => r.weeks)) : weeks(rs); };
   // Unlock cadence: careers per Legacy level over the first five levels, from the careful bot's first-career XP.
+  const sameSeeds = careful.slice(0, loyalist.length); // careful's careers on the loyalist's seeds (1000 + i, in order)
   const meanXp = avg(careful.map((r) => careerXp(r.run).total));
   const perLevel = [1, 2, 3, 4, 5].reduce((s, l) => s + levelCost(l), 0) / 5 / meanXp;
   const gates = [
@@ -125,7 +126,8 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, short, legacy, s
     { name: 'Tactics matter: reading the opponent beats always-Steady by 3–15 points a match', value: tactics.smart - tactics.steady, pass: tactics.smart - tactics.steady >= 0.03 && tactics.smart - tactics.steady <= 0.15, fmt: 'pctDiff' },
     { name: 'No dominant tactic: always-Press does worse than reading the opponent', value: tactics.smart - tactics.press, pass: tactics.press < tactics.smart, fmt: 'pctDiff' },
     { name: 'Tough finish: the Grand Tournament is 10+ points harder than the first Boss', value: (curve[1] ?? 0) - (curve[5] ?? 1), pass: (curve[1] ?? 0) - (curve[5] ?? 1) >= 0.1, fmt: 'pctDiff' },
-    { name: 'The evil road is easier: the loyalist wins 5–20 points more often than careful', value: rate(loyalist) - rate(careful), pass: rate(loyalist) - rate(careful) >= 0.05 && rate(loyalist) - rate(careful) <= 0.2, fmt: 'pctDiff' },
+    // Version 6, alpha.3: on the same seeds (the plot groups play the first half of careful's seeds), so seed luck cancels out.
+    { name: 'The evil road is easier: the loyalist wins 5–20 points more often than careful (same seeds)', value: rate(loyalist) - rate(sameSeeds), pass: rate(loyalist) - rate(sameSeeds) >= 0.05 && rate(loyalist) - rate(sameSeeds) <= 0.2, fmt: 'pctDiff' },
     { name: 'The coup is rare but real: 5–25% of rebel careers', value: ending(rebel, 'coup'), pass: ending(rebel, 'coup') >= 0.05 && ending(rebel, 'coup') <= 0.25, fmt: 'pct' },
     { name: 'Short careers are winnable (careful 20–55%) and a won one is at least a fifth quicker', value: rate(short), pass: rate(short) >= 0.2 && rate(short) <= 0.55 && winWeeks(short) <= 0.8 * winWeeks(careful), fmt: 'pct' },
     { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
