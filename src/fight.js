@@ -545,6 +545,8 @@ export function useSignature(m) {
 // Outside Boss tournaments, regulars save theirs for the Final (`earlyRound`: a bracket's Quarter- or Semi-final).
 export const opponentHasSignature = (f, boss = false, earlyRound = false) => Boolean(SIGNATURES[f.cls]) && (boss ? (f.level ?? 1) >= SIGNATURE.bossLevel : !earlyRound && (f.level ?? 1) >= SIGNATURE.opponentLevel);
 const opponentUnleashes = (m, round) => opponentHasSignature(m.b.f, m.boss, m.earlyRound) && !m.b.sigRound && (m.b.roundsWon < m.a.roundsWon || round === 3);
+// Version 6 (phase 4): the screen warns you when the opponent will unleash theirs in the coming round (it's certain).
+export const opponentUnleashesNext = (m) => !m.over && opponentUnleashes(m, m.round + 1);
 
 export function playRound(m, { stance = 'steady' } = {}) {
   if (m.over) throw new Error('The match is over.');

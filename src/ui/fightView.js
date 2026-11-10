@@ -1,12 +1,12 @@
 // The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
 
-import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE, MERCY, BET, HYPE } from '../data.js';
+import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, COUNTERS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE, MERCY, BET, HYPE, ROUND_TACTICS } from '../data.js';
 
 const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
 
 // What this side actually brings to the coming round (everything applied), so the card never misleads.
 const statLine = (stats, side) => `<div class="round-stats" title="Power and Speed in Round ${stats.round}, with gear, Titles, items, injuries, Scouted, Challenger and arena rules applied">Round ${stats.round}: <b>Power ${stats[side].power}</b> · <b>Speed ${stats[side].speed}</b></div>`;
-import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf, signatureBlocker, hypeOf } from '../fight.js';
+import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf, signatureBlocker, hypeOf, opponentTell, tellAccuracy, opponentUnleashesNext } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, fighterCard, mercyChoices } from './components.js';
 import { roundStats } from '../explain.js';
@@ -39,14 +39,18 @@ function tacticLine(m, r) {
 export const DICE_TIME = 1.4;
 const LINE_GAP = 0.45;
 const SUSPENSE = 1; // the pause ("Steel meets steel…") before the round's winner is announced
+// Version 6 (phase 4): the round that decides the match plays in slow motion: a longer pause, a "Decider" banner.
+const isDecider = (m, r) => m.over && r === m.rounds.at(-1) && m.result?.reason !== 'towel';
+const suspenseOf = (m, r) => (isDecider(m, r) ? SUSPENSE * 2 : SUSPENSE);
 
 // When each line of the round's story appears: the line naming the winner waits a beat of suspense,
 // and lands with the banner. `reveal` is that moment; `end` is the last line.
 function roundTiming(m, r, showMath = false) {
   const lines = (showMath ? narrateRound : narrateStory)(m, r);
   const rollAt = lines.findIndex((l) => l.type === 'roll');
-  const delays = lines.map((l, i) => DICE_TIME + 0.3 + i * LINE_GAP + (rollAt >= 0 && i >= rollAt ? SUSPENSE : 0));
-  const reveal = rollAt >= 0 ? delays[rollAt] : DICE_TIME + 0.3 + lines.length * LINE_GAP + SUSPENSE;
+  const pause = suspenseOf(m, r);
+  const delays = lines.map((l, i) => DICE_TIME + 0.3 + i * LINE_GAP + (rollAt >= 0 && i >= rollAt ? pause : 0));
+  const reveal = rollAt >= 0 ? delays[rollAt] : DICE_TIME + 0.3 + lines.length * LINE_GAP + pause;
   const hurt = lines.findIndex((l, i) => i >= rollAt && l.type === 'injury');
   return { lines, delays, reveal, end: Math.max(reveal, delays.at(-1) ?? 0), shake: hurt >= 0 ? delays[hurt] : reveal };
 }
@@ -61,7 +65,8 @@ function roundBanner(m, r, delay) {
   const who = esc((ours ? m.a : m.b).f.name);
   const text = r.death ? (ours ? `☠ ${esc(m.b.f.name)} falls` : `☠ ${esc(m.a.f.name)} falls`)
     : ours ? `⚔ Round ${r.round} to ${who}!` : `Round ${r.round} to ${who}`;
-  return `<div class="round-banner ${ours ? 'win' : 'loss'}${late}" role="status">${text}<small>${m.a.roundsWon}–${m.b.roundsWon}</small></div>`;
+  const decider = isDecider(m, r) && !r.death ? '<em class="decider-tag">Decider!</em>' : '';
+  return `<div class="round-banner ${ours ? 'win' : 'loss'}${isDecider(m, r) ? ' decider' : ''}${late}" role="status">${decider}${text}<small>${m.a.roundsWon}–${m.b.roundsWon}</small></div>`;
 }
 
 // Who strikes first: two dice tumble, then land. Footwork and Concussed skip the roll.
@@ -130,7 +135,9 @@ function report(s) {
     s.owed ? row('A life owed', esc(s.owed), 'good') : '',
     s.died ? row('Fallen', `${esc(s.fighter)}'s gear returns to the storeroom`, 'bad') : '',
   ].join('');
-  return `<div class="report"><h3>After the fight</h3>${rows}</div>`;
+  // Version 6 (phase 4): confetti for a Title.
+  const confetti = s.title ? `<div class="confetti" aria-hidden="true">${Array.from({ length: 24 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i % 6) * 0.12}s;--c:${['#d9b45a', '#e0603c', '#8fc98f', '#f0e2b8'][i % 4]}"></i>`).join('')}</div>` : '';
+  return `<div class="report">${confetti}<h3>After the fight</h3>${rows}</div>`;
 }
 
 // Thumbs up or down: the beaten opponent's fate, with what the crowd wants.
@@ -148,9 +155,12 @@ function mercyPanel(m, mercy, late) {
 }
 
 // The crowd's hype (fun idea #6): fills on upsets, wounds, kills and comebacks; held back until the round is revealed.
+// Version 6 (phase 4): Guard drains it; at the mark (HYPE.favour) the crowd is with your fighter for the next round.
 function hypeMeter(m, hold) {
   const h = hypeOf(m);
-  return `<div class="hype${hold}" title="The crowd's hype: upsets, wounds, kills, signature moves and comebacks fill it. At the end it pays Renown (and Gold, on a win).">📣 <span class="hypebar"><span style="width:${h}%"></span></span> <small>${h}</small></div>`;
+  const roar = m.a.roar && !m.over;
+  const line = roar ? `<div class="sub roar-line">📣 The crowd is with ${esc(m.a.f.name)}: +${HYPE.favourPower} Power this round. Guarding will cool them.</div>` : '';
+  return `<div class="hype-wrap${hold}"><div class="hype${roar ? ' roar' : ''}" title="The crowd's hype: upsets, wounds, kills, signature moves, comebacks and Press fill it; Guard drains it. At the mark (${HYPE.favour}) the crowd is with your fighter: +${HYPE.favourPower} Power that round. At the end it pays Renown (and Gold, on a win).">📣 <span class="hypebar"><span style="width:${h}%"></span><b class="mark" style="left:${HYPE.favour}%"></b></span> <small>${h}</small></div>${line}</div>`;
 }
 
 // Betting on your own fighter, before Round 1 (fun idea #3). `m.betQuote` ({ odds, cap, gold }) is set by src/main.js.
@@ -193,16 +203,35 @@ function whyTable(m) {
     <tbody>${rows}</tbody></table><p class="sub">You win a round when the roll is at or under your win chance.</p></div></details>`;
 }
 
+// Version 6 (phase 4): the opponent's tell, read by your Oracle. Words are PLACEHOLDER for the designer.
+const TELLS = {
+  press: (name) => `${name} rolls their shoulders and edges forward: they mean to Press.`,
+  feint: (name) => `${name}'s eyes flick to your off side: they mean to Feint.`,
+  guard: (name) => `${name} settles low behind their guard: they mean to Guard.`,
+};
+
+// All In, the clutch choice at the Death Gate (version 6, phase 4), with its death risk beside Steady's.
+function allInButton(m) {
+  const t = TACTICS.allIn;
+  const risk = Math.round(deathRisk(m, 'allIn') * 100);
+  return `<button class="btn big tactic all-in" data-action="next-round" data-stance="allIn" title="${esc(t.desc)}">${t.icon} ${t.name} <small>about ${risk}% death</small></button>`;
+}
+
 // Choose this round's tactic: each button plays the round. The suggestion (what auto-play would do) is marked.
 function tacticPicker(m) {
   const round = m.round + 1;
   const suggested = suggestTactic(m);
   const h = m.b.f.humor ? HUMORS[m.b.f.humor] : null;
-  const buttons = Object.entries(TACTICS).map(([k, t]) => `<button class="btn big tactic${k === suggested ? ' primary' : ''}" data-action="next-round" data-stance="${k}" title="${esc(t.desc)}">
-      ${t.icon} ${t.name}${k === suggested ? ' <small>★ suggested</small>' : ''}</button>`).join('');
+  const buttons = ROUND_TACTICS.map((k) => [k, TACTICS[k]]).map(([k, t]) => `<button class="btn big tactic${k === suggested ? ' primary' : ''}" data-action="next-round" data-stance="${k}" title="${esc(t.desc)}">
+      ${t.icon} ${t.name}${k === suggested ? ' <small>★ suggested</small>' : ''}</button>`).join('')
+    + (mortalDanger(m.a) ? allInButton(m) : '');
   const last = m.rounds.at(-1);
   const read = h ? `${esc(m.b.f.name)} is <b>${h.name}</b>: ${esc(h.tell)}.${last ? ` Last round they chose <b>${TACTICS[last.stances.B].name}</b>.` : ''}` : `${esc(m.b.f.name)} has no clear habits.`;
+  const tell = opponentTell(m);
+  const tellLine = tell ? `<div class="tell">👁 ${esc(TELLS[tell](m.b.f.name))} <small>Your Oracle reads it right about ${Math.round(tellAccuracy(m) * 10)} times in 10.</small></div>` : '';
+  const sig = opponentUnleashesNext(m) ? `<div class="tell warn">⚠ ${esc(m.b.f.name)} is gathering for ${esc(SIGNATURES[m.b.f.cls].name)}: it comes this round.</div>` : '';
   return `<div class="tactics"><div class="label">Round ${round}: choose your tactic</div>
+    ${sig}${tellLine}
     <div class="row tactic-row">${buttons}</div>
     <div class="sub">${read} <span class="counters">🗡 Press beats ↯ Feint · ↯ Feint beats 🛡 Guard · 🛡 Guard beats 🗡 Press (+10% win chance)</span></div></div>`;
 }
@@ -237,7 +266,7 @@ function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {
     return `${pre}${signatureRow(m)}${itemRow}${betRow(m)}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button><button class="btn big" data-action="skip-fight" title="Play the rest of the match at once with the suggested tactic. It stops at the Death Gate while you can still capitulate.">Skip to the result</button></div>`;
   }
   const danger = mortalDanger(m.a);
-  const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.</div>` : '';
+  const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}. Or go 🔥 <b>All In</b>: a better chance to take the round, a worse one to walk out.</div>` : '';
   const paused = ui.auto && danger ? '<div class="sub">Auto-play paused: your call.</div>' : '';
   return `${alert}${paused}
     <div>Score ${m.a.roundsWon}–${m.b.roundsWon}. First to two wins. Your call, Lanista.</div>
@@ -270,7 +299,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
   const delta = last ? last.delta : 0;
   const pills = last ? tagPills(last) : [];
   const animate = Boolean(last) && last.round === ui.animateRound;
-  const shook = animate && last.checks.some((c) => c.injury) ? ' shake' : '';
+  const shook = animate && last.death ? ' shake kill' : animate && last.checks.some((c) => c.injury) ? ' shake' : '';
   const debuff = m.debuff ? BOSS_DEBUFFS[m.debuff] : null;
   const stats = roundStats(m);
   // While the dice roll and the round plays out, hold back the score and the winner so the result isn't spoiled.
@@ -282,6 +311,14 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
   const sideStyle = animate ? ` style="--reveal:${reveal}s"` : '';
   // This round's new wounds wait for the story to reach the blow.
   const fresh = (side) => (animate ? { fresh: last.checks.filter((c) => c.defender === side && c.injury && c.injury.tag !== 'death').length, freshAt: timing.shake } : {});
+  // Version 6 (phase 4): a flash and a floating number on the card that takes the blow.
+  const pop = (side) => {
+    if (!animate) return '';
+    const hits = last.checks.filter((c) => c.defender === side && c.injury);
+    if (!hits.length) return '';
+    const text = hits.some((c) => c.injury.tag === 'death') ? '☠' : hits.map((c) => esc(c.injury.name)).join(' · ');
+    return `<div class="hit-pop${hits.some((c) => c.injury.tag === 'death') ? ' death' : ''}" style="animation-delay:${timing.shake}s" aria-hidden="true">${text}</div>`;
+  };
   return `
     <div class="fight">
       <div class="fight-head">
@@ -290,7 +327,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
       </div>
       ${bracketStrip(bracket, m.over)}
       <div class="arena${shook}"${shook ? ` style="animation-delay:${timing?.shake ?? 0}s"` : ''}>
-        <div class="side${sideCls('A')}"${sideStyle}><div class="side-label a">Your gladiator</div>${fighterCard(m.a.f, { combatant: m.a, live: stats.A, ...fresh('A'), compact: true })}<div class="${hold(reveal)}">${statLine(stats, 'A')}</div></div>
+        <div class="side${sideCls('A')}"${sideStyle}>${pop('A')}<div class="side-label a">Your gladiator</div>${fighterCard(m.a.f, { combatant: m.a, live: stats.A, ...fresh('A'), compact: true })}<div class="${hold(reveal)}">${statLine(stats, 'A')}</div></div>
         <div class="center">
           <div class="gauge-labels"><span>You're stronger</span><span>Power Delta ${last ? signed(delta) : '0'}</span><span>They're stronger</span></div>
           <div class="gauge" title="Leans towards the stronger side: yours on the left, theirs on the right"><div class="needle" style="left:${((10 - delta) / 20) * 100}%"></div></div>
@@ -298,12 +335,12 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
           ${m.a.f.risen && !m.rounds?.length ? `<div class="sub chant">📣 The crowd remembers ${esc(m.a.f.name)}. They chant the name they buried: +${HYPE.risen} hype.</div>` : ''}
           ${last ? initiativeRoll(m, last, animate) : ''}
           ${last ? tacticLine(m, last) : ''}
-          ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span>${animate ? `<span class="suspense" style="--from:${reveal - SUSPENSE}s;--reveal:${reveal}s">Steel meets steel…</span>` : ''}</div>${roundBanner(m, last, reveal)}` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
+          ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span>${animate ? `<span class="suspense${isDecider(m, last) ? ' slow' : ''}" style="--from:${reveal - suspenseOf(m, last)}s;--reveal:${reveal}s">${isDecider(m, last) ? 'Everything on one blow…' : 'Steel meets steel…'}</span>` : ''}</div>${roundBanner(m, last, reveal)}` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
           <div class="tags">${pills.map((p, i) => `<span class="tag ${p.side.toLowerCase()}" style="animation-delay:${animate ? DICE_TIME + i * 0.2 : 0}s">${esc(p.text)}</span>`).join('')}</div>
           <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the math'}</button></div>
           <div class="feed" id="feed">${feed(m, ui)}</div>
         </div>
-        <div class="side${sideCls('B')}"${sideStyle}><div class="side-label b">${m.house ? `Opponent · <span style="color:${esc(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div>${fighterCard(m.b.f, { combatant: m.b, live: stats.B, ...fresh('B'), opponent: { boss: m.boss, earlyRound: m.earlyRound }, compact: true, stress: false })}<div class="${hold(reveal)}">${statLine(stats, 'B')}</div></div>
+        <div class="side${sideCls('B')}"${sideStyle}>${pop('B')}<div class="side-label b">${m.house ? `Opponent · <span style="color:${esc(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div>${fighterCard(m.b.f, { combatant: m.b, live: stats.B, ...fresh('B'), opponent: { boss: m.boss, earlyRound: m.earlyRound }, compact: true, stress: false })}<div class="${hold(reveal)}">${statLine(stats, 'B')}</div></div>
       </div>
       ${tutorial}
       <div class="controls${hold((timing?.end ?? 0) + 0.3)}">${controls(m, ui, bout, items, nextBlocker, mercy)}</div>

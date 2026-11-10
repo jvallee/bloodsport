@@ -4,9 +4,11 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 6.0.0-alpha.4 (in progress): fights with a crowd
 
-- **The crowd is live.** Press and drama fill the hype meter, and now **Guard drains it**. When a round starts with the crowd at half or more, your fighter fights it with **the crowd behind them: +1 Power**.
-- **Reading the opponent:** with an Oracle, the opponent gives away what they mean to do each round (a tell). It's usually right, never always. Auto-play's suggestion weighs it.
-- **All In** at the Death Gate: a last-ditch round with a big bonus to win and wound, at a higher risk of being wounded. (Coming to the fight screen next.)
+- **The crowd is live.** Press and drama fill the hype meter (Press fills it three times faster than before), and now **Guard drains it**. When a round starts with the crowd past the mark on the meter, your fighter fights it with **the crowd behind them: +1 Power**, and the meter glows.
+- **Reading the opponent:** with an Oracle, the opponent gives away what they mean to do each round (a tell). It's usually right (7 in 10; 8–9 in 10 with a better Oracle), never always. Auto-play's suggestion weighs it.
+- **A warning when a seasoned opponent is about to unleash their signature move** (for everyone).
+- **All In** at the Death Gate: a last-ditch round with +15% to win it and +10% to wound, at a much higher risk of being wounded (which, at the gate, can kill). The button shows the chance of death.
+- **Fight-day juice:** the round that decides the match plays slower, with a "Decider!" banner; a blow flashes and names the wound on the card it lands on; kills shake the arena harder; Titles get confetti; the crowd cheers louder as hype builds, and roars when it takes your side.
 
 ## 6.0.0-alpha.3: every career counts
 

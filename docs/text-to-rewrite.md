@@ -902,3 +902,13 @@ Version 6's new words. Rules text (numbers) must stay accurate; names and flavou
 | [src/ui/views.js](../src/ui/views.js) `fortunePanel` | The Augur's gift: "Your patron" / "The Augur reads the birds" / "Choose one relic for your house, before the first week." |
 | [src/fortune.js](../src/fortune.js) `fortuneText`, [src/run.js](../src/run.js) `chooseFortune` | The returning legend: "An old champion of your house… offers to fight for you one last season", the log line and chronicle "Came back from the Hall of Champions for one last season." |
 | [src/ui/views.js](../src/ui/views.js) `helpModal` | The How to play line "Every career counts." |
+
+**Fights: the crowd, tells, All In, the decider** (6.0.0-alpha.4)
+
+| Where | Text |
+|---|---|
+| [src/data.js](../src/data.js) `TACTICS.allIn` | "All In" and its description ("Only at the Death Gate: … The crowd loves it."). |
+| [src/ui/fightView.js](../src/ui/fightView.js) `TELLS` | The Oracle's tells: "… rolls their shoulders and edges forward: they mean to Press.", "…'s eyes flick to your off side: they mean to Feint.", "… settles low behind their guard: they mean to Guard.", and "Your Oracle reads it right about N times in 10." |
+| [src/ui/fightView.js](../src/ui/fightView.js) `hypeMeter` | "📣 The crowd is with …: +1 Power this round. Guarding will cool them." |
+| [src/ui/fightView.js](../src/ui/fightView.js) `controls`, `allInButton` | The Death Gate line "Or go 🔥 All In: a better chance to take the round, a worse one to walk out.", "about N% death". |
+| [src/ui/fightView.js](../src/ui/fightView.js) `roundBanner`, `fightView` | The decider: "Decider!", "Everything on one blow…". |

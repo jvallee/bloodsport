@@ -1,6 +1,6 @@
 // App state, saving, coach tips and event wiring. Game rules live in run.js / fight.js; markup in src/ui/.
 
-import { mortalDanger, canThrowTowel, suggestTactic } from './fight.js';
+import { mortalDanger, canThrowTowel, suggestTactic, hypeOf } from './fight.js';
 import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betOdds, betCap, spareFavorWhy, owedLeft, keepsBuyIn, overtrainedByWeek, demandMet } from './run.js';
 import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
@@ -306,7 +306,7 @@ function scheduleAuto() {
     act('next-round', { stance });
     roundStartedAt = Date.now();
     ui.animateRound = match.round;
-    roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath) });
+    roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath), hype: hypeOf(match) });
     save();
     render();
     scheduleAuto();
@@ -565,7 +565,7 @@ const after = {
   'next-round': () => {
     roundStartedAt = Date.now();
     ui.animateRound = match?.round ?? 0;
-    if (match?.rounds.length) roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath) });
+    if (match?.rounds.length) roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath), hype: hypeOf(match) });
   },
   'event-choice': () => {
     sfx.event();

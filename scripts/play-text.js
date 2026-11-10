@@ -8,12 +8,12 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY } from '../src/data.js';
+import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
 import { RELICS, TAGS, perkTags, fortuneTitle, fortuneText } from '../src/fortune.js';
-import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk, signatureOf, useSignature, opponentHasSignature } from '../src/fight.js';
+import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk, signatureOf, useSignature, opponentHasSignature, hypeOf, opponentTell, tellAccuracy } from '../src/fight.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
@@ -433,7 +433,12 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (!match.over) {
       const h = match.b.f.humor ? HUMORS[match.b.f.humor] : null;
       const last = match.rounds.at(-1);
-      lines.push(`  Tactics: ${Object.entries(TACTICS).map(([k, t]) => `${k} (${t.desc})`).join('; ')}. Press beats Feint, Feint beats Guard, Guard beats Press (+10% win chance).`);
+      lines.push(`  Tactics: ${ROUND_TACTICS.map((k) => `${k} (${TACTICS[k].desc})`).join('; ')}. Press beats Feint, Feint beats Guard, Guard beats Press (+10% win chance).`);
+      if (mortalDanger(match.a)) lines.push(`  At the Death Gate you can also go allIn (${TACTICS.allIn.desc}): about ${Math.round(deathRisk(match, 'allIn') * 100)}% chance of death this round.`);
+      const hype = hypeOf(match);
+      lines.push(`  The crowd: ${hype}/${HYPE.max}. ${match.a.roar ? `The crowd is with ${match.a.f.name}: +${HYPE.favourPower} Power this round.` : `At ${HYPE.favour} the crowd is with your fighter (+${HYPE.favourPower} Power that round).`} Press and drama fill it; Guard drains it.`);
+      const tell = opponentTell(match);
+      if (tell) lines.push(`  Your Oracle reads a tell: ${match.b.f.name} means to ${TACTICS[tell].name} (right about ${Math.round(tellAccuracy(match) * 10)} times in 10).`);
       lines.push(`  ${match.b.f.name} is ${h ? `${h.name}: ${h.tell}` : 'without clear habits'}.${last ? ` Last round they chose ${last.stances.B}.` : ''} Suggested: ${suggestTactic(match)}.`);
       const usable = owned.filter(([k]) => !(match.itemsUsed ?? []).includes(k));
       if (match.itemsUsed?.length) lines.push(`  Items used this fight: ${match.itemsUsed.map((k) => CONSUMABLES[k].name).join(', ')}.`);

@@ -115,3 +115,14 @@ test('the death risk averages over what the opponent might do (it never reads th
   assert.equal(deathRisk(m, 'steady', 200), before);
   assert.ok(deathRisk(m, 'allIn', 200) >= 0);
 });
+
+test("the screen's warning: the opponent's signature move is announced for exactly the round it comes", async () => {
+  const { opponentUnleashesNext } = await import('../src/fight.js');
+  const m = createMatch({ a: blank({ id: 'a' }), b: blank({ id: 'b', cls: 'cestus', level: 3 }), rng: createRng(4) });
+  while (!m.over) {
+    const warned = opponentUnleashesNext(m);
+    const r = playRound(m, { stance: 'steady' });
+    assert.equal(warned, r.signatures.some((x) => x.side === 'B'), `round ${r.round}`);
+  }
+  assert.equal(opponentUnleashesNext(m), false, 'no warning once it is over');
+});

@@ -66,7 +66,9 @@ export const sfx = {
   hit: (at = 0) => { tone(140, { at, dur: 0.18, type: 'triangle', gain: 0.25, slide: -80 }); noise({ at, dur: 0.08, gain: 0.08, freq: 800 }); },
   miss: (at = 0) => noise({ at, dur: 0.12, gain: 0.04, freq: 3000, q: 0.7 }),
   parry: (at = 0) => { tone(1200, { at, dur: 0.15, type: 'square', gain: 0.05 }); tone(1800, { at: at + 0.02, dur: 0.2, gain: 0.04 }); },
-  cheer: (at = 0) => noise({ at, dur: 1.4, gain: 0.07, freq: 900, q: 0.5, swell: true }),
+  cheer: (at = 0, loud = 1) => noise({ at, dur: 1.4 + 0.6 * (loud - 1), gain: 0.07 * loud, freq: 900, q: 0.5, swell: true }),
+  // Version 6 (phase 4): the crowd's favour won: a long, low roar under the cheer.
+  roar: (at = 0) => { noise({ at, dur: 2.4, gain: 0.12, freq: 500, q: 0.4, swell: true }); noise({ at: at + 0.2, dur: 2, gain: 0.06, freq: 1400, q: 0.6, swell: true }); },
   groan: (at = 0) => tone(220, { at, dur: 0.6, type: 'sawtooth', gain: 0.03, slide: -90 }),
   death: (at = 0) => { tone(110, { at, dur: 2.2, gain: 0.2 }); tone(165, { at, dur: 1.8, gain: 0.08 }); },
   fanfare: (at = 0) => [523, 659, 784, 1046].forEach((f, i) => tone(f, { at: at + i * 0.12, dur: 0.35, type: 'triangle', gain: 0.1 })),
@@ -75,14 +77,17 @@ export const sfx = {
 
 // The sounds of one round, timed to its animation: dice, then the crowd, then each blow as its line appears.
 // `revealAt`: when the round's winner is announced. The cheer or groan lands with the banner, then the blows.
-export function roundSounds(m, r, { diceTime = 1.4, lineGap = 0.45, revealAt = null } = {}) {
+// The cheer grows with the crowd's hype (`hype`, 0–100); a roar when the crowd's favour is newly won.
+export function roundSounds(m, r, { diceTime = 1.4, lineGap = 0.45, revealAt = null, hype = 0 } = {}) {
   if (!enabled) return;
   sfx.dice(0);
   const reveal = revealAt ?? diceTime + 0.3 + 2 * lineGap; // after the tactic and initiative lines
   if (!r.death) {
-    if (r.winner === 'A') sfx.cheer(reveal);
+    if (r.winner === 'A') sfx.cheer(reveal, 1 + hype / 100);
     else sfx.groan(reveal);
   }
+  const before = m.rounds[m.rounds.indexOf(r) - 1];
+  if (r.roar && !before?.roar) sfx.roar(reveal + 0.4);
   let at = reveal;
   for (const c of r.checks) {
     at += lineGap;

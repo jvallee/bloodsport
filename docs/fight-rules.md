@@ -734,3 +734,49 @@ All numbers PLACEHOLDER (`LEGACY`, `LEGACY_LEVELS`, `HEAT` in src/data.js; `care
 - **Gate measure change, the loyalist's lead:** with E the check passed every gate but "the loyalist wins 5–20 points more than careful" (+2: loyalist 35% of 150, careful 32% of 300). The loyalist group plays seeds 1000–1149 and careful 1000–1299, and careful's last 150 seeds won more often. On the same seeds the probe gave +9 (loyalist 37%, careful 28%). Levers tried on 150 loyalist careers, all near 37%: betrayal +45 or +60 Favour (37%, 39%), +35 Gold × tier (37%), each top-arena Boss win after the names +4/+7/+10 Favour (37% each), the Emperor's offer 8 or 4 weeks into the Cause (37%), the Cause from 8 weeks after the Mark (37%) or from House level 2 (35%). Betrayers win about three in four; the loyalist careers that lose never reach the offer (40 careers: 15 never got a prisoner, 9 stalled before the Cause), so no reward can help them. Nothing was changed, and the gate now compares the loyalist with careful **on the same seeds**.
 - **The check (300 careers, 150 per plot, short and full-Legacy group):** first career 32%, full Legacy 41%, cadence 1.19 careers a level (75 XP a first career), loyalist +6 on the same seeds, coup 17%, treason 1%, short careers 31% (a won season 101 weeks against 142), reckless 0% with 3.11 deaths: 15/15.
 - **Tests updated for the rule change:** `tests/ui.test.js` checked the decree checkboxes; it now checks the Heat choices.
+
+## 6.0.0-alpha.4: the crowd, tells, All In (design: docs/plan-v6-phase4.md)
+
+**The crowd (`HYPE`).** Hype is read from the rounds (`hypeOf`), floored at 0 after each round. Guard: −10. All In: +25.
+Press: 5 → **15**. At **30** or more (`HYPE.favour`) when a round starts, your fighter has **+1 Power** that round
+(`m.a.roar`, set at the end of each round; "The crowd" in the Power mods). The end-of-fight payout is unchanged.
+
+Measured on 3,000 fights between Market fighters (opponents with humors), share of Round 2 and 3 starts with the crowd's
+favour, and your fighter's match wins:
+
+| Press / favour / Power | Always Press | Suggested tactic | Steady |
+|---|---|---|---|
+| 5 / 50 / +0 (before) | 1%, 51.7% | 0%, 59.4% | 0%, 50.6% |
+| 5 / 50 / +1 | 1%, 51.8% | 0%, 59.4% | 0%, 50.6% |
+| 10 / 40 / +1 | 7%, 52.7% | 1%, 59.5% | 4%, 51.1% |
+| 10 / 30 / +1 | 21%, 53.9% | 5%, 59.8% | 5%, 51.1% |
+| **15 / 30 / +1 (chosen)** | 50%, 56.1% | 12%, 60.4% | 5%, 51.1% |
+| 15 / 35 / +2 | 21%, 55.3% | 4%, 60.3% | |
+| 15 / 30 / +2 | 49%, 59.7% | 12%, 62.2% | |
+
+Chosen: pressing wins the crowd in half of later rounds, which is worth it (+5 points over Steady) without making
+"always Press" as good as reading the opponent. +2 Power made always-Press nearly match the suggestion.
+
+**The opponent's intent and tells (`INTENT`).** The opponent's tactic for the coming round is drawn before you choose
+(`opponentIntent`), with the same draw from the fight's dice at the same point as before, so fights without an Oracle play
+exactly as in alpha.3. With an Oracle (`matchOptions().oracle`), a tell names it: right with probability 0.7 (Oracle level
+1) or 0.85 (level 2), otherwise one of the other two tactics. Tells use their own stream (`m.tells`). `suggestTactic`
+updates the humor's odds by the tell (Bayes, `withTell`). The death risk shown at the gate ignores the intent.
+
+**All In (`TACTICS.allIn`).** Only at the Death Gate: +15% win chance, +10% to injure, **+45% to be injured**. Not in the
+counter triangle, never an opponent's pick, never suggested. Bots don't use it. Measured from 4,000 Death Gate positions
+(two injuries, 0–1 or 1–1), the round played with each tactic and the rest with the suggestion:
+
+| All In (win / injure / self) | Round won | Died | Match won |
+|---|---|---|---|
+| Steady | 48% | 10% | 32% |
+| Guard | 45% | 6% | 30% |
+| Press | 48% | 12% | 32% |
+| +15 / +10 / +10 | 64% | 9% | 43% |
+| +20 / +10 / +15 | 69% | 9% | 46% |
+| +15 / +10 / +30 | 64% | 13% | 44% |
+| **+15 / +10 / +45 (chosen)** | 64% | 15% | 44% |
+| +20 / +15 / +60 | 69% | 16% | 47% |
+
+With a small self cost, All In beat Steady on both counts (it wins more rounds, so fewer losses to die in). Chosen: a real
+gamble between Guard (30% / 6%), All In (44% / 15%) and capitulating (0% / 0%).
