@@ -961,3 +961,8 @@ fight it; deaths ×3). Shortening the season further needs a change in its shape
 Boss straight after a loss without the injury problem), which is the designer's call. Per the phase 5 plan ("ship the gates
 with the best measured season and say so"), the values stay, `SHORT.rival` stays at 1 (no change), and the season-length
 gate is **12–24 fight months** (was 12–20).
+
+**Tried and undone: bots never send a champion back to a lower arena.** In 50 rebel seasons the "champion fighting back"
+Favour penalty came up 201 times, so the bots were changed to skip an arena's champions there. The check got worse (full
+Legacy 47% → 36%, a won season 23.7 → 25.8 months): the Gold and XP of those wins are worth more than the Favour they
+cost. The bots went back to their old play; the penalty may be too mild for the designer's intent.
