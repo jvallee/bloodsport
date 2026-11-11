@@ -38,3 +38,13 @@ test('a Fortune fighter card is remembered when dealt, so a card passed over nev
     FORTUNE.enabled = false;
   }
 });
+
+test('the fight-day odds say they are your fighters, against whom (the designer read them as opponents)', async () => {
+  const { ludusTab } = await import('../src/ui/views.js');
+  const run = createRun(5);
+  recruit(run, run.market[0].id);
+  while (!run.bouts) advanceWeek(run);
+  const html = ludusTab(run, () => ({ win: 0.5, injury: 0.3, death: 0, n: 1 }));
+  assert.ok(html.includes(`Your fighters vs ${run.arenas[1].opponent.name}`), 'the heading names the opponent');
+  assert.ok(!html.includes('>Your odds<'));
+});

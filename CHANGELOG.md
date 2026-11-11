@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 6.0.1
+
+- **Fight day says who's who:** the list of your fighters under each arena is headed "Your fighters vs" and the opponent's name (it was "Your odds", and read like a list of opponents).
+
 ## 6.0.0 (2026-11-10): one more career
 
 Version 6 is built to make you start another career. A month is the turn, and a season (about 21 fight months when won) is the default career. Each month Fortune deals cards: fighters, gear, boons and 21 relics that change how fights go. Every career earns Legacy XP toward an unlock tree, and Heat makes later careers harder. The crowd is live, Oracles read the opponent's tells, and All In is a last gamble at the Death Gate. Frozen and playable at `/v6/`; the notes below (the beta and alpha steps) list every change. Some of the new words are still first drafts, waiting for the designer's rewrite.
