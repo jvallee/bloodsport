@@ -966,3 +966,35 @@ gate is **12–24 fight months** (was 12–20).
 Favour penalty came up 201 times, so the bots were changed to skip an arena's champions there. The check got worse (full
 Legacy 47% → 36%, a won season 23.7 → 25.8 months): the Gold and XP of those wins are worth more than the Favour they
 cost. The bots went back to their old play; the penalty may be too mild for the designer's intent.
+
+**The balance after the fixes (6.0.0-beta-dev.3): 18/18.** The plot gates had broken: the loyalist's lead fell to −3 (the
+Fortune catch-up was worth about 5 points to them, the rematch the rest) and the coup to 3%, because rebels were executed
+in the Bronze Circuit (lost Favour, 90 of 200 rebel seasons) once its returning Boss was 6 Power harder. A gentler Bronze
+brought them back but kept reckless houses alive longer, so they lost more fighters (4.2–4.4 a career); harder upper
+arenas didn't change that (4.1–4.2). What did is the Favour a lost Boss costs in a season (`SHORT.bossLoss`, × the table):
+a reckless house is executed sooner.
+
+| Check | Season arenas (Grand) | `bossLoss` | Careful | Full Legacy | Reckless | Loyalist | Coup | A won season | Fails |
+|---|---|---|---|---|---|---|---|---|---|
+| after the LLM-14 fixes | +1/+6/+12/+18 (+19) | 1 | 30% | 47% | 3.77 | −3 | 3% | 23.7 | 3 |
+| E (betray 70, offer 8) | +1/+4/+12/+18 (+19) | 1 | 35% | 41% | 4.23 | +22 | 6% | 23.5 | 2 |
+| F (betray 70, offer 8) | +1/+3/+11/+18 (+19) | 1 | 34% | 50% | 4.35 | +25 | 12% | 23.0 | 2 |
+| G (betray 45, offer 12) | +1/+3/+12/+18 (+19) | 1 | 26% | 51% | 4.07 | +33 | 13% | 23.5 | 3 |
+| I | +3/+3/+11/+18 (+19) | 1 | 44% | 54% | 4.24 | +8 | 14% | 24.9 | 3 |
+| J | +2/+3/+11/+18 (+19) | 1 | 38% | 55% | 4.37 | +17 | 14% | 23.3 | 2 |
+| K | +2/+3/+10/+17 (+18) | 1.25 | 25% | 39% | 3.70 | +18 | 7% | 21.7 | 1 |
+| L | +2/+3/+10/+16 (+17) | 1.2 | 36% | 41% | 3.65 | +6 | 10% | 21.5 | 1 |
+| N | +2/+3/+10/+16 (+17) | 1.25 | 34% | 39% | 3.63 | +5 | 9% | 21.4 | 2 |
+| **M (chosen)** | **+2/+3/+10/+17 (+18)** | **1.2** | **27%** | **42%** | **3.73** | **+19** | **7%** | **21.6** | **0** |
+
+Probes for `bossLoss` (300 seasons each, on J's arenas): careful 22% / reckless 4.08 at 1.15, 20% / 3.76 at 1.25, 9% / 3.25
+at 1.5, 2% / 2.55 at 2. The plot rewards (`betrayFavor` 30, `offerAfter` 16) stay as they were.
+
+**M sits close to several edges:** full Legacy 42% (gate 40), the loyalist +19 (gate 20), the coup 7% (gate 5), the top relic's
+lift +19 (gate 20). Small changes to seasons should re-run the check.
+
+**In a season a lost Boss now costs 12 / 18 / 24 / 30 Favour** (was 10 / 15 / 20 / 25, the Long Road's): the season is
+quicker and its purses and Prestige richer, so a loss stings more.
+
+**The Long Road after the fixes: careful wins 26%** (44% at dev.2; its gate is 15–45%). Its numbers didn't change, but the
+LLM-14 fixes apply to it too (the Fortune catch-up as training, the Feint, Underdog). A won Long Road takes 140 weeks.

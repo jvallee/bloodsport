@@ -810,6 +810,13 @@ test('Boss losses cost Favour by tier, as in the table', () => {
   assert.equal(run.favor, FAVOR.start + FAVOR.bossLoss[0]);
 });
 
+test('in a season a lost Boss costs more Favour (× SHORT.bossLoss, 6.0.0-beta)', async () => {
+  const { SHORT } = await import('../src/data.js');
+  const short = createRun(4, { short: true });
+  assert.deepEqual([1, 2, 3, 4].map((t) => bossLossFavor(t, short)), FAVOR.bossLoss.map((v) => Math.round(v * SHORT.bossLoss)));
+  assert.ok(bossLossFavor(1, short) < bossLossFavor(1), 'harsher than the Long Road');
+});
+
 test('crushing and upsets count gear Power', () => {
   const { run, f } = atBout();
   const opp = run.arenas[1].opponent;

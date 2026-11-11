@@ -18,6 +18,7 @@ What changed from version to version, newest first. Each frozen version can stil
 - **Fortune's fighters arrive trained, not gifted:** a drafted fighter's catch-up to your house counts as training they've already done, so they can't train a whole Trainer cap on top and outgrow your own fighters.
 - **Reading a Feint pays:** a Feint countered by Press loses its first-strike bonus.
 - **Underdog never backfires:** it now closes the gap, up to +2 (+1 when the opponent has 1 more Power), so a +1 from the crowd or a relic can't switch it off.
+- **A season's arenas, re-balanced after those fixes:** the Dirt Pits are a touch harder (+2 Power over the Long Road's, was +1), the Bronze Circuit gentler (+3, was +6), the Silver and Imperial arenas a little gentler too (+10 and +17, the Grand +18), and a lost Boss costs a fifth more Favour (12 in the Bronze Circuit, up to 30 at the top). A won season is about 21–22 fight months.
 - **Fewer repeated names:** a fighter Fortune deals you and you pass over no longer turns up next month as someone else.
 - **"Retire with honour" is a real choice:** only a veteran behind your strongest fighter asks to retire, never your champion mid-climb.
 - Fixes: "undefined" when going All In; "87.999%"; "three cards" when four were dealt; "a Imperial"; a legendary label on a Dirt Pits vest; the Augur's relics are "rare or legendary"; the Wolf's Pelt and the Fates' Wager say what they do (its house log line too); the Boss card shows the halved Favour for an early loss.
