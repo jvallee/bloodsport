@@ -768,8 +768,9 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .fortune-draft { border-color: var(--gold); margin-bottom: 12px; }
 .fortune-draft h2 { margin: 2px 0 4px; }
 .fortune-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 10px 0; }
-.fortune-card { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2);
-  animation: fortune-in 0.45s ease-out both; animation-delay: calc(var(--i) * 0.12s); transform-origin: 50% 80%; }
+.fortune-card { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); transform-origin: 50% 80%; }
+/* Only a newly dealt hand animates in (src/main.js); a redraw of the same hand stays still. */
+.fortune-cards.fresh .fortune-card { animation: fortune-in 0.45s ease-out both; animation-delay: calc(var(--i) * 0.12s); }
 .fortune-card h3 { font-size: 16px; }
 .fortune-card p { margin: 0; color: var(--muted); font-size: 13px; flex: 1; }
 .fortune-card .btn-why { display: flex; flex-direction: column; }

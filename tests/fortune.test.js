@@ -308,3 +308,16 @@ test('a drafted fighter keeps up with the house: at least FORTUNE.fighterBehind 
   }
   assert.ok(seen > 0, 'fighter cards were dealt');
 }));
+
+test('the cards deal in with an animation only when asked (a redraw of the same hand stays still: the designer saw it replay on every dialogue click)', async () => {
+  const { fortunePanel, fortuneDealKey } = await import('../src/ui/views.js');
+  on(() => {
+  const run = atDraft();
+  assert.match(fortunePanel(run), /fortune-cards fresh/);
+  assert.doesNotMatch(fortunePanel(run, { animate: false }), /fortune-cards fresh/);
+  const key = fortuneDealKey(run);
+  assert.equal(fortuneDealKey(run), key, 'the same hand keeps its key');
+  rerollFortune(run);
+  assert.notEqual(fortuneDealKey(run), key, 'a spin deals a new hand');
+  })();
+});

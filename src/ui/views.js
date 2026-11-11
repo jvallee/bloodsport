@@ -987,8 +987,12 @@ function fortuneFace(card) {
   return `<span class="fortune-icon">${KIND_ICON[card.kind]}</span>`;
 }
 
+// Which hand of cards is on the table: a new month, a spin or the Augur's gift deals a new one. main.js animates the
+// cards in only for a new hand, so redraws (a dialogue's Next, a notice) don't replay the deal.
+export const fortuneDealKey = (run) => (run.fortune ? `${run.seed}|${run.week}|${run.fortune.rerolls ?? 0}|${run.fortune.augur ? 'augur' : ''}` : null);
+
 // Three cards, pick one; spin again for Gold, or let it pass. PLACEHOLDER words.
-export function fortunePanel(run) {
+export function fortunePanel(run, { animate = true } = {}) {
   if (!run.fortune || run.mercy || run.event) return '';
   const cards = run.fortune.cards.map((c, i) => {
     const why = fortuneBlocker(run, i);
@@ -1008,12 +1012,12 @@ export function fortunePanel(run) {
     return `<section class="panel fortune-draft augur">
     <div class="label">Your patron</div><h2>The Augur reads the birds</h2>
     <p class="sub">Choose one relic for your house, before the first week.</p>
-    <div class="fortune-cards">${cards}</div></section>`;
+    <div class="fortune-cards${animate ? ' fresh' : ''}">${cards}</div></section>`;
   }
   return `<section class="panel fortune-draft" data-rolls="${run.fortune.rerolls}">
     <div class="label">This month</div><h2>Fortune's wheel turns</h2>
     <p class="sub">Choose one. Relics stay with the house (${run.relics.length}/${FORTUNE.maxRelics}); boons, gear and fighters are yours at once.${full}</p>
-    <div class="fortune-cards">${cards}</div>
+    <div class="fortune-cards${animate ? ' fresh' : ''}">${cards}</div>
     <div class="row">${button(`↻ Spin again (${rerollPrice(run)} Gold)`, 'fortune-reroll', {}, rerollBlocker(run), 'btn small')}
       ${button(`Let it pass (+${FORTUNE.pass} Gold)`, 'fortune-pass', {}, null, 'btn small')}</div>
   </section>`;

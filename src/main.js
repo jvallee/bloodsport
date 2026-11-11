@@ -8,7 +8,7 @@ import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
 import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey } from './careers.js';
 import { estimateOdds } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, dailySetup, careerSetup } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
@@ -191,6 +191,7 @@ const fightTutorial = () => (match ? nextStep(FIGHT_STEPS, prefs.tutorial, match
 // ---------- Rendering ----------
 
 let renderedTab = null; // the tab the page last drew (scroll positions carry over only within it)
+let dealtHand = null; // the Fortune hand last drawn (fortuneDealKey): only a new hand animates in
 let clickAnchor = null; // the card a click or choice came from, and where it was on screen: { id, top, tab }
 // Before any click or dropdown choice is handled (capture phase), remember the fighter card it was on.
 for (const type of ['click', 'change']) {
@@ -234,8 +235,11 @@ function render() {
   };
   const scrolled = renderedTab === tab ? Object.fromEntries(scrollKeys().map(([k, el]) => [k, el.scrollTop])) : {};
   renderedTab = tab;
+  // The Fortune cards deal in once per hand, not on every redraw (the designer: each dialogue Next replayed it).
+  const fortune = fortunePanel(run, { animate: fortuneDealKey(run) !== dealtHand });
+  if (fortune) dealtHand = fortuneDealKey(run);
   document.body.dataset.house = run.setup?.colour ?? ''; // version 6: the house colour (a Legacy unlock)
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run))}${eventCard(run)}${fortunePanel(run)}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run))}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
   for (const [k, el] of scrollKeys()) if (scrolled[k]) el.scrollTop = scrolled[k];
