@@ -1,6 +1,6 @@
 # Blood and Circus (formerly Bloodsport): handoff for the next agent
 
-Last updated 2026-11-10, at **version 6.0.0**, frozen into `/v6/` (tag `v6.0`; pushed and live; sections 3 onward keep older states for reference). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
+Last updated 2026-11-10, at **version 6.0.1** (6.0.0 frozen into `/v6/`, tag `v6.0`; 6.0.1 renames the fight-day odds heading, not in `/v6/`; pushed and live; sections 3 onward keep older states for reference). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
 
 ## 1. What this is
 
