@@ -12,5 +12,5 @@
     "replay": "node scripts/replay.js",
     "text-index": "node scripts/text-index.js"
   },
-  "version": "6.0.0-beta"
+  "version": "6.0.0"
 }

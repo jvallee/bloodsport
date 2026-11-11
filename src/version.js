@@ -1,2 +1,2 @@
 // The game version shown in bug reports. Keep it equal to package.json's "version" (a test checks).
-export const VERSION = '6.0.0-beta';
+export const VERSION = '6.0.0';

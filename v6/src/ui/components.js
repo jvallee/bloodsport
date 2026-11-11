@@ -1,0 +1,190 @@
+// Shared UI pieces: escaping, buttons, icons, the fighter card. Returns HTML strings.
+
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS, SIGNATURES, SIGNATURE } from '../data.js';
+
+const HUMOR_ICON = { choleric: '🔥', sanguine: '💨', melancholic: '🪨', phlegmatic: '💧' };
+import { effectiveInjuries, mortalDanger, deathGateAt, killMarks, signatureOf, opponentHasSignature } from '../fight.js';
+import { classAbility } from '../narrate.js';
+import { portrait } from './portrait.js';
+import { powerParts } from '../run.js';
+import { WANTS } from '../quests.js';
+
+export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+const svg = (path, cls = '') => `<svg class="icon ${cls}" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
+export const ICON = {
+  power: svg('<path d="M20.5 2.5 21.5 3.5 11 14l-1-1z M5.5 13.5l5 5-1.5 1.5-1.5-1.5-3 3-1-1 3-3-1.5-1.5z M8 11l5 5-1 1-5-5z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>', 'i-power'),
+  speed: svg('<path d="M3 12h11M5 7h11M7 17h9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="m16 5 6 7-6 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>', 'i-speed'),
+  gold: svg('<circle cx="12" cy="12" r="8" fill="currentColor"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/>', 'i-gold'),
+  prestige: svg('<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" fill="currentColor"/>', 'i-prestige'),
+  strike: svg('<path d="M5 5l14 14M19 5 5 19" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>', 'i-strike'),
+  stress: svg('<path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor"/>', 'i-stress'),
+  injury: svg('<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z" fill="currentColor"/>', 'i-injury'),
+};
+
+export const BUILDING_ICON = {
+  bed: '🛏', lyre: '🎭', dumbbell: '🏋', cross: '⚕', eye: '👁', chain: '⛓', anvil: '⚒', paw: '🐾', temple: '🏛', swords: '⚔', goblet: '🍷', forge: '🔥',
+};
+
+export function button(label, action, data = {}, blocker = null, cls = 'btn small', help = null) {
+  const attrs = Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ');
+  return `<button class="${cls}" data-action="${action}" ${attrs} ${blocker ? `disabled title="${esc(blocker)}"` : help ? `title="${esc(help)}"` : ''}>${label}</button>`;
+}
+
+// A button that, when blocked, says why on the page (not only on hover: touchscreens can't hover).
+export function buttonWhy(label, action, data = {}, blocker = null, cls = 'btn small') {
+  return `<span class="btn-why">${button(label, action, data, blocker, cls)}${blocker ? `<small class="why-not">${esc(blocker)}</small>` : ''}</span>`;
+}
+
+export function deathGate(f) {
+  const n = effectiveInjuries(f);
+  const gate = deathGateAt(f);
+  const title = n >= gate ? 'Death Gate open: losing a round can now be fatal.' : `Fighters can only die once they have ${gate} effective injuries${gate > 2 ? ' (Unbreakable or Iron Will)' : ''}.`;
+  const pips = Array.from({ length: gate }, (_, i) => `<i class="${n > i ? 'on' : ''}"></i>`).join('');
+  return `<span class="gate" title="${title}">${pips}</span>`;
+}
+
+function stressBar(f) {
+  const hot = f.stress >= STRESS.overtrained;
+  return `<div class="stress${hot ? ' hot' : ''}" title="Stress ${f.stress}/100. At ${STRESS.overtrained}+ a fighter is overtrained: can't train, and fights at −1 Power with one ability lost. Rest lowers it.">
+    ${ICON.stress}<div class="bar"><span style="width:${f.stress}%"></span></div><small>${hot ? 'Overtrained' : f.stress}</small></div>`;
+}
+
+// The Power badge: total, with a hover listing where it comes from. In a fight, `live` is
+// computePower's result for the coming round, and the badge shows what changed (traits, injuries, items...).
+function powerBadge(f, live) {
+  const parts = powerParts(f);
+  const standing = parts.reduce((n, x) => n + x.value, 0);
+  const lines = parts.map((x, i) => (i === 0 ? `${x.label} ${x.value}` : `${signedNum(x.value)} ${x.label}`));
+  let total = standing;
+  let delta = '';
+  if (live) {
+    const sources = live.mods.map((m) => m.source);
+    const changes = [
+      ...live.mods.filter((m) => !parts.some((x) => !x.base && x.label === m.source)).map((m) => ({ label: m.source, value: m.value })),
+      ...parts.filter((x) => !x.base && !sources.includes(x.label)).map((x) => ({ label: `${x.label} (not working)`, value: -x.value })),
+    ].filter((x) => x.value);
+    total = live.power;
+    if (changes.length) lines.push(`This round: ${changes.map((x) => `${signedNum(x.value)} ${x.label}`).join(', ')}`);
+    const d = total - standing;
+    if (d) delta = `<span class="pdelta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}${Math.abs(d)}</span>`;
+  }
+  return `<div class="badge power${delta ? ' live' : ''}" title="Power ${total}: decides who wins rounds (each point of difference shifts the odds a lot).&#10;${esc(lines.join('\n')).replace(/\n/g, '&#10;')}">${ICON.power}<b>${total}</b>${delta}</div>`;
+}
+// The signature move: ready from level 3 (used from the fight screen), shown dimmed before that.
+// `opponent` ({ boss }): an opponent's card shows the move only if they will use it.
+function signatureChip(f, opponent = null) {
+  const sig = SIGNATURES[f.cls];
+  if (!sig) return '';
+  if (opponent) return opponentHasSignature(f, opponent.boss, opponent.earlyRound) ? `<span class="chip signature" title="Their signature move: ${esc(sig.desc)} They use it once they fall behind, or in Round 3.">★ ${esc(sig.name)}</span>` : '';
+  const ready = Boolean(signatureOf(f));
+  return `<span class="chip signature${ready ? '' : ' locked'}" title="Signature move${ready ? '' : ` (unlocks at level ${SIGNATURE.level})`}: ${esc(sig.desc)} Once per fight.">★ ${esc(sig.name)}${ready ? '' : ` · Lv ${SIGNATURE.level}`}</span>`;
+}
+const signedNum = (n) => (n >= 0 ? `+${n}` : `−${-n}`);
+
+// In a fight, `fresh` wounds (the newest injuries) appear only at `freshAt` seconds, when the story reaches the blow.
+export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true, notes = '', anchor = false } = {}) {
+  const off = (slot) => (combatant?.disabled.includes(slot) ? ' off' : '');
+  const trait = f.kindTrait ? TRAITS[f.kindTrait] : null;
+  const clsName = f.cls ? CLASSES[f.cls].name + (f.weapon ? ` · ${WEAPONS[f.weapon].name}` : '') : '';
+  const abilityDesc = f.cls === 'fighter' ? WEAPONS[f.weapon].desc : CLASSES[f.cls]?.desc;
+  const injuries = f.injuries.map((i, n) => {
+    const def = INJURY_BY_TAG[i.tag];
+    const weeks = i.weeksLeft ? ` · ${Math.ceil(i.weeksLeft)}w` : '';
+    const held = fresh && n >= f.injuries.length - fresh ? ` late" style="animation-delay:${freshAt}s` : '';
+    return `<span class="chip injury${held}" title="${esc(def.desc)}${i.weeksLeft ? ` Heals in ${Math.ceil(i.weeksLeft)} Medbay week(s)${i.tag === 'fleshWound' ? ', or twice that on Rest' : ''}.` : ''}">${ICON.injury}${def.name}${i.weight > 1 ? ' ×' + i.weight : ''}${weeks}</span>`;
+  }).join('');
+  const decor = Object.entries(f.decor).filter(([, n]) => n > 0)
+    .map(([k, n]) => `<span class="chip decor" title="${esc(DECOR[k].effect)}">${DECOR[k].name} ×${n}</span>`).join('');
+  const titles = (f.titles ?? []).map((t) => `<span class="chip title" title="+1 Power">🏆 ${esc(t)}</span>`).join('');
+  const scars = (f.scars ?? []).map((sc) => `<span class="chip scar" title="${esc(SCARS[sc.id].desc)}">🩹 ${esc(SCARS[sc.id].name)}${sc.vs ? ` (${sc.vs})` : ''}</span>`).join('');
+  const augs = (f.augments ?? []).map((k) => `<span class="chip augment" title="${esc(AUGMENTS[k].desc)}">⚙ ${esc(AUGMENTS[k].name)}</span>`).join('');
+  const perks = (f.perks ?? []).map((p) => `<span class="chip perk" title="${esc(PERKS[p].desc)}">⭐ ${esc(PERKS[p].name)}</span>`).join('');
+  const gear = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => `<span class="chip gear" title="${esc(gearSummary(GEAR[k]))}">⚒ ${esc(GEAR[k].name)}</span>`).join('');
+  const nextXp = XP.levels[(f.level ?? 1) - 1];
+  const levelLine = f.level ? `<span class="lvl-chip" title="XP ${f.xp}${nextXp ? ` / ${nextXp} for the next level` : ' (max level reached; XP no longer adds anything)'}">Lv ${f.level}${nextXp ? '' : ' max'}</span>` : '';
+  const danger = combatant ? mortalDanger(combatant) : f.alive && effectiveInjuries(f) >= deathGateAt(f);
+  const marks = killMarks(f).map((k) => `<span class="chip mark" title="${esc(k.desc)}">💀 ${esc(k.name)}</span>`).join('');
+  const winsBy = Object.entries(f.arenaWins ?? {}).filter(([, n]) => n > 0);
+  const totalWins = winsBy.reduce((n, [, w]) => n + w, 0) + ((f.titles ?? []).includes('Master of the Games') ? 1 : 0);
+  const wins = totalWins ? `<span class="chip wins" title="Wins by arena: ${esc(winsBy.map(([t, n]) => `${CIRCUITS[t - 1]?.name ?? 'Grand Tournament'}: ${n}`).join(' · '))}">🏅 ${totalWins} win${totalWins === 1 ? '' : 's'}</span>` : '';
+  const want = f.want && WANTS[f.want.id] ? `<span class="chip want tip" title="${esc(`They want: ${WANTS[f.want.id].goal(f.want)}. Met: their spirits lift, +2 Renown and +2 XP; left too long, they sulk. The Quests panel shows the time left.`)}">💬 ${esc(WANTS[f.want.id].label(f.want))}</span>` : '';
+  const spy = f.spy ? `<span class="chip spy tip" title="The Emperor's spy you chose to keep. Whatever your house hides, the palace hears.">👁 Writes to the palace</span>` : '';
+  const bond = f.bond ? `<span class="chip bond" title="Bonded with ${esc(f.bond.name)}: +8 comfort while both are in the house. A partner 3+ levels higher teaches 1 XP a week. If one dies, the other grieves.">🤝 ${esc(f.bond.name)}</span>` : '';
+  const kills = f.kills ? `<span class="chip kills" title="Opponents killed in the arena. ${KILL_MARKS.map((k) => `${k.at} kills: ${k.name} (${k.desc})`).join(' ')}">💀 ${f.kills}</span>` : '';
+  return `
+    <article ${anchor ? `id="card-${esc(f.id)}" ` : ''}class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
+      ${tag ? `<div class="card-tag">${tag}</div>` : ''}
+      <div class="card-head">
+        <div class="id-row">${portrait(f, compact ? 44 : 52)}<div class="who"><h3><span class="nm">${esc(f.name)}</span></h3><div class="kind">${levelLine} ${KINDS[f.kind].name} · ${clsName}</div></div></div>
+        <div class="badges">
+          ${powerBadge(f, live)}
+          <div class="badge speed" title="Speed decides who strikes first (Speed + d6) and makes them harder to wound. ${f.speed}${gearSpd(f) ? ` ${gearSpd(f) > 0 ? '+' : '−'} ${Math.abs(gearSpd(f))} from gear` : ''}.">${ICON.speed}<b>${f.speed + gearSpd(f)}</b></div>
+        </div>
+      </div>
+      <div class="traits">
+        ${trait ? `<span class="chip trait tip${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
+        ${f.cls ? `<span class="chip ability tip${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
+        ${signatureChip(f, opponent)}
+        ${f.humor ? `<span class="chip humor tip" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
+        ${want}${spy}${wins}${bond}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
+      </div>
+      ${compact ? '' : `<details class="more card-more" data-key="what-${esc(f.id)}"><summary>ⓘ What they do</summary><div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div></details>`}
+      ${f.notice ? `<div class="notice">⚠ ${esc(f.notice)}</div>` : ''}
+      <div class="status-row">
+        <span class="gate-wrap">Death Gate ${deathGate(f)}</span>
+        ${stress && f.stress !== undefined ? stressBar(f) : ''}
+        ${stress && f.morale !== undefined ? moraleChip(f, morale) : ''}
+        ${f.renown ? `<span class="renown" title="Renown: fame from wins. +1 Gold per 5 on wins, but famous fighters expect better rooms.">★ ${f.renown}</span>` : ''}
+      </div>
+      ${injuries || decor ? `<div class="chips">${injuries}${decor}</div>` : ''}
+      ${notes}${actions}
+    </article>`;
+}
+
+function gearSummary(g) {
+  const bits = [];
+  if (g.power) bits.push(`${g.power > 0 ? '+' : '−'}${Math.abs(g.power)} Power`);
+  if (g.speed) bits.push(`${g.speed > 0 ? '+' : '−'}${Math.abs(g.speed)} Speed`);
+  if (g.injure) bits.push(`+${g.injure / 1000}% to injure`);
+  if (g.guard) bits.push(`−${g.guard / 1000}% to be injured`);
+  return bits.join(', ');
+}
+
+// `info`: moraleTarget's { target, comfort, expects }, when known: where Morale is heading and why, with a warning
+// before a fighter turns Discontented (and stops training).
+function moraleChip(f, info = null) {
+  const state = f.morale >= MORALE.inspired ? ['inspired', 'Inspired: +5% win chance'] : f.morale < MORALE.mutinous ? ['mutinous', 'Mutinous: refuses to fight'] : f.morale < MORALE.restless ? ['restless', "Discontented: won't train"] : ['content', 'Content'];
+  const why = info?.revenant
+    ? ` A Revenant feels nothing: Morale settles at ${info.target} whatever the room.`
+    : info
+    ? ` Heading to ${info.target}: base ${MORALE.base}, comfort +${info.comfort} (Quarters +${MORALE.perQuartersLevel} a level, each decor item +3 to +7 by price, Entertainment Room +${MORALE.perEntertainmentLevel} a level), fame expects −${info.expects} (${MORALE.expectationPerRenown} per Renown).`
+    : ' Comfort (Quarters, decor, Entertainment Room) raises it; fame raises expectations.';
+  const sliding = info && f.morale >= MORALE.restless && info.target < MORALE.restless;
+  return `<span class="morale ${state[0]}${sliding ? ' sliding' : ''}" title="Morale ${f.morale}/100. ${state[1]}.${why}${sliding ? ' Sliding towards Discontented: more comfort needed.' : ''}">☺ ${f.morale}${info && info.target !== f.morale ? ` → ${info.target}` : ''} <small>${sliding ? '⚠ Discontented soon' : state[1].split(':')[0]}</small></span>`;
+}
+
+export const gearSpd = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].speed ?? 0), 0);
+// Gear effects that the badges don't show: injure chance and armour.
+function gearBonus(f) {
+  const items = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => GEAR[k]);
+  const injure = items.reduce((n, g) => n + (g.injure ?? 0), 0);
+  const guard = items.reduce((n, g) => n + (g.guard ?? 0), 0);
+  return [injure ? `+${injure / 1000}% to injure` : '', guard ? `−${guard / 1000}% to be injured (armour)` : ''].filter(Boolean).join(', ');
+}
+
+// Thumbs up or down (playtest #8: "more aligned, and tell the crowd's suggestion apart from your choices"): the crowd's
+// wish as a banner, then the two choices in equal columns, each with exactly what it does, marked with or against the crowd.
+export function mercyChoices({ title, blood, spare, kill }) {
+  const col = (choice, label, cls, effects) => {
+    const withCrowd = (choice === 'kill') === blood;
+    return `<div class="verdict ${cls}"><div class="verdict-tag ${withCrowd ? 'with' : 'against'}">${withCrowd ? 'The crowd\'s choice' : 'Against the crowd'}</div>
+      <button class="btn big ${cls === 'spare' ? 'good' : 'danger'}" data-action="mercy" data-choice="${choice}">${label}</button>
+      <ul class="verdict-effects">${effects.map((e) => `<li>${esc(e)}</li>`).join('')}</ul></div>`;
+  };
+  return `<div class="mercy-box">
+    <div class="mercy-title">${title}</div>
+    <div class="crowd-wish ${blood ? 'blood' : 'mercy'}"><span class="label">The crowd wants</span> ${blood ? '👎 Blood' : '👍 Mercy'}</div>
+    <div class="verdicts">${col('spare', '👍 Spare them', 'spare', spare)}${col('kill', '👎 Finish them', 'kill', kill)}</div>
+  </div>`;
+}
