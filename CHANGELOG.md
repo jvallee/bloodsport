@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## 6.0.0-beta (in progress): balance, and what two playtesters found
+## 6.0.0-beta: balance, and what three playtesters found
 
 - **The crowd loves a read:** a round where your tactic counters the opponent's now fills the hype meter too (+10), so good play can win the crowd, not only pressing.
 - **All In is a true gamble:** +20% to take the round, but lose it and your fighter falls. The button shows that chance.

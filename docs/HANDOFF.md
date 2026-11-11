@@ -1,6 +1,6 @@
 # Blood and Circus (formerly Bloodsport): handoff for the next agent
 
-Last updated 2026-11-10, at **version 6.0.0-beta-dev.3** (pushed and live; sections 3 onward keep older states for reference). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
+Last updated 2026-11-10, at **version 6.0.0-beta** (pushed and live; sections 3 onward keep older states for reference). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
 
 ## 1. What this is
 
