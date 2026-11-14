@@ -11,3 +11,47 @@ test('the week\'s second button says "End week", not "One week" (the designer)',
   assert.ok(html.includes('End week'));
   assert.ok(!html.includes('One week'));
 });
+
+test('renaming: a new name, which costs Morale about 65% of the time, on its own dice (the designer)', async () => {
+  const { rename, renameBlocker, moraleTarget } = await import('../src/run.js');
+  const { RENAME } = await import('../src/data.js');
+  const { MOOD_WEEKS } = await import('../src/events.js');
+  let resented = 0;
+  const N = 400;
+  for (let seed = 1; seed <= N; seed++) {
+    const run = createRun(seed);
+    const f = recruit(run, run.market[0].id);
+    const dice = JSON.stringify({ ...run.rng, rename: undefined });
+    const before = moraleTarget(run, f).target;
+    const hurt = rename(run, f.id, '  Spartacus  the Bold ');
+    assert.equal(f.name, 'Spartacus the Bold', 'spaces are tidied');
+    assert.ok(f.story.some((e) => e.text.includes('once called')), 'their Story remembers the old name');
+    assert.equal(JSON.stringify({ ...run.rng, rename: undefined }), dice, 'no other dice are drawn');
+    if (hurt) {
+      resented++;
+      assert.deepEqual(f.mood, { n: RENAME.morale, weeks: MOOD_WEEKS });
+      assert.equal(moraleTarget(run, f).target, before + RENAME.morale);
+    } else assert.ok(!f.mood || f.mood.n === 0);
+  }
+  assert.ok(Math.abs(resented / N - RENAME.chance) < 0.07, `resented ${resented}/${N}`);
+  const run = createRun(3);
+  const [a, b] = [recruit(run, run.market[0].id), recruit(run, run.market[1].id)];
+  assert.match(renameBlocker(run, a.id, '   '), /empty/);
+  assert.match(renameBlocker(run, a.id, 'x'.repeat(RENAME.maxLength + 1)), /at most/);
+  assert.match(renameBlocker(run, a.id, b.name.toUpperCase()), /already called/);
+  assert.match(renameBlocker(run, a.id, a.name), /already has/);
+  assert.equal(renameBlocker(run, a.id, 'Crixus Novus'), null);
+});
+
+test('a rename is recorded with its name, so a career with one replays (the designer)', async () => {
+  const { applyGameAction } = await import('../src/game.js');
+  const { replay } = await import('../src/debug.js');
+  const state = { run: createRun(9), match: null };
+  applyGameAction(state, 'recruit', { id: state.run.market[0].id });
+  const id = state.run.roster[0].id;
+  applyGameAction(state, 'rename', { id, name: 'Felix' });
+  const again = replay({ kind: 'bloodsport-bug-report', format: 1, version: 'x', seed: 9, actions: state.run.actions, save: { setup: state.run.setup } });
+  assert.deepEqual(again.errors, []);
+  assert.equal(again.state.run.roster[0].name, 'Felix');
+  assert.deepEqual(again.state.run.roster[0].mood, state.run.roster[0].mood);
+});

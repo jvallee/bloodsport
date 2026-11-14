@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, SPY, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, SUMMONS, FEAR, FORTUNE, HEAT, LEGACY, deltaRow,
+  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, RENAME, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, SUMMONS, FEAR, FORTUNE, HEAT, LEGACY, deltaRow,
 } from './data.js';
 import { RELICS, BOONS, hasRelic, relicSum, relicFight, tagCount, fortuneTitle, fortuneText } from './fortune.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
@@ -2660,6 +2660,38 @@ export function retire(run, id) {
   run.retired = [...(run.retired ?? []), legend];
   log(run, `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good');
   return legend;
+}
+
+// Renaming (the designer, 6.0.3): a new name, which the fighter resents RENAME.chance of the time. Its own dice
+// (run.rng.rename), so renaming never changes what any other roll in the career would have been.
+const renameRng = (run) => (run.rng.rename ??= createRng(deriveSeed(run.seed, 14)));
+export const cleanName = (name) => String(name ?? '').replace(/\s+/g, ' ').trim();
+
+export function renameBlocker(run, id, name) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (name === undefined) return null; // the button itself: the name is asked for next
+  const n = cleanName(name);
+  if (!n) return 'A name can\'t be empty.';
+  if (n.length > RENAME.maxLength) return `A name is at most ${RENAME.maxLength} characters.`;
+  if (n === f.name) return `${f.name} already has that name.`;
+  if (takenNames(run).some((x) => x.toLowerCase() === n.toLowerCase())) return `Someone is already called ${n}.`;
+  return null;
+}
+
+// Returns true when the fighter resented it.
+export function rename(run, id, name) {
+  assertOk(renameBlocker(run, id, name ?? ''));
+  const f = findFighter(run, id);
+  const old = f.name;
+  f.name = cleanName(name);
+  chronicle(run, f, `Renamed: once called ${old}.`);
+  const resents = next(renameRng(run)) < RENAME.chance;
+  if (resents) f.mood = { n: (f.mood?.n ?? 0) + RENAME.morale, weeks: MOOD_WEEKS };
+  log(run, resents ? `${old} is now ${f.name}, and resents it: −${-RENAME.morale} Morale for ${MOOD_WEEKS} weeks.` : `${old} is now ${f.name}, and takes it well.`, resents ? 'bad' : 'good');
+  return resents;
 }
 
 // ---------- Tournaments ----------

@@ -2,7 +2,7 @@
 
 import { MAX_CAREERS } from '../careers.js';
 import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
-import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR } from '../data.js';
+import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, unlockText, levelFor, nextUnlock, unlocksAt, heatUnlocked, houseColours, dailyStreak, returningFor, LEGACY_LEVELS, HEAT, HOUSE_COLOURS } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
@@ -10,7 +10,7 @@ import {
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker, fortuneBlocker, rerollBlocker, rerollPrice,
   isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
-  trainGain,
+  trainGain, renameBlocker,
 } from '../run.js';
 import { stepText } from '../tutorial.js';
 import {
@@ -22,7 +22,7 @@ import { gearText, slotLabel } from '../codex.js';
 import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON, mercyChoices, gearSpd } from './components.js';
 import { portrait, npcPortrait } from './portrait.js';
 import { SPEAKERS, tipSpeaker } from '../dialogue.js';
-import { EVENT_BY_ID, choiceLabel, stakesText } from '../events.js';
+import { EVENT_BY_ID, MOOD_WEEKS, choiceLabel, stakesText } from '../events.js';
 import { RELICS, TAGS, KIND_LABELS, perkTags, fortuneTitle, fortuneText } from '../fortune.js';
 
 const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
@@ -598,10 +598,11 @@ function rosterPanel(run) {
       <details class="more" data-key="room-${f.id}"><summary>Room &amp; decor${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f).room}</details>
       <details class="more" data-key="gear-${f.id}"><summary>Gear${f.gear.weapon || f.gear.armor ? ` <small>(${[f.gear.weapon, f.gear.armor].filter(Boolean).map((k) => esc(GEAR[k].name)).join(', ')})</small>` : run.inventory.gear.length ? ' <small>(spare gear in the storeroom)</small>' : ''}</summary>${roomPanel(run, f).gear}</details>
       ${f.story?.length ? `<details class="more" data-key="story-${f.id}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
-      <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, cyborg surgery, ${(f.scars ?? []).some((x) => x.id === 'afeared') ? 'fear, ' : ''}retire, release</summary>
+      <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, cyborg surgery, ${(f.scars ?? []).some((x) => x.id === 'afeared') ? 'fear, ' : ''}rename, retire, release</summary>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
         ${(f.scars ?? []).some((x) => x.id === 'afeared') ? `<div class="label">Afeared: win ${FEAR.conquerWins} fights against the style they fear to conquer it, or</div><div class="row">${buttonWhy(`🏛 Fortuna's rite: lift the fear (${ritePrice(run)} Gold)`, 'rite', { id: f.id }, riteBlocker(run, f.id), 'btn small')}</div>` : ''}
         ${augments ? `<div class="label">Cyborg surgery: replace the wound for good (${augmentPrice(run)} Gold, −1 Renown)</div><div class="row">${augments}</div>` : ''}
+        <div class="row">${buttonWhy(`✎ Rename (${Math.round(RENAME.chance * 100)}% chance they resent it: −${-RENAME.morale} Morale for ${MOOD_WEEKS} weeks)`, 'rename', { id: f.id }, renameBlocker(run, f.id), 'btn small')}</div>
         <div class="row">${buttonWhy(`Retire to the Hall of Champions (+${RETIRE.prestige} Prestige, roster +${RETIRE.morale} Morale)`, 'retire', { id: f.id }, retireBlocker(run, f.id), 'btn small')}</div>
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>

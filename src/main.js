@@ -533,6 +533,13 @@ const before = {
   'event-choice': () => { logMark = run.log.length; return true; },
   fortune: () => { logMark = run.log.length; return true; },
   release: () => confirm('Release this fighter for good?'),
+  rename: (data) => { // the new name is asked for here, and recorded with the action so a replay needs no prompt
+    const f = run.roster.find((x) => x.id === data.id);
+    const name = prompt(`A new name for ${f?.name ?? 'this fighter'}:`, f?.name ?? '');
+    if (name === null) return false;
+    data.name = name;
+    return true;
+  },
   retire: () => confirm('Retire this fighter to the Hall of Champions? They leave your roster for good.'),
   forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favour than losing the fight.'),
   withdraw: () => confirm('Withdraw from the tournament? It counts as capitulating; your fighter is safe.'),
@@ -608,7 +615,7 @@ document.addEventListener('click', (e) => {
     try {
       if (name !== 'next-round') ui.animateRound = 0; // only a new round plays its animation (not items, toggles...)
       if (isGameAction(name)) {
-        if (before[name] && !before[name]()) return;
+        if (before[name] && !before[name](data)) return;
         gameAction(name, data);
       } else {
         actions[name](data);

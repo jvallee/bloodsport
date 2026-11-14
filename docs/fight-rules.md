@@ -261,6 +261,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Cyborg surgery** (Medbay Lv 2+): replace a Maimed limb (Cyborg Arm: +1 Power) or a Blinded eye (Cyborg Eye: +1 Power, can't be Blinded again; that wound lands as a Flesh Wound). Costs 10 Gold + 4 per tier above 1, and −1 Renown (cut after playtest #3: it was never worth it).
 - **Chronicle:** each fighter keeps up to 12 story lines (joined, first win, first kill, titles, marks, scars, augments, death). A death adds a eulogy to the report.
 - **Retirement:** a fighter at level 4+ or with a Title can retire: +5 Prestige, +10 Morale to the roster, and they join the Hall of Champions (kept across careers).
+- **Renaming** (`RENAME`, the designer, 6.0.3): free, any time the house is idle. 65% of the time (own dice, `rng.rename`) the fighter resents it: mood −10 for 4 weeks, like an event's. A name is 1–20 characters (spaces tidied) and can't be anyone else's (`takenNames`, any case). Their Story keeps the old name.
 
 ### Phase D: a run, not just a career
 - **Score:** Glory + 25 per arena tier above 1 + 10 per House level above 1 + 2 per win; a won career adds 200 plus its decrees' bonus.
