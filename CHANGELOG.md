@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 6.0.5
+
+- **Your first victory stands out:** the house's first ever win gets a gold banner above the result, saying what it means and what comes next.
+
 ## 6.0.4
 
 - **Rename your fighters:** under a fighter's "rename, retire, release" fold-out. It's free, but about two times in three they resent it: −10 Morale for 4 weeks.

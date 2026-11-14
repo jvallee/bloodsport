@@ -266,10 +266,10 @@ End-screen titles and closing lines:
 
 | Where | Text |
 |---|---|
-| [src/run.js:3333](../src/run.js#L3333) | 'You won the Grand Tournament. The Emperor names you Master of the Games.' |
-| [src/run.js:3383](../src/run.js#L3383) | `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.` |
-| [src/run.js:3388](../src/run.js#L3388) | 'Your gladiators revolt and burn the Ludus.' |
-| [src/run.js:3394](../src/run.js#L3394) | 'No fighters left and not enough Gold to buy one. Your house falls.' |
+| [src/run.js:3339](../src/run.js#L3339) | 'You won the Grand Tournament. The Emperor names you Master of the Games.' |
+| [src/run.js:3389](../src/run.js#L3389) | `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.` |
+| [src/run.js:3394](../src/run.js#L3394) | 'Your gladiators revolt and burn the Ludus.' |
+| [src/run.js:3400](../src/run.js#L3400) | 'No fighters left and not enough Gold to buy one. Your house falls.' |
 | Where | Text |
 |---|---|
 
@@ -474,9 +474,9 @@ These are templates: keep the `${...}` parts. A line with several variants picks
 | [src/ui/fightView.js:143](../src/ui/fightView.js#L143) | // Thumbs up or down: the beaten opponent's fate, with what the crowd wants. |
 | [src/ui/fightView.js:151](../src/ui/fightView.js#L151) | const spare = blood ? `${favor}; ${house} will owe you a life (−1 Power against you)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale (the crowd agrees)` |
 | [src/ui/fightView.js:152](../src/ui/fightView.js#L152) | const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill (the crowd agrees)` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${m.house ? `; ${house} will swear a feud` : ''}` |
-| [src/ui/fightView.js:265](../src/ui/fightView.js#L265) | const pre = mortalDanger(m.a) ? `⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about ${Math.round(deathRisk(m) * 100)}% chance of death. Capitulating is only possible between rounds.` : '' |
-| [src/ui/fightView.js:269](../src/ui/fightView.js#L269) | const alert = danger ? `⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about ${Math.round(deathRisk(m) * 100)}% chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.` : '' |
-| [src/ui/fightView.js:338](../src/ui/fightView.js#L338) | ${last ? `Your round chance ${fmtPct(last.win.chance)}${animate ? `Steel meets steel…` : ''}${roundBanner(m, last, reveal)}` : 'The crowd roars. Three rounds; first to two wins.'} |
+| [src/ui/fightView.js:267](../src/ui/fightView.js#L267) | const pre = mortalDanger(m.a) ? `⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about ${Math.round(deathRisk(m) * 100)}% chance of death. Capitulating is only possible between rounds.` : '' |
+| [src/ui/fightView.js:271](../src/ui/fightView.js#L271) | const alert = danger ? `⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about ${Math.round(deathRisk(m) * 100)}% chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.` : '' |
+| [src/ui/fightView.js:340](../src/ui/fightView.js#L340) | ${last ? `Your round chance ${fmtPct(last.win.chance)}${animate ? `Steel meets steel…` : ''}${roundBanner(m, last, reveal)}` : 'The crowd roars. Three rounds; first to two wins.'} |
 
 ## 9. The house log (read all the time)
 
@@ -505,19 +505,19 @@ Lines the house steward writes each week. The plot's lines are in section 4.
 | [src/run.js:2637](../src/run.js#L2637) | `${f.name} wakes with a ${AUGMENTS[key].name}. The crowd mutters about machines.`, 'event' |
 | [src/run.js:2661](../src/run.js#L2661) | `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good' |
 | [src/run.js:2858](../src/run.js#L2858) | `You skip ${bout.name}: +${ECONOMY.skipGold} Gold, and the roster rests.` |
-| [src/run.js:2961](../src/run.js#L2961) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event' |
-| [src/run.js:2966](../src/run.js#L2966) | `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn' |
-| [src/run.js:2969](../src/run.js#L2969) | `The crowd jeers ${fighter.name} for crushing a much weaker opponent.`, 'warn' |
-| [src/run.js:3132](../src/run.js#L3132) | `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good' |
-| [src/run.js:3084](../src/run.js#L3084) | `${fighter.name} is scarred: ${SCARS[id].name} against ${vs} fighters.`, 'warn' |
-| [src/run.js:3095](../src/run.js#L3095) | `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad' |
-| [src/run.js:3113](../src/run.js#L3113) | `House Prestige level ${run.prestigeLevel}! New buildings and room plots unlocked.`, 'event' |
-| [src/run.js:3187](../src/run.js#L3187) | `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good' |
-| [src/run.js:3240](../src/run.js#L3240) | `Overnight, every chalk mark on your doors is washed away.`, 'warn' |
-| [src/run.js:3277](../src/run.js#L3277) | `Thumbs down: ${fighter.name} finishes ${opp}.`, 'warn' |
-| [src/run.js:2961](../src/run.js#L2961) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${out.mark}: ${marks.at(-1).desc}`, 'event' |
-| [src/run.js:3297](../src/run.js#L3297) | `The crowd roars its approval for ${fighter.name}.`, 'good' |
-| [src/run.js:3357](../src/run.js#L3357) | `${opp.name} will remember this, and will be waiting for you.`, 'warn' |
+| [src/run.js:2967](../src/run.js#L2967) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event' |
+| [src/run.js:2972](../src/run.js#L2972) | `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn' |
+| [src/run.js:2975](../src/run.js#L2975) | `The crowd jeers ${fighter.name} for crushing a much weaker opponent.`, 'warn' |
+| [src/run.js:3138](../src/run.js#L3138) | `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good' |
+| [src/run.js:3090](../src/run.js#L3090) | `${fighter.name} is scarred: ${SCARS[id].name} against ${vs} fighters.`, 'warn' |
+| [src/run.js:3101](../src/run.js#L3101) | `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad' |
+| [src/run.js:3119](../src/run.js#L3119) | `House Prestige level ${run.prestigeLevel}! New buildings and room plots unlocked.`, 'event' |
+| [src/run.js:3193](../src/run.js#L3193) | `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good' |
+| [src/run.js:3246](../src/run.js#L3246) | `Overnight, every chalk mark on your doors is washed away.`, 'warn' |
+| [src/run.js:3283](../src/run.js#L3283) | `Thumbs down: ${fighter.name} finishes ${opp}.`, 'warn' |
+| [src/run.js:2967](../src/run.js#L2967) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${out.mark}: ${marks.at(-1).desc}`, 'event' |
+| [src/run.js:3303](../src/run.js#L3303) | `The crowd roars its approval for ${fighter.name}.`, 'good' |
+| [src/run.js:3363](../src/run.js#L3363) | `${opp.name} will remember this, and will be waiting for you.`, 'warn' |
 
 ## 10. Tutorial and coach tips
 
@@ -857,17 +857,17 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/run.js:3007](../src/run.js#L3007) | log(run, `Reaching the Boss earns respect: the ${bout.buyIn} Prestige buy-in is returned.`, 'event'); |
-| [src/run.js:3357](../src/run.js#L3357) | log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn'); |
+| [src/run.js:3013](../src/run.js#L3013) | log(run, `Reaching the Boss earns respect: the ${bout.buyIn} Prestige buy-in is returned.`, 'event'); |
+| [src/run.js:3363](../src/run.js#L3363) | log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn'); |
 | [src/ui/views.js](../src/ui/views.js) `overtrainModal` | The steward's overtraining question: "Before you end the week: another week of training and … will be Overtrained (Stress 50+)." |
 
 **The crowd remembers its dead** (a Revenant's first fight back)
 
 | Where | Text |
 |---|---|
-| [src/ui/fightView.js:335](../src/ui/fightView.js#L335) | ${m.a.f.risen && !m.rounds?.length ? `<div class="sub chant">📣 The crowd remembers ${esc(m.a.f.name)}. They chant the name they buried: +${HYPE.risen} hype.</div>` : ''} |
-| [src/run.js:3052](../src/run.js#L3052) | `Fought again, back from the dead. The crowd chanted their name.` |
-| [src/run.js:3053](../src/run.js#L3053) | `The crowd chants ${fighter.name}'s name: the dead fighter walks the sand again.`, 'event' |
+| [src/ui/fightView.js:337](../src/ui/fightView.js#L337) | ${m.a.f.risen && !m.rounds?.length ? `<div class="sub chant">📣 The crowd remembers ${esc(m.a.f.name)}. They chant the name they buried: +${HYPE.risen} hype.</div>` : ''} |
+| [src/run.js:3058](../src/run.js#L3058) | `Fought again, back from the dead. The crowd chanted their name.` |
+| [src/run.js:3059](../src/run.js#L3059) | `The crowd chants ${fighter.name}'s name: the dead fighter walks the sand again.`, 'event' |
 
 **Lower arenas** (5.3.0)
 
@@ -936,3 +936,4 @@ Version 6's new words. Rules text (numbers) must stay accurate; names and flavou
 | [src/ui/views.js](../src/ui/views.js) `rosterPanel` | The button "✎ Rename (65% chance they resent it: −10 Morale for 4 weeks)". |
 | [src/main.js](../src/main.js) `before.rename` | The prompt "A new name for …:". |
 | [src/run.js](../src/run.js) `rename` | Log: "… is now …, and resents it: −10 Morale for 4 weeks." / "…, and takes it well." Story: "Renamed: once called …". |
+| [src/ui/fightView.js](../src/ui/fightView.js) `controls` | The first-win banner: "🏆 Your first victory!" and "The house's first win. The crowd will remember your colours, and every win from here pays Gold and Prestige: win the arena's Boss fight to conquer it and climb." |

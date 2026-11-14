@@ -513,7 +513,7 @@ export function answerSummons(run, id, order) {
     }
   }
   summary.favor = run.favor - favorBefore;
-  run.history.push(summary);
+  pushResult(run, summary);
   run.summons = null;
   run.summonsDone = true;
   log(run, `The Emperor's summons: ${fighter.name} (Power ${effectivePower(fighter)}) against ${opp.name} (Power ${summary.oppPower}): ${won ? 'won' : !summary.died ? (reason === 'towel' ? 'yielded at the Death Gate' : 'lost, but survived') : 'killed'}${fighter.alive && newInjuries.length ? `, with ${newInjuries.join(', ')}` : ''}.${[summary.favor ? ` Favour ${summary.favor > 0 ? '+' : '−'}${Math.abs(summary.favor)}` : '', summary.renown ? ` +${summary.renown} Renown` : ''].filter(Boolean).join(',')}${summary.favor || summary.renown ? '.' : ''}`, won ? 'good' : summary.died ? 'bad' : 'event');
@@ -2891,6 +2891,12 @@ function settleBout(run, tier) {
 // The Final of a Boss tournament from the Silver Coliseum up: losing it returns the buy-in (BRACKET.bossFinalRefund).
 export const keepsBuyIn = (run, tier) => Boolean(BRACKET.bossFinalRefund) && tier !== GRAND_TIER && hasBracket(tier) && boutFor(run, tier).boss && bracketOf(run, tier)?.round === 2;
 
+// A fight's summary joins the history; the house's first ever win is marked, so the fight screen can celebrate it (the designer, 6.0.5).
+function pushResult(run, summary) {
+  if (summary.won && !run.history.some((h) => h.won)) summary.firstWin = true;
+  run.history.push(summary);
+}
+
 export function finishMatch(run, match) {
   if (!run.inMatch) throw new Error('No match in progress.');
   if (!match.over) throw new Error('The match is not over.');
@@ -3112,7 +3118,7 @@ export function finishMatch(run, match) {
     summary.levelUp = run.prestigeLevel;
     log(run, `House Prestige level ${run.prestigeLevel}! New buildings and room plots unlocked.`, 'event');
   }
-  run.history.push(summary);
+  pushResult(run, summary);
   log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
   const fought = (match.round ?? 0) > 0; // a withdrawal between bracket matches fights nobody (playtest #10)
   if (!won && fought) recordNemesis(run, opp, tier, fighter, bout.boss);
@@ -3183,7 +3189,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   bracket.round += 1;
   run.inMatch = false;
   run.matchInfo = null;
-  run.history.push(summary);
+  pushResult(run, summary);
   log(run, `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good');
   offerMercy(run, match, summary, fighter, opp, tier);
   return summary;

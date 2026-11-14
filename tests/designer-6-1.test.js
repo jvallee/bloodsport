@@ -55,3 +55,40 @@ test('a rename is recorded with its name, so a career with one replays (the desi
   assert.equal(again.state.run.roster[0].name, 'Felix');
   assert.deepEqual(again.state.run.roster[0].mood, state.run.roster[0].mood);
 });
+
+test('the house\'s first win is marked, and the fight screen celebrates it once (the designer: "make first victory more clear")', async () => {
+  const { applyGameAction } = await import('../src/game.js');
+  const { fightView } = await import('../src/ui/fightView.js');
+  const { boutFor } = await import('../src/run.js');
+  let firsts = 0;
+  for (let seed = 1; seed <= 30 && firsts < 3; seed++) {
+    const state = { run: createRun(seed), match: null };
+    const { run } = state;
+    applyGameAction(state, 'recruit', { id: run.market[0].id });
+    run.roster[0].power += 30; // wins nearly every fight
+    let wins = 0;
+    const tidy = () => {
+      for (const f of run.roster) if (f.pendingPerks.length) applyGameAction(state, 'perk', { id: f.id, perk: f.pendingPerks[0][0] });
+      if (run.event) applyGameAction(state, 'event-choice', { index: 0 });
+      if (run.fortune) applyGameAction(state, 'fortune-pass');
+    };
+    while (run.status === 'active' && wins < 2 && run.week < 60) {
+      tidy();
+      if (!run.bouts) { applyGameAction(state, 'advance-tournament'); continue; }
+      const tier = run.topTier;
+      try { applyGameAction(state, 'fight', { id: run.roster[0].id, tier }); } catch { applyGameAction(state, 'advance'); continue; }
+      while (!state.match.over) applyGameAction(state, 'next-round', { stance: 'steady' });
+      const s = state.match.summary;
+      const html = fightView(state.match, { animateRound: 0 }, boutFor(run, tier));
+      if (s.won) {
+        wins++;
+        assert.equal(Boolean(s.firstWin), wins === 1, `win ${wins} is ${wins === 1 ? '' : 'not '}the first`);
+        assert.equal(html.includes('Your first victory'), wins === 1);
+        if (wins === 1) firsts++;
+      } else assert.ok(!html.includes('Your first victory'));
+      if (run.mercy) applyGameAction(state, 'mercy', { choice: 'spare' });
+      applyGameAction(state, 'leave-fight');
+    }
+  }
+  assert.ok(firsts >= 3, 'first wins were seen');
+});

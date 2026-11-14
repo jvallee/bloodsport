@@ -243,7 +243,9 @@ function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {
     const last = m.rounds.at(-1);
     const at = last?.round === ui.animateRound ? roundEndTime(m, last, ui.showMath) : 0;
     const late = at ? ` late" style="animation-delay:${at + 0.6}s` : '';
-    return `<div class="result ${won ? 'win' : 'loss'}${late}">${won ? 'Victory' : m.result.reason === 'towel' ? 'Capitulated' : m.result.reason === 'death' ? 'Slain' : 'Defeat'}</div>
+    // The house's first ever win gets its own banner (the designer, 6.0.5: "make first victory more clear"). PLACEHOLDER words.
+    const first = won && m.summary?.firstWin ? `<div class="first-win${late ? ' late' : ''}" ${late ? `style="animation-delay:${at + 0.6}s"` : ''}><div class="first-win-title">🏆 Your first victory!</div><div>The house's first win. The crowd will remember your colours, and every win from here pays Gold and Prestige: win the arena's Boss fight to conquer it and climb.</div></div>` : '';
+    return `${first}<div class="result ${won ? 'win' : 'loss'}${late}">${won ? 'Victory' : m.result.reason === 'towel' ? 'Capitulated' : m.result.reason === 'death' ? 'Slain' : 'Defeat'}</div>
       <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${at + 0.8}s"` : ''}>${esc(resultText(m))}</div>
       <div class="${late ? 'late' : ''}" ${late ? `style="animation-delay:${at + 1}s"` : ''}>${report(m.summary)}</div>
       ${advice ? `<div class="advice">💡 ${esc(advice)}</div>` : ''}

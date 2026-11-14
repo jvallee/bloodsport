@@ -254,6 +254,10 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .result { font-family: var(--display); font-size: 28px; }
 .result.win { color: var(--good); }
 .result.loss { color: var(--blood); }
+.first-win { margin: 4px 0 10px; padding: 12px 14px; border: 2px solid var(--gold); border-radius: 10px; background: color-mix(in srgb, var(--gold) 14%, transparent); }
+.first-win-title { font-family: var(--display); font-size: 30px; color: var(--gold); }
+/* Only as the result is revealed (.late), so a redraw of the finished fight doesn't replay it. */
+@keyframes first-win-in { from { opacity: 0; transform: scale(0.94); box-shadow: 0 0 0 0 transparent; } 60% { opacity: 1; transform: scale(1.02); box-shadow: 0 0 28px 6px color-mix(in srgb, var(--gold) 35%, transparent); } to { opacity: 1; transform: none; box-shadow: none; } }
 .advice { max-width: 640px; background: var(--panel-2); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 12px; color: #f0e2b8; }
 .why { width: 100%; text-align: left; }
 .why summary { cursor: pointer; color: var(--gold); text-align: center; }
@@ -372,6 +376,7 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 @keyframes fade-out { to { opacity: 0; } }
 @keyframes glow-first { from { border-color: transparent; box-shadow: none; } 50% { border-color: var(--gold); box-shadow: 0 0 18px 2px rgba(217, 180, 90, 0.6); } to { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; } }
 .late { opacity: 0; animation: fade-in 0.35s forwards; }
+.first-win.late { animation: first-win-in 1.4s ease-out forwards; }
 
 /* After-fight report */
 .report { width: 100%; max-width: 520px; margin: 6px auto; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--panel); text-align: left; }
@@ -390,7 +395,7 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 
 @media (prefers-reduced-motion: reduce) {
   .die::before { content: none; }
-  .die .face, .reveal, .late { opacity: 1; animation: none; }
+  .die .face, .reveal, .late, .first-win.late { opacity: 1; animation: none; }
   .die:not(.still), .init-side.first { animation: none; }
 }
 
