@@ -429,7 +429,7 @@ function weekPanel(run) {
       ${run.demand ? `<div class="demand${demandMet(run) ? ' met' : ''}">⚜ <b>The Emperor demands:</b> ${esc(DEMANDS[run.demand.id].goal)}, by the end of this month's fight day. ${demandMet(run) ? '✔ Done: he will be pleased.' : `Reward: +${DEMAND.favor} Favour and Gold; missing it costs ${-DEMAND.missFavor} Favour.`}</div>` : ''}
       <div class="row">
         ${run.bouts ? button('End week', 'advance', {}, blocked, 'btn primary') : `${button(`⚔ To fight day <small>(${weeksUntilTournament(run.week)} wk${weeksUntilTournament(run.week) === 1 ? '' : 's'})</small>`, 'advance-tournament', {}, blocked, 'btn primary')}
-        ${button('One week', 'advance', {}, blocked, 'btn')}`}
+        ${button('End week', 'advance', {}, blocked, 'btn')}`}
         ${run.roster.length ? button('📋 Steward\'s plan', 'steward-plan', {}, stewardPlanBlocker(run), 'btn', 'Sets everyone\'s job: the hurt to the Medbay, the tired to Rest, the rest to training while there are rooms.') : ''}
       </div>
       ${blocked && !run.boutPending ? `<div class="why-not">${esc(blocked)}</div>` : ''}
@@ -852,7 +852,7 @@ export function helpModal() {
       <li><b>Take Fortune's card.</b> Each month offers three: a <b>relic</b> the house keeps (up to 6, and some count a perk's tag, like Brute or Swift), a boon, gear, a fighter, or a wager. Spin again for Gold if none suit.</li>
       <li><b>Every career counts.</b> Win or lose, a career earns <b>Legacy XP</b>, and each Legacy level unlocks something for the careers after it: relics, a patron, house colours, legends who return. Win a career to unlock <b>Heat</b>: harder rules, a higher score, more XP.</li>
     </ol>
-    <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or plays one week · T goes to fight day · 1–4 switch tabs · ? opens this page.</p>
+    <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or ends the week · T goes to fight day · 1–4 switch tabs · ? opens this page.</p>
     <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>
     <div class="row"><button class="btn small" data-action="intro-replay">Replay the intro</button><button class="btn small" data-action="tutorial-replay">Restart the tutorial</button><button class="btn small" data-action="tab" data-tab="codex">Open the Codex</button></div>
     <div class="row"><button class="btn small" data-action="export-save" title="Download your career, Codex and Legacy as one file">Export save</button><button class="btn small" data-action="import-save" title="Load a save file as a new career (your other careers are kept)">Import save</button></div>

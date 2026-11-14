@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 6.0.3
+
+- **End week:** the button that plays a single week now says "End week" (it said "One week").
+
 ## 6.0.2
 
 - **Fortune's cards deal in once:** the cards' entrance animation played again every time the page redrew (each Next in a dialogue, for one). Now only a new hand animates: a new month or a spin.

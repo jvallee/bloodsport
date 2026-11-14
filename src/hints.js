@@ -40,5 +40,5 @@ export function nextHint(run) {
   if (restless) return { text: `${restless.name} is Discontented (Morale ${restless.morale}): place decor or upgrade their quarters.`, tone: 'warn' };
   const idle = run.roster.find((f) => f.job === 'rest' && f.stress + STRESS.train < STRESS.overtrained && !jobBlocker(run, f.id, 'trainPower'));
   if (idle) return { text: `${idle.name} is resting with Stress ${idle.stress}: they could train this week.` };
-  return { text: 'Jobs are set. Go to fight day (T), or play one week at a time (Space).' };
+  return { text: 'Jobs are set. Go to fight day (T), or end the week (Space).' };
 }
