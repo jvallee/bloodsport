@@ -149,7 +149,7 @@ export const PATRONS = {
 
 // Emperor's Decrees: optional harder rules for a career, after your first win. Each adds to the score.
 export const DECREES = {
-  ironBosses: { name: 'Iron Bosses', desc: 'Every Boss fights with +1 Power.', score: 30 },
+  ironBosses: { name: 'Iron Bosses', desc: 'Every Boss fights with +1 Power.', power: 1, score: 30 },
   greedyEmperor: { name: 'A Greedy Emperor', desc: 'Tribute costs 50% more.', score: 20 },
   harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favour, and falling before its Final costs the full amount.', score: 20 }, // phase 5 (LLM-13): the halving for an early loss made Heat 1 barely felt
   leanFortune: { name: 'Lean Fortunes', desc: 'Fortune deals one card fewer each month.', score: 25 }, // version 6
@@ -158,7 +158,7 @@ export const DECREES = {
 
 // Version 6, Heat (docs/plan-v6-phase3.md): numbered levels of the decrees, each adding one rule to the last.
 // Winning a career at Heat N unlocks Heat N+1. Legacy XP gains `xpPerHeat` × the Heat level.
-export const HEAT = { decrees: ['ironBosses', 'greedyEmperor', 'harshJudges', 'leanFortune', 'hungryLions'], xpPerHeat: 0.2 };
+export const HEAT = { decrees: ['harshJudges', 'leanFortune', 'hungryLions', 'greedyEmperor', 'ironBosses'], xpPerHeat: 0.2 };
 
 // Version 6, Legacy XP and the unlock tree (src/legacy.js). Level 2 needs `first` XP; each level after needs `step` more.
 // Past level 12 a level still comes, but unlocks nothing new.
@@ -580,7 +580,7 @@ export const DEMANDS = {
 export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] };
 
 // Season mode (short career): Tournament -> Boss per tier, scaled purses, training, market, and opponent Power.
-export const SHORT = { purse: 1.7, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 12], grandPower: 19, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
+export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 12], grandPower: 19, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],

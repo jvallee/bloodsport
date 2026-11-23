@@ -11,7 +11,7 @@ Version 7 smooths the season from start to Grand Tournament, rebalances the weap
 - **Recruits keep up:** in a season, the Market's and the Liaison's fighters arrive stronger in the higher arenas, so a new recruit is still worth hiring late on.
 - **Training costs rise in steps:** 2 Gold a week in the Dirt Pits and Bronze Circuit, 3 in the Silver Coliseum, and the full price from the Imperial Coliseum on (it used to jump straight to full price at Silver).
 - **Small purses are worth taking:** the steward's early tasks now pay at least 1 Gold (some paid nothing), a Purse of Coin from Fortune is richer (5 Gold in the Dirt Pits), and hosting the Patron Lounge costs 2 Gold a tier (was 3).
-- **Heat climbs in order:** each step of Heat is now harder than the one before. The first decree is Iron Bosses.
+- **Heat climbs in order:** each step of Heat is now harder than the one before. Heat 1 is still Harsh Judges; Lean Fortunes and Hungry Lions now come second and third, then a Greedy Emperor and Iron Bosses.
 
 **Fights**
 - **Tactics:** Steady now lowers the chance to be injured (−2.5%). Press gives less win chance (+1.5%, was +3%) and makes you easier to wound (+10%, was +7.5%).

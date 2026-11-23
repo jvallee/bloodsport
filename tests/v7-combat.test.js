@@ -207,7 +207,7 @@ test('Contract D combat rules: Axe +5% injure, Viper Venom +15 severity, COMBAT 
   assert.equal(INJURIES.find((i) => i.tag === 'blinded').weight, 2);
   assert.deepEqual(SHORT.oppPower, [2, 4, 9, 12]);
   assert.equal(SHORT.grandPower, 19);
-  assert.equal(SHORT.purse, 1.7);
+  assert.equal(SHORT.purse, 1.6);
   assert.deepEqual(SHORT.marketPower, [0, 2, 6, 10]);
   assert.deepEqual(TRAINING, { fullFeeFrom: 4, cheapFee: 2, midTier: 3, midFee: 3 });
   assert.equal(LOUNGE.hostGold, 2);

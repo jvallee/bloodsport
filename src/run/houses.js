@@ -3,7 +3,7 @@
 import { createRng, deriveSeed, int, next, pick } from '../rng.js';
 import {
   ECONOMY, STRESS, CIRCUITS, GRAND, STAGES, PERKS, GEAR, HOUSES, BRACKET, NEMESIS, SHORT, DEMAND, DEMANDS,
-  BOND, LOUNGE, RIVAL, SUMMONS,
+  BOND, LOUNGE, RIVAL, SUMMONS, DECREES,
 } from '../data.js';
 import { relicFight } from '../fortune.js';
 import { coupBonus } from '../plot.js';
@@ -67,9 +67,9 @@ export function rivalsCompete(run) {
 // ---------- Arenas, bouts, brackets, opponents ----------
 
 export function arenaPower(run, tier, stage = 2) {
-  if (tier === GRAND_TIER) return GRAND.oppPower + (hasDecree(run, 'ironBosses') ? 1 : 0) + lionsPower(run) + (isShort(run) ? SHORT.grandPower : 0);
+  if (tier === GRAND_TIER) return GRAND.oppPower + (hasDecree(run, 'ironBosses') ? DECREES.ironBosses.power : 0) + lionsPower(run) + (isShort(run) ? SHORT.grandPower : 0);
   return CIRCUITS[tier - 1].oppPower[stage] + lionsPower(run) + (isShort(run) ? SHORT.oppPower[tier - 1] ?? 0 : 0)
-    + (stage === 2 && hasDecree(run, 'ironBosses') ? 1 : 0) + (stage === 2 && hasPolicy(run, 'unleashLions') ? 1 : 0);
+    + (stage === 2 && hasDecree(run, 'ironBosses') ? DECREES.ironBosses.power : 0) + (stage === 2 && hasPolicy(run, 'unleashLions') ? 1 : 0);
 }
 
 export const summonsPower = (run) => arenaPower(run, SUMMONS.tier, 0);

@@ -1027,12 +1027,13 @@ Placeholder numbers, chosen on the machine where v7 was built (balance gates in 
 | Silver Coliseum opponents | 22 / 22 / 23 | 21 / 21 / 22 |
 | Imperial Coliseum opponents | 31 / 32 / 33 | 30 / 31 / 32 |
 | Grand Tournament | 36 | 35 |
-| Season (`SHORT`) purses | ×1.6 | ×1.7 |
+| Season (`SHORT`) purses | ×1.6 | ×1.6 (the patch's ×1.7 failed the first-career and evil-road gates) |
 | Season extra opponent Power (Dirt … Imperial, Grand) | +2 / +3 / +10 / +17, +18 | +2 / +4 / +9 / +12, +19 |
 | Season Market and Liaison recruits (new `SHORT.marketPower`) | — | +0 / +2 / +6 / +10 Power by arena tier |
 | Training fee | at most 2 Gold until the Silver Coliseum, then the Trainer's level | 2 Gold (Dirt, Bronze), 3 Gold (Silver), the Trainer's level from the Imperial up |
 | Early Boss loss (Quarter- or Semi-final) | ½ of the Boss's Favour loss, the usual loss purse | ¾ of the Favour loss, 0 Gold (`BRACKET.earlyBossLossGold`) |
-| Heat decree order | Harsh Judges, Greedy Emperor, Iron Bosses, Lean Fortune, Hungry Lions | Iron Bosses, Greedy Emperor, Harsh Judges, Lean Fortune, Hungry Lions |
+| Heat decree order | Harsh Judges, Greedy Emperor, Iron Bosses, Lean Fortune, Hungry Lions | Harsh Judges, Lean Fortune, Hungry Lions, Greedy Emperor, Iron Bosses |
+| Iron Bosses' extra Boss Power | +1 (in the code) | +1 (now `DECREES.ironBosses.power`, so sweeps can change it) |
 | Steward assignments (`QUESTS.goldScale`) | ×0.2 | ×0.5, and at least 1 Gold when the task pays any |
 | A Purse of Coin (Fortune boon) | 1 + 2 × tier Gold | 2 + 3 × tier Gold |
 | Patron Lounge hosting | 3 Gold × tier | 2 Gold × tier |
