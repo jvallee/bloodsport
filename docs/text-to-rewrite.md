@@ -268,7 +268,7 @@ End-screen titles and closing lines:
 |---|---|
 | [src/run/tournaments.js:807](../src/run/tournaments.js#L807) | 'You won the Grand Tournament. The Emperor names you Master of the Games.' |
 | [src/run/helpers.js:303](../src/run/helpers.js#L303) | `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.` |
-| [src/run/unrest.js:143](../src/run/unrest.js#L143) | 'Killed in a gladiator revolt.' (7.3; was 'Your gladiators revolt and burn the Ludus.') |
+| [src/run/unrest.js:150](../src/run/unrest.js#L150) | 'Killed in a gladiator revolt.' (7.3; was 'Your gladiators revolt and burn the Ludus.') |
 | [src/run/helpers.js:310](../src/run/helpers.js#L310) | 'No fighters left and not enough Gold to buy one. Your house falls.' |
 | Where | Text |
 |---|---|
@@ -464,7 +464,7 @@ These are templates: keep the `${...}` parts. A line with several variants picks
 
 | Where | Text |
 |---|---|
-| [src/ui/views.js:1055](../src/ui/views.js#L1055) | The crowd waits${esc(m.opp)}'s fate${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}. ${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'} |
+| [src/ui/views.js:1057](../src/ui/views.js#L1057) | The crowd waits${esc(m.opp)}'s fate${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}. ${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'} |
 | Where | Text |
 |---|---|
 | [src/ui/fightView.js:41](../src/ui/fightView.js#L41) | const SUSPENSE = 1; // the pause ("Steel meets steel…") before the round's winner is announced |
@@ -501,9 +501,9 @@ Lines the house steward writes each week. The plot's lines are in section 4.
 | [src/run/weekly.js:353](../src/run/weekly.js#L353) | `You can't pay the ${due} Gold tribute. The Emperor takes what you have, and remembers.`, 'bad' |
 | [src/run/helpers.js:293](../src/run/helpers.js#L293) | `Imperial Favour ${delta > 0 ? '+' : ''}${delta} (${why}): now ${run.favor}.`, delta > 0 ? 'good' : 'bad' |
 | [src/run/helpers.js:207](../src/run/helpers.js#L207) | `${f.name} reaches level ${f.level}! Choose a perk.`, 'event' |
-| [src/run/roster.js:547](../src/run/roster.js#L547) | `Sold a ${GEAR[key].name} for ${sellPrice(key)} Gold.` |
-| [src/run/roster.js:660](../src/run/roster.js#L660) | `${f.name} wakes with a ${AUGMENTS[key].name}. The crowd mutters about machines.`, 'event' |
-| [src/run/roster.js:685](../src/run/roster.js#L685) | `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good' |
+| [src/run/roster.js:548](../src/run/roster.js#L548) | `Sold a ${GEAR[key].name} for ${sellPrice(key)} Gold.` |
+| [src/run/roster.js:661](../src/run/roster.js#L661) | `${f.name} wakes with a ${AUGMENTS[key].name}. The crowd mutters about machines.`, 'event' |
+| [src/run/roster.js:686](../src/run/roster.js#L686) | `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good' |
 | [src/run/tournaments.js:335](../src/run/tournaments.js#L335) | `You skip ${bout.name}: +${ECONOMY.skipGold} Gold, and the roster rests.` |
 | [src/run/tournaments.js:750](../src/run/tournaments.js#L750) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event' |
 | [src/run/tournaments.js:449](../src/run/tournaments.js#L449) | `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn' |
@@ -626,18 +626,18 @@ Short, everywhere. Some carry rules: keep the numbers accurate.
 
 | Where | Text |
 |---|---|
-| [src/data.js:590](../src/data.js#L590) | Fighter name pool |
+| [src/data.js:591](../src/data.js#L591) | Fighter name pool |
 | [src/data.js:145](../src/data.js#L145) | Rival houses |
 | [src/data.js:166](../src/data.js#L166) | Patrons |
 | [src/data.js:177](../src/data.js#L177) | Emperor's Decrees |
 | [src/data.js:263](../src/data.js#L263) | Kinds and their traits |
 | [src/data.js:273](../src/data.js#L273) | Classes |
 | [src/data.js:286](../src/data.js#L286) | Signature moves |
-| [src/data.js:450](../src/data.js#L450) | Buildings |
+| [src/data.js:451](../src/data.js#L451) | Buildings |
 | [src/data.js:321](../src/data.js#L321) | Decor |
-| [src/data.js:532](../src/data.js#L532) | Fight items |
-| [src/data.js:412](../src/data.js#L412) | Gods' Days (festivals) |
-| [src/data.js:566](../src/data.js#L566) | Boss arena rules |
+| [src/data.js:533](../src/data.js#L533) | Fight items |
+| [src/data.js:413](../src/data.js#L413) | Gods' Days (festivals) |
+| [src/data.js:567](../src/data.js#L567) | Boss arena rules |
 | [src/data.js:217](../src/data.js#L217) | Scars |
 
 ## 13. New in 5.2.0 and 5.3.0 (first drafts, marked PLACEHOLDER in the code)
@@ -648,7 +648,7 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/data.js:652](../src/data.js#L652) | Epithets: epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'], |
+| [src/data.js:653](../src/data.js#L653) | Epithets: epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'], |
 | [src/run/houses.js:305](../src/run/houses.js#L305) | `${n.name} ${n.nemesis.epithet} is back, in ${arenaName(bout.tier)}. They remember your house.`, 'warn' |
 | [src/run/houses.js:319](../src/run/houses.js#L319) | `${opp.name} will be remembered in your house as ${opp.name} ${n.nemesis.epithet}.`, 'warn' |
 | [src/run/houses.js:337](../src/run/houses.js#L337) | `Beat the house's nemesis, ${opp.name} ${opp.nemesis.epithet}${opp.nemesis.victims.length ? `, who had killed ${opp.nemesis.victims.join(' and ')}` : ''}.` |
@@ -658,11 +658,11 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/data.js:640](../src/data.js#L640) | topWin: { goal: 'Win a match in your top arena', say: 'My guests are bored, Lanista. Give them a victory in your top arena this month.' }, |
-| [src/data.js:641](../src/data.js#L641) | bloodied: { goal: 'Win a Bloodied Victory (a win with 2+ injuries)', say: 'I want to see blood on a winner. Win me a bloody victory this month.' }, |
-| [src/data.js:642](../src/data.js#L642) | kill: { goal: 'Finish a beaten opponent (thumbs down)', say: 'The crowd grows soft. Give them a death this month.' }, |
-| [src/data.js:643](../src/data.js#L643) | spare: { goal: 'Spare a beaten opponent (thumbs up)', say: 'The Senate calls me cruel. Show them my clemency: spare someone in the arena this month.' }, |
-| [src/data.js:644](../src/data.js#L644) | twoArenas: { goal: 'Win in two different arenas on fight day', say: 'Show me the depth of your house. Win in two of my arenas this month.' }, |
+| [src/data.js:641](../src/data.js#L641) | topWin: { goal: 'Win a match in your top arena', say: 'My guests are bored, Lanista. Give them a victory in your top arena this month.' }, |
+| [src/data.js:642](../src/data.js#L642) | bloodied: { goal: 'Win a Bloodied Victory (a win with 2+ injuries)', say: 'I want to see blood on a winner. Win me a bloody victory this month.' }, |
+| [src/data.js:643](../src/data.js#L643) | kill: { goal: 'Finish a beaten opponent (thumbs down)', say: 'The crowd grows soft. Give them a death this month.' }, |
+| [src/data.js:644](../src/data.js#L644) | spare: { goal: 'Spare a beaten opponent (thumbs up)', say: 'The Senate calls me cruel. Show them my clemency: spare someone in the arena this month.' }, |
+| [src/data.js:645](../src/data.js#L645) | twoArenas: { goal: 'Win in two different arenas on fight day', say: 'Show me the depth of your house. Win in two of my arenas this month.' }, |
 | [src/main.js:162](../src/main.js#L162) | scene = { id: 'demand', beat: 0, beats: [{ speaker: 'emperor', text: DEMANDS[run.demand.id].say }, { speaker: 'steward', text: `The Emperor's demand: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day. Meet it and he pays in Favour and Gold; miss it and he remembers.` }] }; |
 | [src/run/houses.js:537](../src/run/houses.js#L537) | `The Emperor demands: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.`, 'event' |
 
@@ -670,13 +670,13 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/data.js:619](../src/data.js#L619) | breadAndCircuses: { name: 'Bread and Circuses', cost: 3, lean: 'loyalist', desc: 'Every purse pays 25% more.' }, |
-| [src/data.js:620](../src/data.js#L620) | edictOfMercy: { name: 'Edict of Mercy', cost: 2, lean: 'reformist', desc: 'Sparing a beaten opponent earns Favour in every arena, not just your top one.' }, |
-| [src/data.js:621](../src/data.js#L621) | lowerTribute: { name: 'Lower the Tribute', cost: 4, lean: 'reformist', desc: 'This year\'s tribute is 30% lower.' }, |
-| [src/data.js:622](../src/data.js#L622) | unleashLions: { name: 'Unleash the Lions', cost: 3, lean: 'loyalist', desc: 'Bosses fight with +1 Power, but beating one pays double Prestige.' }, |
-| [src/data.js:623](../src/data.js#L623) | grainToLudus: { name: 'Grain to the Ludus', cost: 2, lean: 'neutral', desc: '+5 comfort for every fighter.' }, |
-| [src/data.js:624](../src/data.js#L624) | purgePrisons: { name: 'Purge the Prisons', cost: 2, lean: 'loyalist', desc: 'No political prisoners are offered while it lasts.' }, |
-| [src/data.js:625](../src/data.js#L625) | amnesty: { name: 'Amnesty', cost: 2, lean: 'reformist', desc: 'Political prisoners are twice as common while it lasts.' }, |
+| [src/data.js:620](../src/data.js#L620) | breadAndCircuses: { name: 'Bread and Circuses', cost: 3, lean: 'loyalist', desc: 'Every purse pays 25% more.' }, |
+| [src/data.js:621](../src/data.js#L621) | edictOfMercy: { name: 'Edict of Mercy', cost: 2, lean: 'reformist', desc: 'Sparing a beaten opponent earns Favour in every arena, not just your top one.' }, |
+| [src/data.js:622](../src/data.js#L622) | lowerTribute: { name: 'Lower the Tribute', cost: 4, lean: 'reformist', desc: 'This year\'s tribute is 30% lower.' }, |
+| [src/data.js:623](../src/data.js#L623) | unleashLions: { name: 'Unleash the Lions', cost: 3, lean: 'loyalist', desc: 'Bosses fight with +1 Power, but beating one pays double Prestige.' }, |
+| [src/data.js:624](../src/data.js#L624) | grainToLudus: { name: 'Grain to the Ludus', cost: 2, lean: 'neutral', desc: '+5 comfort for every fighter.' }, |
+| [src/data.js:625](../src/data.js#L625) | purgePrisons: { name: 'Purge the Prisons', cost: 2, lean: 'loyalist', desc: 'No political prisoners are offered while it lasts.' }, |
+| [src/data.js:626](../src/data.js#L626) | amnesty: { name: 'Amnesty', cost: 2, lean: 'reformist', desc: 'Political prisoners are twice as common while it lasts.' }, |
 | [src/run/houses.js:491](../src/run/houses.js#L491) | `Senators dine at your table${star ? ` and admire ${star.name}` : ''}. +${gain} Influence (now ${run.influence}).`, 'event' |
 | [src/run/houses.js:514](../src/run/houses.js#L514) | `The Senate passes ${p.name}: ${p.desc}`, 'event' |
 
@@ -710,12 +710,12 @@ Every line below is a first draft. The rows show the code around the words; chan
 | [src/data.js:116](../src/data.js#L116) | graveChill: { name: 'Grave Chill', desc: 'The opponent has −5% win chance every round: nobody wants to fight the dead.' }, |
 | [src/data.js:117](../src/data.js#L117) | cinderHeart: { name: 'Cinder Heart', desc: '+1 Power in Rounds 2 and 3: the forge-fire inside wakes slowly.' }, |
 | [src/data.js:270](../src/data.js#L270) | revenant: { name: 'Revenant', basePower: 5, traits: ['deathless', 'graveChill', 'cinderHeart'], exotic: true }, |
-| [src/data.js:465](../src/data.js#L465) | vulcan: { unique: true, name: 'Unnatural Temple of Vulcan', dept: 'medical', icon: 'forge', cost: [10, 16], req: [2, 3], per: [4, 12], effect: (n) => `Raises a fighter killed in the arena as a Revenant, up to ${n} weeks after their death`, extra: (lv) => (lv >= 2 ? 'Revenants come back with all their strength' : 'Revenants come back with 1 less Power') }, |
+| [src/data.js:466](../src/data.js#L466) | vulcan: { unique: true, name: 'Unnatural Temple of Vulcan', dept: 'medical', icon: 'forge', cost: [10, 16], req: [2, 3], per: [4, 12], effect: (n) => `Raises a fighter killed in the arena as a Revenant, up to ${n} weeks after their death`, extra: (lv) => (lv >= 2 ? 'Revenants come back with all their strength' : 'Revenants come back with 1 less Power') }, |
 | [src/codex.js:36](../src/codex.js#L36) | 'kind:revenant': 'A gladiator who died on the sand and was carried to the Unnatural Temple of Vulcan. The smith-god\'s priests rebuild them in brass and stitched flesh. They remember every fight, and feel nothing at all.', |
-| [src/run/roster.js:408](../src/run/roster.js#L408) | `Raised from the dead in the Unnatural Temple of Vulcan, ${run.week - body.diedWeek} week${run.week - body.diedWeek === 1 ? '' : 's'} after falling. ${TRAITS[f.kindTrait].name}.` |
-| [src/run/roster.js:409](../src/run/roster.js#L409) | `The priests of Vulcan work through the night. ${f.name} walks out of the forge: a Revenant, brass where the wounds were${lost ? `, and a little weaker (${lost} Power)` : ''}.`, 'event' |
-| [src/ui/views.js:892](../src/ui/views.js#L892) | : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death, for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p> |
-| [src/ui/views.js:893](../src/ui/views.js#L893) | ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary small')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`; |
+| [src/run/roster.js:409](../src/run/roster.js#L409) | `Raised from the dead in the Unnatural Temple of Vulcan, ${run.week - body.diedWeek} week${run.week - body.diedWeek === 1 ? '' : 's'} after falling. ${TRAITS[f.kindTrait].name}.` |
+| [src/run/roster.js:410](../src/run/roster.js#L410) | `The priests of Vulcan work through the night. ${f.name} walks out of the forge: a Revenant, brass where the wounds were${lost ? `, and a little weaker (${lost} Power)` : ''}.`, 'event' |
+| [src/ui/views.js:894](../src/ui/views.js#L894) | : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death, for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p> |
+| [src/ui/views.js:895](../src/ui/views.js#L895) | ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary small')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`; |
 
 **The rebel's confession** (5.3.0, src/dialogue.js `rebelScene`: the first political prisoner tells you about the rising; what they've heard depends on your record)
 
@@ -873,7 +873,7 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/ui/views.js:752](../src/ui/views.js#L752) | If nobody from your house fights here this week, the tournament goes ahead without you and the arena moves on. |
+| [src/ui/views.js:754](../src/ui/views.js#L754) | If nobody from your house fights here this week, the tournament goes ahead without you and the arena moves on. |
 
 ## 14. New in version 6 (first drafts, PLACEHOLDER)
 
@@ -948,10 +948,10 @@ Version 6's new words. Rules text (numbers) must stay accurate; names and flavou
 | [src/data.js:331](../src/data.js#L331) | Spiky Bed: No comfort at all; shapes a Melancholic temper. A win taken with even one wound makes them Battle-Hardened (usually it takes two). |
 | [src/data.js:332](../src/data.js#L332) | Skull Rack: A little comfort; shapes a Choleric temper. A severe wound scars them Enraged, never Afeared. |
 | [src/data.js:336](../src/data.js#L336) | Wine Amphora: Plenty of comfort; shapes a Sanguine temper. The crowd warms to them: each fight starts with +5 Hype. |
-| [src/run/roster.js:337](../src/run/roster.js#L337) | Story: `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} changed their temper: now ${name}.` |
-| [src/run/roster.js:338](../src/run/roster.js#L338) | `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} have changed ${f.name}: now ${name}.`, 'event' |
-| [src/run/roster.js:346](../src/run/roster.js#L346) | `${f.name} meditates in the Rock Garden.`, 'good' |
-| [src/run/roster.js:348](../src/run/roster.js#L348) | `${f.name} sits with their fear of ${sc.vs} fighters` … `Meditated on their fear of ${sc.vs} fighters, and let it go.` |
+| [src/run/roster.js:338](../src/run/roster.js#L338) | Story: `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} changed their temper: now ${name}.` |
+| [src/run/roster.js:339](../src/run/roster.js#L339) | `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} have changed ${f.name}: now ${name}.`, 'event' |
+| [src/run/roster.js:347](../src/run/roster.js#L347) | `${f.name} meditates in the Rock Garden.`, 'good' |
+| [src/run/roster.js:349](../src/run/roster.js#L349) | `${f.name} sits with their fear of ${sc.vs} fighters` … `Meditated on their fear of ${sc.vs} fighters, and let it go.` |
 | [src/run/tournaments.js:553](../src/run/tournaments.js#L553) | Story: 'Won wounded, slept on spikes, and became Battle-Hardened.' |
 | [src/ui/views.js](../src/ui/views.js) `temperNote`, `temperLine` | "Already Choleric: keeps them so." / "Would make them … after 4 weeks as the room's main Temperament piece (2/4 so far)." / "Temper: …. Turning …: 2/4 weeks." / "Temperament tied: no piece leads, so their temper holds." |
 | [src/ui/components.js](../src/ui/components.js) `fighterCard` | The drift chip "→ 🌙 2/4" and its tooltip "Their room is changing their temper: …". |
