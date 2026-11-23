@@ -180,7 +180,7 @@ export const DECREES = {
   greedyEmperor: { name: 'A Greedy Emperor', desc: 'Tribute costs 50% more.', score: 20 },
   harshJudges: { name: 'Harsh Judges', desc: 'Losing or forfeiting a Boss costs 5 more Favour, and falling before its Final costs the full amount.', score: 20 }, // phase 5 (LLM-13): the halving for an early loss made Heat 1 barely felt
   leanFortune: { name: 'Lean Fortunes', desc: 'Fortune deals one card fewer each month.', score: 25 }, // version 6
-  hungryLions: { name: 'Hungry Lions', desc: 'Every opponent fights with +1 Power.', score: 40 }, // version 6
+  hungryLions: { name: 'Hungry Lions', desc: 'Every opponent fights with +1 Power.', power: 1, score: 40 }, // version 6
 };
 
 // Version 6, Heat (docs/plan-v6-phase3.md): numbered levels of the decrees, each adding one rule to the last.

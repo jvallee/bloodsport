@@ -3,7 +3,7 @@
 import { createRng, int, pick } from '../rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, BOSS_DEBUFFS,
-  XP, PERKS, MORALE, GEAR, DECOR, FAVOR, HUMORS, AUGMENTS, TITLES, RECRUIT, SHORT, QUESTS, HEAT, CONSUMABLES,
+  XP, PERKS, MORALE, GEAR, DECOR, FAVOR, HUMORS, DECREES, AUGMENTS, TITLES, RECRUIT, SHORT, QUESTS, HEAT, CONSUMABLES,
 } from '../data.js';
 import { relicSum } from '../fortune.js';
 import { Refused } from '../errors.js';
@@ -162,7 +162,7 @@ export const trainGain = (run, stat) => Math.round(TRAIN_GAIN[stat] * (isShort(r
 export const hasDecree = (run, id) => Boolean(run?.setup?.decrees?.includes(id));
 export const hasUnlock = (run, id) => Boolean(run?.setup?.unlocks?.includes(id));
 export const heatDecrees = (heat) => HEAT.decrees.slice(0, Math.max(0, heat ?? 0));
-export const lionsPower = (run) => (hasDecree(run, 'hungryLions') ? 1 : 0);
+export const lionsPower = (run) => (hasDecree(run, 'hungryLions') ? DECREES.hungryLions.power : 0);
 export const hasPolicy = (run, id) => Boolean(run?.policies?.some((p) => p.id === id && p.until > run.week));
 export const bossLossFavor = (tier, run = null) => Math.round(FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1] * (isShort(run) ? SHORT.bossLoss : 1)) - (hasDecree(run, 'harshJudges') ? 5 : 0);
 
