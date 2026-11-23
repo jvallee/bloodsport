@@ -407,7 +407,7 @@ function steerWound(m, X, Y, sev, round) {
       .filter(([wt, tag]) => tag !== rolled.tag && tag !== base.tag && wt <= base.weight + src.upWeight && (wt >= base.weight || (src.style === 'blindPowder' && src.upWeight === 0))
         && !(DEFLECTED[tag] && Y.f.augments?.includes(DEFLECTED[tag]))).sort((a, b) => b[0] - a[0]);
     if (!reach.length) continue;
-    if (rollE5(m.rng) <= src.chance) return { tag: reach[0][1], source: src.source };
+    if (rollE5(m.rng) <= src.chance) return { tag: reach[0][1], source: src.source, from: base.name };
   }
   return null;
 }
@@ -426,7 +426,7 @@ function inflictInjury(m, X, Y, r) {
   }
   const steer = steerWound(m, X, Y, sev, r.round);
   if (steer) {
-    result.steered = { from: sev.injury.name, source: steer.source };
+    result.steered = { from: steer.from, source: steer.source }; // what would have landed (after a cyborg deflection)
     sev.injury = INJURY_BY_TAG[steer.tag];
     Object.assign(result, { tag: steer.tag, name: sev.injury.name });
   }

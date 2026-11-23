@@ -179,3 +179,11 @@ test('a style compares against the wound after a cyborg deflection: a deflected 
   const eye = strike(blank({ cls: 'fighter', weapon: 'club' }), { roll: 95, steer: [1], b: blank({ id: 'b', augments: ['eye'] }) }).inj;
   assert.ok(eye.weight <= 1, `weight ${eye.weight} (${eye.tag})`);
 });
+
+// 7.4.1 review fix.
+test('against a cyborg, a steered wound is described from the Flesh Wound it would have been', () => {
+  // Dagger (bleed) vs a Cyborg Arm, rolled Maimed (80): it would land as a Flesh Wound, so it bleeds "from a Flesh Wound".
+  const r = strike(blank({ cls: 'fighter', weapon: 'dagger' }), { roll: 80, steer: [1], b: blank({ id: 'b', augments: ['arm'] }) }).inj;
+  assert.equal(r.tag, 'bleeding');
+  assert.equal(r.steered.from, 'Flesh Wound');
+});
