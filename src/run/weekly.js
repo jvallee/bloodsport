@@ -186,12 +186,12 @@ export function advanceWeek(run) {
       clearHealedMedbay(run, f, { logLeave: true });
     } else if (f.job === 'rest') {
       f.stress = clampStress(f.stress + STRESS.rest);
-      const light = f.injuries.find((i) => i.tag === 'fleshWound' && i.weeksLeft !== undefined);
+      const light = f.injuries.find((i) => ['fleshWound', 'bleeding'].includes(i.tag) && i.weeksLeft !== undefined);
       if (light) {
         light.weeksLeft -= 0.5;
         if (light.weeksLeft <= 0) {
           f.injuries = f.injuries.filter((i) => i !== light);
-          log(run, `${f.name}'s Flesh Wound has healed with rest.`, 'good');
+          log(run, `${f.name}'s ${INJURY_BY_TAG[light.tag].name} has healed with rest.`, 'good');
         }
       }
     }

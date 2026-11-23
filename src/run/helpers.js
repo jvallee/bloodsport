@@ -109,7 +109,8 @@ export function assertOk(reason) {
 // ---------- Stat and economy queries ----------
 
 export const decorComfortOf = (f) => Object.entries(f.decor ?? {}).reduce((n, [k, c]) => n + (DECOR[k] ? decorComfort(DECOR[k]) * c : 0), 0);
-export const decorCalm = (f) => Math.min(STRESS.decorCalm, Object.entries(f.decor ?? {}).reduce((n, [k, count]) => n + (DECOR[k]?.calm ?? 0) * count, 0));
+// `calmIf` (7.2): the piece only calms the fighters it names (the Viper Terrarium).
+export const decorCalm = (f) => Math.min(STRESS.decorCalm, Object.entries(f.decor ?? {}).reduce((n, [k, count]) => n + (DECOR[k] && (!DECOR[k].calmIf || DECOR[k].calmIf(f)) ? DECOR[k].calm ?? 0 : 0) * count, 0));
 export const decorCount = (f) => Object.values(f.decor ?? {}).reduce((s, n) => s + n, 0);
 
 export const trainStress = (run, f) => Math.max(0, STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0) - relicSum(run, 'trainStress'));

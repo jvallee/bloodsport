@@ -16,7 +16,12 @@ function playCareer(seed, { months = 4, reloadMidFight = false } = {}) {
   act('job', { id: state.run.roster[0].id, job: 'trainPower' });
   for (let m = 0; m < months && state.run.status === 'active'; m++) {
     for (const f of state.run.roster) while (f.pendingPerks.length) act('perk', { id: f.id, perk: f.pendingPerks[0][0] });
+    if (state.run.fortune) act('fortune-pass'); // Fortune's monthly hand would hold the month up
     act('advance-tournament');
+    if (state.run.fortune) {
+      act('fortune-pass');
+      act('advance-tournament');
+    }
     const f = state.run.roster.find((x) => x.alive);
     if (!f || !state.run.boutPending) break;
     act('fight', { id: f.id, tier: state.run.topTier });
@@ -36,7 +41,7 @@ function playCareer(seed, { months = 4, reloadMidFight = false } = {}) {
 }
 
 test('a recorded career replays exactly from its seed', () => {
-  const played = playCareer(7, { months: 5 });
+  const played = playCareer(2, { months: 5 }); // 7.2: seed 7's lone fighter now dies in their second fight
   assert.ok(played.run.actions.length > 10);
   assert.ok(played.run.history.length >= 3, 'fights happened');
   const report = parseReport(JSON.stringify(buildReport(played.run, played.match)));

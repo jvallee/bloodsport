@@ -34,7 +34,8 @@ test('Delta clamps at ±10', () => {
 
 test('injury tier boundaries match the injury table', () => {
   const cases = [
-    [1, 'distracted'], [25, 'distracted'], [26, 'fleshWound'], [45, 'fleshWound'], [46, 'concussed'], [60, 'concussed'],
+    // 7.2: Bleeding takes 39–48 out of Flesh Wound (was 26–45) and Concussed (was 46–60).
+    [1, 'distracted'], [25, 'distracted'], [26, 'fleshWound'], [38, 'fleshWound'], [39, 'bleeding'], [48, 'bleeding'], [49, 'concussed'], [60, 'concussed'],
     [61, 'poisoned'], [74, 'poisoned'], [75, 'maimed'], [84, 'maimed'], [85, 'senseless'], [92, 'senseless'],
     [93, 'blinded'], [99, 'blinded'], [100, 'death'], [175, 'death'],
   ];

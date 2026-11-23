@@ -93,7 +93,7 @@ export function narrateRound(m, r) {
       if (inj.tag === 'death') {
         add('death', `${def} is slain! (severity ${severity})`);
       } else {
-        let text = `${def} suffers ${inj.name} (severity ${severity}).${inj.deflected ? ` The ${inj.deflected} turned a blinding blow into a Flesh Wound.` : ''}`;
+        let text = `${def} suffers ${inj.name} (severity ${severity}).${inj.steered ? ` ${inj.steered.source} turned a ${inj.steered.from} into ${inj.name}.` : ''}${inj.deflected ? ` The ${inj.deflected} turned it into a Flesh Wound.` : ''}`;
         if (inj.doubled) text += ' The arena rule makes it count double.';
         if (inj.disabled?.length) text += ` Disabled: ${inj.disabled.map((s) => slotName(fighter(c.defender), s)).join(', ')}.`;
         add('injury', text);
@@ -123,7 +123,8 @@ export function resultText(m) {
 
 const INJURY_STORY = {
   distracted: 'rattled and Distracted',
-  fleshWound: 'bleeding from a Flesh Wound',
+  fleshWound: 'cut, a Flesh Wound',
+  bleeding: 'Bleeding, and it will not stop',
   concussed: 'Concussed, the world spinning',
   poisoned: 'Poisoned (counts as two injuries!)',
   maimed: 'Maimed (counts as two injuries!)',
@@ -164,7 +165,7 @@ export function narrateStory(m, r) {
       if (inj.tag === 'death') {
         add('death', `${att} lands a killing blow. ${def} falls and does not rise.`);
       } else {
-        let text = inj.deflected ? `${att} goes for the eyes, but ${def}'s ${inj.deflected} turns the blow: only a Flesh Wound.` : `${att} lands a brutal blow: ${def} is ${INJURY_STORY[inj.tag]}.`;
+        let text = inj.deflected ? `${att} lands a crippling blow, but ${def}'s ${inj.deflected} takes it: only a Flesh Wound.` : `${att} lands a brutal blow${inj.steered ? ` (${inj.steered.source})` : ''}: ${def} is ${INJURY_STORY[inj.tag]}.`;
         if (inj.doubled) text += ' First blood counts double!';
         if (inj.disabled?.length) text += ` ${def} loses ${inj.disabled.map((s) => slotName((c.defender === 'A' ? m.a : m.b).f, s)).join(' and ')} for this match.`;
         add('injury', text);

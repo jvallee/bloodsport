@@ -9,7 +9,7 @@ import { speedSplit, tacticsEdge, gateJobs, gatesFrom } from '../scripts/checks.
 import { playCareer } from '../scripts/bots.js';
 
 test('v7 Season speedSplit finds a balanced interior Speed optimum (12–50%) on at least 2 of 4 Bosses', () => {
-  const split = speedSplit({ n: 500 });
+  const split = speedSplit({ n: 1000 }); // 7.2: at 500 samples the Imperial splits 0–2 are within noise
   assert.equal(split.rows.length, 4);
   assert.ok(split.balanced >= 2, `only ${split.balanced}/4 Bosses had a balanced split`);
   for (const r of split.rows) {

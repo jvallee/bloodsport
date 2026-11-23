@@ -239,6 +239,10 @@ export function useItem(run, match, key) {
     for (const inj of match.a.f.injuries) if (['distracted', 'concussed'].includes(inj.tag)) inj.suppressed = true;
     match.a.disabled = match.a.disabled.filter((slot) => !match.a.distracted?.includes(slot));
   }
+  if (item.staunch) {
+    const bleed = match.a.f.injuries.find((inj) => inj.tag === 'bleeding' && !inj.suppressed);
+    if (bleed) bleed.suppressed = true;
+  }
   if (item.bribe) match.bribe = true;
   if (item.stressAfter) match.stressAfter = item.stressAfter;
   log(run, `${match.a.f.name} uses ${item.name}.`, 'event');

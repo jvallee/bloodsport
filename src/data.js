@@ -47,17 +47,44 @@ export const COMBAT = {
 };
 
 export const INJURIES = [
-  { tier: 1, min: 1, max: 25, tag: 'distracted', name: 'Distracted', weight: 0, desc: 'A passing daze: disables 1 random trait or class ability for the rest of the match. Doesn\'t count toward the Death Gate.' },
-  { tier: 2, min: 26, max: 45, tag: 'fleshWound', name: 'Flesh Wound', weight: 1, desc: '−10% chance to injure the opponent.' },
-  { tier: 3, min: 46, max: 60, tag: 'concussed', name: 'Concussed', weight: 1, desc: 'Always strikes second.' },
-  { tier: 4, min: 61, max: 74, tag: 'poisoned', name: 'Poisoned', weight: 2, desc: 'Counts as two injuries.' },
-  { tier: 5, min: 75, max: 84, tag: 'maimed', name: 'Maimed', weight: 2, desc: 'Counts as two injuries. Disables 1 random trait or ability per prior effective injury for the rest of the match.' },
-  { tier: 6, min: 85, max: 92, tag: 'senseless', name: 'Senseless', weight: 2, desc: 'Counts as two injuries. +10% chance to be injured per effective injury.' },
-  { tier: 7, min: 93, max: 99, tag: 'blinded', name: 'Blinded', weight: 2, desc: 'Counts as two injuries. −2 Power; disables First Volley, Bow and Gun.' },
-  { tier: 8, min: 100, max: Infinity, tag: 'death', name: 'Immediate Death', weight: 0, desc: 'Dies in the arena.' },
+  { tier: 1, min: 1, max: 25, part: 'head', tag: 'distracted', name: 'Distracted', weight: 0, desc: 'A passing daze: disables 1 random trait or class ability for the rest of the match. Doesn\'t count toward the Death Gate.' },
+  { tier: 2, min: 26, max: 38, part: 'torso', tag: 'fleshWound', name: 'Flesh Wound', weight: 1, desc: '−10% chance to injure the opponent.' },
+  { tier: 3, min: 39, max: 48, part: 'torso', tag: 'bleeding', name: 'Bleeding', weight: 1, desc: 'Counts as one injury. +10% chance to be injured (+5% while Guarding). A Blessed Bandage staunches it for the fight.' },
+  { tier: 4, min: 49, max: 60, part: 'head', tag: 'concussed', name: 'Concussed', weight: 1, desc: 'Always strikes second.' },
+  { tier: 5, min: 61, max: 74, part: 'torso', tag: 'poisoned', name: 'Poisoned', weight: 2, desc: 'Counts as two injuries.' },
+  { tier: 6, min: 75, max: 84, part: 'limb', tag: 'maimed', name: 'Maimed', weight: 2, desc: 'Counts as two injuries. Disables 1 random trait or ability per prior effective injury for the rest of the match.' },
+  { tier: 7, min: 85, max: 92, part: 'head', tag: 'senseless', name: 'Senseless', weight: 2, desc: 'Counts as two injuries. +10% chance to be injured per effective injury.' },
+  { tier: 8, min: 93, max: 99, part: 'head', tag: 'blinded', name: 'Blinded', weight: 2, desc: 'Counts as two injuries. −2 Power; disables First Volley, Bow and Gun.' },
+  { tier: 9, min: 100, max: Infinity, tag: 'death', name: 'Immediate Death', weight: 0, desc: 'Dies in the arena.' },
 ];
 
 export const INJURY_BY_TAG = Object.fromEntries(INJURIES.map((i) => [i.tag, i]));
+
+// 7.2 Wound affinities (docs/roadmap-v7.md, Phase 2). After the injury roll, a fighter's style can turn the wound into its
+// signature wound. `WOUND_STYLES[style]` maps a weight to the wound of that weight. A source may only reach a wound up to
+// `upWeight` heavier than the rolled one (0 for weapons, gear and decor: they steer, never add Death Gate weight); single-use
+// items get upWeight 1 on hits of `minScore`+. Of the wounds a source may reach, the heaviest is used. Chance in ChanceE5.
+export const WOUND_STYLES = {
+  bleed: { 1: 'bleeding' },
+  stun: { 1: 'concussed', 2: 'senseless' },
+  maim: { 2: 'maimed' },
+  blind: { 2: 'blinded' },
+  poison: { 2: 'poisoned' },
+  blindPowder: { 0: 'distracted', 2: 'blinded' },
+};
+export const AFFINITY = {
+  steer: 35000, // weapon, class and gear affinities
+  weapons: { dagger: 'bleed', club: 'stun', axe: 'maim', flail: 'maim', bow: 'blind' },
+  classes: { cestus: 'stun', thornBlade: 'bleed', bloodBearer: 'bleed', ornitharius: 'blind' },
+  gear: { serratedSpatha: 'bleed', warMaul: 'stun', executionerAxe: 'maim', hunterBow: 'blind' },
+  minScore: 49, // single-use items reach one weight up only on hits this hard
+  // Whetstone Rack: only bladed fighters (these weapon specialties, blades in hand, or these classes).
+  bladedWeapons: ['sword', 'dagger', 'axe'],
+  bladedGear: ['gladius', 'imperialGladius', 'serratedSpatha', 'executionerAxe', 'throwingAxes'],
+  bladedClasses: ['bloodBearer', 'thornBlade'],
+};
+// Bleeding: more chance to be injured, per Bleeding wound (less while Guarding).
+export const BLEEDING = { self: 10000, guarding: 5000 };
 
 export function injuryForScore(score) {
   return INJURIES.find((i) => score >= i.min && score <= i.max) ?? INJURIES[0];
@@ -203,7 +230,7 @@ export const SEVERE = ['concussed', 'poisoned', 'maimed', 'senseless', 'blinded'
 
 // Cyborg surgery (Medbay Lv 2+): replace a Maimed limb or Blinded eye. The crowd distrusts machines.
 export const AUGMENTS = {
-  arm: { name: 'Cyborg Arm', from: 'maimed', desc: '+1 Power. Replaces a Maimed limb.', power: 1 },
+  arm: { name: 'Cyborg Arm', from: 'maimed', desc: '+1 Power. Replaces a Maimed limb, and a blow that would Maim becomes only a Flesh Wound.', power: 1 },
   eye: { name: 'Cyborg Eye', from: 'blinded', desc: 'Replaces a Blinded eye. +1 Power in every fight, and a blow that would Blind becomes only a Flesh Wound.', power: 1 },
 };
 export const SURGERY = { cost: 10, perTier: 4, renown: -1, medbay: 2 }; // playtest #3: was 15 + 5/tier and −2 Renown, never worth it
@@ -284,6 +311,9 @@ export const WEAPONS = {
 
 // Comfort for Morale: 2 + price, unless an item sets its own (`comfort`).
 export const decorComfort = (d) => d.comfort ?? 2 + d.price;
+// Bladed fighters (Whetstone Rack, 7.2).
+export const isBladed = (f) => (f.cls === 'fighter' && AFFINITY.bladedWeapons.includes(f.weapon)) || AFFINITY.bladedClasses.includes(f.cls)
+  || AFFINITY.bladedGear.includes(f.gear?.weapon);
 // `group` sorts the quarters drawer: comfort, temperament (shapes a fighter's Humour, 7.1) or craft (helps a build in fights).
 // `helps`: the ✦ mark and the careful bot's first pick: a build-specific or combat use. Temperament pieces don't set it;
 // their room line says what they would do to that fighter's temper instead.
@@ -300,6 +330,9 @@ export const DECOR = {
   rockGarden: { group: 'temperament', humor: 'phlegmatic', price: 3, comfort: 5, calm: 8, name: 'Rock Garden', feeds: 'Phlegmatic', effect: 'Comfort for Morale and −8 Stress a week; shapes a Phlegmatic temper. On a Rest week they meditate: −10 more Stress, +1 XP, and half a step toward conquering a fear.', helps: () => false },
   spikyBed: { group: 'temperament', humor: 'melancholic', price: 2, comfort: 0, name: 'Spiky Bed', feeds: 'Melancholic', effect: 'No comfort at all; shapes a Melancholic temper. A win taken with even one wound makes them Battle-Hardened (usually it takes two).', helps: () => false },
   skullRack: { group: 'temperament', humor: 'choleric', price: 3, comfort: 3, name: 'Skull Rack', feeds: 'Choleric', effect: 'A little comfort; shapes a Choleric temper. A severe wound scars them Enraged, never Afeared.', helps: () => false },
+  // 7.2 Arena Craft pieces (PLACEHOLDER words): wound affinities in a fight (AFFINITY; off under Iron Rules).
+  terrarium: { group: 'craft', price: 4, comfort: 4, calm: 5, calmIf: (f) => f.cls === 'ashHungry' || f.kind === 'vampire', affinity: { style: 'poison', chance: 20000 }, name: 'Viper Terrarium', feeds: 'Poison', effect: 'A little comfort. In a fight, 20% of their heavy wounds become Poison. Ash-Hungry and Vampire fighters find the vipers soothing: −5 Stress a week.', helps: (f) => f.cls === 'ashHungry' || f.kind === 'vampire' },
+  whetstone: { group: 'craft', price: 4, comfort: 4, affinity: { style: 'bleed', chance: 25000, bladed: true }, name: 'Whetstone Rack', feeds: 'Bleeding', effect: 'A little comfort. Bladed fighters (Sword, Dagger, Axe, a blade in hand, Blood-Bearer, Thorn-Blade): 25% of their light wounds bleed.', helps: (f) => isBladed(f) },
   wineAmphora: { group: 'temperament', humor: 'sanguine', price: 3, comfort: 7, name: 'Wine Amphora', feeds: 'Sanguine', effect: 'Plenty of comfort; shapes a Sanguine temper. The crowd warms to them: each fight starts with +5 Hype.', helps: () => false },
 };
 
@@ -357,7 +390,7 @@ export const TRAIN_GAIN = { power: 1, speed: 3 };
 export const STRESS = { train: 20, fight: 15, rest: -40, medbay: -10, overtrained: 50, max: 100, decorCalm: 30 };
 
 // Weeks an injury takes to heal in the Medbay (Medbay Lv 2+ heals 2 weeks per week).
-export const HEAL_WEEKS = { distracted: 1, fleshWound: 1, concussed: 2, poisoned: 2, maimed: 3, senseless: 2, blinded: 3 };
+export const HEAL_WEEKS = { distracted: 1, fleshWound: 1, bleeding: 1, concussed: 2, poisoned: 2, maimed: 3, senseless: 2, blinded: 3 };
 
 export const MONTHS = ['Martius', 'Aprilis', 'Maius', 'Iunius', 'Quintilis', 'Sextilis', 'September', 'October', 'November', 'December'];
 export const CALENDAR = { weeksPerMonth: 4, winterWeeks: 4 };
@@ -486,9 +519,11 @@ export const MORALE = {
 export const CONSUMABLES = {
   warPaint: { name: 'War Paint', price: 4, desc: '+1 Power next round.', boost: { power: 1 } },
   adrenaline: { name: 'Adrenaline Draught', price: 3, desc: '+3 Speed next round; +15 Stress after the fight.', boost: { speed: 3 }, stressAfter: 15 },
-  blessedBandage: { name: 'Blessed Bandage', price: 3, desc: '−10% chance to be injured next round.', boost: { guard: 10000 } },
+  blessedBandage: { name: 'Blessed Bandage', price: 3, desc: '−10% chance to be injured next round, and staunches one Bleeding wound for the rest of the fight.', boost: { guard: 10000 }, staunch: true },
   ironTonic: { name: 'Iron Tonic', price: 3, desc: '+5% win chance next round.', boost: { win: 5000 } },
-  viperVenom: { name: 'Viper Venom', price: 3, desc: '+15% chance to injure and +15 injury severity next round.', boost: { injure: 15000, severity: 15 } },
+  viperVenom: { name: 'Viper Venom', price: 3, desc: '+10% chance to injure next round; 65% of wounds it lands turn to Poison (a hard hit can make a lighter wound Poisoned).', boost: { injure: 10000, affinity: { style: 'poison', chance: 65000, upWeight: 1 } } },
+  bloodThinner: { name: 'Blood Thinner', price: 3, desc: '+10% chance to injure next round; 75% of light wounds it lands bleed.', boost: { injure: 10000, affinity: { style: 'bleed', chance: 75000, upWeight: 1 } } },
+  blindingPowder: { name: 'Blinding Powder', price: 4, desc: 'Next round, 60% of wounds go for the eyes: a hard hit Blinds, a light one only Distracts. A Cyborg Eye shrugs it off.', boost: { affinity: { style: 'blindPowder', chance: 60000, upWeight: 1 } } },
   berserkerMushroom: { name: 'Berserker Mushroom', price: 4, desc: '+2 Power next round, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
   throwingNet: { name: 'Throwing Net', price: 4, desc: 'The opponent has −3 Speed next round.', foe: { speed: -3 } },
   smellingSalts: { name: 'Smelling Salts', price: 3, desc: 'Clears a Distracted or Concussed wound for the rest of this fight (it still needs healing after).', salts: true },
