@@ -158,17 +158,20 @@ function equipAll(run, reserve) {
 
 // 7.4: with clues of a mole, investigate one fighter a week (named suspects first, then the unhappiest); the careful
 // event order executes an unmasked mole.
+// The bot's own notes (who it has searched) stay out of the save.
+const searchedBy = new WeakMap();
 function hunt(run, reserve = 6) {
   const st = espState(run);
-  if (!st.clues.length) delete st.searched; // a new mole starts a new search
+  if (!st.clues.length) searchedBy.delete(run); // a new mole starts a new search
   if (!st.clues.length || run.gold - ESPIONAGE.investigate < reserve) return;
-  st.searched ??= [];
+  const searched = searchedBy.get(run) ?? [];
+  searchedBy.set(run, searched);
   const order = [...(canNarrow(run) && st.suspects ? st.suspects.map((id) => run.roster.find((f) => f.id === id)).filter(Boolean) : []),
     ...[...run.roster].sort((a, b) => a.morale - b.morale)];
-  const f = order.find((x) => !st.searched.includes(x.id) && !investigateBlocker(run, x.id));
+  const f = order.find((x) => !searched.includes(x.id) && !investigateBlocker(run, x.id));
   if (!f) return;
-  st.searched.push(f.id);
-  investigate(run, f.id);
+  searched.push(f.id);
+  if (investigate(run, f.id)) chooseEvent(run, 0); // unmasked: execute them now, so the week isn't played twice
 }
 
 function keepHappy(run, reserve = 6) {
@@ -234,7 +237,7 @@ function carefulWeek(run, opts) {
       if (!jobBlocker(run, f.id, want)) setJob(run, f.id, want);
     }
   }
-  hunt(run, Math.max(6, saveForTribute)); // last: an unmasked mole opens an event
+  hunt(run, Math.max(6, saveForTribute));
 }
 
 // `tactic`: 'smart' reads the opponent's humor (as auto-play does); anything else is used every round.
@@ -467,7 +470,6 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
     }
     if (strategy === 'careful') carefulWeek(run, opts);
     else recklessWeek(run);
-    if (run.event) continue; // a mole unmasked this week: decide it first
     advanceWeek(run);
   }
   const fought = run.history.filter((h) => !h.skipped && !h.forfeit);
