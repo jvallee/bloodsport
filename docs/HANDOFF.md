@@ -1,6 +1,6 @@
 # Blood and Circus (formerly Bloodsport): handoff for the next agent
 
-Last updated 2026-11-23, at **version 7.0.0** (live at the root; 6.0.5 frozen into `/v6/`; tag `v7.0`). 7.0.0 split `src/run.js` into `src/run/`, fixed a long audit of bugs, and rebalanced Seasons and Heat: all 20 gates pass (`docs/roadmap-v2.md`, "v7.0.0"). Next: the designer's 7.1–7.4 plan in `docs/roadmap-v7.md` (Phase 1, living quarters, first).
+Last updated 2026-11-23, at **version 7.1.0** (7.1 added Temperament decor, Phase 1 of `docs/roadmap-v7.md`; live at the root; 6.0.5 frozen into `/v6/`; tag `v7.0`). 7.0.0 split `src/run.js` into `src/run/`, fixed a long audit of bugs, and rebalanced Seasons and Heat: all 20 gates pass (`docs/roadmap-v2.md`, "v7.0.0"). Next: Phases 2–4 of `docs/roadmap-v7.md` (wound affinities, unrest, spies); its open decisions were answered "yes" to the review notes on 2026-11-23.
 
 ## 1. What this is
 

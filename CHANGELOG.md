@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## Unreleased (7.1.0): living quarters
+## 7.1.0 (2026-11-23): living quarters
 
 - **Temperament decor:** four new pieces for a fighter's room, each shaping their temper. Keep one as the room's main piece for 4 weeks and their Humour changes for good: the **Rock Garden** makes them Phlegmatic, the **Spiky Bed** Melancholic, the **Skull Rack** Choleric and the **Wine Amphora** Sanguine. The fighter card shows a change under way ("→ 2/4"), and each piece says what it would do to that fighter.
 - **Rock Garden:** −8 Stress a week, and a fighter resting beside it meditates: −10 more Stress, +1 XP, and half a step toward conquering a fear.

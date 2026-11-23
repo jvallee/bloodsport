@@ -252,3 +252,11 @@ Boss Power barely bites: the careful bot trains longer before a Boss, so Iron Bo
 Chosen: purses ×1.6 (the v6 value) and Heat order Harsh Judges → Lean Fortunes → Hungry Lions → Greedy Emperor → Iron Bosses.
 Full check: first career 34%, reckless 5%, full Legacy 42% (Heat 1 21%, Heat 3 11%), evil road +14, coup 15%, Long Road
 36%, a won season 15.5 fight months, Boss win per attempt 91 · 69 · 37 · 22 · 40%. All 20 gates pass.
+
+### v7.1.0 (`npm run check`, 300 careers): 21/21
+
+Temperament decor (Phase 1 of `docs/roadmap-v7.md`). The bots don't place the new pieces, so careers play exactly as in
+7.0.0 and every number is unchanged: first career 34%, full Legacy 42% (Heat 1 21%, Heat 3 11%), Boss win per attempt
+91 · 69 · 37 · 22 · 40%. New gate: no Temperament piece in more than 55% of winning careful houses (Rock Garden 2%, from
+Fortune's cards). A first try that marked the pieces as helping everyone put a Rock Garden in every bot's rooms: that gate
+read 100% and full Legacy fell to 39% (every fighter turned Phlegmatic).
