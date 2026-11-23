@@ -235,24 +235,24 @@ Each card has a title, its text, and choice labels. A choice's visible stakes ("
 
 | Where | Text |
 |---|---|
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
+| [src/run/plotEngine.js:49](../src/run/plotEngine.js#L49) | `${name} slips out of the city.`, 'event' |
+| [src/run/plotEngine.js:93](../src/run/plotEngine.js#L93) | 'A sealed letter arrives with no name on it. Inside: a pass bearing the Emperor\'s seal.', 'event' |
+| [src/run/plotEngine.js:98](../src/run/plotEngine.js#L98) | `A blessing from ${priest.name} reaches the barracks in secret. Spirits lift.`, 'good' |
+| [src/run/plotEngine.js:101](../src/run/plotEngine.js#L101) | `${courier.name} sends word: the Praetorians are watching another house this month.`, 'good' |
+| [src/run/plotEngine.js:108](../src/run/plotEngine.js#L108) | pick(run.rng.plot, SUSPICION_SIGNS.ready), 'event' |
+| [src/run/plotEngine.js:185](../src/run/plotEngine.js#L185) | `${f.name} tried to escape over the wall, and was caught by the watch and executed.`, 'bad'); } |
+| [src/run/plotEngine.js:190](../src/run/plotEngine.js#L190) | `${f.name} is taken by the Praetorians and executed in the arena at noon.`, 'bad' |
+| [src/run/plotEngine.js:193](../src/run/plotEngine.js#L193) | 'Not tonight. The rebels will wait for the next Grand Tournament.', 'event' |
+| [src/run/plotEngine.js:204](../src/run/plotEngine.js#L204) | 'The Praetorians break down the gates. Your house is tried for treason, and the sentence is read at the games.' |
+| [src/run/plotEngine.js:215](../src/run/plotEngine.js#L215) | `On your word, the Praetorians drag ${f.name} from the barracks. They are executed at noon.`, 'bad' |
+| [src/run/plotEngine.js:217](../src/run/plotEngine.js#L217) | `${c.name} is found hiding in the city, and executed.`, 'bad' |
+| [src/run/plotEngine.js:224](../src/run/plotEngine.js#L224) | `A purse of ${purse} Gold arrives from the palace, with the Emperor's thanks.`, 'event' |
+| [src/run/plotEngine.js:239](../src/run/plotEngine.js#L239) | run.epilogue = [...(run.epilogue ?? []), victims.length ? `Executed on your word: ${victims.join(', ')}.` : 'You gave the Emperor names. He made sure they were the right ones.'] |
+| [src/run/plotEngine.js:247](../src/run/plotEngine.js#L247) | 'The signal is never given. The rebels melt back into the crowd, to wait for another day of games.', 'warn' |
+| [src/run/plotEngine.js:253](../src/run/plotEngine.js#L253) | `${fighter.name} wins the Final, turns, and climbs into the imperial box. Silbannacus falls on the sand he filled with blood. The empire is yours to remake.` |
+| [src/run/plotEngine.js:255](../src/run/plotEngine.js#L255) | if (freed.length) run.epilogue = [...(run.epilogue ?? []), `In the crowd, the people you freed were the first to cheer: ${freed.join(', ')}.`] |
+| [src/run/plotEngine.js:258](../src/run/plotEngine.js#L258) | run.epilogue = [...(run.epilogue ?? []), 'The signal never came: the wrong fighter won the Final, and the moment passed. Somewhere, a chalk mark fades.'] |
+| [src/run/plotEngine.js:263](../src/run/plotEngine.js#L263) | `${fighter.name} falls in the Final, and the rising dies with them. The broken chain is scrubbed from every door, but the city remembers.` |
 
 End-screen titles and closing lines:
 
@@ -266,10 +266,10 @@ End-screen titles and closing lines:
 
 | Where | Text |
 |---|---|
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
+| [src/run/tournaments.js:780](../src/run/tournaments.js#L780) | 'You won the Grand Tournament. The Emperor names you Master of the Games.' |
+| [src/run/helpers.js:301](../src/run/helpers.js#L301) | `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.` |
+| [src/run/helpers.js:307](../src/run/helpers.js#L307) | 'Your gladiators revolt and burn the Ludus.' |
+| [src/run/helpers.js:314](../src/run/helpers.js#L314) | 'No fighters left and not enough Gold to buy one. Your house falls.' |
 | Where | Text |
 |---|---|
 
@@ -484,40 +484,40 @@ Lines the house steward writes each week. The plot's lines are in section 4.
 
 | Where | Text |
 |---|---|
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
+| [src/run/weekly.js:96](../src/run/weekly.js#L96) | `You take charge of a bottom-tier Ludus in ${arenaName(1)}.` |
+| [src/run/roster.js:123](../src/run/roster.js#L123) | `${fighter.name} joins the Ludus.` |
+| [src/run/roster.js:142](../src/run/roster.js#L142) | `${f.name} is released from the Ludus. Their gear and decor return to the storeroom.` |
+| [src/run/helpers.js:249](../src/run/helpers.js#L249) | `${f.name} leaves the Medbay fully healed.`, 'good' |
+| [src/run/weekly.js:214](../src/run/weekly.js#L214) | `${f.name} is overtrained (Stress ${f.stress}). Rest them before a fight.`, 'warn' |
+| [src/run/weekly.js:215](../src/run/weekly.js#L215) | `${f.name} is mutinous and refuses to fight.`, 'bad' |
+| [src/run/weekly.js:220](../src/run/weekly.js#L220) | `The gladiators are close to revolt (${run.revoltWeeks}/${REVOLT.weeks} weeks).`, 'bad' |
+| [src/run/weekly.js:244](../src/run/weekly.js#L244) | 'The stranger in the Medbay slipped away before dawn.', 'event'); } |
+| [src/run/weekly.js:245](../src/run/weekly.js#L245) | `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn' |
+| [src/run/weekly.js:255](../src/run/weekly.js#L255) | `Tournament week in ${unlockedTiers(run).length > 1 ? `${unlockedTiers(run).length} arenas` : arenaName(run.topTier)}.`, 'event' |
+| [src/run/weekly.js:321](../src/run/weekly.js#L321) | `You pay the Emperor's tribute early: ${due} Gold.`, 'event' |
+| [src/run/weekly.js:330](../src/run/weekly.js#L330) | `The year-end purse: your house finished #${rank + 1} of ${run.houses.length + 1} in Glory${purse ? ` and is paid ${purse} Gold` : ', and is paid nothing'}.`, purse ? 'good' : 'warn' |
+| [src/run/weekly.js:338](../src/run/weekly.js#L338) | 'The Emperor\'s collectors find your tribute already paid.', 'event' |
+| [src/run/weekly.js:342](../src/run/weekly.js#L342) | `You pay the Emperor's tribute: ${due} Gold.`, 'event' |
+| [src/run/weekly.js:345](../src/run/weekly.js#L345) | `You can't pay the ${due} Gold tribute. The Emperor takes what you have, and remembers.`, 'bad' |
+| [src/run/helpers.js:291](../src/run/helpers.js#L291) | `Imperial Favour ${delta > 0 ? '+' : ''}${delta} (${why}): now ${run.favor}.`, delta > 0 ? 'good' : 'bad' |
+| [src/run/helpers.js:205](../src/run/helpers.js#L205) | `${f.name} reaches level ${f.level}! Choose a perk.`, 'event' |
+| [src/run/roster.js:492](../src/run/roster.js#L492) | `Sold a ${GEAR[key].name} for ${sellPrice(key)} Gold.` |
+| [src/run/roster.js:605](../src/run/roster.js#L605) | `${f.name} wakes with a ${AUGMENTS[key].name}. The crowd mutters about machines.`, 'event' |
+| [src/run/roster.js:630](../src/run/roster.js#L630) | `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good' |
+| [src/run/tournaments.js:320](../src/run/tournaments.js#L320) | `You skip ${bout.name}: +${ECONOMY.skipGold} Gold, and the roster rests.` |
+| [src/run/tournaments.js:723](../src/run/tournaments.js#L723) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event' |
+| [src/run/tournaments.js:428](../src/run/tournaments.js#L428) | `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn' |
+| [src/run/tournaments.js:431](../src/run/tournaments.js#L431) | `The crowd jeers ${fighter.name} for crushing a much weaker opponent.`, 'warn' |
+| [src/run/tournaments.js:581](../src/run/tournaments.js#L581) | `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good' |
+| [src/run/tournaments.js:542](../src/run/tournaments.js#L542) | `${fighter.name} is scarred: ${SCARS[id].name} against ${vs} fighters.`, 'warn' |
+| [src/run/tournaments.js:551](../src/run/tournaments.js#L551) | `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad' |
+| [src/run/helpers.js:241](../src/run/helpers.js#L241) | `House Prestige level ${run.prestigeLevel}! New buildings and room plots unlocked.`, 'event' |
+| [src/run/tournaments.js:637](../src/run/tournaments.js#L637) | `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good' |
+| [src/run/tournaments.js:682](../src/run/tournaments.js#L682) | `Overnight, every chalk mark on your doors is washed away.`, 'warn' |
+| [src/run/tournaments.js:717](../src/run/tournaments.js#L717) | `Thumbs down: ${fighter.name} finishes ${opp}.`, 'warn' |
+| [src/run/tournaments.js:723](../src/run/tournaments.js#L723) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${out.mark}: ${marks.at(-1).desc}`, 'event' |
+| [src/run/tournaments.js:737](../src/run/tournaments.js#L737) | `The crowd roars its approval for ${fighter.name}.`, 'good' |
+| [src/run/tournaments.js:804](../src/run/tournaments.js#L804) | `${opp.name} will remember this, and will be waiting for you.`, 'warn' |
 
 ## 10. Tutorial and coach tips
 
@@ -649,10 +649,10 @@ Every line below is a first draft. The rows show the code around the words; chan
 | Where | Text |
 |---|---|
 | [src/data.js:586](../src/data.js#L586) | Epithets: epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'], |
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
+| [src/run/houses.js:305](../src/run/houses.js#L305) | `${n.name} ${n.nemesis.epithet} is back, in ${arenaName(bout.tier)}. They remember your house.`, 'warn' |
+| [src/run/houses.js:319](../src/run/houses.js#L319) | `${opp.name} will be remembered in your house as ${opp.name} ${n.nemesis.epithet}.`, 'warn' |
+| [src/run/houses.js:337](../src/run/houses.js#L337) | `Beat the house's nemesis, ${opp.name} ${opp.nemesis.epithet}${opp.nemesis.victims.length ? `, who had killed ${opp.nemesis.victims.join(' and ')}` : ''}.` |
+| [src/run/houses.js:338](../src/run/houses.js#L338) | `${fighter.name} beats ${opp.name} ${opp.nemesis.epithet}! +${gold} Gold, +${NEMESIS.renown} Renown. The house breathes again.`, 'good' |
 
 **The Emperor's demands** (`say` is his line; `goal` is the rule, keep it accurate)
 
@@ -664,7 +664,7 @@ Every line below is a first draft. The rows show the code around the words; chan
 | [src/data.js:577](../src/data.js#L577) | spare: { goal: 'Spare a beaten opponent (thumbs up)', say: 'The Senate calls me cruel. Show them my clemency: spare someone in the arena this month.' }, |
 | [src/data.js:578](../src/data.js#L578) | twoArenas: { goal: 'Win in two different arenas on fight day', say: 'Show me the depth of your house. Win in two of my arenas this month.' }, |
 | [src/main.js:160](../src/main.js#L160) | scene = { id: 'demand', beat: 0, beats: [{ speaker: 'emperor', text: DEMANDS[run.demand.id].say }, { speaker: 'steward', text: `The Emperor's demand: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day. Meet it and he pays in Favour and Gold; miss it and he remembers.` }] }; |
-| [:](../#L) | 
+| [src/run/houses.js:537](../src/run/houses.js#L537) | `The Emperor demands: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.`, 'event' |
 
 **The Patron Lounge** (policy names, and their rules text)
 
@@ -677,20 +677,20 @@ Every line below is a first draft. The rows show the code around the words; chan
 | [src/data.js:557](../src/data.js#L557) | grainToLudus: { name: 'Grain to the Ludus', cost: 2, lean: 'neutral', desc: '+5 comfort for every fighter.' }, |
 | [src/data.js:558](../src/data.js#L558) | purgePrisons: { name: 'Purge the Prisons', cost: 2, lean: 'loyalist', desc: 'No political prisoners are offered while it lasts.' }, |
 | [src/data.js:559](../src/data.js#L559) | amnesty: { name: 'Amnesty', cost: 2, lean: 'reformist', desc: 'Political prisoners are twice as common while it lasts.' }, |
-| [:](../#L) | 
-| [:](../#L) | 
+| [src/run/houses.js:491](../src/run/houses.js#L491) | `Senators dine at your table${star ? ` and admire ${star.name}` : ''}. +${gain} Influence (now ${run.influence}).`, 'event' |
+| [src/run/houses.js:514](../src/run/houses.js#L514) | `The Senate passes ${p.name}: ${p.desc}`, 'event' |
 
 **Bonds and betting**
 
 | Where | Text |
 |---|---|
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
-| [:](../#L) | 
+| [src/run/houses.js:434](../src/run/houses.js#L434) | for (const [x, y] of [[a, b], [b, a]]) chronicle(run, x, `Bonded with ${y.name}.` |
+| [src/run/houses.js:435](../src/run/houses.js#L435) | `${a.name} and ${b.name} have become fast friends: each is happier while the other is in the house.`, 'good' |
+| [src/run/houses.js:464](../src/run/houses.js#L464) | `Grieved for ${f.bond.name}.` |
+| [src/run/houses.js:465](../src/run/houses.js#L465) | `${f.name} grieves for ${f.bond.name}.`, 'bad' |
+| [src/run/tournaments.js:273](../src/run/tournaments.js#L273) | `You bet ${stake} Gold on ${match.a.f.name} at ×${odds.toFixed(2)}: a win returns ${match.bet.payout} Gold (+${match.bet.payout - stake}).`, 'event' |
+| [src/run/tournaments.js:294](../src/run/tournaments.js#L294) | `The bookmakers pay out ${match.bet.payout} Gold on your ${match.bet.stake} Gold bet: +${match.bet.payout - match.bet.stake} profit.`, 'good' |
+| [src/run/tournaments.js:301](../src/run/tournaments.js#L301) | } else log(run, `The ${match.bet.stake} Gold bet is lost.`, 'bad' |
 
 **The steward's news**
 
@@ -712,8 +712,8 @@ Every line below is a first draft. The rows show the code around the words; chan
 | [src/data.js:243](../src/data.js#L243) | revenant: { name: 'Revenant', basePower: 5, traits: ['deathless', 'graveChill', 'cinderHeart'], exotic: true }, |
 | [src/data.js:401](../src/data.js#L401) | vulcan: { unique: true, name: 'Unnatural Temple of Vulcan', dept: 'medical', icon: 'forge', cost: [10, 16], req: [2, 3], per: [4, 12], effect: (n) => `Raises a fighter killed in the arena as a Revenant, up to ${n} weeks after their death`, extra: (lv) => (lv >= 2 ? 'Revenants come back with all their strength' : 'Revenants come back with 1 less Power') }, |
 | [src/codex.js:36](../src/codex.js#L36) | 'kind:revenant': 'A gladiator who died on the sand and was carried to the Unnatural Temple of Vulcan. The smith-god\'s priests rebuild them in brass and stitched flesh. They remember every fight, and feel nothing at all.', |
-| [:](../#L) | 
-| [:](../#L) | 
+| [src/run/roster.js:355](../src/run/roster.js#L355) | `Raised from the dead in the Unnatural Temple of Vulcan, ${run.week - body.diedWeek} week${run.week - body.diedWeek === 1 ? '' : 's'} after falling. ${TRAITS[f.kindTrait].name}.` |
+| [src/run/roster.js:356](../src/run/roster.js#L356) | `The priests of Vulcan work through the night. ${f.name} walks out of the forge: a Revenant, brass where the wounds were${lost ? `, and a little weaker (${lost} Power)` : ''}.`, 'event' |
 | [src/ui/views.js:844](../src/ui/views.js#L844) | : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death, for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p> |
 | [src/ui/views.js:845](../src/ui/views.js#L845) | ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary small')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`; |
 
@@ -771,7 +771,7 @@ Every line below is a first draft. The rows show the code around the words; chan
 |---|---|
 | [src/events.js:169](../src/events.js#L169) | text: ({ f }) => `Your steward brings you a letter he found sewn into ${f}'s bedroll, addressed to the Praetorian prefect. ${f} has been reporting on your house to the palace.`, |
 | [src/events.js:171](../src/events.js#L171) | { label: 'Let them be, and mind what you say', effects: { favor: 3, spy: 'keep' } }, |
-| [:](../#L) | 
+| [src/run/eventsEngine.js:120](../src/run/eventsEngine.js#L120) | chronicle(run, f, 'Unmasked as the Emperor\'s spy, and executed in the yard.'); |
 
 **5.4.0: quests** (src/quests.js: the steward's assignments, what fighters want, the cause's requests, the rival house; `goal` texts are rules, keep them accurate)
 
@@ -857,8 +857,8 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [:](../#L) | 
-| [:](../#L) | 
+| [src/run/tournaments.js:466](../src/run/tournaments.js#L466) | log(run, `Reaching the Boss earns respect: the ${bout.buyIn} Prestige buy-in is returned.`, 'event'); |
+| [src/run/tournaments.js:804](../src/run/tournaments.js#L804) | log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn'); |
 | [src/ui/views.js](../src/ui/views.js) `overtrainModal` | The steward's overtraining question: "Before you end the week: another week of training and … will be Overtrained (Stress 50+)." |
 
 **The crowd remembers its dead** (a Revenant's first fight back)
@@ -866,8 +866,8 @@ Every line below is a first draft. The rows show the code around the words; chan
 | Where | Text |
 |---|---|
 | [src/ui/fightView.js:394](../src/ui/fightView.js#L394) | ${m.a.f.risen && !m.rounds?.length ? `<div class="sub chant">📣 The crowd remembers ${esc(m.a.f.name)}. They chant the name they buried: +${HYPE.risen} hype.</div>` : ''} |
-| [:](../#L) | 
-| [:](../#L) | 
+| [src/run/tournaments.js:510](../src/run/tournaments.js#L510) | `Fought again, back from the dead. The crowd chanted their name.` |
+| [src/run/tournaments.js:511](../src/run/tournaments.js#L511) | `The crowd chants ${fighter.name}'s name: the dead fighter walks the sand again.`, 'event' |
 
 **Lower arenas** (5.3.0)
 
