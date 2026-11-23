@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## Unreleased
+
+- **Fixes to the new decor:** the Iron Rules Boss debuff now switches off the Spiky Bed and Skull Rack too, as it says ("room decor gives no bonus"); the Spiky Bed only counts wounds taken in that fight, not old ones still healing; taking a piece out of a room ends its change of temper straight away; the fear help text mentions the Rock Garden.
+
 ## 7.1.0 (2026-11-23): living quarters
 
 - **Temperament decor:** four new pieces for a fighter's room, each shaping their temper. Keep one as the room's main piece for 4 weeks and their Humour changes for good: the **Rock Garden** makes them Phlegmatic, the **Spiky Bed** Melancholic, the **Skull Rack** Choleric and the **Wine Amphora** Sanguine. The fighter card shows a change under way ("→ 2/4"), and each piece says what it would do to that fighter.

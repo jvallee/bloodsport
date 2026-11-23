@@ -156,6 +156,13 @@ function equipAll(run, reserve) {
 }
 
 function keepHappy(run, reserve = 6) {
+  // 7.1: an Afeared fighter gets a Rock Garden to meditate the fear away (one, if the house can spare the Gold).
+  for (const f of run.roster) {
+    if (!(f.scars ?? []).some((x) => x.id === 'afeared') || f.decor.rockGarden) continue;
+    if (!run.inventory.decor.rockGarden && (buyDecorBlocker(run, 'rockGarden') || run.gold - DECOR.rockGarden.price < reserve)) continue;
+    if (!run.inventory.decor.rockGarden) buyDecor(run, 'rockGarden');
+    if (!assignDecorBlocker(run, f.id, 'rockGarden')) assignDecor(run, f.id, 'rockGarden');
+  }
   // Place decor where Morale is heading below Inspired, preferring decor that also helps in combat.
   for (const f of run.roster) {
     for (let guard = 0; guard < 6 && moraleTarget(run, f).target < MORALE.inspired; guard++) {

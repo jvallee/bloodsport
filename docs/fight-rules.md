@@ -1083,7 +1083,9 @@ Placeholder numbers.
 - **Bots don't use Temperament pieces yet.** The careful bot places the first decor item that `helps` a fighter. Marking the
   new pieces as helping everyone made it put a Rock Garden in every room (the new gate read 100%, and full Legacy fell to
   39%, since every fighter turned Phlegmatic). Temperament pieces don't set `helps` (their room line explains them), so
-  bot careers play exactly as in 7.0.0 (same log, Gold, Favour and history on the fingerprint seeds). The decor-diversity
-  gate passes trivially until a bot chooses these pieces on purpose.
+  bot careers played exactly as in 7.0.0 (same log, Gold, Favour and history on the fingerprint seeds). From 7.2 the careful
+  bot buys a Rock Garden for any Afeared fighter on purpose, so the decor-diversity gate measures a real choice.
+- **Review fixes (7.2):** Iron Rules switches the Spiky Bed and Skull Rack off too (it already did the Wine Amphora); the
+  Spiky Bed counts only wounds taken in this fight; taking the leading piece back ends a drift at once (a tie still pauses).
 - **Saves:** version 5. Version-4 careers load unchanged; the new decor slots are filled with 0 on load.
 - **New gate:** no Temperament piece is in more than 55% of winning careful houses.

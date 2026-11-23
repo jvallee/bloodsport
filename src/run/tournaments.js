@@ -364,6 +364,12 @@ function pushResult(run, summary) {
   run.history.push(summary);
 }
 
+// Decor only works outside Iron Rules (the Boss debuff turns room decor off, as in the fight engine).
+const decorWorks = (match) => match.a?.arena !== 'ironRules';
+// Spiky Bed (7.1): a win with at least SPIKY_HARDENED_AT weight of wounds taken in this fight (old wounds don't count).
+const newWoundWeight = (match) => match.a.f.injuries.filter((i) => i.weeksLeft === undefined).reduce((n, i) => n + (i.weight ?? 0), 0);
+const spikyHardens = (match, fighter) => decorWorks(match) && fighter.decor?.spikyBed > 0 && newWoundWeight(match) >= SPIKY_HARDENED_AT;
+
 export function finishMatch(run, match) {
   if (!run.inMatch) throw new Error('No match in progress.');
   if (!match.over) throw new Error('The match is not over.');
@@ -533,7 +539,7 @@ export function finishMatch(run, match) {
     if (summary.mark) chronicle(run, fighter, `Earned the mark ${summary.mark}.`);
     if (bout.boss && !summary.title) chronicle(run, fighter, `Beat the Boss ${opp.name}.`);
   }
-  const hardening = bloodied || (won && fighter.decor?.spikyBed > 0 && effectiveInjuries(fighter) >= SPIKY_HARDENED_AT);
+  const hardening = bloodied || (won && spikyHardens(match, fighter));
   if (fighter.alive && hardening && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
     fighter.scars = [...(fighter.scars ?? []), { id: 'hardened' }];
     summary.scar = 'Battle-Hardened';
@@ -544,7 +550,7 @@ export function finishMatch(run, match) {
     const vs = meleeOnly(match.b ?? { f: opp }) ? 'melee' : 'ranged';
     const afeared = SCAR_AFEARED[fighter.humor] ?? SCAR_AFEARED.other;
     const roll = afeared > 0 ? next(run.rng.growth) : 1;
-    const id = !(fighter.decor?.skullRack > 0) && roll < afeared ? 'afeared' : 'enraged';
+    const id = !(decorWorks(match) && fighter.decor?.skullRack > 0) && roll < afeared ? 'afeared' : 'enraged';
     if (!(fighter.scars ?? []).some((sc) => sc.vs === vs)) {
       fighter.scars = [...(fighter.scars ?? []), { id, vs }];
       summary.scar = `${SCARS[id].name} (${vs})`;
@@ -615,7 +621,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
       summary.scar = 'Battle-Hardened';
       chronicle(run, fighter, 'Won bloodied and became Battle-Hardened.');
     }
-  } else if (fighter.decor?.spikyBed > 0 && effectiveInjuries(fighter) >= SPIKY_HARDENED_AT && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
+  } else if (spikyHardens(match, fighter) && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
     fighter.scars = [...(fighter.scars ?? []), { id: 'hardened' }];
     summary.scar = 'Battle-Hardened';
     chronicle(run, fighter, 'Won wounded, slept on spikes, and became Battle-Hardened.');

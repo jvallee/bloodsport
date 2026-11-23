@@ -9,7 +9,7 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup, ALL_UNLOCKS, careerXp, levelFor, LEGACY_LEVELS } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT } from '../src/data.js';
+import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
@@ -154,7 +154,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (f.spy) bits.push('writes to the palace (the spy you kept)');
     const gear = ['weapon', 'armor'].filter((s) => f.gear[s]).map((s) => `${GEAR[f.gear[s]].name} (${gearText(GEAR[f.gear[s]])})`);
     if (gear.length) bits.push(`Gear: ${gear.join('; ')}`);
-    const decorNote = (d) => (d.helps(f) ? '' : d.calm ? ` (−${d.calm} Stress/wk + comfort)` : d.renown ? ` (+${d.renown} Renown/win + comfort)` : ' (comfort only)');
+    const decorNote = (d) => (d.helps(f) ? '' : d.humor ? ` (Temperament: ${HUMORS[d.humor].name}${decorComfort(d) ? '' : ', no comfort'})` : d.calm ? ` (−${d.calm} Stress/wk + comfort)` : d.renown ? ` (+${d.renown} Renown/win + comfort)` : ' (comfort only)');
     const decor = Object.entries(f.decor).filter(([, n]) => n).map(([k, n]) => `${DECOR[k].name} ×${n}${decorNote(DECOR[k])}`);
     if (decor.length) bits.push(`Decor: ${decor.join(', ')}`);
     if (f.humourDrift && HUMORS[f.humourDrift.to]) bits.push(`Temper: turning ${HUMORS[f.humourDrift.to].name} (${f.humourDrift.weeks}/${HUMOUR_DRIFT.weeks} weeks)`);

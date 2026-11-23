@@ -588,7 +588,7 @@ export function temperNote(f, k) {
 export function temperLine(f) {
   const dom = dominantTemperament(f);
   const now = f.humor ? `Temper: <b>${HUMORS[f.humor].name}</b>.` : '';
-  if (f.humourDrift) return `${now} Turning <b>${HUMORS[f.humourDrift.to].name}</b>: ${f.humourDrift.weeks}/${HUMOUR_DRIFT.weeks} weeks.`;
+  if (f.humourDrift && HUMORS[f.humourDrift.to]) return `${now} Turning <b>${HUMORS[f.humourDrift.to].name}</b>: ${f.humourDrift.weeks}/${HUMOUR_DRIFT.weeks} weeks.`;
   if (dom?.tied) return `${now} Temperament tied: no piece leads, so their temper holds.`;
   return now;
 }
@@ -663,7 +663,7 @@ function rosterPanel(run) {
       ${f.story?.length ? `<details class="more" data-key="story-${fid}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
       <details class="more" data-key="surgeon-${fid}"><summary>Surgeon, cyborg surgery, ${(f.scars ?? []).some((x) => x.id === 'afeared') ? 'fear, ' : ''}rename, retire, release</summary>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
-        ${(f.scars ?? []).some((x) => x.id === 'afeared') ? `<div class="label">Afeared: win ${FEAR.conquerWins} fights against the style they fear to conquer it, or</div><div class="row">${buttonWhy(`🏛 Fortuna's rite: lift the fear (${ritePrice(run)} Gold)`, 'rite', { id: f.id }, riteBlocker(run, f.id), 'btn small')}</div>` : ''}
+        ${(f.scars ?? []).some((x) => x.id === 'afeared') ? `<div class="label">Afeared: win ${FEAR.conquerWins} fights against the style they fear to conquer it (a Rest week beside a Rock Garden counts as half a win), or</div><div class="row">${buttonWhy(`🏛 Fortuna's rite: lift the fear (${ritePrice(run)} Gold)`, 'rite', { id: f.id }, riteBlocker(run, f.id), 'btn small')}</div>` : ''}
         ${augments ? `<div class="label">Cyborg surgery: replace the wound for good (${augmentPrice(run)} Gold, −1 Renown)</div><div class="row">${augments}</div>` : ''}
         <div class="row">${buttonWhy(`✎ Rename (${Math.round(RENAME.chance * 100)}% chance they resent it: −${-RENAME.morale} Morale for ${MOOD_WEEKS} weeks)`, 'rename', { id: f.id }, renameBlocker(run, f.id), 'btn small')}</div>
         <div class="row">${buttonWhy(`Retire to the Hall of Champions (+${RETIRE.prestige} Prestige, roster +${RETIRE.morale} Morale)`, 'retire', { id: f.id }, retireBlocker(run, f.id), 'btn small')}</div>

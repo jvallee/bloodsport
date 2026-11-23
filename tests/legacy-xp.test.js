@@ -116,7 +116,7 @@ test('Heat N plays the first N decrees and adds their score', () => {
   assert.equal(careerScore(won(createRun(12, { heat: 3 }))) - careerScore(won(createRun(12))), 20 + 25 + 40);
 });
 
-test('Hungry Lions (Heat 5): every opponent fights with +1 Power, Bosses with +2 (Iron Bosses too)', () => {
+test('Hungry Lions (Heat 3 and up): every opponent fights with +1 Power, Bosses with +2 (Iron Bosses too)', () => {
   const cold = createRun(13);
   const hot = createRun(13, { heat: 5 });
   assert.equal(boutFor(hot, 1).oppPower, boutFor(cold, 1).oppPower + 1);
