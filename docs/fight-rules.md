@@ -1180,3 +1180,12 @@ Placeholder numbers (`ESPIONAGE`). Own dice (`run.rng.espionage`).
 - The full-Legacy gate's floor is 35% (was 40%): the designer is fine with win rates 1–4 points lower.
 - Heat order: Harsh Judges, a Greedy Emperor, Hungry Lions, Lean Fortunes, Iron Bosses (Heat 3 was no harder than Heat 1
   with moles about). Hungry Lions' +1 and Iron Bosses' +1 are now `DECREES.*.power`.
+
+## 7.4.1 fixes
+- No tell at 0% accuracy: a stolen playbook without an Oracle gives an exact Round-1 tell and none after.
+- Raising a body clears `mole` and `humourDrift`. Revenants don't drift or meditate.
+- Bribe the Armourer needs an opponent wearing armour gear; investigating waits until the fighter's bracket ends.
+- A steered wound against a cyborg is described from the wound that would have landed.
+- The Chains Break, Palatine choice: a palace mole as ringleader is unmasked and adds `UNREST.moleTip` (15) suspicion on
+  top of the usual 15, instead of becoming the plot's champion. The unrest still calms.
+- The careful bot's Morale decor only picks pieces that add comfort and aren't Temperament pieces.

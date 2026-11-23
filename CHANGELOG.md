@@ -2,6 +2,17 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.4.1 (2026-11-23): fixes
+
+- **The Chains Break:** if the ringleader is secretly the palace's mole, turning the revolt on the Palatine now backfires: they run to the palace, are unmasked, and the palace grows more suspicious (they used to join the rebels' cause).
+- **After a fight:** a fighter who becomes Battle-Hardened and takes a scar in the same fight now shows both (the scar hid Battle-Hardened).
+- **Fight report:** against a fighter with a Cyborg Arm or Eye, a weapon's signature wound is described from the Flesh Wound it would have been (it said "turned a Maimed into Bleeding").
+- **Temperament:** a tie between two pieces now shows the change of temper as paused (it still said "Turning"); a Revenant's temper never changes and they don't meditate, as the room already said, and the decor now says so too.
+- **Bribe the Armourer** can't be bought against an opponent who wears no armour (you paid for nothing).
+- **Investigating** waits until a fighter's bracket is over (it could leave a bracket without its fighter).
+- **The Temple of Vulcan:** raising an executed mole no longer brings back a spy, and a fighter who died partway through a change of temper rises without it.
+- **Steal the Playbook without an Oracle:** you now get the exact Round 1 tactic and no tell after it (it showed a false tell at "about 0%" in later rounds, and the suggested tactic followed it).
+
 ## 7.4.0 (2026-11-23): blood, unrest and knives in the dark (7.2–7.4)
 
 - **Bleeding:** a new wound between a Flesh Wound and a Concussion. It counts as one injury and makes a fighter easier to hit (+10%, or +5% while Guarding) until it heals. A Blessed Bandage staunches it for the fight, and Blood Drinkers can drink it.

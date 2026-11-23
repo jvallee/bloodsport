@@ -127,6 +127,7 @@ function atFight(seed, type, { success = true } = {}) {
   perks(run);
   run.buildings.push({ id: 'b99', type: 'liaison', level: 1 });
   quietWeek(run);
+  if (type === 'armourer') opTarget(run).gear = { ...(opTarget(run).gear ?? {}), armor: 'lionPelt' }; // something to strip
   const saved = ESPIONAGE.ops[type].chance;
   ESPIONAGE.ops[type].chance = success ? 1 : 0;
   try {
@@ -158,6 +159,7 @@ test('covert op: Bribe the Armourer strips the opponent\'s armour; caught costs 
   run.buildings.push({ id: 'b99', type: 'liaison', level: 1 });
   quietWeek(run);
   const favor = run.favor;
+  opTarget(run).gear = { ...(opTarget(run).gear ?? {}), armor: 'lionPelt' };
   const saved = ESPIONAGE.ops.armourer.chance;
   ESPIONAGE.ops.armourer.chance = 0;
   try { covertOp(run, 'armourer'); } finally { ESPIONAGE.ops.armourer.chance = saved; }
@@ -284,6 +286,7 @@ test('the odds preview sees espionage without using this month\'s op', async () 
   const { run } = house(44, 1);
   run.buildings.push({ id: 'b99', type: 'liaison', level: 1 });
   quietWeek(run);
+  opTarget(run).gear = { ...(opTarget(run).gear ?? {}), armor: 'lionPelt' };
   const saved = ESPIONAGE.ops.armourer.chance;
   ESPIONAGE.ops.armourer.chance = 1;
   try { covertOp(run, 'armourer'); } finally { ESPIONAGE.ops.armourer.chance = saved; }
@@ -292,4 +295,57 @@ test('the odds preview sees espionage without using this month\'s op', async () 
   assert.equal(preview.opp.gear?.armor ?? null, null);
   assert.ok(espState(run).op, 'not used up by the preview');
   assert.notEqual(preview.opp, target, 'a copy');
+});
+
+// 7.4.1 review fixes.
+test('a stolen playbook without an Oracle: an exact tell in Round 1, none after (never a false one)', async () => {
+  const { createMatch, tellForecast, opponentIntent } = await import('../src/fight.js');
+  const { createRng } = await import('../src/rng.js');
+  for (let seed = 1; seed <= 30; seed++) {
+    const { fs: [a] } = house(50 + seed, 1);
+    const b = { ...structuredClone(a), id: 'opp', humor: 'choleric' };
+    const m = createMatch({ a, b, rng: createRng(seed), oracle: 0 });
+    m.playbook = true;
+    m.tellSeed ??= 99 + seed;
+    assert.equal(opponentTell(m), m.b.intent.stance, 'Round 1: exact');
+    assert.equal(tellForecast(m), 100);
+    assert.equal(opponentIntent(m, 2).tell, null, 'Round 2: no tell');
+  }
+});
+
+test('raising an executed mole brings back a Revenant, not a mole; a mid-drift death leaves no stale drift', async () => {
+  const { reanimate, buildRoom } = await import('../src/run.js');
+  const { run, fs: [a, b] } = house(60);
+  run.gold = 200;
+  run.prestige = 200;
+  run.prestigeLevel = 5;
+  run.buildings.push({ id: 'bv', type: 'vulcan', level: 1 });
+  a.mole = { master: run.houses[0].id, since: 1, clues: 1 };
+  a.humourDrift = { to: 'sanguine', weeks: 2 };
+  espState(run).clues = [{ week: 1, text: 'x' }];
+  investigate(run, a.id);
+  chooseEvent(run, 0); // execute; the body is kept
+  const r = reanimate(run, a.id);
+  assert.equal(r.mole, undefined);
+  assert.equal(r.humourDrift, undefined);
+  assert.equal(moleOf(run), null);
+});
+
+test('Bribe the Armourer needs an opponent who wears armour', () => {
+  const { run } = house(61, 1);
+  run.buildings.push({ id: 'b99', type: 'liaison', level: 1 });
+  quietWeek(run);
+  const target = opTarget(run);
+  target.gear = { ...(target.gear ?? {}), armor: null };
+  assert.match(covertOpBlocker(run, 'armourer'), /wears no armour/);
+  target.gear.armor = 'lionPelt';
+  assert.equal(covertOpBlocker(run, 'armourer'), null);
+});
+
+test('a fighter in the middle of a bracket cannot be investigated', () => {
+  const { run, fs: [a] } = house(62);
+  espState(run).clues = [{ week: 1, text: 'x' }];
+  run.brackets = { 3: { round: 1, fighterId: a.id } };
+  run.bouts = { 3: 'open' };
+  assert.match(investigateBlocker(run, a.id), /bracket/i);
 });

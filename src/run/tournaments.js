@@ -560,7 +560,7 @@ export function finishMatch(run, match) {
     const id = !(decorWorks(match) && fighter.decor?.skullRack > 0) && roll < afeared ? 'afeared' : 'enraged';
     if (!(fighter.scars ?? []).some((sc) => sc.vs === vs)) {
       fighter.scars = [...(fighter.scars ?? []), { id, vs }];
-      summary.scar = `${SCARS[id].name} (${vs})`;
+      summary.scar = [summary.scar, `${SCARS[id].name} (${vs})`].filter(Boolean).join(', '); // keep Battle-Hardened too
       chronicle(run, fighter, `${opp.name}'s blow left a scar: ${SCARS[id].name} against ${vs} fighters.`);
       log(run, `${fighter.name} is scarred: ${SCARS[id].name} against ${vs} fighters.`, 'warn');
     }

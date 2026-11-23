@@ -323,6 +323,7 @@ export function syncDrift(f) {
 // Weekly: a dominant Temperament piece for another Humour advances the drift; at HUMOUR_DRIFT.weeks the Humour changes for
 // good (until reshaped). A tie pauses the drift; no piece, or one matching their Humour, clears it.
 export function driftHumour(run, f) {
+  if (f.kind === 'revenant') return; // a Revenant feels nothing
   const dom = dominantTemperament(f);
   if (dom?.tied) return;
   if (!dom || dom.humor === f.humor) {
@@ -340,7 +341,7 @@ export function driftHumour(run, f) {
 
 // A Rest week with a Rock Garden: extra Stress relief, a little XP, and half a step toward conquering each fear.
 export function meditate(run, f) {
-  if (f.job !== 'rest' || !(f.decor?.rockGarden > 0)) return;
+  if (f.job !== 'rest' || !(f.decor?.rockGarden > 0) || f.kind === 'revenant') return;
   f.stress = clamp(f.stress - MEDITATION.stress, 0, STRESS.max);
   gainXp(run, f, MEDITATION.xp);
   log(run, `${f.name} meditates in the Rock Garden.`, 'good');
@@ -398,7 +399,7 @@ export function reanimate(run, id) {
   body.raised = true;
   run.gold -= reanimatePrice(run);
   const f = structuredClone(body);
-  for (const key of ['diedWeek', 'arena', 'raised', 'bond', 'political', 'record', 'mood', 'nemesisOf', 'spy', 'body', 'want', 'resume', 'notice']) delete f[key];
+  for (const key of ['diedWeek', 'arena', 'raised', 'bond', 'political', 'record', 'mood', 'nemesisOf', 'spy', 'body', 'want', 'resume', 'notice', 'mole', 'humourDrift']) delete f[key]; // 7.4.1: a raised mole or mid-drift death starts clean
   const lost = maxLevel(run, 'vulcan') >= 2 ? 0 : REANIMATE.power;
   Object.assign(f, {
     id: newId(run, 'f'), kind: 'revenant', kindTrait: pick(run.rng.growth, KINDS.revenant.traits), alive: true, injuries: [],

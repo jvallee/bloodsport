@@ -295,3 +295,42 @@ test('a bad drift target in a save does not break the room panel', async () => {
   f.humourDrift = { to: 'bogus', weeks: 2 };
   assert.match(temperLine(f), /Choleric/);
 });
+
+// 7.4.1 review fixes.
+test('a tie during a drift shows it paused, not still turning', async () => {
+  const { temperLine } = await import('../src/ui/views.js');
+  const { f } = fighter(70, 'choleric');
+  f.humourDrift = { to: 'melancholic', weeks: 2 };
+  f.decor.spikyBed = 1;
+  f.decor.rockGarden = 1;
+  const line = temperLine(f);
+  assert.match(line, /Temperament tied: drift paused \(2\/4 weeks\)/);
+  assert.doesNotMatch(line, /Turning/);
+});
+
+test('a Revenant feels nothing: no drift, no meditation, and the room says so', async () => {
+  const { temperNote } = await import('../src/ui/views.js');
+  const { run, f } = fighter(71, 'choleric');
+  f.kind = 'revenant';
+  f.decor.spikyBed = 1;
+  for (let i = 0; i < HUMOUR_DRIFT.weeks + 1; i++) driftHumour(run, f);
+  assert.equal(f.humor, 'choleric');
+  assert.equal(f.humourDrift, undefined);
+  f.decor.rockGarden = 1;
+  f.job = 'rest';
+  f.stress = 50;
+  meditate(run, f);
+  assert.equal(f.stress, 50);
+  assert.match(temperNote(f, 'spikyBed'), /Revenant/);
+});
+
+test('a fight that gives Battle-Hardened and a scar reports both', () => {
+  let both = null;
+  for (let seed = 200; seed < 260 && !both; seed++) {
+    const { run, f } = fighter(seed, 'sanguine');
+    const s = winWith(run, f, [{ tag: 'concussed', weight: 1 }, { tag: 'fleshWound', weight: 1 }]);
+    if ((f.scars ?? []).some((x) => x.vs)) both = s;
+  }
+  assert.ok(both, 'some seed scarred them');
+  assert.match(both.scar, /^Battle-Hardened, (Enraged|Afeared) \((melee|ranged)\)$/);
+});

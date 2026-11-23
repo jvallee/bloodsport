@@ -5,7 +5,7 @@
 //          freshly fallen fighter at the Unnatural Temple of Vulcan (building it then, if it must).
 // reckless: trains one star nonstop, heals only with the Surgeon, fights only the top arena, always Presses, never towels.
 
-import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE, FORTUNE, ESPIONAGE } from '../src/data.js';
+import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE, FORTUNE, ESPIONAGE, decorComfort } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
 import { isMonthStart, isWinter, weeksUntilWinter } from '../src/calendar.js';
 import { coupBonus } from '../src/plot.js';
@@ -185,7 +185,7 @@ function keepHappy(run, reserve = 6) {
   // Place decor where Morale is heading below Inspired, preferring decor that also helps in combat.
   for (const f of run.roster) {
     for (let guard = 0; guard < 6 && moraleTarget(run, f).target < MORALE.inspired; guard++) {
-      const item = Object.keys(DECOR).find((k) => DECOR[k].helps(f) && f.decor[k] < decorCap(run)) ?? Object.keys(DECOR).find((k) => f.decor[k] < decorCap(run));
+      const item = Object.keys(DECOR).find((k) => DECOR[k].helps(f) && f.decor[k] < decorCap(run)) ?? Object.keys(DECOR).find((k) => decorComfort(DECOR[k]) > 0 && !DECOR[k].humor && f.decor[k] < decorCap(run)); // for Morale: comfort, no change of temper
       if (!item) break;
       if (!run.inventory.decor[item]) {
         if (buyDecorBlocker(run, item) || run.gold - DECOR[item].price < reserve) break;

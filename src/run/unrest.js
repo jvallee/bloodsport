@@ -120,7 +120,14 @@ export function resolveRevolt(run, how, ev, out) {
     run.palatineUsed = true;
     run.plot.trust = Math.max(0, run.plot.trust + UNREST.palatineTrust);
     changeSuspicion(run, UNREST.palatineSuspicion);
-    if (leader) {
+    if (leader?.mole?.master === 'palace' && !leader.mole.exposed) {
+      // A palace mole at the head of the revolt runs straight to the palace with it.
+      leader.mole.exposed = true;
+      changeSuspicion(run, UNREST.moleTip);
+      chronicle(run, leader, 'Led a revolt in the barracks, then sold it to the palace: they were its mole all along.');
+      log(run, `${leader.name} was the palace's mole: the Palatine hears of the cause before nightfall.`, 'bad');
+      out.push(`${leader.name} runs to the palace: they were its mole`);
+    } else if (leader) {
       run.plot.champion = leader.id;
       chronicle(run, leader, 'Led a revolt in the barracks, and turned it toward the Palatine.');
       out.push(`${leader.name} joins the cause`);

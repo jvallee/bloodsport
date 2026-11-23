@@ -580,6 +580,7 @@ const decorByGroup = (render) => DECOR_GROUPS.map(([g, label]) => {
 export function temperNote(f, k) {
   const to = DECOR[k].humor;
   if (!to) return '';
+  if (f.kind === 'revenant') return 'A Revenant feels nothing: their temper never changes.';
   if (to === f.humor) return `Already ${HUMORS[to].name}: keeps them so.`;
   const drift = f.humourDrift?.to === to ? f.humourDrift.weeks : 0;
   return `Would make them ${HUMORS[to].name} after ${HUMOUR_DRIFT.weeks} weeks as the room's main Temperament piece${drift ? ` (${drift}/${HUMOUR_DRIFT.weeks} so far)` : ''}.`;
@@ -589,6 +590,7 @@ export function temperNote(f, k) {
 export function temperLine(f) {
   const dom = dominantTemperament(f);
   const now = f.humor ? `Temper: <b>${HUMORS[f.humor].name}</b>.` : '';
+  if (dom?.tied && f.humourDrift) return `${now} Temperament tied: drift paused (${f.humourDrift.weeks}/${HUMOUR_DRIFT.weeks} weeks).`;
   if (f.humourDrift && HUMORS[f.humourDrift.to]) return `${now} Turning <b>${HUMORS[f.humourDrift.to].name}</b>: ${f.humourDrift.weeks}/${HUMOUR_DRIFT.weeks} weeks.`;
   if (dom?.tied) return `${now} Temperament tied: no piece leads, so their temper holds.`;
   return now;
