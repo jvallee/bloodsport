@@ -398,7 +398,7 @@ export function reanimate(run, id) {
   body.raised = true;
   run.gold -= reanimatePrice(run);
   const f = structuredClone(body);
-  for (const key of ['diedWeek', 'arena', 'raised', 'bond', 'political', 'record', 'mood', 'nemesisOf', 'spy', 'body', 'want', 'resume', 'notice']) delete f[key];
+  for (const key of ['diedWeek', 'arena', 'raised', 'bond', 'political', 'record', 'mood', 'nemesisOf', 'spy', 'body', 'want', 'resume', 'notice', 'mole', 'humourDrift']) delete f[key]; // 7.4.1: a raised mole or mid-drift death starts clean
   const lost = maxLevel(run, 'vulcan') >= 2 ? 0 : REANIMATE.power;
   Object.assign(f, {
     id: newId(run, 'f'), kind: 'revenant', kindTrait: pick(run.rng.growth, KINDS.revenant.traits), alive: true, injuries: [],

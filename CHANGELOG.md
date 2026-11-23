@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.4.1): fixes
 
+- **The Temple of Vulcan:** raising an executed mole no longer brings back a spy, and a fighter who died partway through a change of temper rises without it.
 - **Steal the Playbook without an Oracle:** you now get the exact Round 1 tactic and no tell after it (it showed a false tell at "about 0%" in later rounds, and the suggested tactic followed it).
 
 ## 7.4.0 (2026-11-23): blood, unrest and knives in the dark (7.2–7.4)

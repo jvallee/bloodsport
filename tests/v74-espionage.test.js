@@ -309,3 +309,21 @@ test('a stolen playbook without an Oracle: an exact tell in Round 1, none after 
     assert.equal(opponentIntent(m, 2).tell, null, 'Round 2: no tell');
   }
 });
+
+test('raising an executed mole brings back a Revenant, not a mole; a mid-drift death leaves no stale drift', async () => {
+  const { reanimate, buildRoom } = await import('../src/run.js');
+  const { run, fs: [a, b] } = house(60);
+  run.gold = 200;
+  run.prestige = 200;
+  run.prestigeLevel = 5;
+  run.buildings.push({ id: 'bv', type: 'vulcan', level: 1 });
+  a.mole = { master: run.houses[0].id, since: 1, clues: 1 };
+  a.humourDrift = { to: 'sanguine', weeks: 2 };
+  espState(run).clues = [{ week: 1, text: 'x' }];
+  investigate(run, a.id);
+  chooseEvent(run, 0); // execute; the body is kept
+  const r = reanimate(run, a.id);
+  assert.equal(r.mole, undefined);
+  assert.equal(r.humourDrift, undefined);
+  assert.equal(moleOf(run), null);
+});
