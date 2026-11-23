@@ -1,0 +1,53 @@
+# Tags releases on GitHub's side, so tags never depend on who pushed.
+# - On every push to main: tags the commit v<VERSION> (from src/version.js) if that tag doesn't exist yet.
+# - By hand (Actions tab -> "Tag a release" -> Run workflow): tags any commit, e.g. v7.0 on 246f573.
+name: Tag a release
+
+on:
+  push:
+    branches: [main]
+    paths: [src/version.js]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name, e.g. v7.0'
+        required: true
+      ref:
+        description: 'Commit or branch to tag'
+        required: true
+        default: main
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create the tag if it is new
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          INPUT_REF: ${{ github.event.inputs.ref }}
+        run: |
+          set -eu
+          if [ -n "${INPUT_TAG:-}" ]; then
+            tag="$INPUT_TAG"
+            ref="$INPUT_REF"
+          else
+            version=$(sed -n "s/.*VERSION = '\([^']*\)'.*/\1/p" src/version.js)
+            [ -n "$version" ] || { echo "No VERSION in src/version.js"; exit 1; }
+            tag="v$version"
+            ref="$GITHUB_SHA"
+          fi
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists; nothing to do."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" "$ref" -m "Blood and Circus $tag"
+          git push origin "refs/tags/$tag"
+          echo "Tagged $ref as $tag."

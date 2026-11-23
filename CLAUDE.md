@@ -46,3 +46,4 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - Current plan: `docs/roadmap-v2.md`. Deferred features stay deferred unless asked.
 - `v1/` to `v6/` are frozen playable archives (`v1.0`, `v2.2`, `v3.0`, `v4.0`, `v5.4.3`, `v6.0.5`) with isolated `localStorage` keys (`bloodsport.v6.*`, etc.). Don't edit them unless the user asks.
 - Check that the site works when opened from GitHub Pages (relative paths only, no absolute `/` links).
+- Tags are made by GitHub, not pushed: `.github/workflows/tag-release.yml` tags `main` as `v<VERSION>` whenever `src/version.js` changes, and can tag any commit by hand from the Actions tab (Claude sessions can push branches but not tags).
