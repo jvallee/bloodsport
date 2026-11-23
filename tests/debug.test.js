@@ -22,6 +22,8 @@ function playCareer(seed, { months = 4, reloadMidFight = false } = {}) {
       act('fortune-pass');
       act('advance-tournament');
     }
+    // A fighter lost in the arena is replaced, as a player would (7.2: seed 7's first fighter dies in their second fight).
+    if (!state.run.roster.length && state.run.market[0]) act('recruit', { id: state.run.market[0].id });
     const f = state.run.roster.find((x) => x.alive);
     if (!f || !state.run.boutPending) break;
     act('fight', { id: f.id, tier: state.run.topTier });
@@ -41,7 +43,7 @@ function playCareer(seed, { months = 4, reloadMidFight = false } = {}) {
 }
 
 test('a recorded career replays exactly from its seed', () => {
-  const played = playCareer(2, { months: 5 }); // 7.2: seed 7's lone fighter now dies in their second fight
+  const played = playCareer(7, { months: 5 });
   assert.ok(played.run.actions.length > 10);
   assert.ok(played.run.history.length >= 3, 'fights happened');
   const report = parseReport(JSON.stringify(buildReport(played.run, played.match)));

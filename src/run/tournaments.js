@@ -255,7 +255,7 @@ export function useItem(run, match, key) {
 const betOddsCache = new WeakMap();
 export function betOdds(run, match) {
   const tier = match.bout?.tier ?? run.matchInfo?.tier ?? run.topTier;
-  const opts = { ...matchOptions(run, match.a.f, tier), useSignatures: false, n: 400, seed: 777 };
+  const opts = { ...matchOptions(run, match.a.f, tier), useSignatures: false, n: 400, seed: 777, boostsA: match.a.boosts ?? null, boostsB: match.b.boosts ?? null, vengeanceB: Boolean(match.b.vengeance) };
   const key = JSON.stringify([match.a.f, match.b.f, opts]);
   const hit = betOddsCache.get(match);
   if (hit?.key === key) return hit.odds;

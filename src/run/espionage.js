@@ -28,8 +28,18 @@ export function espionageWeek(run) {
   }
   if (!moleOf(run)) flipMutineer(run);
   const mole = moleOf(run);
-  if (!mole) return;
-  mole.mole.since ??= run.week; // a planted mole starts counting the week they join
+  if (!mole) {
+    // The mole is gone (died, released, retired): the whispers stop, and an old suspect list would mislead.
+    if (st.clues.length || st.suspects) log(run, 'The whispers in the house have stopped.', 'event');
+    st.clues = [];
+    st.suspects = null;
+    return;
+  }
+  if (mole.mole.since == null) { // a planted mole starts counting the week they join; a new mole, a new trail
+    mole.mole.since = run.week;
+    st.clues = [];
+    st.suspects = null;
+  }
   if (run.week <= mole.mole.since) return; // never acts in their first week
   const r = espRng(run);
   if (next(r) < ESPIONAGE.clue) {
@@ -60,6 +70,8 @@ function flipMutineer(run) {
   for (const f of run.roster.filter((x) => isMutinous(x) && !x.mole && !x.spy)) {
     if (next(espRng(run)) < ESPIONAGE.flip) {
       f.mole = { master, since: run.week, clues: 0 };
+      espState(run).clues = [];
+      espState(run).suspects = null;
       return;
     }
   }
@@ -91,7 +103,7 @@ export function investigate(run, id) {
   const f = findFighter(run, id);
   run.gold -= ESPIONAGE.investigate;
   if (f.mole && !f.mole.exposed) {
-    run.event = { id: 'moleUnmasked', f: f.id, house: masterName(run, f.mole.master) };
+    run.event = { id: 'moleUnmasked', f: f.id, house: masterName(run, f.mole.master), palace: f.mole.master === 'palace' };
     log(run, `${f.name} is unmasked: they report to ${masterName(run, f.mole.master)}.`, 'event');
     return true;
   }

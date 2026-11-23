@@ -163,3 +163,34 @@ test('save version 6: a version-5 career loads with no unrest', () => {
   assert.equal(loaded.unrest, 0);
   assert.deepEqual(loaded.unrestStats, { incidents: 0, crises: 0 });
 });
+
+// Review fixes (7.2–7.4 review).
+test('the crisis opens only while someone is still Mutinous', () => {
+  const { run, fs: [a] } = house(30, 1);
+  run.unrest = UNREST.threshold + 2;
+  run.unrestWarned = run.week - 1;
+  a.morale = 60; // calmed in time
+  unrestWeek(run);
+  assert.equal(run.event, null);
+});
+
+test('The Chains Break is never replaced by a random event in the same week', async () => {
+  const { EVENT_CHANCE } = await import('../src/events.js');
+  const saved = { ...EVENT_CHANCE };
+  EVENT_CHANCE.season = 1;
+  EVENT_CHANCE.winter = 1;
+  try {
+    const { run, fs: [a, b] } = house(31, 2);
+    a.morale = 0;
+    a.renown = 99;
+    run.unrest = UNREST.threshold;
+    run.unrestWarned = run.week - 1;
+    run.boutPending = false;
+    run.bouts = null;
+    run.fortune = null;
+    advanceWeek(run);
+    assert.equal(run.event?.id, 'chainsBreak');
+  } finally {
+    Object.assign(EVENT_CHANCE, saved);
+  }
+});

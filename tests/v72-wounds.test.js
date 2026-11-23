@@ -72,9 +72,10 @@ test('Blinding Powder: a hard hit Blinds, a light one only Distracts; a Cyborg E
   const powder = [item('blindingPowder')];
   assert.equal(strike(blank(), { roll: 55, steer: [1], boosts: powder }).inj.tag, 'blinded');
   assert.equal(strike(blank(), { roll: 30, steer: [1], boosts: powder }).inj.tag, 'distracted');
+  // Review fix: the powder doesn't aim at a Cyborg Eye at all, so the wound stays as rolled (it can't backfire).
   const eye = strike(blank(), { roll: 55, steer: [1], boosts: powder, b: blank({ id: 'b', augments: ['eye'] }) }).inj;
-  assert.equal(eye.tag, 'fleshWound');
-  assert.equal(eye.deflected, 'Cyborg Eye');
+  assert.equal(eye.tag, 'concussed');
+  assert.equal(eye.steered, undefined);
 });
 
 test('Cyborg Arm: a blow that would Maim becomes a Flesh Wound', () => {
@@ -157,4 +158,17 @@ test('a Rest week heals half a week of Bleeding, like a Flesh Wound', async () =
   f.injuries = [{ tag: 'bleeding', weight: 1, weeksLeft: 1 }];
   advanceWeek(run);
   assert.equal(f.injuries[0]?.weeksLeft, 0.5);
+});
+
+// Review fixes (7.2–7.4 review).
+test('a style never makes a heavy wound lighter: a Dagger leaves Poison as Poison', () => {
+  const r = strike(blank({ cls: 'fighter', weapon: 'dagger' }), { roll: 70, steer: [1] });
+  assert.equal(r.inj.tag, 'poisoned');
+  assert.equal(strike(blank(), { roll: 70, steer: [1], boosts: [item('bloodThinner')] }).inj.tag, 'poisoned', 'Blood Thinner too');
+});
+
+test('a style never aims at a part the defender\'s cyborg augment would turn aside', () => {
+  const r = strike(blank({ cls: 'fighter', weapon: 'axe' }), { roll: 46, steer: [1], b: blank({ id: 'b', augments: ['arm'] }) });
+  assert.equal(r.inj.tag, 'poisoned', 'no Maim to deflect: the Poison lands');
+  assert.equal(r.inj.deflected, undefined);
 });

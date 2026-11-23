@@ -89,7 +89,8 @@ export function unrestWeek(run) {
     log(run, `The barracks seethe: unrest ${run.unrest}/${UNREST.threshold}. Calm your Mutinous fighters, or the chains will break.`, 'bad');
     return;
   }
-  if (run.unrest >= UNREST.threshold && run.unrestWarned < run.week && !run.event && run.status === 'active') openCrisis(run);
+  // The chains break only while someone is still Mutinous (calming them all in time averts it, as the warning says).
+  if (run.unrest >= UNREST.threshold && run.unrestWarned < run.week && mutineers.length && !run.event && run.status === 'active') openCrisis(run);
 }
 
 export function openCrisis(run) {

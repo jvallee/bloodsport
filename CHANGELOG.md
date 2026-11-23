@@ -4,6 +4,15 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased
 
+- **Bleeding:** a new wound between a Flesh Wound and a Concussion. It counts as one injury and makes a fighter easier to hit (+10%, or +5% while Guarding) until it heals. A Blessed Bandage staunches it for the fight, and Blood Drinkers can drink it.
+- **Every weapon has a signature wound:** Daggers and blades make wounds bleed, Clubs and Cestus fighters Concuss, Axes and Flails Maim, Bows Blind. A style only changes *which* wound lands, never makes it heavier on the Death Gate. The fight report says when a style turned a wound.
+- **New fight items:** Blood Thinner (light wounds bleed) and Blinding Powder (a hard hit Blinds). Viper Venom now turns wounds to Poison, and a hard hit can make a lighter wound Poisoned.
+- **New Arena Craft decor:** the Viper Terrarium (Poison; soothing for Ash-Hungry and Vampire fighters) and the Whetstone Rack (bladed fighters make wounds bleed).
+- **The Cyborg Arm** now turns a Maiming blow into a Flesh Wound, like the Cyborg Eye does for blinding.
+- **Unrest replaces the old revolt:** each Mutinous fighter stirs up the barracks (Choleric fighters, convicts, champions and Skull Racks make it worse) and may start a brawl, steal from the strongbox or try to escape. The top bar shows Unrest when there is any. You're warned at 5; at 8, **The Chains Break**: pay to calm them, send in the guards (the card shows both sides' Power: lose, and the Ludus falls), or, if you're with the rebels, turn their fury on the Palatine. Calm every Mutinous fighter in time and it never comes to that.
+- **Moles:** a feuding house (or a suspicious palace) can buy an unhappy fighter, and sometimes a cheap Market fighter is a rival's plant (their card says something is off). They leave clues; investigate a fighter to unmask them, then execute, turn or ransom them. An Oracle Lv 2 or the Whispering Gallery narrows the suspects to two.
+- **Covert ops:** with a Liaison or the Whispering Gallery, once a month before fight day, work against your next opponent: steal their playbook, doctor their wine, or bribe their armourer. Get caught and it costs Favour, or a feud.
+- **Fairer bets:** the bookmakers now price items you've already used and any dirty work done to the opponent.
 - **Fixes to the new decor:** the Iron Rules Boss debuff now switches off the Spiky Bed and Skull Rack too, as it says ("room decor gives no bonus"); the Spiky Bed only counts wounds taken in that fight, not old ones still healing; taking a piece out of a room ends its change of temper straight away; the fear help text mentions the Rock Garden.
 
 ## 7.1.0 (2026-11-23): living quarters

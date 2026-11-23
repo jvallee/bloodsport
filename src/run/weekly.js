@@ -267,7 +267,8 @@ export function advanceWeek(run) {
   checkQuests(run);
   checkLoss(run);
   if (monthStart && run.status === 'active') fortuneMonth(run);
-  if (run.status === 'active') {
+  // An event opened this week (The Chains Break) is never replaced by a random event or a plot card.
+  if (run.status === 'active' && !run.event) {
     const recentBefore = run.recentEvents;
     const eventMonthBefore = run.eventMonth;
     rollEvent(run);

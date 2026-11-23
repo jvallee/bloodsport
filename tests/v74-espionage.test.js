@@ -5,7 +5,7 @@ import { ESPIONAGE, HOUSES } from '../src/data.js';
 import {
   createRun, recruit, advanceWeek, chooseEvent, espState, moleOf, espionageWeek, plantMole, investigate,
   investigateBlocker, covertOp, covertOpBlocker, opTarget, recruitPrice, advanceToTournament, startMatch, choosePerk,
-  buildRoom, SAVE_VERSION, serialize, deserialize,
+  buildRoom, SAVE_VERSION, serialize, deserialize, eventChoiceBlocker,
 } from '../src/run.js';
 import { computePower, computePhase2, opponentTell } from '../src/fight.js';
 import { isTournamentWeek } from '../src/calendar.js';
@@ -237,4 +237,36 @@ test('UI: whispers, suspects, covert ops; the investigate button; a planted mole
   assert.match(ludusTab(run, () => ({ win: 0.5, injury: 0.2, death: 0 })), /data-action="investigate"/);
   run.market[0].mole = { master: run.houses[0].id, since: null, clues: 0, tell: 'suspiciously cheap for their Power', cut: 2 };
   assert.match(marketTab(run), /Something is off[^]*suspiciously cheap for their Power/);
+});
+
+// Review fixes (7.2–7.4 review).
+test('when the mole is gone, the whispers stop and the suspects are cleared', () => {
+  const { run, fs: [a] } = house(40);
+  quietWeek(run);
+  espState(run).clues = [{ week: 1, text: 'x' }];
+  espState(run).suspects = [a.id, 'gone'];
+  espionageWeek(run); // no mole in the house
+  assert.deepEqual(espState(run).clues, []);
+  assert.equal(espState(run).suspects, null);
+});
+
+test('a palace mole cannot be "turned" (the palace sends no fighters to fool)', () => {
+  const { run, fs: [a] } = house(41);
+  a.mole = { master: 'palace', since: 1, clues: 1 };
+  espState(run).clues = [{ week: 1, text: 'x' }];
+  investigate(run, a.id);
+  assert.match(eventChoiceBlocker(run, 1), /palace/);
+  assert.equal(eventChoiceBlocker(run, 0), null);
+});
+
+test('bets are priced on the real fight: stolen plans and doctored wine move the odds', async () => {
+  const { betOdds } = await import('../src/run.js');
+  const { run, fs: [a] } = house(42, 1);
+  perks(run);
+  advanceToTournament(run);
+  perks(run);
+  const m = startMatch(run, a.id, run.topTier);
+  const fair = betOdds(run, m);
+  m.b.boosts = [1, 2, 3].map((round) => ({ power: -3, round, name: 'Doctored wine' }));
+  assert.ok(betOdds(run, m) < fair, 'a weakened opponent pays less');
 });

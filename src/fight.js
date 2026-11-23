@@ -393,12 +393,16 @@ export function affinitySources(X, round, score) {
   return out;
 }
 
-// The first source whose roll succeeds turns the wound; a source only rolls if it could change it. Never death.
-function steerWound(m, X, sev, round) {
+// The first source whose roll succeeds turns the wound; a source only rolls if it could change it. Never death. A style
+// never makes a wound lighter (except Blinding Powder on a light hit, by design), and never aims at a part the defender's
+// cyborg augment would turn aside.
+const DEFLECTED = { blinded: 'eye', maimed: 'arm' };
+function steerWound(m, X, Y, sev, round) {
   const base = sev.injury;
   for (const src of affinitySources(X, round, sev.score)) {
     const reach = Object.entries(WOUND_STYLES[src.style] ?? {}).map(([wt, tag]) => [Number(wt), tag])
-      .filter(([wt, tag]) => tag !== base.tag && wt <= base.weight + src.upWeight).sort((a, b) => b[0] - a[0]);
+      .filter(([wt, tag]) => tag !== base.tag && wt <= base.weight + src.upWeight && (wt >= base.weight || (src.style === 'blindPowder' && src.upWeight === 0))
+        && !(DEFLECTED[tag] && Y.f.augments?.includes(DEFLECTED[tag]))).sort((a, b) => b[0] - a[0]);
     if (!reach.length) continue;
     if (rollE5(m.rng) <= src.chance) return { tag: reach[0][1], source: src.source };
   }
@@ -417,7 +421,7 @@ function inflictInjury(m, X, Y, r) {
     Y.f.alive = false;
     return result;
   }
-  const steer = steerWound(m, X, sev, r.round);
+  const steer = steerWound(m, X, Y, sev, r.round);
   if (steer) {
     result.steered = { from: sev.injury.name, source: steer.source };
     sev.injury = INJURY_BY_TAG[steer.tag];

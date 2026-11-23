@@ -203,7 +203,7 @@ export const EVENTS = [
     text: ({ f, house }) => `${f} confesses: every week they have been sending word to ${house}. The house waits to see what you do.`,
     choices: [
       { label: 'Execute them in the yard', effects: { mole: 'execute' } },
-      { label: 'Turn them: feed ${house} a false playbook (4 Gold)', cost: 4, effects: { mole: 'turn' } },
+      { label: 'Turn them: feed ${house} a false playbook (4 Gold)', cost: 4, needs: (run, ev) => (ev.palace ? 'The palace sends no fighters to fool.' : null), effects: { mole: 'turn' } },
       { label: 'Ransom them back to ${house} (+8 Gold)', effects: { mole: 'ransom' } },
     ],
   },
