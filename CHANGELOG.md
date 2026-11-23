@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## Unreleased (7.4.1): fixes
+## 7.4.1 (2026-11-23): fixes
 
 - **The Chains Break:** if the ringleader is secretly the palace's mole, turning the revolt on the Palatine now backfires: they run to the palace, are unmasked, and the palace grows more suspicious (they used to join the rebels' cause).
 - **After a fight:** a fighter who becomes Battle-Hardened and takes a scar in the same fight now shows both (the scar hid Battle-Hardened).

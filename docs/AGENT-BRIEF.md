@@ -8,7 +8,7 @@ Written 2026-11-23 at the end of a cloud session. Read this first, then `CLAUDE.
 A turn-based gladiator-house management roguelike: plain HTML/CSS/JS ES modules, no build step, no dependencies, served
 as-is by GitHub Pages from `main`.
 
-- Repo: `github.com/jvallee/bloodsport`. Live game: https://jvallee.github.io/bloodsport/ (version **7.4.0**).
+- Repo: `github.com/jvallee/bloodsport`. Live game: https://jvallee.github.io/bloodsport/ (version **7.4.1**).
 - Frozen older versions: `/v1/` … `/v6/` (don't edit them).
 - Node 20+ is all you need. `npm test` (about 15 s), `npm run serve` (play at http://localhost:8000), `npm run check`
   (balance gates, about 12 min on 4 cores; run it in the background).
@@ -17,8 +17,8 @@ as-is by GitHub Pages from `main`.
 
 | Branch | State |
 |---|---|
-| `main` | 7.4.0, live. Tags `v7.0` and `v7.4` exist. |
-| `v7.4.1` | **In progress**: 9 review fixes, each with a test, all 750 tests passing. Not merged yet. |
+| `main` | **7.4.1, live** (released at the end of the cloud session; all 22 gates passed). Tags `v7.0`, `v7.4`, and `v7.4.1` from the Action. |
+| `v7.4.1` | Merged into `main`; can be deleted. |
 | `v7.0.0`, `v7.1.0`, `v7.2.0` | Old release branches, all fully merged into `main`. The designer agreed to delete them; the cloud session wasn't allowed to. |
 
 ### The 7.4.1 fixes already on `v7.4.1` (one commit each)
@@ -33,19 +33,19 @@ as-is by GitHub Pages from `main`.
 
 `CHANGELOG.md` has them under "Unreleased (7.4.1)"; `docs/fight-rules.md` has a "7.4.1 fixes" section.
 
-## 3. What to do next (in order)
+## 3. How 7.4.1 was released (already done; the same steps for the next release)
 
 1. `git fetch origin && git checkout v7.4.1`
 2. `npm test` (expect 750 passing) and `node scripts/text-index.js --check` (expect exit 0; the "Changed?" lines about
    `src/quests.js`, `src/dialogue.js` and `src/ui/fightView.js:1…` are old and harmless).
-3. `npm run check` (in the background). **All 22 gates must pass.** The cloud session started this run but didn't see the
-   result. If a gate fails, don't guess: sweep the lever and show the designer a table (see §5).
+3. `npm run check` (in the background). **All 22 gates must pass.** If a gate fails, don't guess: sweep the lever and
+   show the designer a table (see §5).
 4. Record the gate numbers in `docs/roadmap-v2.md` (a "v7.4.1" section like the "v7.4.0" one above it).
 5. Release: set `src/version.js` and `package.json` to `7.4.1`; rename the CHANGELOG heading to
    `## 7.4.1 (date): fixes`; commit; merge into `main` (`git merge --no-ff v7.4.1`); push `main`.
    The GitHub Action `.github/workflows/tag-release.yml` then tags `v7.4.1` by itself.
 6. Check the live site loads: https://jvallee.github.io/bloodsport/ (no console errors, careers load).
-7. Delete the merged branches: `git push origin --delete v7.0.0 v7.1.0 v7.2.0 v7.4.1` (on the designer's machine this
+7. **Still to do:** delete the merged branches: `git push origin --delete v7.0.0 v7.1.0 v7.2.0 v7.4.1` (on the designer's machine this
    uses their own GitHub login, so it should work).
 
 ## 4. Open items after 7.4.1 (ask the designer before starting any)

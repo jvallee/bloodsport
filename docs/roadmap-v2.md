@@ -273,3 +273,8 @@ Heat 1 / Heat 3, 150 careers): as built 37 / 18 / 19; no moles 44 / 21 / 17; no 
 mutineers 37 / 18 / 19; plant 8% 39 / 17 / 19; act 15% 35 / 17 / 17; purses ×1.7 38 / 23 / 18. The designer accepted the
 lower win rate (floor 35%). Heat 3 sets: Lean + Lions 19%, Lean + Greedy 23%, Lean + Iron 17%, Lean + Lions at +2 8%,
 **Greedy + Lions 14%** (chosen).
+
+### v7.4.1 (`npm run check`, 300 careers): 22/22
+
+Review fixes only. First career 24%, reckless 3%, full Legacy 37% (Heat 1 18%, Heat 3 14%), loyalist 39%, a won season
+15.3 fight months, Boss win per attempt 91 · 67 · 38 · 19 · 26%: the same as 7.4.0 within a point.
