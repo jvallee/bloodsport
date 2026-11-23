@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.4.1): fixes
 
+- **The Chains Break:** if the ringleader is secretly the palace's mole, turning the revolt on the Palatine now backfires: they run to the palace, are unmasked, and the palace grows more suspicious (they used to join the rebels' cause).
 - **After a fight:** a fighter who becomes Battle-Hardened and takes a scar in the same fight now shows both (the scar hid Battle-Hardened).
 - **Fight report:** against a fighter with a Cyborg Arm or Eye, a weapon's signature wound is described from the Flesh Wound it would have been (it said "turned a Maimed into Bleeding").
 - **Temperament:** a tie between two pieces now shows the change of temper as paused (it still said "Turning"); a Revenant's temper never changes and they don't meditate, as the room already said, and the decor now says so too.

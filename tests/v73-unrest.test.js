@@ -194,3 +194,19 @@ test('The Chains Break is never replaced by a random event in the same week', as
     Object.assign(EVENT_CHANCE, saved);
   }
 });
+
+// 7.4.1 review fix.
+test('The Chains Break: a palace mole leading the revolt tips off the palace instead of joining the cause', () => {
+  const { run, fs } = house(80, 2);
+  fs[0].morale = 0;
+  fs[0].mole = { master: 'palace', since: 1, clues: 0 };
+  run.unrest = UNREST.threshold;
+  run.plot = { stage: 'cause', trust: 3, suspicion: 10, refusals: 0, seen: [], cells: [], champion: null, freed: [], nextAt: 99, ended: null };
+  openCrisis(run);
+  assert.equal(eventChoiceBlocker(run, 2), null, 'nothing gives the mole away beforehand');
+  chooseEvent(run, 2);
+  assert.equal(run.plot.champion, null);
+  assert.ok(fs[0].mole.exposed, 'unmasked');
+  assert.equal(run.plot.suspicion, 10 + UNREST.palatineSuspicion + UNREST.moleTip);
+  assert.equal(run.unrest, 0, 'the barracks still calm');
+});
