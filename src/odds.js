@@ -11,7 +11,7 @@ export function estimateOdds(fighter, opponent, { debuff = null, overtrained = f
   let hurt = 0;
   let death = 0;
   for (let i = 0; i < n; i++) {
-    const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger, festival, grudge, vengeance, boss, earlyRound, rebels, relics, oracle });
+    const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger, festival, grudge, vengeance, boss, earlyRound, rebels, relics, oracle, fast: true });
     autoPlay(m, (match) => {
       if (useSignatures && !signatureBlocker(match) && (match.a.roundsWon < match.b.roundsWon || match.round >= 1)) {
         useSignature(match);

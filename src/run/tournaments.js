@@ -244,10 +244,18 @@ export function useItem(run, match, key) {
   log(run, `${match.a.f.name} uses ${item.name}.`, 'event');
 }
 
+// Bet odds are asked for several times before Round 1 (bot, blocker, bet); cache them per match, keyed by their inputs.
+const betOddsCache = new WeakMap();
 export function betOdds(run, match) {
   const tier = match.bout?.tier ?? run.matchInfo?.tier ?? run.topTier;
-  const { win } = estimateOdds(match.a.f, match.b.f, { ...matchOptions(run, match.a.f, tier), useSignatures: false, n: 400, seed: 777 });
-  return Math.min(BET.maxOdds, BET.cut / Math.max(0.01, win));
+  const opts = { ...matchOptions(run, match.a.f, tier), useSignatures: false, n: 400, seed: 777 };
+  const key = JSON.stringify([match.a.f, match.b.f, opts]);
+  const hit = betOddsCache.get(match);
+  if (hit?.key === key) return hit.odds;
+  const { win } = estimateOdds(match.a.f, match.b.f, opts);
+  const odds = Math.min(BET.maxOdds, BET.cut / Math.max(0.01, win));
+  betOddsCache.set(match, { key, odds });
+  return odds;
 }
 
 export const betCap = (run, match) => BET.perTier * Math.min(match.bout?.tier ?? run.matchInfo?.tier ?? run.topTier, CIRCUITS.length);

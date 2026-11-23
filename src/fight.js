@@ -34,12 +34,22 @@ export const gearOf = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).map
 // Stripped of Armour switches off the armour piece entirely.
 const gearFor = (c) => (c.arena === 'noArmor' ? [c.f.gear?.weapon].filter(Boolean).map((k) => GEAR[k]) : gearOf(c.f));
 
+// Deep copy of plain data (fighters are JSON-like); much faster than structuredClone in odds simulations.
+export function cloneData(v) {
+  if (v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) return v.map(cloneData);
+  if (Object.getPrototypeOf(v) !== Object.prototype) return structuredClone(v);
+  const out = {};
+  for (const k of Object.keys(v)) out[k] = cloneData(v[k]);
+  return out;
+}
+
 // `arena` is the Boss debuff affecting this fighter (see BOSS_DEBUFFS in data.js).
 export function makeCombatant(fighter, side, arena = null) {
   return {
     side,
     arena,
-    f: structuredClone(fighter),
+    f: cloneData(fighter),
     disabled: [], // 'kind' | 'class', for the rest of the match (Distracted, Maimed)
     classDisabledRound: null, // Fists disarm
     analyzed: 0, // Quantum Analyzer stacks
@@ -459,12 +469,13 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
 
 const BOTH_SIDES = ['bloodMoon', 'crowdFavorite', 'lions', 'emperorsGaze'];
 
-export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, oracle = 0 }) {
+export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, oracle = 0, fast = false }) {
   const m = {
     a: makeCombatant(a, 'A', debuff),
     b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
     rng, debuff, boss, earlyRound, round: 0, rounds: [], over: false, result: null, preMatch: [],
   };
+  if (fast) m.fast = true; // odds simulations: skip the UI-only pre-round snapshot
   if (festival) {
     m.festival = festival;
     m.a.festival = m.b.festival = FESTIVAL_BY_ID[festival];
@@ -567,7 +578,7 @@ export function playRound(m, { stance = 'steady' } = {}) {
   const round = (m.round += 1);
   const { a: A, b: B, rng } = m;
   const r = { round, checks: [], endEffects: [] };
-  r.before = {
+  if (!m.fast) r.before = {
     a: { alive: A.f.alive, injuries: structuredClone(A.f.injuries), disabled: [...A.disabled], roundsWon: A.roundsWon, power: computePower(A, B, round), speed: computeSpeed(A, round).total },
     b: { alive: B.f.alive, injuries: structuredClone(B.f.injuries), disabled: [...B.disabled], roundsWon: B.roundsWon, power: computePower(B, A, round), speed: computeSpeed(B, round).total },
   };

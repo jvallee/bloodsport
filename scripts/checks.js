@@ -12,11 +12,13 @@ const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
 // B2 (v7 Season): is a balanced fighter ever best? For each Season Boss, split the Trainer cap between Power (+2/wk)
 // and Speed (+6/wk) and score each split by: win chance − 0.5 × injury chance − 5 × death chance.
-export function speedSplit({ n = 3000 } = {}) {
+// `only`: one Boss's index, so the gates can run the four in parallel (each has its own seeds; see mergeSplits).
+export function speedSplit({ n = 3000, only = null } = {}) {
   const caps = [3, 5, 8, 13];
   const pGain = Math.round(TRAIN_GAIN.power * SHORT.train);
   const sGain = Math.round(TRAIN_GAIN.speed * SHORT.train);
   const rows = CIRCUITS.map((c, i) => {
+    if (only !== null && i !== only) return null;
     const points = caps[i];
     const titles = i;
     const bossPower = c.oppPower[2] + (SHORT.oppPower[i] ?? 0);
@@ -36,11 +38,18 @@ export function speedSplit({ n = 3000 } = {}) {
     }
     const best = splits.reduce((a, b) => (b.value > a.value ? b : a));
     return { boss: c.name, points, best, splits };
-  });
+  }).filter(Boolean);
+  return splitSummary(rows);
+}
+
+const splitSummary = (rows) => {
   // At Season training rates (+2 Power / +6 Speed per week), 1–2 Speed weeks (12–50% of cap) is a balanced interior optimum.
   const balanced = rows.filter((r) => r.best.share >= 0.12 && r.best.share <= 0.5).length;
   return { rows, balanced };
-}
+};
+
+// Joins per-Boss speedSplit results (in Boss order) into one.
+export const mergeSplits = (parts) => splitSummary(parts.flatMap((p) => p.rows));
 
 // Phase A: do tactics matter? Equal-Power random fighters (real traits and humors), each match played with
 // the same dice by a fighter who reads the opponent (as auto-play does) and by one who always fights Steady / always Presses.
@@ -82,7 +91,7 @@ export function gateJobs({ careers = 200, quick = false } = {}) {
   const group = (name, n, strategy, opts = {}) => Array.from({ length: n }, (_, i) => ({ type: 'career', group: name, seed: 1000 + i, strategy, opts: { ...oddsOpts, ...opts } }));
   return [
     // The two long simulations first, so they don't finish last on their own.
-    { type: 'split', group: 'split', opts: { n: quick ? 800 : 3000 } },
+    ...CIRCUITS.map((_, i) => ({ type: 'split', group: 'split', opts: { n: quick ? 800 : 3000, only: i } })),
     { type: 'tactics', group: 'tactics', opts: { n: quick ? 1500 : 4000 } },
     // v6/v7: Seasons are the default career; Long Road keeps a gate of its own.
     ...group('careful', careers, 'careful', { setup: SEASON }),
@@ -108,7 +117,7 @@ export async function runGates({ careers = 200, quick = false, tunables = {} } =
   return gatesFrom({
     careful: of('careful'), reckless: of('reckless'), rebel: of('rebel'), loyalist: of('loyalist'),
     long: of('long'), legacy: of('legacy'), heat1: of('heat1'), heat3: of('heat3'),
-    split: of('split')[0], tactics: of('tactics')[0],
+    split: mergeSplits(of('split')), tactics: of('tactics')[0],
   });
 }
 
