@@ -398,10 +398,12 @@ export function affinitySources(X, round, score) {
 // cyborg augment would turn aside.
 const DEFLECTED = { blinded: 'eye', maimed: 'arm' };
 function steerWound(m, X, Y, sev, round) {
-  const base = sev.injury;
+  const rolled = sev.injury;
+  // Compare against what would land: a wound the defender's augment deflects lands as a Flesh Wound.
+  const base = DEFLECTED[rolled.tag] && Y.f.augments?.includes(DEFLECTED[rolled.tag]) ? INJURY_BY_TAG.fleshWound : rolled;
   for (const src of affinitySources(X, round, sev.score)) {
     const reach = Object.entries(WOUND_STYLES[src.style] ?? {}).map(([wt, tag]) => [Number(wt), tag])
-      .filter(([wt, tag]) => tag !== base.tag && wt <= base.weight + src.upWeight && (wt >= base.weight || (src.style === 'blindPowder' && src.upWeight === 0))
+      .filter(([wt, tag]) => tag !== rolled.tag && tag !== base.tag && wt <= base.weight + src.upWeight && (wt >= base.weight || (src.style === 'blindPowder' && src.upWeight === 0))
         && !(DEFLECTED[tag] && Y.f.augments?.includes(DEFLECTED[tag]))).sort((a, b) => b[0] - a[0]);
     if (!reach.length) continue;
     if (rollE5(m.rng) <= src.chance) return { tag: reach[0][1], source: src.source };

@@ -172,3 +172,10 @@ test('a style never aims at a part the defender\'s cyborg augment would turn asi
   assert.equal(r.inj.tag, 'poisoned', 'no Maim to deflect: the Poison lands');
   assert.equal(r.inj.deflected, undefined);
 });
+
+test('a style compares against the wound after a cyborg deflection: a deflected Maim never becomes Senseless', () => {
+  const arm = strike(blank({ cls: 'fighter', weapon: 'club' }), { roll: 80, steer: [1], b: blank({ id: 'b', augments: ['arm'] }) }).inj;
+  assert.ok(arm.weight <= 1, `weight ${arm.weight} (${arm.tag})`);
+  const eye = strike(blank({ cls: 'fighter', weapon: 'club' }), { roll: 95, steer: [1], b: blank({ id: 'b', augments: ['eye'] }) }).inj;
+  assert.ok(eye.weight <= 1, `weight ${eye.weight} (${eye.tag})`);
+});
