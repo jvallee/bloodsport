@@ -260,3 +260,16 @@ Temperament decor (Phase 1 of `docs/roadmap-v7.md`). The bots don't place the ne
 91 · 69 · 37 · 22 · 40%. New gate: no Temperament piece in more than 55% of winning careful houses (Rock Garden 2%, from
 Fortune's cards). A first try that marked the pieces as helping everyone put a Rock Garden in every bot's rooms: that gate
 read 100% and full Legacy fell to 39% (every fighter turned Phlegmatic).
+
+### v7.4.0 (`npm run check`, 300 careers): 22/22
+
+7.2 wound affinities, 7.3 unrest, 7.4 moles and covert ops, after two review rounds. First career 24% (was 34%), reckless 3%,
+full Legacy 37% (Heat 1 18%, Heat 3 14%), evil road +16, coup 8%, Long Road 32%, a won season 15.3 fight months, Boss win per
+attempt 91 · 67 · 38 · 19 · 26%, careful deaths 1.06 a career. Unrest: reckless 1.81 incidents and crises a career, careful 0.
+Temperament decor in 14% of winning houses (the careful bot's Rock Gardens for Afeared fighters).
+
+Phase 2 alone passed every gate (first career 28%, full Legacy 43%). Moles cost most of the rest; swept (full Legacy /
+Heat 1 / Heat 3, 150 careers): as built 37 / 18 / 19; no moles 44 / 21 / 17; no planted moles 44 / 21 / 17; no flipped
+mutineers 37 / 18 / 19; plant 8% 39 / 17 / 19; act 15% 35 / 17 / 17; purses ×1.7 38 / 23 / 18. The designer accepted the
+lower win rate (floor 35%). Heat 3 sets: Lean + Lions 19%, Lean + Greedy 23%, Lean + Iron 17%, Lean + Lions at +2 8%,
+**Greedy + Lions 14%** (chosen).

@@ -1175,3 +1175,8 @@ Placeholder numbers (`ESPIONAGE`). Own dice (`run.rng.espionage`).
 - **Bots:** the careful bot investigates one fighter a week when there are clues (named suspects first, then the unhappiest)
   and executes an unmasked mole; neither bot runs covert ops.
 - **Save version 7.**
+
+### 7.4 balance (designer's decisions, 2026-11-23)
+- The full-Legacy gate's floor is 35% (was 40%): the designer is fine with win rates 1–4 points lower.
+- Heat order: Harsh Judges, a Greedy Emperor, Hungry Lions, Lean Fortunes, Iron Bosses (Heat 3 was no harder than Heat 1
+  with moles about). Hungry Lions' +1 and Iron Bosses' +1 are now `DECREES.*.power`.
