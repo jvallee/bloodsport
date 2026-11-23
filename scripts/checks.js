@@ -150,7 +150,8 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, he
     .map((k) => [k, wonCareful.length ? wonCareful.filter((r) => holds(r, k)).length / wonCareful.length : 0]).sort((a, b) => b[1] - a[1])[0];
   const gates = [
     { name: 'First career: careful win rate is 15–35%', value: rate(careful), pass: rate(careful) >= 0.15 && rate(careful) <= 0.35, fmt: 'pct' },
-    { name: 'Full Legacy: careful win rate is 40–60%', value: rate(legacy), pass: rate(legacy) >= 0.4 && rate(legacy) <= 0.6, fmt: 'pct' },
+    // 7.4 (the designer, 2026-11-23): a 1–4 point lower win rate is fine, so the floor is 35% (was 40%).
+    { name: 'Full Legacy: careful win rate is 35–60%', value: rate(legacy), pass: rate(legacy) >= 0.35 && rate(legacy) <= 0.6, fmt: 'pct' },
     { name: 'Unlock cadence: each of the first five Legacy levels takes 1–2 careers', value: perLevel, pass: perLevel >= 1 && perLevel <= 2, fmt: 'num' },
     { name: 'Careful wins at least as often as reckless', value: rate(careful) - rate(reckless), pass: rate(careful) >= rate(reckless), fmt: 'pctDiff' },
     { name: 'Careful loses clearly fewer fighters than reckless', value: deaths(careful) / Math.max(0.01, deaths(reckless)), pass: deaths(careful) <= 0.5 * deaths(reckless), fmt: 'ratio' },
