@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick, createRng, deriveSeed } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, COMBAT, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, HOUSES, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG, HYPE, AMPHORA_HYPE, INTENT, ROUND_TACTICS } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, COMBAT, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, HOUSES, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG, HYPE, AMPHORA_HYPE, INTENT, ROUND_TACTICS, WOUND_STYLES, AFFINITY, BLEEDING, WEAPONS, CLASSES, DECOR, isBladed } from './data.js';
 import { Refused } from './errors.js';
 import { relicMods } from './fortune.js';
 
@@ -97,12 +97,13 @@ export function opponentIntent(m, round = m.round + 1) {
   if ((m.tellSeed !== undefined || m.tells) && humorOf(m.b)) {
     const tellRng = m.tellSeed !== undefined ? createRng(deriveSeed(m.tellSeed, round)) : m.tells;
     const others = ROUND_TACTICS.filter((k) => k !== 'steady' && k !== stance);
-    tell = next(tellRng) < tellAccuracy(m) ? stance : pick(tellRng, others);
+    tell = next(tellRng) < tellAccuracy(m, round) ? stance : pick(tellRng, others);
   }
   m.b.intent = { round, stance, tell };
   return m.b.intent;
 }
-export const tellAccuracy = (m) => INTENT.accuracy[Math.min(m.oracle ?? 0, INTENT.accuracy.length - 1)];
+// A stolen playbook (7.4 covert op) makes the Round-1 tell exact.
+export const tellAccuracy = (m, round = m.round + 1) => (m.playbook && round === 1 ? 1 : INTENT.accuracy[Math.min(m.oracle ?? 0, INTENT.accuracy.length - 1)]);
 export const opponentTell = (m) => ((m.tellSeed !== undefined || m.tells) && !m.over ? opponentIntent(m).tell : null);
 export const tellForecast = (m) => {
   const tell = opponentTell(m);
@@ -294,6 +295,8 @@ export function computePhase2(c, opp, round, volley = {}) {
   const fleshWounds = countInjury(f, 'fleshWound');
   if (fleshWounds) enemy.push({ source: 'Flesh Wound', value: -10000 * fleshWounds });
   if (hasInjury(f, 'senseless')) self.push({ source: 'Senseless', value: 10000 * eff });
+  const bleeds = countInjury(f, 'bleeding');
+  if (bleeds) self.push({ source: 'Bleeding', value: (c.stance === 'guard' ? BLEEDING.guarding : BLEEDING.self) * bleeds });
   if (c.arena === 'bloodMoon') self.push({ source: 'Blood Moon', value: 10000 });
   for (const b of c.boosts ?? []) {
     if (b.round !== round) continue;
@@ -371,6 +374,43 @@ function disableRandom(c, n, rng, fromInjury = false) {
   return out;
 }
 
+// 7.2 Wound affinities: what may turn X's rolled wound into a signature wound this round, in order (items first).
+export function affinitySources(X, round, score) {
+  const out = [];
+  for (const b of X.boosts ?? []) {
+    if (b.round === round && b.affinity) out.push({ source: b.name, ...b.affinity, upWeight: score >= AFFINITY.minScore ? b.affinity.upWeight ?? 0 : 0 });
+  }
+  const w = X.f.cls === 'fighter' ? X.f.weapon : null;
+  if (w && AFFINITY.weapons[w] && weaponActive(X, w, round)) out.push({ source: WEAPONS[w].name, style: AFFINITY.weapons[w], chance: AFFINITY.steer, upWeight: 0 });
+  const cls = X.f.cls;
+  if (AFFINITY.classes[cls] && classActive(X, cls, round)) out.push({ source: CLASSES[cls].name, style: AFFINITY.classes[cls], chance: AFFINITY.steer, upWeight: 0 });
+  const g = X.f.gear?.weapon;
+  if (g && AFFINITY.gear[g]) out.push({ source: GEAR[g].name, style: AFFINITY.gear[g], chance: AFFINITY.steer, upWeight: 0 });
+  for (const [k, d] of Object.entries(DECOR)) {
+    if (!d.affinity || !decorOf(X, k) || (d.affinity.bladed && !isBladed(X.f))) continue;
+    out.push({ source: d.name, style: d.affinity.style, chance: d.affinity.chance, upWeight: 0 });
+  }
+  return out;
+}
+
+// The first source whose roll succeeds turns the wound; a source only rolls if it could change it. Never death. A style
+// never makes a wound lighter (except Blinding Powder on a light hit, by design), and never aims at a part the defender's
+// cyborg augment would turn aside.
+const DEFLECTED = { blinded: 'eye', maimed: 'arm' };
+function steerWound(m, X, Y, sev, round) {
+  const rolled = sev.injury;
+  // Compare against what would land: a wound the defender's augment deflects lands as a Flesh Wound.
+  const base = DEFLECTED[rolled.tag] && Y.f.augments?.includes(DEFLECTED[rolled.tag]) ? INJURY_BY_TAG.fleshWound : rolled;
+  for (const src of affinitySources(X, round, sev.score)) {
+    const reach = Object.entries(WOUND_STYLES[src.style] ?? {}).map(([wt, tag]) => [Number(wt), tag])
+      .filter(([wt, tag]) => tag !== rolled.tag && tag !== base.tag && wt <= base.weight + src.upWeight && (wt >= base.weight || (src.style === 'blindPowder' && src.upWeight === 0))
+        && !(DEFLECTED[tag] && Y.f.augments?.includes(DEFLECTED[tag]))).sort((a, b) => b[0] - a[0]);
+    if (!reach.length) continue;
+    if (rollE5(m.rng) <= src.chance) return { tag: reach[0][1], source: src.source };
+  }
+  return null;
+}
+
 function inflictInjury(m, X, Y, r) {
   const prior = effectiveInjuries(Y.f);
   const advantage = Math.max(0, clampDelta(r.power[X.side].total - r.power[Y.side].total));
@@ -383,8 +423,15 @@ function inflictInjury(m, X, Y, r) {
     Y.f.alive = false;
     return result;
   }
-  if (result.tag === 'blinded' && Y.f.augments?.includes('eye')) {
-    Object.assign(result, { tag: 'fleshWound', name: 'Flesh Wound', deflected: 'Cyborg Eye' });
+  const steer = steerWound(m, X, Y, sev, r.round);
+  if (steer) {
+    result.steered = { from: sev.injury.name, source: steer.source };
+    sev.injury = INJURY_BY_TAG[steer.tag];
+    Object.assign(result, { tag: steer.tag, name: sev.injury.name });
+  }
+  const cyborg = { blinded: 'eye', maimed: 'arm' }[result.tag];
+  if (cyborg && Y.f.augments?.includes(cyborg)) {
+    Object.assign(result, { tag: 'fleshWound', name: 'Flesh Wound', deflected: AUGMENTS[cyborg].name });
     sev.injury = INJURY_BY_TAG.fleshWound;
   }
   let weight = sev.injury.weight;
@@ -444,7 +491,7 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
       X.ash = (X.ash ?? 0) + 1;
     }
     if (kindActive(X, 'bloodDrinker', round)) {
-      const i = X.f.injuries.findLastIndex((inj) => inj.weeksLeft === undefined && ['fleshWound', 'distracted'].includes(inj.tag));
+      const i = X.f.injuries.findLastIndex((inj) => inj.weeksLeft === undefined && ['fleshWound', 'bleeding', 'distracted'].includes(inj.tag));
       if (i >= 0) {
         const healed = X.f.injuries.splice(i, 1)[0];
         check.drained = healed.tag;

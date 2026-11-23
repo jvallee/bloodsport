@@ -3,14 +3,14 @@
 import { createRng, int, pick } from '../rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, BOSS_DEBUFFS,
-  XP, PERKS, MORALE, GEAR, DECOR, FAVOR, REVOLT, HUMORS, AUGMENTS, TITLES, RECRUIT, SHORT, QUESTS, HEAT, CONSUMABLES,
+  XP, PERKS, MORALE, GEAR, DECOR, FAVOR, HUMORS, DECREES, AUGMENTS, TITLES, RECRUIT, SHORT, QUESTS, HEAT, CONSUMABLES,
 } from '../data.js';
 import { relicSum } from '../fortune.js';
 import { Refused } from '../errors.js';
 import { formatDate, dateOf } from '../calendar.js';
 import { prestigeLevelFor, stressRelief } from '../ludus.js';
 
-export const SAVE_VERSION = 5; // 5 (7.1): new decor slots and f.humourDrift (backfilled on load)
+export const SAVE_VERSION = 7; // 5 (7.1): Temperament decor, f.humourDrift; 6 (7.3): run.unrest; 7 (7.4): run.espionage, f.mole
 export const GRAND_TIER = CIRCUITS.length + 1;
 export const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
 export const NAME_MEMORY = 90;
@@ -109,7 +109,8 @@ export function assertOk(reason) {
 // ---------- Stat and economy queries ----------
 
 export const decorComfortOf = (f) => Object.entries(f.decor ?? {}).reduce((n, [k, c]) => n + (DECOR[k] ? decorComfort(DECOR[k]) * c : 0), 0);
-export const decorCalm = (f) => Math.min(STRESS.decorCalm, Object.entries(f.decor ?? {}).reduce((n, [k, count]) => n + (DECOR[k]?.calm ?? 0) * count, 0));
+// `calmIf` (7.2): the piece only calms the fighters it names (the Viper Terrarium).
+export const decorCalm = (f) => Math.min(STRESS.decorCalm, Object.entries(f.decor ?? {}).reduce((n, [k, count]) => n + (DECOR[k] && (!DECOR[k].calmIf || DECOR[k].calmIf(f)) ? DECOR[k].calm ?? 0 : 0) * count, 0));
 export const decorCount = (f) => Object.values(f.decor ?? {}).reduce((s, n) => s + n, 0);
 
 export const trainStress = (run, f) => Math.max(0, STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0) - relicSum(run, 'trainStress'));
@@ -161,14 +162,15 @@ export const trainGain = (run, stat) => Math.round(TRAIN_GAIN[stat] * (isShort(r
 export const hasDecree = (run, id) => Boolean(run?.setup?.decrees?.includes(id));
 export const hasUnlock = (run, id) => Boolean(run?.setup?.unlocks?.includes(id));
 export const heatDecrees = (heat) => HEAT.decrees.slice(0, Math.max(0, heat ?? 0));
-export const lionsPower = (run) => (hasDecree(run, 'hungryLions') ? 1 : 0);
+export const lionsPower = (run) => (hasDecree(run, 'hungryLions') ? DECREES.hungryLions.power : 0);
 export const hasPolicy = (run, id) => Boolean(run?.policies?.some((p) => p.id === id && p.until > run.week));
 export const bossLossFavor = (tier, run = null) => Math.round(FAVOR.bossLoss[Math.min(tier, FAVOR.bossLoss.length) - 1] * (isShort(run) ? SHORT.bossLoss : 1)) - (hasDecree(run, 'harshJudges') ? 5 : 0);
 
 export const tierMarketPower = (run) => circuitInfo(run).marketPower + (isShort(run) ? (SHORT.marketPower?.[Math.min(run.topTier, CIRCUITS.length) - 1] ?? 0) : 0);
 export const marketPrice = (run) => circuitInfo(run).price;
 export const liaisonOffer = (run, id) => (run.liaisonOffers ?? []).find((f) => f.id === id) ?? null;
-export const recruitPrice = (run, f) => Math.max(1, (liaisonOffer(run, f.id) ? f.price : marketPrice(run) + RECRUIT.perLevel * ((f.level ?? 1) - 1)) - relicSum(run, 'recruitDiscount'));
+// `f.mole.cut` (7.4): a planted mole comes suspiciously cheap.
+export const recruitPrice = (run, f) => Math.max(1, (liaisonOffer(run, f.id) ? f.price : marketPrice(run) + RECRUIT.perLevel * ((f.level ?? 1) - 1)) - relicSum(run, 'recruitDiscount') - (f.mole?.cut ?? 0));
 
 export function cheapestRecruitPrice(run) {
   const offers = [
@@ -299,12 +301,6 @@ export function checkLoss(run) {
   if (run.favor <= 0) {
     run.status = 'lost';
     run.endReason = `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.`;
-    run.fortune = null;
-    return;
-  }
-  if (run.revoltWeeks >= REVOLT.weeks) {
-    run.status = 'lost';
-    run.endReason = 'Your gladiators revolt and burn the Ludus.';
     run.fortune = null;
     return;
   }

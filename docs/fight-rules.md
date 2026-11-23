@@ -81,7 +81,7 @@ All numbers live in `src/data.js` and were tuned with `npm run career` (see `doc
 | Medbay | Heals the oldest injury by 1 week per week (2 at Medbay Lv 2+), −10 Stress; needs a free bed |
 
 - **Overtrained (Stress ≥ 50):** can't train (rests instead, job kept), and in the arena fights at **−1 Power** with one random ability disabled. A fight adds +15 Stress. Train, train, rest stays under the line.
-- **Injury healing times (Medbay weeks):** Distracted 1, Flesh Wound 1, Concussed 2, Poisoned 2, Senseless 2, Maimed 3, Blinded 3. Injuries don't heal outside the Medbay.
+- **Injury healing times (Medbay weeks):** Distracted 1, Flesh Wound 1, Bleeding 1 (7.2), Concussed 2, Poisoned 2, Senseless 2, Maimed 3, Blinded 3. Injuries don't heal outside the Medbay.
 - **Emergency Surgeon:** heals one injury instantly for 8 Gold (+4 per tier above 1).
 
 ### Fight changes
@@ -168,7 +168,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Fight items** (Apothecary, in the Market): War Paint (+1 Power next round, 10 Gold), Adrenaline Draught (+3 Speed next round, +15 Stress after, 8), Blessed Bandage (−10% to be injured next round, not armor, 10), Crowd Bribe (no Favor or Renown lost for capitulating this fight; a Boss loss still counts, 12). Used before Round 1 or between rounds, one of each kind per fight (different items can be combined; it was one item per fight, and after Round 1 only).
 - **"Throw in the towel" is now "capitulate"** in all player-facing text.
 - **Reloading mid-match** counts as capitulating, but keeps any injuries (or death) from rounds already played.
-- **Revolt:** if the roster's average Morale stays below 20 for 4 weeks in a row, the career is lost.
+- **Revolt:** if the roster's average Morale stays below 20 for 4 weeks in a row, the career is lost. *(Replaced in 7.3 by unrest and The Chains Break: see "7.3.0" at the end.)*
 
 ### Fighter growth
 - **XP:** win 3, loss 1, ×2 for Bosses, +2 for an upset win. Levels at 3 / 8 / 15 / 25 / 40 XP (max level 6).
@@ -1083,7 +1083,100 @@ Placeholder numbers.
 - **Bots don't use Temperament pieces yet.** The careful bot places the first decor item that `helps` a fighter. Marking the
   new pieces as helping everyone made it put a Rock Garden in every room (the new gate read 100%, and full Legacy fell to
   39%, since every fighter turned Phlegmatic). Temperament pieces don't set `helps` (their room line explains them), so
-  bot careers play exactly as in 7.0.0 (same log, Gold, Favour and history on the fingerprint seeds). The decor-diversity
-  gate passes trivially until a bot chooses these pieces on purpose.
+  bot careers played exactly as in 7.0.0 (same log, Gold, Favour and history on the fingerprint seeds). From 7.2 the careful
+  bot buys a Rock Garden for any Afeared fighter on purpose, so the decor-diversity gate measures a real choice.
+- **Review fixes (7.2):** Iron Rules switches the Spiky Bed and Skull Rack off too (it already did the Wine Amphora); the
+  Spiky Bed counts only wounds taken in this fight; taking the leading piece back ends a drift at once (a tie still pauses).
 - **Saves:** version 5. Version-4 careers load unchanged; the new decor slots are filled with 0 on load.
 - **New gate:** no Temperament piece is in more than 55% of winning careful houses.
+
+## 7.2.0: Bleeding and wound affinities (design: docs/roadmap-v7.md, Phase 2)
+
+Placeholder numbers.
+
+- **Bleeding** (weight 1, heals in 1 week, or half a week a Rest week like a Flesh Wound): +10% chance to be injured per
+  Bleeding wound (+5% while Guarding). Blood Drinker can drink it; a Blessed Bandage staunches one for the rest of the fight.
+- **Injury bands:** Distracted 1–25, Flesh Wound 26–38 (was 26–45), **Bleeding 39–48**, Concussed 49–60 (was 46–60); the
+  weight-2 bands 61–99 are unchanged, so the Death Gate odds hold.
+- **Body parts:** head (Distracted, Concussed, Senseless, Blinded), torso (Flesh Wound, Bleeding, Poisoned), limb (Maimed).
+- **Wound affinities** (`WOUND_STYLES`, `AFFINITY`): after the injury roll (never on death), each source in order
+  (single-use items, then weapon specialty, class, weapon gear, room decor) may turn the wound into its style's wound of
+  the reachable weight, the heaviest it may reach. Only the first success counts; a source that couldn't change the wound
+  doesn't roll. Rules:
+  - A style never makes a wound lighter, except Blinding Powder on a light hit (Distracted).
+  - Weapons, classes, gear and decor never add weight (`upWeight 0`); single-use items may go one weight up on hits of
+    49+ (`AFFINITY.minScore`).
+  - A style never aims at a part the defender's cyborg augment would turn aside (Maimed vs a Cyborg Arm, Blinded vs a
+    Cyborg Eye).
+
+| Source | Style | Chance |
+|---|---|---|
+| Dagger, Serrated Spatha, Thorn-Blade, Blood-Bearer | Bleed (Bleeding) | 35% |
+| Club, War Maul, Cestus | Stun (Concussed; Senseless on a weight-2 wound) | 35% |
+| Axe, Flail, Executioner's Axe | Maim (Maimed, weight-2 wounds) | 35% |
+| Bow, Hunter's Bow, Ornitharius | Blind (Blinded, weight-2 wounds) | 35% |
+| Viper Venom (3 Gold; +10% injure, was +15% and +15 severity) | Poison | 65%, one up on 49+ |
+| Blood Thinner (3 Gold, new; +10% injure) | Bleed | 75%, one up on 49+ (Bleeding is weight 1, so it only steers) |
+| Blinding Powder (4 Gold, new) | Blinded on 49+ (one up), Distracted on lighter hits | 60% |
+| Viper Terrarium (decor, 4 Gold, comfort 4; −5 Stress a week for Ash-Hungry and Vampire fighters) | Poison | 20% |
+| Whetstone Rack (decor, 4 Gold, comfort 4; bladed fighters only) | Bleed | 25% |
+
+- **Bladed:** a Fighter with Sword, Dagger or Axe, a Gladius, Imperial Gladius, Serrated Spatha, Executioner's Axe or
+  Throwing Axes in hand, or a Blood-Bearer or Thorn-Blade.
+- **Cyborg Arm:** a blow that would Maim becomes a Flesh Wound (as the Cyborg Eye does for Blinded).
+- Decor affinities are off under Iron Rules.
+- **Balance (Phase 2 alone, `npm run check`):** all gates pass; first career 34% → 28%; see `docs/roadmap-v2.md`.
+
+## 7.3.0: unrest and The Chains Break (design: docs/roadmap-v7.md, Phase 3)
+
+Replaces the house-average revolt. Placeholder numbers (`UNREST`).
+
+- **Agitation:** a Restless fighter (Morale 20–39) who is Choleric, overtrained (Stress 50+) or sleeps by a Skull Rack drags a
+  bonded partner's Morale by 3 a week.
+- **Defiance:** each Mutinous fighter (Morale under 20) adds unrest each week: 1, +1 if Choleric or a condemned convict, +1 if
+  they hold a title or are level 4+, +1 with a Skull Rack. Each has a 25% weekly chance of an incident (own dice): a brawl
+  (another fighter takes a Flesh Wound), a theft (2 Gold × top tier), or an escape attempt (+20 Stress).
+- **Cooling:** −2 unrest a week while nobody is Mutinous.
+- **Uprising:** at 5 the house is warned; at 8, in a later week and only while someone is still Mutinous, **The Chains
+  Break** opens (never replaced by a random event that week). The ringleader is the strongest Mutinous fighter.
+  - Open the coffers: 4 Gold a fighter; unrest 0; everyone +15 Morale for 4 weeks.
+  - Send in the guards: loyal Power (fighters at Morale 50+, not the ringleader, plus 10 × House level) against the
+    mutineers' (the ringleader and anyone under 30). Loyal ≥ mutineers: the ringleader is Concussed or Maimed, −6 Favour,
+    unrest 2. Otherwise the career ends: "Killed in a gladiator revolt."
+  - Turn their fury on the Palatine (the plot at cause or ready, once a career, not if the ringleader is a palace spy):
+    trust −1, suspicion +15, the ringleader becomes the plot's champion, unrest 0, everyone +15 Morale.
+- **Save version 6.** New gate: reckless houses have at least 3× the unrest incidents and crises of careful ones.
+
+## 7.4.0: moles, double agents and covert ops (design: docs/roadmap-v7.md, Phase 4)
+
+Placeholder numbers (`ESPIONAGE`). Own dice (`run.rng.espionage`).
+
+- **Moles** (`f.mole`, separate from the palace spy `f.spy`): a feuding house, or the palace once plot suspicion is 40+,
+  flips a Mutinous fighter (25% a week); or one Market fighter is planted some months (15%), cheaper by half the arena's
+  fighter price, with a tell on their card.
+- A mole does nothing their first week; then each week 50% chance of a clue (in the log and the Estate's "Knives in the
+  dark" panel; one clue also takes 2 Gold). Once a clue is found, 30% a week they act: for a house, +1 Power to that house's
+  fighters against you on the next fight day; for the palace, +3 suspicion (with the plot active).
+- If the mole leaves the house any other way, the whispers stop and the trail is cleared.
+- **Investigate** any fighter (2 Gold) once a clue is found; an innocent fighter resents it (−5 Morale). An Oracle Lv 2 or the
+  Whispering Gallery names two suspects, one of them the mole.
+- **Unmasked:** execute (body kept for the Temple of Vulcan; −15 suspicion for a palace mole, else −3 Glory for their house;
+  everyone −5 Morale); turn (4 Gold; not a palace mole: +10% win in Round 1 against their house); ransom (+8 Gold; a feud
+  with their house ends).
+- **Covert ops** (a Liaison or the Whispering Gallery; one a month; before fight day; against your next top-arena opponent):
+
+| Op | Cost | Chance | Success | Caught |
+|---|---|---|---|---|
+| Steal the Playbook | 3 | 75% (+10% with the Gallery) | The Round-1 tell is exact | They fight with Vengeance (+5% win) |
+| Doctor the Wine | 6 | 60% (+15% with a double agent) | They arrive Bleeding, or −1 Power every round | −5 Favour; a 3-month feud with their house |
+| Bribe the Armourer | 7 | 60% | Their armour gear does nothing | −5 Favour; the Gold is gone |
+
+- Bets are priced with the boosts already on the match (items used before Round 1, stolen plans, doctored wine).
+- **Bots:** the careful bot investigates one fighter a week when there are clues (named suspects first, then the unhappiest)
+  and executes an unmasked mole; neither bot runs covert ops.
+- **Save version 7.**
+
+### 7.4 balance (designer's decisions, 2026-11-23)
+- The full-Legacy gate's floor is 35% (was 40%): the designer is fine with win rates 1–4 points lower.
+- Heat order: Harsh Judges, a Greedy Emperor, Hungry Lions, Lean Fortunes, Iron Bosses (Heat 3 was no harder than Heat 1
+  with moles about). Hungry Lions' +1 and Iron Bosses' +1 are now `DECREES.*.power`.

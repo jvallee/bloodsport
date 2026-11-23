@@ -29,6 +29,7 @@ import {
   houseOf, houseForArena, houseTier, matchOptions, recordNemesis, nemesisFalls,
   rivalChampionResult, rivalChampionKilled,
 } from './houses.js';
+import { espionageAtMatch } from './espionage.js';
 import { faceFear } from './roster.js';
 import { relicRewards, settleWager } from './fortuneEngine.js';
 
@@ -206,7 +207,9 @@ export function startMatch(run, id, tier = run.topTier) {
   if (bracket) Object.assign(bracket, { fighterId: id, buyIn });
   run.inMatch = true;
   run.matchInfo = { fighterId: id, tier, buyIn };
-  return createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, ...matchOptions(run, fighter, tier) });
+  const m = createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, ...matchOptions(run, fighter, tier) });
+  espionageAtMatch(run, m);
+  return m;
 }
 
 export function recordMatchProgress(run, match) {
@@ -239,6 +242,10 @@ export function useItem(run, match, key) {
     for (const inj of match.a.f.injuries) if (['distracted', 'concussed'].includes(inj.tag)) inj.suppressed = true;
     match.a.disabled = match.a.disabled.filter((slot) => !match.a.distracted?.includes(slot));
   }
+  if (item.staunch) {
+    const bleed = match.a.f.injuries.find((inj) => inj.tag === 'bleeding' && !inj.suppressed);
+    if (bleed) bleed.suppressed = true;
+  }
   if (item.bribe) match.bribe = true;
   if (item.stressAfter) match.stressAfter = item.stressAfter;
   log(run, `${match.a.f.name} uses ${item.name}.`, 'event');
@@ -248,7 +255,7 @@ export function useItem(run, match, key) {
 const betOddsCache = new WeakMap();
 export function betOdds(run, match) {
   const tier = match.bout?.tier ?? run.matchInfo?.tier ?? run.topTier;
-  const opts = { ...matchOptions(run, match.a.f, tier), useSignatures: false, n: 400, seed: 777 };
+  const opts = { ...matchOptions(run, match.a.f, tier), useSignatures: false, n: 400, seed: 777, boostsA: match.a.boosts ?? null, boostsB: match.b.boosts ?? null, vengeanceB: Boolean(match.b.vengeance) };
   const key = JSON.stringify([match.a.f, match.b.f, opts]);
   const hit = betOddsCache.get(match);
   if (hit?.key === key) return hit.odds;
@@ -363,6 +370,12 @@ function pushResult(run, summary) {
   if (summary.won && !run.history.some((h) => h.won)) summary.firstWin = true;
   run.history.push(summary);
 }
+
+// Decor only works outside Iron Rules (the Boss debuff turns room decor off, as in the fight engine).
+const decorWorks = (match) => match.a?.arena !== 'ironRules';
+// Spiky Bed (7.1): a win with at least SPIKY_HARDENED_AT weight of wounds taken in this fight (old wounds don't count).
+const newWoundWeight = (match) => match.a.f.injuries.filter((i) => i.weeksLeft === undefined).reduce((n, i) => n + (i.weight ?? 0), 0);
+const spikyHardens = (match, fighter) => decorWorks(match) && fighter.decor?.spikyBed > 0 && newWoundWeight(match) >= SPIKY_HARDENED_AT;
 
 export function finishMatch(run, match) {
   if (!run.inMatch) throw new Error('No match in progress.');
@@ -533,7 +546,7 @@ export function finishMatch(run, match) {
     if (summary.mark) chronicle(run, fighter, `Earned the mark ${summary.mark}.`);
     if (bout.boss && !summary.title) chronicle(run, fighter, `Beat the Boss ${opp.name}.`);
   }
-  const hardening = bloodied || (won && fighter.decor?.spikyBed > 0 && effectiveInjuries(fighter) >= SPIKY_HARDENED_AT);
+  const hardening = bloodied || (won && spikyHardens(match, fighter));
   if (fighter.alive && hardening && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
     fighter.scars = [...(fighter.scars ?? []), { id: 'hardened' }];
     summary.scar = 'Battle-Hardened';
@@ -544,7 +557,7 @@ export function finishMatch(run, match) {
     const vs = meleeOnly(match.b ?? { f: opp }) ? 'melee' : 'ranged';
     const afeared = SCAR_AFEARED[fighter.humor] ?? SCAR_AFEARED.other;
     const roll = afeared > 0 ? next(run.rng.growth) : 1;
-    const id = !(fighter.decor?.skullRack > 0) && roll < afeared ? 'afeared' : 'enraged';
+    const id = !(decorWorks(match) && fighter.decor?.skullRack > 0) && roll < afeared ? 'afeared' : 'enraged';
     if (!(fighter.scars ?? []).some((sc) => sc.vs === vs)) {
       fighter.scars = [...(fighter.scars ?? []), { id, vs }];
       summary.scar = `${SCARS[id].name} (${vs})`;
@@ -615,7 +628,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
       summary.scar = 'Battle-Hardened';
       chronicle(run, fighter, 'Won bloodied and became Battle-Hardened.');
     }
-  } else if (fighter.decor?.spikyBed > 0 && effectiveInjuries(fighter) >= SPIKY_HARDENED_AT && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
+  } else if (spikyHardens(match, fighter) && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
     fighter.scars = [...(fighter.scars ?? []), { id: 'hardened' }];
     summary.scar = 'Battle-Hardened';
     chronicle(run, fighter, 'Won wounded, slept on spikes, and became Battle-Hardened.');

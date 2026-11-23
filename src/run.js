@@ -32,7 +32,7 @@ export {
   sellPrice, sellGearBlocker, sellGear, unequipBlocker, unequip, unequipAllBlocker, unequipAll,
   buyItemBlocker, buyItem, surgeonPrice, surgeonBlocker, surgeon, treatFirstBlocker, treatFirst,
   augmentPrice, augmentBlocker, augment, retireBlocker, retire, renameBlocker, rename,
-  dominantTemperament, driftHumour, meditate,
+  dominantTemperament, driftHumour, meditate, syncDrift,
 } from './run/roster.js';
 
 export {
@@ -61,5 +61,7 @@ export {
 } from './run/weekly.js';
 
 export {
-  serialize, deserialize, validateRun, migrateV2ToV3, migrateV3ToV4, migrateV4ToV5,
+  serialize, deserialize, validateRun, migrateV2ToV3, migrateV3ToV4, migrateV4ToV5, migrateV5ToV6, migrateV6ToV7,
 } from './run/migrations.js';
+export { isMutinous, isRestless, isAgitated, unrestFrom, ringleader, revoltSides, unrestWeek, openCrisis } from './run/unrest.js';
+export { espState, moleOf, masterName, canNarrow, espionageWeek, plantMole, investigateBlocker, investigate, opTarget, opChance, covertOpBlocker, covertOp, espionageAtMatch, espionageOdds } from './run/espionage.js';

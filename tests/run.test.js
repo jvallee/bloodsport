@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
 import { KINDS, CIRCUITS, GRAND, STRESS, ECONOMY, FAVOR, MORALE, XP, PERKS, GEAR, TRIBUTE, CONSUMABLES, BLOODIED, DECOR, LIAISON, POLITICAL, decorComfort } from '../src/data.js';
 import { autoPlay } from '../src/fight.js';
+import { chooseEvent, eventChoiceBlocker } from '../src/run.js';
 import { build, rosterCap, plotsFree } from '../src/ludus.js';
 import {
   createRun, createFighter, recruit, recruitBlocker, release, setJob, jobBlocker, advanceWeek, advanceBlocker, advanceToTournament,
@@ -274,16 +275,23 @@ test('a Mutinous fighter refuses to fight', () => {
   assert.match(fightBlocker(run, f.id), /mutinous/);
 });
 
-test('a house that stays below 20 average Morale for 4 weeks revolts', () => {
+test('7.3: a miserable house is warned, then the chains break; outmatched guards lose the Ludus', () => {
+  // Was: average Morale below 20 for 4 weeks ended the career. Now unrest builds from Mutinous fighters (src/run/unrest.js).
   const run = createRun(1);
   const f = recruit(run, run.market[0].id);
   run.buildings = run.buildings.filter((b) => b.type !== 'quarters');
   f.renown = 50;
   f.morale = 0;
-  for (let i = 0; i < 4 && run.status === 'active'; i++) {
+  f.power = 40; // stronger than the garrison
+  for (let i = 0; i < 20 && !run.event && run.status === 'active'; i++) {
     run.boutPending = false;
+    run.fortune = null;
     advanceWeek(run);
   }
+  assert.ok(run.log.some((l) => /The barracks seethe/.test(l.text ?? l)), 'warned first');
+  assert.equal(run.event?.id, 'chainsBreak');
+  assert.equal(run.event.f, f.id);
+  chooseEvent(run, 1); // send in the guards
   assert.equal(run.status, 'lost');
   assert.match(run.endReason, /revolt/);
 });
@@ -695,6 +703,10 @@ test('simple-bot careers always end, and the state stays valid every week', () =
     const run = createRun(seed);
     for (let step = 0; step < 3000 && run.status === 'active'; step++) {
       pickPerks(run);
+      if (run.event) { // 7.3: The Chains Break opens even with random events off; answer it like a player would
+        chooseEvent(run, [0, 1, 2].find((i) => !eventChoiceBlocker(run, i)));
+        continue;
+      }
       if (run.roster.length < rosterCap(run) && run.market.length && !recruitBlocker(run, run.market[0].id)) recruit(run, run.market[0].id);
       for (const f of run.roster) {
         const job = f.injuries.length ? 'medbay' : f.stress >= 40 ? 'rest' : 'trainPower';

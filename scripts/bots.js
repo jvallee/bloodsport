@@ -5,7 +5,7 @@
 //          freshly fallen fighter at the Unnatural Temple of Vulcan (building it then, if it must).
 // reckless: trains one star nonstop, heals only with the Surgeon, fights only the top arena, always Presses, never towels.
 
-import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE, FORTUNE } from '../src/data.js';
+import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE, FORTUNE, ESPIONAGE } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
 import { isMonthStart, isWinter, weeksUntilWinter } from '../src/calendar.js';
 import { coupBonus } from '../src/plot.js';
@@ -14,6 +14,7 @@ import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
+  espState, canNarrow, investigate, investigateBlocker,
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom, recruitPrice,
   buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, withdrawBlocker, resolveMercy,
   betOdds, betCap, betBlocker, placeBet, hostBlocker, host, enactBlocker, enact, raisable, reanimateBlocker, reanimate,
@@ -155,7 +156,32 @@ function equipAll(run, reserve) {
   }
 }
 
+// 7.4: with clues of a mole, investigate one fighter a week (named suspects first, then the unhappiest); the careful
+// event order executes an unmasked mole.
+// The bot's own notes (who it has searched) stay out of the save.
+const searchedBy = new WeakMap();
+function hunt(run, reserve = 6) {
+  const st = espState(run);
+  if (!st.clues.length) searchedBy.delete(run); // a new mole starts a new search
+  if (!st.clues.length || run.gold - ESPIONAGE.investigate < reserve) return;
+  const searched = searchedBy.get(run) ?? [];
+  searchedBy.set(run, searched);
+  const order = [...(canNarrow(run) && st.suspects ? st.suspects.map((id) => run.roster.find((f) => f.id === id)).filter(Boolean) : []),
+    ...[...run.roster].sort((a, b) => a.morale - b.morale)];
+  const f = order.find((x) => !searched.includes(x.id) && !investigateBlocker(run, x.id));
+  if (!f) return;
+  searched.push(f.id);
+  if (investigate(run, f.id)) chooseEvent(run, 0); // unmasked: execute them now, so the week isn't played twice
+}
+
 function keepHappy(run, reserve = 6) {
+  // 7.1: an Afeared fighter gets a Rock Garden to meditate the fear away (one, if the house can spare the Gold).
+  for (const f of run.roster) {
+    if (!(f.scars ?? []).some((x) => x.id === 'afeared') || f.decor.rockGarden) continue;
+    if (!run.inventory.decor.rockGarden && (buyDecorBlocker(run, 'rockGarden') || run.gold - DECOR.rockGarden.price < reserve)) continue;
+    if (!run.inventory.decor.rockGarden) buyDecor(run, 'rockGarden');
+    if (!assignDecorBlocker(run, f.id, 'rockGarden')) assignDecor(run, f.id, 'rockGarden');
+  }
   // Place decor where Morale is heading below Inspired, preferring decor that also helps in combat.
   for (const f of run.roster) {
     for (let guard = 0; guard < 6 && moraleTarget(run, f).target < MORALE.inspired; guard++) {
@@ -211,6 +237,7 @@ function carefulWeek(run, opts) {
       if (!jobBlocker(run, f.id, want)) setJob(run, f.id, want);
     }
   }
+  hunt(run, Math.max(6, saveForTribute));
 }
 
 // `tactic`: 'smart' reads the opponent's humor (as auto-play does); anything else is used every round.

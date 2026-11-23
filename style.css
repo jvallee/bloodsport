@@ -316,6 +316,8 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .temper-line { margin: 0 0 4px; }
 .chip.drift { border-style: dashed; }
 .chip.bad { color: var(--bad); border-color: var(--bad); }
+.stat.unrest { color: var(--muted); font-size: 13px; }
+.stat.unrest.high { color: var(--bad); }
 .chip.decor.off { opacity: 0.5; }
 .codex-group { margin-top: 16px; }
 .codex-group h3 { font-size: 15px; color: var(--gold); margin-bottom: 8px; }

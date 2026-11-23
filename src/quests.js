@@ -155,6 +155,15 @@ export const RIVAL_LINES = {
 
 // ---------- The Emperor's summons (the designer, 5.4.2) ----------
 // PLACEHOLDER lines. The rules (and the steward's line) must stay accurate.
+// 7.4 Mole clues and market tells (PLACEHOLDER words).
+export const MOLE_CLUES = [
+  'Two Gold are missing from the lockbox, and the lock is not broken.',
+  'An opponent seemed to know your fighters\' opening stance before the horn.',
+  'Someone was seen at the gate at night, speaking to a cloaked rider.',
+  'A letter half-burned in the brazier, the seal scraped away.',
+];
+export const MOLE_TELLS = ['suspiciously cheap for their Power', 'a brand scar under the tunic, the mark of another house', 'asks a great many questions about your other fighters'];
+
 export const SUMMONS_LINES = {
   ask: 'The games in my Coliseum have grown dull, Lanista. I want new blood on the Imperial sand. Send me one of yours on this month\'s fight day.',
   steward: (favor) => `A summons, not a request. He doesn't make requests. On fight day, send a fighter to the Imperial Coliseum against one of its regulars, told to yield at the Death Gate or to fight to the death. Or refuse him, and lose ${-favor} Favour.`,

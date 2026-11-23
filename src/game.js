@@ -3,7 +3,7 @@
 
 import { playRound, throwTowel, useSignature } from './fight.js';
 import {
-  boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom, pray, reanimate, exhibition, host, enact,
+  boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom, pray, reanimate, exhibition, host, enact, investigate, covertOp,
   assignDecor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
   recordMatchProgress, buyItem, useItem, placeBet, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy, checkQuests,
   answerSummons, refuseSummons, rite, stewardPlan, chooseFortune, rerollFortune, passFortune, rename,
@@ -45,6 +45,8 @@ export const GAME_ACTIONS = {
   reanimate: ({ run }, d) => { reanimate(run, d.id); },
   host: ({ run }) => { host(run); },
   enact: ({ run }, d) => { enact(run, d.policy); },
+  investigate: ({ run }, d) => { investigate(run, d.id); },
+  'covert-op': ({ run }, d) => { covertOp(run, d.op); },
   exhibition: ({ run }, d) => { exhibition(run, d.id, d.index); },
   // The Emperor's summons (5.4.2): a dropdown sends a fighter with an order (index: 'yield' or 'death'); a button refuses.
   summons: ({ run }, d) => { answerSummons(run, d.id, d.index); },

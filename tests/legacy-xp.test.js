@@ -111,12 +111,12 @@ test('Heat: winning at Heat N unlocks N+1 (up to the last); a loss or the daily 
 test('Heat N plays the first N decrees and adds their score', () => {
   const run = createRun(12, { heat: 3 });
   assert.deepEqual(run.setup.decrees, HEAT.decrees.slice(0, 3));
-  assert.ok(hasDecree(run, 'harshJudges') && hasDecree(run, 'hungryLions') && !hasDecree(run, 'greedyEmperor'));
+  assert.ok(hasDecree(run, 'harshJudges') && hasDecree(run, 'greedyEmperor') && hasDecree(run, 'hungryLions') && !hasDecree(run, 'leanFortune'));
   const won = (r) => Object.assign(r, { status: 'won' });
-  assert.equal(careerScore(won(createRun(12, { heat: 3 }))) - careerScore(won(createRun(12))), 20 + 25 + 40);
+  assert.equal(careerScore(won(createRun(12, { heat: 3 }))) - careerScore(won(createRun(12))), 20 + 20 + 40);
 });
 
-test('Hungry Lions (Heat 5): every opponent fights with +1 Power, Bosses with +2 (Iron Bosses too)', () => {
+test('Hungry Lions (Heat 3 and up): every opponent fights with +1 Power, Bosses with +2 (Iron Bosses too)', () => {
   const cold = createRun(13);
   const hot = createRun(13, { heat: 5 });
   assert.equal(boutFor(hot, 1).oppPower, boutFor(cold, 1).oppPower + 1);

@@ -4,7 +4,7 @@
 import { createRng } from './rng.js';
 import { createMatch, autoPlay, suggestTactic, signatureBlocker, useSignature } from './fight.js';
 
-export function estimateOdds(fighter, opponent, { debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, oracle = 0, useSignatures = true, n = 500, seed = 12345 } = {}) {
+export function estimateOdds(fighter, opponent, { debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, oracle = 0, useSignatures = true, n = 500, seed = 12345, boostsA = null, boostsB = null, vengeanceB = false } = {}) {
   const rng = createRng(seed);
   const startInjuries = fighter.injuries.filter((i) => i.weight > 0).length;
   let win = 0;
@@ -12,6 +12,10 @@ export function estimateOdds(fighter, opponent, { debuff = null, overtrained = f
   let death = 0;
   for (let i = 0; i < n; i++) {
     const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger, festival, grudge, vengeance, boss, earlyRound, rebels, relics, oracle, fast: true });
+    // A live match's boosts already in place (items used before Round 1, espionage) so a bet is priced on the real fight.
+    if (boostsA) m.a.boosts = [...boostsA];
+    if (boostsB) m.b.boosts = [...boostsB];
+    if (vengeanceB) m.b.vengeance = true;
     autoPlay(m, (match) => {
       if (useSignatures && !signatureBlocker(match) && (match.a.roundsWon < match.b.roundsWon || match.round >= 1)) {
         useSignature(match);

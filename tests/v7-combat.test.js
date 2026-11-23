@@ -223,7 +223,8 @@ test('Contract D combat rules: Axe +5% injure, Viper Venom +15 severity, COMBAT 
   assert.deepEqual(TACTICS.steady.self, -2500);
   assert.deepEqual(TACTICS.press.win, 1500);
   assert.deepEqual(TACTICS.press.self, 10000);
-  assert.deepEqual(CONSUMABLES.viperVenom.boost, { injure: 15000, severity: 15 });
+  // 7.2: Viper Venom became a Poison affinity (tests/v72-wounds.test.js); the severity boost it used stays in the engine.
+  assert.deepEqual(CONSUMABLES.viperVenom.boost, { injure: 10000, affinity: { style: 'poison', chance: 65000, upWeight: 1 } });
   assert.equal(GEAR.hunterBow.win, 3000);
   assert.equal(GEAR.lightGreaves.guard, 3000);
   assert.equal(GEAR.loricaSegmentata.guard, 15000);
@@ -233,9 +234,9 @@ test('Contract D combat rules: Axe +5% injure, Viper Venom +15 severity, COMBAT 
   const opp = makeCombatant(blank(), 'B');
   assert.ok(sources(computePhase2(axe, opp, 1).enemy).includes('Axe:5000'));
 
-  // Viper Venom adds +15 to severity roll: d100(35) + 15 = 50 -> Concussed.
+  // A severity boost adds to the severity roll: d100(35) + 15 = 50 -> Concussed (49–60 since 7.2).
   const mv = createMatch({ a: blank(), b: blank(), rng: scripted([e5(1), pct(35)]) });
-  mv.a.boosts = [{ ...CONSUMABLES.viperVenom.boost, name: CONSUMABLES.viperVenom.name, round: 1 }];
+  mv.a.boosts = [{ severity: 15, name: 'Severity test', round: 1 }];
   const chk = injuryCheck(mv, mv.a, mv.b, roundRecord({ winner: 'A' }), 'Venom strike');
   assert.equal(chk.injury.roll, 50);
   assert.equal(chk.injury.tag, 'concussed');

@@ -184,14 +184,14 @@ test('the new pieces are bought and placed like any decor', () => {
 });
 
 test('save version 5: a version-4 career loads with the new decor slots', () => {
-  assert.equal(SAVE_VERSION, 5);
+  assert.equal(SAVE_VERSION, 7);
   const { run, f } = fighter(10);
   const old = JSON.parse(serialize(run));
   old.version = 4;
   for (const x of [...old.roster, ...old.market]) for (const k of TEMPERAMENT) delete x.decor[k];
   for (const k of TEMPERAMENT) delete old.inventory.decor[k];
   const loaded = deserialize(JSON.stringify(old));
-  assert.equal(loaded.version, 5);
+  assert.equal(loaded.version, SAVE_VERSION);
   const g = loaded.roster.find((x) => x.id === f.id);
   for (const k of TEMPERAMENT) {
     assert.equal(g.decor[k], 0);
@@ -224,4 +224,74 @@ test('UI: the fighter card shows a drift under way', async () => {
   assert.doesNotMatch(fighterCard(f), /chip small drift/);
   f.humourDrift = { to: 'sanguine', weeks: 3 };
   assert.match(fighterCard(f), /chip small drift[^>]*>→ \S+ 3\/4/);
+});
+
+// Review fixes (7.1 follow-up).
+test('Iron Rules turns the Spiky Bed and Skull Rack off, like the rest of the decor', () => {
+  const { run, f } = fighter(20);
+  f.decor.spikyBed = 1;
+  for (const x of run.roster) while (x.pendingPerks.length) choosePerk(run, x.id, x.pendingPerks[0][0]);
+  advanceToTournament(run);
+  const m = startMatch(run, f.id, 1);
+  m.a.arena = 'ironRules';
+  m.a.f.injuries = [{ tag: 'fleshWound', weight: 1 }];
+  m.over = true;
+  m.result = { winner: 'A', reason: 'rounds' };
+  finishMatch(run, m);
+  assert.ok(!f.scars?.some((x) => x.id === 'hardened'));
+});
+
+test('Spiky Bed: an old wound carried into the fight does not count', () => {
+  const { run, f } = fighter(21);
+  f.decor.spikyBed = 1;
+  winWith(run, f, [{ tag: 'fleshWound', weight: 1, weeksLeft: 2 }]);
+  assert.ok(!f.scars?.some((x) => x.id === 'hardened'));
+});
+
+test('Spiky Bed also hardens in a Boss bracket Quarter-final', async () => {
+  const { drawBrackets } = await import('../src/run.js');
+  const run = createRun(22);
+  const f = recruit(run, run.market[0].id);
+  recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  run.arenas[2] = { ...structuredClone(run.arenas[1]), tier: 2 };
+  for (const t of [1, 2]) run.arenas[t].conquered = true;
+  run.topTier = 3;
+  run.arenas[3] = { ...structuredClone(run.arenas[1]), tier: 3, stage: 0, conquered: false };
+  run.bouts = { 1: 'open', 2: 'open', 3: 'open' };
+  run.boutPending = true;
+  drawBrackets(run);
+  run.prestige = 50;
+  f.decor.spikyBed = 1;
+  for (const x of run.roster) while (x.pendingPerks.length) choosePerk(run, x.id, x.pendingPerks[0][0]);
+  const m = startMatch(run, f.id, 3);
+  m.a.f.injuries = [{ tag: 'fleshWound', weight: 1 }];
+  m.over = true;
+  m.result = { winner: 'A', reason: 'rounds' };
+  const s = finishMatch(run, m);
+  assert.ok(s.bracket, 'a bracket round');
+  assert.ok(f.scars.some((x) => x.id === 'hardened'));
+  assert.equal(s.scar, 'Battle-Hardened');
+});
+
+test('taking the leading piece back ends the drift at once (a tie only pauses it)', () => {
+  const { run, f } = fighter(23, 'choleric');
+  run.gold = 30;
+  for (const k of ['wineAmphora', 'rockGarden']) buyDecor(run, k);
+  assignDecor(run, f.id, 'wineAmphora');
+  driftHumour(run, f);
+  driftHumour(run, f);
+  assignDecor(run, f.id, 'rockGarden'); // tie
+  assert.deepEqual(f.humourDrift, { to: 'sanguine', weeks: 2 });
+  return import('../src/run.js').then(({ removeDecor }) => {
+    removeDecor(run, f.id, 'wineAmphora'); // the Rock Garden leads now
+    assert.equal(f.humourDrift, undefined);
+  });
+});
+
+test('a bad drift target in a save does not break the room panel', async () => {
+  const { temperLine } = await import('../src/ui/views.js');
+  const { f } = fighter(24, 'choleric');
+  f.humourDrift = { to: 'bogus', weeks: 2 };
+  assert.match(temperLine(f), /Choleric/);
 });

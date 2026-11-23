@@ -314,6 +314,12 @@ export function dominantTemperament(f) {
   return { item: leaders[0][0], humor: DECOR[leaders[0][0]].humor };
 }
 
+// A drift ends as soon as its piece stops leading the room (a tie only pauses it), so the UI never shows a stale drift.
+export function syncDrift(f) {
+  const dom = dominantTemperament(f);
+  if (f.humourDrift && !dom?.tied && dom?.humor !== f.humourDrift.to) delete f.humourDrift;
+}
+
 // Weekly: a dominant Temperament piece for another Humour advances the drift; at HUMOUR_DRIFT.weeks the Humour changes for
 // good (until reshaped). A tie pauses the drift; no piece, or one matching their Humour, clears it.
 export function driftHumour(run, f) {
@@ -472,6 +478,7 @@ export function assignDecor(run, id, item) {
   assertOk(assignDecorBlocker(run, id, item));
   run.inventory.decor[item] -= 1;
   findFighter(run, id).decor[item] += 1;
+  syncDrift(findFighter(run, id));
 }
 
 export function removeDecorBlocker(run, id, item) {
@@ -487,6 +494,7 @@ export function removeDecor(run, id, item) {
   assertOk(removeDecorBlocker(run, id, item));
   findFighter(run, id).decor[item] -= 1;
   run.inventory.decor[item] += 1;
+  syncDrift(findFighter(run, id));
 }
 
 export function buyGearBlocker(run, index) {

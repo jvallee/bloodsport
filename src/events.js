@@ -197,6 +197,26 @@ export const EVENTS = [
       { label: 'Offer him a gift (6 Gold)', cost: 6, effects: { gold: -6, favor: 4 } },
     ],
   },
+  // 7.4 A mole unmasked by an investigation (src/run/espionage.js; never drawn at random). PLACEHOLDER words.
+  {
+    id: 'moleUnmasked', who: 'any', title: 'A mole in the house', when: () => false,
+    text: ({ f, house }) => `${f} confesses: every week they have been sending word to ${house}. The house waits to see what you do.`,
+    choices: [
+      { label: 'Execute them in the yard', effects: { mole: 'execute' } },
+      { label: 'Turn them: feed ${house} a false playbook (4 Gold)', cost: 4, needs: (run, ev) => (run.roster.find((f) => f.id === ev.f)?.mole?.master === 'palace' ? 'The palace sends no fighters to fool.' : null), effects: { mole: 'turn' } },
+      { label: 'Ransom them back to ${house} (+8 Gold)', effects: { mole: 'ransom' } },
+    ],
+  },
+  // 7.3 The house rises (src/run/unrest.js opens it; never drawn at random). PLACEHOLDER words.
+  {
+    id: 'chainsBreak', who: 'any', title: 'The Chains Break', when: () => false, crisis: true,
+    text: ({ f }) => `Torches in the barracks. ${f} has the keys, and half the house behind them. The guards look to you. What you do in the next hour decides whether there is a Ludus at dawn.`,
+    choices: [
+      { label: 'Open the coffers and the wine cellars (${price} Gold)', needs: (run, ev) => (run.gold < ev.price ? `Needs ${ev.price} Gold.` : null), effects: { revolt: 'coffers' } },
+      { label: 'Send in the guards and the loyal (your ${loyal} Power against their ${mutineers})', effects: { revolt: 'guards' } },
+      { label: "Turn their fury toward the Palatine (the rebels' cause)", needs: (run, ev) => ev.palatine ?? null, effects: { revolt: 'palatine' } },
+    ],
+  },
 ];
 
 export const EVENT_BY_ID = Object.fromEntries([...EVENTS, ...PLOT_EVENTS].map((e) => [e.id, e])); // plot cards are looked up here, but never drawn as ordinary events
@@ -233,6 +253,12 @@ export function stakesText(eff, sep = '; ', names = {}) {
   if (eff.coup) house.push('there is no turning back');
   if (eff.champion) add(eff.champion, 'joins the cause');
   if (eff.betray) house.push('your political prisoners and everyone you freed are executed; the Emperor rewards you');
+  if (eff.mole === 'execute') house.push('they die; the body is kept; their masters lose face; everyone −5 Morale');
+  if (eff.mole === 'turn') house.push('they stay, feeding their masters lies: +10% win in Round 1 against that house');
+  if (eff.mole === 'ransom') house.push('they leave; a feud with their house ends');
+  if (eff.revolt === 'coffers') house.push('the unrest is gone; everyone +15 Morale for 4 weeks');
+  if (eff.revolt === 'guards') house.push('if the loyal are stronger: the ringleader is hurt, −6 Favour; if not, the Ludus falls and the career ends');
+  if (eff.revolt === 'palatine') house.push('the unrest is gone; the ringleader joins the rebels; the palace grows more suspicious');
   const parts = [house.join(', '), ...Object.entries(people).map(([to, list]) => `${names[to] ?? WHO[to]}: ${list.join(', ')}`)].filter(Boolean);
   if (eff.chance) {
     const win = stakesText(eff.chance.win, ', ', names);

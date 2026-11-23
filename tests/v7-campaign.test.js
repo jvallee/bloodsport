@@ -312,7 +312,7 @@ test('#6.14 stewardPlan and advanceToTournament use net training stress (decorCa
 });
 
 test('#6.15 save v4 validation, log cap 400, importSave guard, and recordCareer dedup beyond 10 past careers', () => {
-  assert.equal(SAVE_VERSION, 5);
+  assert.equal(SAVE_VERSION, 7);
   assert.throws(() => deserialize('{bad json'), /corrupted/);
   assert.throws(() => deserialize('[]'), /corrupted/);
   assert.throws(() => deserialize(JSON.stringify({ version: 1 })), /older version/);

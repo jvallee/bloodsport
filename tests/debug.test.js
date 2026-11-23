@@ -16,7 +16,14 @@ function playCareer(seed, { months = 4, reloadMidFight = false } = {}) {
   act('job', { id: state.run.roster[0].id, job: 'trainPower' });
   for (let m = 0; m < months && state.run.status === 'active'; m++) {
     for (const f of state.run.roster) while (f.pendingPerks.length) act('perk', { id: f.id, perk: f.pendingPerks[0][0] });
+    if (state.run.fortune) act('fortune-pass'); // Fortune's monthly hand would hold the month up
     act('advance-tournament');
+    if (state.run.fortune) {
+      act('fortune-pass');
+      act('advance-tournament');
+    }
+    // A fighter lost in the arena is replaced, as a player would (7.2: seed 7's first fighter dies in their second fight).
+    if (!state.run.roster.length && state.run.market[0]) act('recruit', { id: state.run.market[0].id });
     const f = state.run.roster.find((x) => x.alive);
     if (!f || !state.run.boutPending) break;
     act('fight', { id: f.id, tier: state.run.topTier });

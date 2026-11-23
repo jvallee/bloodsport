@@ -10,6 +10,8 @@ import {
   changeFavor, checkLoss,
 } from './helpers.js';
 import { plotActive, changeSuspicion, advancePlot, applyPlotEffects } from './plotEngine.js';
+import { resolveRevolt } from './unrest.js';
+import { resolveMole } from './espionage.js';
 
 export function eventTargets(run, who) {
   const alive = run.roster.filter((f) => !isInActiveBracket(run, f.id));
@@ -60,7 +62,7 @@ export function rollEvent(run) {
 
 export function eventNames(run, ev = run.event) {
   const name = (id) => findFighter(run, id)?.name;
-  return { f: name(ev?.f), g: name(ev?.g), name: ev?.name, house: ev?.house, opp: ev?.opp, fOdds: ev?.fOdds, gOdds: ev?.gOdds };
+  return { f: name(ev?.f), g: name(ev?.g), name: ev?.name, house: ev?.house, opp: ev?.opp, fOdds: ev?.fOdds, gOdds: ev?.gOdds, price: ev?.price, loyal: ev?.loyal, mutineers: ev?.mutineers };
 }
 
 export function eventChoiceBlocker(run, index) {
@@ -69,8 +71,8 @@ export function eventChoiceBlocker(run, index) {
   if (!run.event) return 'No event to decide.';
   const choice = EVENT_BY_ID[run.event.id]?.choices[index];
   if (!choice) return 'No such choice.';
-  if (choice.cost && run.gold < choice.cost) return `Needs ${choice.cost} Gold.`;
-  return choice.needs?.(run, run.event) ?? null;
+  // The choice's own reason first: "Needs 4 Gold" would hide why it can never be taken.
+  return choice.needs?.(run, run.event) ?? (choice.cost && run.gold < choice.cost ? `Needs ${choice.cost} Gold.` : null);
 }
 
 export function applyEventEffects(run, eff, ev, out) {
@@ -104,6 +106,8 @@ export function applyEventEffects(run, eff, ev, out) {
     }
   }
   if (eff.spy) spyFound(run, findFighter(run, ev.f), eff.spy, out);
+  if (eff.revolt) resolveRevolt(run, eff.revolt, ev, out);
+  if (eff.mole) resolveMole(run, eff.mole, ev, out);
   if (ev.plot) applyPlotEffects(run, eff, ev, out);
   if (eff.chance) {
     const p = typeof eff.chance.p === 'function' ? eff.chance.p(run, ev) : eff.chance.p;

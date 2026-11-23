@@ -2,7 +2,7 @@
 
 import { createRng, deriveSeed, int, pick, randomSeed } from '../rng.js';
 import {
-  ECONOMY, STRESS, STARTING_BUILDINGS, XP, MORALE, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG,
+  ECONOMY, STRESS, STARTING_BUILDINGS, XP, MORALE, FAVOR, TRIBUTE, INJURY_BY_TAG,
   HOUSES, PATRONS, BRACKET, SHORT, FORTUNE,
 } from '../data.js';
 import { RELICS, relicSum } from '../fortune.js';
@@ -29,6 +29,8 @@ import { checkQuests, wantsMonth, rebelQuestsMonth } from './questsEngine.js';
 import { fortuneMonth, loseWager, relicInPool } from './fortuneEngine.js';
 import { rollEvent } from './eventsEngine.js';
 import { summonsMonth } from './tournaments.js';
+import { unrestWeek } from './unrest.js';
+import { espionageWeek, plantMole } from './espionage.js';
 
 // ---------- Career setup ----------
 
@@ -68,7 +70,9 @@ export function createRun(seed = randomSeed(), setup = {}) {
     endReason: null,
     inMatch: false,
     matchInfo: null,
-    revoltWeeks: 0,
+    unrest: 0,
+    unrestStats: { incidents: 0, crises: 0 },
+    espionage: { clues: [], suspects: null, opMonth: null, op: null, leak: null },
     history: [],
     log: [],
     actions: [],
@@ -186,12 +190,12 @@ export function advanceWeek(run) {
       clearHealedMedbay(run, f, { logLeave: true });
     } else if (f.job === 'rest') {
       f.stress = clampStress(f.stress + STRESS.rest);
-      const light = f.injuries.find((i) => i.tag === 'fleshWound' && i.weeksLeft !== undefined);
+      const light = f.injuries.find((i) => ['fleshWound', 'bleeding'].includes(i.tag) && i.weeksLeft !== undefined);
       if (light) {
         light.weeksLeft -= 0.5;
         if (light.weeksLeft <= 0) {
           f.injuries = f.injuries.filter((i) => i !== light);
-          log(run, `${f.name}'s Flesh Wound has healed with rest.`, 'good');
+          log(run, `${f.name}'s ${INJURY_BY_TAG[light.tag].name} has healed with rest.`, 'good');
         }
       }
     }
@@ -218,9 +222,8 @@ export function advanceWeek(run) {
     if (f.morale < MORALE.mutinous) log(run, `${f.name} is mutinous and refuses to fight.`, 'bad');
   }
   tendBonds(run);
-  const avg = run.roster.length ? run.roster.reduce((s, f) => s + f.morale, 0) / run.roster.length : 100;
-  run.revoltWeeks = avg < REVOLT.morale ? run.revoltWeeks + 1 : 0;
-  if (run.revoltWeeks) log(run, `The gladiators are close to revolt (${run.revoltWeeks}/${REVOLT.weeks} weeks).`, 'bad');
+  unrestWeek(run); // 7.3: replaces the house-average revolt
+  espionageWeek(run); // 7.4
 
   if (run.bouts) for (const f of run.roster) if (f.foughtTopWeek !== run.week) f.topStreak = 0;
   if (run.bouts) for (const tier of unlockedTiers(run)) if (tier < run.topTier && run.bouts[tier] === 'open') arenaMovesOn(run, tier);
@@ -235,6 +238,7 @@ export function advanceWeek(run) {
   const monthStart = isMonthStart(run.week);
   if (monthStart) {
     refreshMarket(run);
+    plantMole(run);
     refreshLiaison(run);
     refreshArmourer(run);
     plotMonth(run);
@@ -263,7 +267,8 @@ export function advanceWeek(run) {
   checkQuests(run);
   checkLoss(run);
   if (monthStart && run.status === 'active') fortuneMonth(run);
-  if (run.status === 'active') {
+  // An event opened this week (The Chains Break) is never replaced by a random event or a plot card.
+  if (run.status === 'active' && !run.event) {
     const recentBefore = run.recentEvents;
     const eventMonthBefore = run.eventMonth;
     rollEvent(run);
