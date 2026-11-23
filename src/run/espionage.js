@@ -7,7 +7,7 @@ import { MOLE_CLUES, MOLE_TELLS } from '../quests.js';
 import { isTournamentWeek } from '../calendar.js';
 import { maxLevel, oracleLevel } from '../ludus.js';
 import {
-  log, chronicle, findFighter, bumpMorale, monthOf, assertOk, activeModalOrPendingBlocker, changeFavor, removeFighter,
+  log, chronicle, findFighter, bumpMorale, monthOf, assertOk, activeModalOrPendingBlocker, changeFavor, removeFighter, isInActiveBracket,
 } from './helpers.js';
 import { plotActive, changeSuspicion } from './plotEngine.js';
 import { houseOf, opponentFor } from './houses.js';
@@ -94,6 +94,7 @@ export function investigateBlocker(run, id) {
   if (blocked) return blocked;
   if (!espState(run).clues.length) return 'No clues yet: nothing to go on.';
   if (!findFighter(run, id)) return 'No such fighter.';
+  if (isInActiveBracket(run, id)) return `${findFighter(run, id).name} is in the middle of a bracket: investigate them after it.`;
   if (run.gold < ESPIONAGE.investigate) return `Needs ${ESPIONAGE.investigate} Gold.`;
   return null;
 }
@@ -165,6 +166,7 @@ export function covertOpBlocker(run, type) {
   if (espState(run).opMonth === monthOf(run.week)) return 'One covert op a month.';
   if (isTournamentWeek(run.week) || run.bouts) return 'Plan it before fight day.';
   if (!opTarget(run)) return 'No opponent to work on yet.';
+  if (type === 'armourer' && !opTarget(run).gear?.armor) return `${opTarget(run).name} wears no armour to sabotage.`;
   if (run.gold < op.cost) return `Needs ${op.cost} Gold.`;
   return null;
 }

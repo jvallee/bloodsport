@@ -127,6 +127,7 @@ function atFight(seed, type, { success = true } = {}) {
   perks(run);
   run.buildings.push({ id: 'b99', type: 'liaison', level: 1 });
   quietWeek(run);
+  if (type === 'armourer') opTarget(run).gear = { ...(opTarget(run).gear ?? {}), armor: 'lionPelt' }; // something to strip
   const saved = ESPIONAGE.ops[type].chance;
   ESPIONAGE.ops[type].chance = success ? 1 : 0;
   try {
@@ -158,6 +159,7 @@ test('covert op: Bribe the Armourer strips the opponent\'s armour; caught costs 
   run.buildings.push({ id: 'b99', type: 'liaison', level: 1 });
   quietWeek(run);
   const favor = run.favor;
+  opTarget(run).gear = { ...(opTarget(run).gear ?? {}), armor: 'lionPelt' };
   const saved = ESPIONAGE.ops.armourer.chance;
   ESPIONAGE.ops.armourer.chance = 0;
   try { covertOp(run, 'armourer'); } finally { ESPIONAGE.ops.armourer.chance = saved; }
@@ -284,6 +286,7 @@ test('the odds preview sees espionage without using this month\'s op', async () 
   const { run } = house(44, 1);
   run.buildings.push({ id: 'b99', type: 'liaison', level: 1 });
   quietWeek(run);
+  opTarget(run).gear = { ...(opTarget(run).gear ?? {}), armor: 'lionPelt' };
   const saved = ESPIONAGE.ops.armourer.chance;
   ESPIONAGE.ops.armourer.chance = 1;
   try { covertOp(run, 'armourer'); } finally { ESPIONAGE.ops.armourer.chance = saved; }
@@ -326,4 +329,23 @@ test('raising an executed mole brings back a Revenant, not a mole; a mid-drift d
   assert.equal(r.mole, undefined);
   assert.equal(r.humourDrift, undefined);
   assert.equal(moleOf(run), null);
+});
+
+test('Bribe the Armourer needs an opponent who wears armour', () => {
+  const { run } = house(61, 1);
+  run.buildings.push({ id: 'b99', type: 'liaison', level: 1 });
+  quietWeek(run);
+  const target = opTarget(run);
+  target.gear = { ...(target.gear ?? {}), armor: null };
+  assert.match(covertOpBlocker(run, 'armourer'), /wears no armour/);
+  target.gear.armor = 'lionPelt';
+  assert.equal(covertOpBlocker(run, 'armourer'), null);
+});
+
+test('a fighter in the middle of a bracket cannot be investigated', () => {
+  const { run, fs: [a] } = house(62);
+  espState(run).clues = [{ week: 1, text: 'x' }];
+  run.brackets = { 3: { round: 1, fighterId: a.id } };
+  run.bouts = { 3: 'open' };
+  assert.match(investigateBlocker(run, a.id), /bracket/i);
 });

@@ -4,6 +4,8 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.4.1): fixes
 
+- **Bribe the Armourer** can't be bought against an opponent who wears no armour (you paid for nothing).
+- **Investigating** waits until a fighter's bracket is over (it could leave a bracket without its fighter).
 - **The Temple of Vulcan:** raising an executed mole no longer brings back a spy, and a fighter who died partway through a change of temper rises without it.
 - **Steal the Playbook without an Oracle:** you now get the exact Round 1 tactic and no tell after it (it showed a false tell at "about 0%" in later rounds, and the suggested tactic followed it).
 
