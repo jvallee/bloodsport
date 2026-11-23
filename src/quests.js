@@ -161,6 +161,7 @@ export const SUMMONS_LINES = {
   refused: 'You refuse me? I will remember the name of your house, Lanista. I will remember it at every dinner.',
   won: (f) => `${f} beat my champion? On my own sand? Well. Someone bring me that fighter's name, I want to say it again.`,
   survived: (f) => `${f} lost, but still stood at the end. The crowd liked them. So, for a moment, did I.`,
+  swept: (f) => `${f} barely lasted two rounds on my sand. Do not waste my afternoon again.`,
   yielded: (f) => `${f} begged for their life on my sand. I let them keep it. I will not forget the begging.`,
   died: (f) => `${f} died well. That is all I asked of them.`,
 };

@@ -14,7 +14,7 @@ export const INTRO = [
   },
   {
     title: "How you win",
-    body: `<p>Climb four arenas, from <b>the Dirt Pits</b> to <b>the Imperial Coliseum</b>. Each arena holds a circuit: <b>Tournament 1 → Tournament 2 → Boss</b>.</p>
+    body: `<p>Climb four arenas, from <b>the Dirt Pits</b> to <b>the Imperial Coliseum</b>. Each arena holds a circuit: <b>Tournament → Boss</b> in a season (or <b>Tournament 1 → Tournament 2 → Boss</b> on the Long Road).</p>
       <p>Beat all four Bosses, then win <b>the Grand Tournament</b>, and the Emperor names you Master of the Games.</p>
       <p>You don't fight. You recruit, train, heal and choose who to send, then make the hard calls from your box above the sand.</p>`,
   },
@@ -67,7 +67,7 @@ export const GUIDE = [
     goal: (r) => r.boutPending || r.history.length > 0,
     tab: "ludus",
     focus: '[data-action="advance-tournament"]',
-    text: `The last week of every month is fight day. Keep training, and rest a fighter whose Stress passes ${STRESS.overtrained - STRESS.train}: at ${STRESS.overtrained} they're overtrained and fight worse. When you're ready, <b>Skip to tournament</b> takes you straight there.`,
+    text: `The last week of every month is fight day. Keep training, and rest a fighter whose Stress passes ${STRESS.overtrained - STRESS.train}: at ${STRESS.overtrained} they're overtrained and fight worse. When you're ready, <b>⚔ To fight day</b> takes you straight there.`,
   },
   {
     id: "bout",
@@ -85,7 +85,7 @@ export const STEPS = [
     id: "trainerCap",
     when: (r) => r.roster.some((f) => f.trained >= trainCapFor(r)),
     title: "The Trainer cap",
-    body: "A fighter has learned everything this Trainer Room can teach. Upgrade the <b>Trainer Room</b> in the Estate to raise the cap (3 → 5 → 8 → 13 → 21 points per fighter). Each level also raises the weekly fee by 1 Gold per trainee, so plan your Gold.",
+    body: "A fighter has learned everything this Trainer Room can teach. Upgrade the <b>Trainer Room</b> in the Estate to raise the cap (3 → 5 → 8 → 13 → 21 training weeks per fighter). Each level also raises the weekly fee by 1 Gold per trainee, so plan your Gold.",
   },
   {
     id: "stress",

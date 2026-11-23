@@ -86,7 +86,8 @@ test('to the death: some fall, and leave a body for the Temple of Vulcan; Favour
       assert.ok(!run.roster.includes(f));
       assert.ok(run.fallen.some((x) => x.id === f.id && x.arena), 'a body');
     } else if (s.won) assert.equal(run.favor, Math.min(100, favor + SUMMONS.winFavor));
-    else assert.equal(run.favor, Math.min(100, favor + SUMMONS.surviveFavor), 'stood to the end');
+    else if (s.rounds >= 3) assert.equal(run.favor, Math.min(100, favor + SUMMONS.surviveFavor), 'stood to the end');
+    else assert.equal(run.favor, Math.max(0, favor + (SUMMONS.sweptFavor ?? -5)), 'swept in two rounds');
   }
   assert.ok(died > 0, 'the Imperial sand is dangerous');
 });

@@ -22,6 +22,7 @@ export const d100 = (rng) => int(rng, 1, 100);
 export const d6 = (rng) => int(rng, 1, 6);
 
 export function pick(rng, list) {
+  if (!list.length) return undefined;
   return list[int(rng, 0, list.length - 1)];
 }
 

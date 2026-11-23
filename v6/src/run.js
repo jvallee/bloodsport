@@ -7,7 +7,7 @@ import { createRng, deriveSeed, int, next, pick, randomSeed } from './rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, STAGES, BOSS_DEBUFFS,
   STARTING_BUILDINGS, SPY, XP, PERKS, RENOWN, MORALE, GEAR, DECOR, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG, CONSUMABLES, BLOODIED, HUMORS, FESTIVAL_BY_ID, HOUSES, PATRONS,
-  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, SUMMONS, FEAR, FORTUNE, HEAT, LEGACY, deltaRow,
+  SCARS, SCAR_CHANCE, SCAR_AFEARED, SEVERE, AUGMENTS, SURGERY, RETIRE, RENAME, BRACKET, MERCY, TITLES, POLITICAL, PLOT, LIAISON, RECRUIT, EXHIBITION, NEMESIS, SHORT, BET, DEMAND, DEMANDS, BOND, HYPE, LOUNGE, REANIMATE, QUESTS, FIGHTER_WANTS, RIVAL, REBEL_QUEST, SUMMONS, FEAR, FORTUNE, HEAT, LEGACY, deltaRow,
 } from './data.js';
 import { RELICS, BOONS, hasRelic, relicSum, relicFight, tagCount, fortuneTitle, fortuneText } from './fortune.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed, coupBonus } from './plot.js';
@@ -513,7 +513,7 @@ export function answerSummons(run, id, order) {
     }
   }
   summary.favor = run.favor - favorBefore;
-  run.history.push(summary);
+  pushResult(run, summary);
   run.summons = null;
   run.summonsDone = true;
   log(run, `The Emperor's summons: ${fighter.name} (Power ${effectivePower(fighter)}) against ${opp.name} (Power ${summary.oppPower}): ${won ? 'won' : !summary.died ? (reason === 'towel' ? 'yielded at the Death Gate' : 'lost, but survived') : 'killed'}${fighter.alive && newInjuries.length ? `, with ${newInjuries.join(', ')}` : ''}.${[summary.favor ? ` Favour ${summary.favor > 0 ? '+' : '−'}${Math.abs(summary.favor)}` : '', summary.renown ? ` +${summary.renown} Renown` : ''].filter(Boolean).join(',')}${summary.favor || summary.renown ? '.' : ''}`, won ? 'good' : summary.died ? 'bad' : 'event');
@@ -2662,6 +2662,38 @@ export function retire(run, id) {
   return legend;
 }
 
+// Renaming (the designer, 6.0.3): a new name, which the fighter resents RENAME.chance of the time. Its own dice
+// (run.rng.rename), so renaming never changes what any other roll in the career would have been.
+const renameRng = (run) => (run.rng.rename ??= createRng(deriveSeed(run.seed, 14)));
+export const cleanName = (name) => String(name ?? '').replace(/\s+/g, ' ').trim();
+
+export function renameBlocker(run, id, name) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (name === undefined) return null; // the button itself: the name is asked for next
+  const n = cleanName(name);
+  if (!n) return 'A name can\'t be empty.';
+  if (n.length > RENAME.maxLength) return `A name is at most ${RENAME.maxLength} characters.`;
+  if (n === f.name) return `${f.name} already has that name.`;
+  if (takenNames(run).some((x) => x.toLowerCase() === n.toLowerCase())) return `Someone is already called ${n}.`;
+  return null;
+}
+
+// Returns true when the fighter resented it.
+export function rename(run, id, name) {
+  assertOk(renameBlocker(run, id, name ?? ''));
+  const f = findFighter(run, id);
+  const old = f.name;
+  f.name = cleanName(name);
+  chronicle(run, f, `Renamed: once called ${old}.`);
+  const resents = next(renameRng(run)) < RENAME.chance;
+  if (resents) f.mood = { n: (f.mood?.n ?? 0) + RENAME.morale, weeks: MOOD_WEEKS };
+  log(run, resents ? `${old} is now ${f.name}, and resents it: −${-RENAME.morale} Morale for ${MOOD_WEEKS} weeks.` : `${old} is now ${f.name}, and takes it well.`, resents ? 'bad' : 'good');
+  return resents;
+}
+
 // ---------- Tournaments ----------
 
 // A fighter's wins, a Revenant's from before their death included.
@@ -2858,6 +2890,12 @@ function settleBout(run, tier) {
 
 // The Final of a Boss tournament from the Silver Coliseum up: losing it returns the buy-in (BRACKET.bossFinalRefund).
 export const keepsBuyIn = (run, tier) => Boolean(BRACKET.bossFinalRefund) && tier !== GRAND_TIER && hasBracket(tier) && boutFor(run, tier).boss && bracketOf(run, tier)?.round === 2;
+
+// A fight's summary joins the history; the house's first ever win is marked, so the fight screen can celebrate it (the designer, 6.0.5).
+function pushResult(run, summary) {
+  if (summary.won && !run.history.some((h) => h.won)) summary.firstWin = true;
+  run.history.push(summary);
+}
 
 export function finishMatch(run, match) {
   if (!run.inMatch) throw new Error('No match in progress.');
@@ -3080,7 +3118,7 @@ export function finishMatch(run, match) {
     summary.levelUp = run.prestigeLevel;
     log(run, `House Prestige level ${run.prestigeLevel}! New buildings and room plots unlocked.`, 'event');
   }
-  run.history.push(summary);
+  pushResult(run, summary);
   log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
   const fought = (match.round ?? 0) > 0; // a withdrawal between bracket matches fights nobody (playtest #10)
   if (!won && fought) recordNemesis(run, opp, tier, fighter, bout.boss);
@@ -3151,7 +3189,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   bracket.round += 1;
   run.inMatch = false;
   run.matchInfo = null;
-  run.history.push(summary);
+  pushResult(run, summary);
   log(run, `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good');
   offerMercy(run, match, summary, fighter, opp, tier);
   return summary;

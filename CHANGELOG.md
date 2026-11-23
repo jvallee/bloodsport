@@ -2,6 +2,50 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.0.0
+
+Version 7 smooths the season from start to Grand Tournament, rebalances the weapons, gear and tactics that were too strong or too weak, and fixes a long list of bugs found in a full review. Version 6.0.5 is frozen and playable at `/v6/`, with its own saves, so a career there and one here never overwrite each other. Your current careers carry over to version 7.
+
+**A smoother season**
+- **The Silver and Imperial walls are lower:** their opponents are a little weaker, and the Grand Tournament is now the hardest fight of a season, as it should be. A won season takes about 15 fight months.
+- **Recruits keep up:** in a season, the Market's and the Liaison's fighters arrive stronger in the higher arenas, so a new recruit is still worth hiring late on.
+- **Training costs rise in steps:** 2 Gold a week in the Dirt Pits and Bronze Circuit, 3 in the Silver Coliseum, and the full price from the Imperial Coliseum on (it used to jump straight to full price at Silver).
+- **Small purses are worth taking:** the steward's early tasks now pay at least 1 Gold (some paid nothing), a Purse of Coin from Fortune is richer (5 Gold in the Dirt Pits), and hosting the Patron Lounge costs 2 Gold a tier (was 3).
+- **Heat climbs in order:** each step of Heat is now harder than the one before. Heat 1 is still Harsh Judges; Lean Fortunes and Hungry Lions now come second and third, then a Greedy Emperor and Iron Bosses.
+
+**Fights**
+- **Tactics:** Steady now lowers the chance to be injured (−2.5%). Press gives less win chance (+1.5%, was +3%) and makes you easier to wound (+10%, was +7.5%).
+- **Weapons:** the Sword parries more often (25%, was 20%) and a parry also gives +5% win chance next round. The Axe adds +5% chance to injure on top of its worse wounds.
+- **Classes and moves:** Birds of Prey (Ornitharius) works from the first blow, not only once your fighter is hurt. Haymaker is safer (+5% to be injured, was +10%), Aimed Shot is stronger (+12% win, was +10%), and Cast the Net is weaker (−4 Speed and −5% win, was −5 and −10%).
+- **Blinded counts as two injuries**, like the other wounds that bad.
+- **Viper Venom** is stronger: +15% chance to injure and worse wounds next round.
+- **Gear:** the Hunter's Bow and Light Greaves trade a point of Speed for win chance or armour and cost 14 Gold (was 12); the Trident, Executioner's Axe, Lorica Segmentata and Lion Pelt are cheaper and/or stronger.
+- **The Oracle's tells stay put:** what the Oracle shows you no longer changes how the fight plays out, so a bug report replays the fight exactly.
+- **No spoilers in the fight animation:** the fighters' cards show the state before the round until the blow lands, so you no longer see a death or wound before it happens.
+
+**Rules that now hold**
+- **Losing early to a Boss isn't a cheap way out:** losing in a Boss Quarter- or Semi-final pays no Gold and costs three quarters of the Boss's Favour (was half).
+- **The Emperor's summons:** surviving pays only if your fighter lasts all three rounds; being swept 0–2 costs 5 Favour.
+- **The Fates' Wager:** if you can't pay a lost wager in full, the rest is taken in Favour.
+- **Lower Tribute** discounts one year's tribute, not every year.
+- **At most one surprise event a month** while you plan, outside fight days.
+
+**Fixes**
+- A fighter in the middle of a Boss bracket can no longer be released, retired or sent away by an event (this could lock up the bracket).
+- Reloading in the middle of a fight no longer breaks the save (it did for Orcs with Blood Faith).
+- Phlegmatic opponents no longer crash the fight after you go All In.
+- Skipping a bout in a season no longer creates a phantom second tournament.
+- The Liaison's discount now applies to every recruit, and the game no longer ends your career for being "too poor to recruit" when a discounted fighter was affordable.
+- Returning legends from the Hall can no longer be retired and returned again and again.
+- A healed fighter leaves the Medbay however they were healed.
+- The Emperor's summons shows the opponent's real Power (it showed 18 too few).
+- Boss brackets show the opponent you face next, with their Power, Speed and purse, and the Final's opponent below.
+- Very old saves (version 2) load again; a damaged or newer save gives a clear message instead of failing.
+- Sound: a browser blocking sound no longer opens the error box, and sounds stop when you leave a fight or switch career.
+- Easier to read: higher-contrast danger colours, a header that no longer covers the Codex, keyboard focus outlines, screen-reader labels on tabs and portraits, and "reduce motion" respected everywhere.
+- A renamed fighter keeps their face; Basa have the right ears; the unlockable classes have their own gear in portraits.
+- The Surgeon names each injury properly, and locked Codex entries no longer show up in search.
+
 ## 6.0.5
 
 - **Your first victory stands out:** the house's first ever win gets a gold banner above the result, saying what it means and what comes next.

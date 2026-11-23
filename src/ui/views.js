@@ -5,11 +5,12 @@ import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
 import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, unlockText, levelFor, nextUnlock, unlocksAt, heatUnlocked, houseColours, dailyStreak, returningFor, LEGACY_LEVELS, HEAT, HOUSE_COLOURS } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
+import * as runApi from '../run.js';
 import {
-  boutFor, unlockedTiers, arenaName, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
+  boutFor, unlockedTiers, arenaName, arenaPower, circuitInfo, marketPrice, surgeonPrice, recruitBlocker, jobBlocker, surgeonBlocker, fightBlocker,
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
-  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker, fortuneBlocker, rerollBlocker, rerollPrice,
-  isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
+  buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, effectiveSpeed, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker, fortuneBlocker, rerollBlocker, rerollPrice,
+  buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
   trainGain, renameBlocker,
 } from '../run.js';
 import { stepText } from '../tutorial.js';
@@ -19,11 +20,45 @@ import {
 import { describeOdds } from '../odds.js';
 import { fighterWarnings, arenaStakes } from '../explain.js';
 import { gearText, slotLabel } from '../codex.js';
-import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON, mercyChoices, gearSpd } from './components.js';
+import { esc, safeColor, safeTone, button, buttonWhy, fighterCard, ICON, BUILDING_ICON, mercyChoices, gearSpd } from './components.js';
 import { portrait, npcPortrait } from './portrait.js';
 import { SPEAKERS, tipSpeaker } from '../dialogue.js';
 import { EVENT_BY_ID, MOOD_WEEKS, choiceLabel, stakesText } from '../events.js';
 import { RELICS, TAGS, KIND_LABELS, perkTags, fortuneTitle, fortuneText } from '../fortune.js';
+
+const getSummonsPower = (run) => (typeof runApi.summonsPower === 'function' ? runApi.summonsPower(run) : arenaPower(run, SUMMONS.tier, 0));
+const getIdleBlocker = (run) => (typeof runApi.idleBlocker === 'function'
+  ? runApi.idleBlocker(run)
+  : run.status !== 'active' ? 'The career is over.' : run.inMatch ? 'Finish the current match first.' : run.mercy ? 'Decide the beaten opponent\'s fate first.' : null);
+function getBracketInfo(run, tier) {
+  if (typeof runApi.bracketInfo === 'function') return runApi.bracketInfo(run, tier);
+  if (!hasBracket(tier)) return null;
+  const b = bracketOf(run, tier);
+  const finalOpponent = run.arenas[tier].opponent;
+  const earlyPurse = BRACKET.purse * tier;
+  const earlyPrestige = BRACKET.prestigeTopOnly && tier !== run.topTier ? 0 : BRACKET.prestige;
+  const round = b?.round ?? 0;
+  const foes = b ? [...b.foes, finalOpponent] : [null, null, finalOpponent];
+  const bout = boutFor(run, tier);
+  return {
+    tier,
+    open: Boolean(b),
+    round,
+    fighterId: b?.fighterId ?? null,
+    earlyPurse,
+    earlyPrestige,
+    rounds: BRACKET.rounds.map((label, index) => ({
+      index,
+      label,
+      opponent: foes[index],
+      power: foes[index] ? effectivePower(foes[index]) : null,
+      gold: index < 2 ? earlyPurse : bout.winGold,
+      prestige: index < 2 ? earlyPrestige : bout.winPrestige,
+    })),
+    nextOpponent: opponentFor(run, tier),
+    finalOpponent,
+  };
+}
 
 const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
 // A season trains faster (trainGain), so the training labels name this career's gain.
@@ -62,32 +97,34 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
   const ludusBadge = levelUps ? `<span class="count" title="Fighters waiting to choose a perk">${levelUps}</span>` : '';
   const low = run.favor <= FAVOR.warning;
   return `
-    <header class="topbar">
-      <h1>BLOOD AND CIRCUS</h1>
-      <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
-      <div class="stat prestige" title="${esc(prestigeTip(run))}">${ICON.prestige}<b>${run.prestige}</b>
-        <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${Math.max(0, next.at - run.prestige)} to Lv ${next.level}</small>` : ''}</span></div>
-      <div class="favor${low ? ' low' : ''}" title="Imperial Favour: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
-        <span>Favour</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
-      ${tributeStat(run)}
-      <div class="track" title="Arena tiers">${tiers}</div>
-      <div class="spacer"></div>
-      <button class="btn small sound" data-action="toggle-sound" title="${sound ? 'Sound on: click to mute' : 'Sound off: click to turn on'}" aria-label="${sound ? 'Mute sound' : 'Turn sound on'}">${sound ? '🔊' : '🔇'}</button>
-      <span class="top-actions">
-        <button class="btn small" data-action="help">How to play</button>
-        <button class="btn small" data-action="bug-open" title="Something wrong or confusing? Send the developer a report they can replay.">Report a bug</button>
-        <button class="btn small" data-action="careers-open" title="Your saved careers: switch between them, or delete one">Careers</button>
-        <button class="btn small" data-action="new-run" title="Start another career (this one stays in Careers)">New career</button>
-      </span>
-      <details class="top-menu"><summary class="btn small" aria-label="Menu">☰</summary><div class="top-menu-list">
-        <button class="btn small" data-action="help">How to play</button>
-        <button class="btn small" data-action="careers-open">Careers</button>
-        <button class="btn small" data-action="new-run">New career</button>
-        <button class="btn small" data-action="bug-open">Report a bug</button>
-      </div></details>
-    </header>
-    ${run.bouts && run.boutPending && tab === 'ludus' ? '<button class="jump-bout" data-action="jump-bout">⚔ Fight day ↓</button>' : ''}
-    <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>`;
+    <div class="sticky-head">
+      <header class="topbar">
+        <h1>BLOOD AND CIRCUS</h1>
+        <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
+        <div class="stat prestige" title="${esc(prestigeTip(run))}">${ICON.prestige}<b>${run.prestige}</b>
+          <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${Math.max(0, next.at - run.prestige)} to Lv ${next.level}</small>` : ''}</span></div>
+        <div class="favor${low ? ' low' : ''}" title="Imperial Favour: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
+          <span>Favour</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
+        ${tributeStat(run)}
+        <div class="track" title="Arena tiers">${tiers}</div>
+        <div class="spacer"></div>
+        <button class="btn small sound" data-action="toggle-sound" title="${sound ? 'Sound on: click to mute' : 'Sound off: click to turn on'}" aria-label="${sound ? 'Mute sound' : 'Turn sound on'}">${sound ? '🔊' : '🔇'}</button>
+        <span class="top-actions">
+          <button class="btn small" data-action="help">How to play</button>
+          <button class="btn small" data-action="bug-open" title="Something wrong or confusing? Send the developer a report they can replay.">Report a bug</button>
+          <button class="btn small" data-action="careers-open" title="Your saved careers: switch between them, or delete one">Careers</button>
+          <button class="btn small" data-action="new-run" title="Start another career (this one stays in Careers)">New career</button>
+        </span>
+        <details class="top-menu"><summary class="btn small" aria-label="Menu">☰</summary><div class="top-menu-list">
+          <button class="btn small" data-action="help">How to play</button>
+          <button class="btn small" data-action="careers-open">Careers</button>
+          <button class="btn small" data-action="new-run">New career</button>
+          <button class="btn small" data-action="bug-open">Report a bug</button>
+        </div></details>
+      </header>
+      <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>
+    </div>
+    ${run.bouts && run.boutPending && tab === 'ludus' ? '<button class="jump-bout" data-action="jump-bout">⚔ Fight day ↓</button>' : ''}`;
 }
 
 // The coming bouts in your top arena, up to its Boss.
@@ -141,14 +178,14 @@ export function endBanner(run, legacy = null) {
     <div>${esc(run.endReason)}</div>
     ${(run.epilogue ?? []).map((line) => `<p class="epilogue">${esc(line)}</p>`).join('')}
     ${plotAftermath(run)}
-    <div class="end-score">${run.setup?.daily ? `⚜ The Emperor's Challenge, ${run.setup.daily} · ` : run.setup?.short ? 'Short career · ' : ''}${run.setup?.heat ? `🔥 Heat ${run.setup.heat} · ` : ''}Score <b>${score}</b>${run.setup?.daily && legacy ? ` · your best today ${Math.max(legacy.daily?.[run.setup.daily] ?? 0, score)}` : ''}${legacy ? ` · best ever ${Math.max(legacy.best, score)} · career ${legacy.careers}` : ''}</div>
+    <div class="end-score">${run.setup?.daily ? `⚜ The Emperor's Challenge, ${esc(run.setup.daily)} · ` : run.setup?.short ? 'Short career · ' : ''}${run.setup?.heat ? `🔥 Heat ${esc(run.setup.heat)} · ` : ''}Score <b>${score}</b>${run.setup?.daily && legacy ? ` · your best today ${Math.max(legacy.daily?.[run.setup.daily] ?? 0, score)}` : ''}${legacy ? ` · best ever ${Math.max(legacy.best, score)} · career ${esc(legacy.careers)}` : ''}</div>
     ${legacy ? legacyGain(legacy.past?.find((p) => p.seed === run.seed && p.weeks === run.week), legacy) : ''}
     <div class="end-grid">
       <div><div class="label">The career</div>${formatDate(run.week)}<br>${wins} won, ${fought.length - wins} lost · ${kills} kill${kills === 1 ? '' : 's'}<br>Top arena: ${esc(arenaName(run.topTier))}<br>House rank: #${rank} of ${standings(run).length} · Glory ${run.glory ?? 0}</div>
       ${best ? `<div class="end-best">${portrait(best, 64)}<div><div class="label">Best fighter</div><b>${esc(best.name)}</b> (${esc(KINDS[best.kind].name)})<br>${bestWins} win${bestWins === 1 ? '' : 's'} · Renown ${best.renown}${best.titles?.length ? `<br>🏆 ${esc(best.titles.join(', '))}` : ''}${best.alive ? '' : '<br>Fell in the arena'}</div></div>` : ''}
       ${deaths ? `<div><div class="label">The fallen</div><div class="fallen-faces">${run.fallen.map((f) => `<span title="${esc(f.name)}">${portrait(f, 40)}</span>`).join('')}</div></div>` : ''}
     </div>
-    <div class="row"><button class="btn primary" data-action="new-run">New career</button><button class="btn" data-action="replay-seed">Replay seed ${run.seed}</button></div></div>`;
+    <div class="row"><button class="btn primary" data-action="new-run">New career</button><button class="btn" data-action="replay-seed">Replay seed ${esc(run.seed)}</button></div></div>`;
 }
 
 // Choosing how the next career starts (once a past career has unlocked anything).
@@ -162,7 +199,7 @@ export function careersModal(index, activeId) {
     <div><b>${esc(e.label)}</b><small>Seed ${esc(e.seed ?? '?')}${e.savedAt ? ` · saved ${esc(when(e.savedAt))}` : ''}</small></div>
     <div class="row">${e.id === activeId ? '<span class="chip">Playing</span>' : `<button class="btn small primary" data-action="career-load" data-id="${esc(e.id)}">Play</button><button class="btn small" data-action="career-delete" data-id="${esc(e.id)}">Delete</button>`}</div>
   </div>`).join('');
-  return `<div class="modal careers" role="dialog" aria-label="Your careers"><div class="modal-body">
+  return `<div class="modal careers" role="dialog" aria-modal="true" aria-label="Your careers"><div class="modal-body">
     <button class="close" data-action="careers-close" aria-label="Close">×</button>
     <h2>Your careers</h2>
     <p class="sub">Each career saves on its own, in this browser. Starting a new one keeps the others here. Up to ${MAX_CAREERS}.</p>
@@ -192,13 +229,13 @@ export function setupModal(legacy, choice) {
   const unlocks = unlocksAt(level);
   const streak = dailyStreak(legacy, today());
   const classes = unlockedClasses(legacy);
-  return `<div class="modal setup" role="dialog" aria-label="A new career"><div class="modal-body">
+  return `<div class="modal setup" role="dialog" aria-modal="true" aria-label="A new career"><div class="modal-body">
     <button class="close" data-action="setup-cancel" aria-label="Close">×</button>
     <h2>A new career</h2>
     <div class="label">Career length</div>
     <label class="opt"><input type="radio" name="length" value="short" ${choice.short === false ? '' : 'checked'}> <b>A season</b> <small>Each arena: Tournament → Boss, with richer purses and a head start. About an hour.</small></label>
     <label class="opt"><input type="radio" name="length" value="full" ${choice.short === false ? 'checked' : ''}> <b>The Long Road</b> <small>Each arena: Tournament 1 → Tournament 2 → Boss. A few hours.</small></label>
-    <div class="daily"><b>⚜ The Emperor's Challenge</b>${streak ? ` <span class="chip streak">🔥 ${streak}-day streak</span>` : ''} <small>Today's short career: the same seed for everyone today, with no patron, Heat or Legacy unlocks.${legacy.daily?.[today()] ? ` Your best today: <b>${legacy.daily[today()]}</b>.` : ''}</small>
+    <div class="daily"><b>⚜ The Emperor's Challenge</b>${streak ? ` <span class="chip streak">🔥 ${streak}-day streak</span>` : ''} <small>Today's short career: the same seed for everyone today, with no patron, Heat or Legacy unlocks.${legacy.daily?.[today()] ? ` Your best today: <b>${esc(legacy.daily[today()])}</b>.` : ''}</small>
       <button class="btn small" data-action="daily-challenge">Take today's challenge</button></div>
     <div class="label">Patron</div>${patronList}
     <div class="label">Heat</div>${heat}
@@ -216,11 +253,11 @@ export function legacyPanel(legacy) {
     if (a.secret && !got) return '<li class="secret"><b>☆ ???</b>: a secret of the empire.</li>';
     return `<li class="${got ? 'got' : ''}"><b>${got ? '★' : '☆'} ${esc(a.name)}</b>: ${esc(a.desc)} <small>${esc(unlockText(a))}</small></li>`;
   }).join('');
-  const past = legacy.past.map((p) => `<li>${p.won ? '👑' : '⚰'} Seed ${p.seed}: score <b>${p.score}</b>, ${p.weeks} weeks${p.endReason ? ` · ${esc(p.endReason)}` : ''}</li>`).join('');
-  const hall = (legacy.hall ?? []).map((l) => `<div class="legend" title="${esc((l.story ?? []).map((e) => e.text).join(' '))}">${portrait(l, 48)}<div><b>${esc(l.name)}</b><br><small>${l.wins} win${l.wins === 1 ? '' : 's'} · ${l.kills} kill${l.kills === 1 ? '' : 's'}${l.titles?.length ? ` · ${esc(l.titles.join(', '))}` : ''}</small></div></div>`).join('');
+  const past = legacy.past.map((p) => `<li>${p.won ? '👑' : '⚰'} Seed ${esc(p.seed)}: score <b>${esc(p.score)}</b>, ${esc(p.weeks)} weeks${p.endReason ? ` · ${esc(p.endReason)}` : ''}</li>`).join('');
+  const hall = (legacy.hall ?? []).map((l) => `<div class="legend" title="${esc((l.story ?? []).map((e) => e.text).join(' '))}">${portrait(l, 48)}<div><b>${esc(l.name)}</b><br><small>${esc(l.wins)} win${l.wins === 1 ? '' : 's'} · ${esc(l.kills)} kill${l.kills === 1 ? '' : 's'}${l.titles?.length ? ` · ${esc(l.titles.join(', '))}` : ''}</small></div></div>`).join('');
   const { level } = levelFor(legacy.xp ?? 0);
   const tree = LEGACY_LEVELS.map((u, i) => `<li class="${level >= i + 2 ? 'got' : ''}"><b>${level >= i + 2 ? '★' : '☆'} Level ${i + 2}: ${esc(u.name)}</b> <small>${esc(u.desc)}</small></li>`).join('');
-  return `<section class="panel legacy"><h2>Legacy <small>level ${level} · ${legacy.achievements.length}/${ACHIEVEMENTS.length} achievements · ${legacy.careers} career${legacy.careers === 1 ? '' : 's'} · best score ${legacy.best}${heatUnlocked(legacy) ? ` · Heat ${heatUnlocked(legacy)} unlocked` : ''}</small></h2>
+  return `<section class="panel legacy"><h2>Legacy <small>level ${level} · ${legacy.achievements.length}/${ACHIEVEMENTS.length} achievements · ${esc(legacy.careers)} career${legacy.careers === 1 ? '' : 's'} · best score ${esc(legacy.best)}${heatUnlocked(legacy) ? ` · Heat ${heatUnlocked(legacy)} unlocked` : ''}</small></h2>
     ${legacyBar(legacy.xp ?? 0)}
     <p class="sub">Every career earns Legacy XP, win or lose, and every level unlocks something for the careers after it. Achievements unlock patrons and classes.</p>
     <h3 class="mini">The Legacy tree</h3><ul class="achievements tree">${tree}</ul>
@@ -287,7 +324,7 @@ export function summaryBanner(s) {
   if (s.bloodFaith) bits.push('Blood Faith refunded the buy-in');
   if (s.refund) bits.push('reaching the Boss returned the buy-in');
   if (s.levelUp) bits.push(`⭐ House Prestige level ${s.levelUp}! Visit the Estate.`);
-  return `<div class="banner ${s.won ? 'win' : 'loss'}${s.injuries?.length ? ' hurt' : ''}"><button class="close" data-action="dismiss-summary" data-key="${s.week}-${s.tier}-${s.fighterId}" aria-label="Dismiss">×</button>
+  return `<div class="banner ${s.won ? 'win' : 'loss'}${s.injuries?.length ? ' hurt' : ''}"><button class="close" data-action="dismiss-summary" data-key="${esc(s.week)}-${esc(s.tier)}-${esc(s.fighterId)}" aria-label="Dismiss">×</button>
     <h2>${esc(s.name)}: ${esc(s.fighter)} ${verdict}</h2><div>${bits.map(esc).join(' · ')}</div></div>`;
 }
 
@@ -322,7 +359,7 @@ function dialogueBox(beat, actions, kind = 'scene') {
   const who = beat.fighter ? { name: beat.fighter.name } : SPEAKERS[beat.speaker] ?? SPEAKERS.narrator;
   const face = beat.fighter ? portrait(beat.fighter, 72) : npcPortrait(who.portrait, 72);
   const body = beat.html ?? `<p>${esc(beat.text)}</p>`;
-  return `<div class="modal dialogue ${kind}" role="dialog" aria-label="${esc(who.name || beat.title || 'Story')}"><div class="modal-body dialogue-body speaker-${beat.speaker}">
+  return `<div class="modal dialogue ${kind}" role="dialog" aria-modal="true" aria-label="${esc(who.name || beat.title || 'Story')}"><div class="modal-body dialogue-body speaker-${esc(beat.speaker)}">
     <div class="dialogue-speaker">${face}<div>${who.name ? `<div class="dialogue-name">${esc(who.name)}</div>` : ''}${beat.title ? `<h2>${beat.title}</h2>` : ''}</div></div>
     <div class="dialogue-text">${body}</div>
     <div class="dialogue-actions">${actions}</div>
@@ -345,7 +382,7 @@ export function resultModal(title, lines) {
   const text = lines.map((l) => l.text).join(' ');
   const outcome = /it went well/i.test(text) ? '<div class="outcome good">✔ It went well</div>' : /it went badly/i.test(text) ? '<div class="outcome bad">✘ It went badly</div>' : '';
   lines = lines.map((l) => ({ ...l, text: l.text.replace(/,? ?[Ii]t went (well|badly),? ?/, ' ').replace(/\s+\./, '.').replace(/\s{2,}/g, ' ').trim() }));
-  const html = `${outcome}<ul class="result-lines">${lines.map((l) => `<li class="${l.tone}">${esc(l.text)}</li>`).join('')}</ul>`;
+  const html = `${outcome}<ul class="result-lines">${lines.map((l) => `<li class="${safeTone(l.tone)}">${esc(l.text)}</li>`).join('')}</ul>`;
   return dialogueBox({ speaker: 'narrator', title: esc(title), html }, '<span></span><button class="btn primary" data-action="result-close" autofocus>Continue</button>', 'result');
 }
 
@@ -367,7 +404,7 @@ export function introModal(page, pages) {
   const p = pages[page];
   const dots = pages.map((_, i) => `<i class="${i === page ? 'on' : ''}"></i>`).join('');
   const last = page === pages.length - 1;
-  return `<div class="modal intro" role="dialog" aria-label="${esc(p.title)}"><div class="modal-body">
+  return `<div class="modal intro" role="dialog" aria-modal="true" aria-label="${esc(p.title)}"><div class="modal-body">
     <div class="intro-kicker">Blood and Circus</div>
     <h2>${p.title}</h2>${p.body}
     <div class="intro-nav"><span class="dots">${dots}</span>
@@ -396,10 +433,10 @@ function questsPanel(run) {
   return `<details class="more quests" data-key="quests" open><summary>📜 Quests</summary><ul class="quest-list">${items.join('')}</ul>${gallery}</details>`;
 }
 
-// Version 6: the house's relics, one chip each (hover or tap for what it does).
+// Version 6: the house's relics, one chip each (hover or focus for what it does).
 function relicStrip(run) {
   if (!run.relics?.length) return '';
-  const chips = run.relics.map((id) => `<span class="relic-chip rarity-${RELICS[id].rarity}" title="${esc(RELICS[id].desc)}" tabindex="0">🏺 ${esc(RELICS[id].name)}<small>${esc(RELICS[id].desc)}</small></span>`).join('');
+  const chips = run.relics.map((id) => `<span class="relic-chip rarity-${RELICS[id].rarity}" tabindex="0">🏺 ${esc(RELICS[id].name)}<small>${esc(RELICS[id].desc)}</small></span>`).join('');
   return `<div class="relics"><span class="label">Relics ${run.relics.length}/${FORTUNE.maxRelics}</span>${chips}</div>`;
 }
 
@@ -416,7 +453,7 @@ function weekPanel(run) {
   const tribute = toTribute > 0 && toTribute <= 4 && !tributePaid(run)
     ? `<div class="tribute${run.gold < due ? ' short' : ''}">⚖ The Emperor's tribute of <b>${due} Gold</b> is due in <b>${toTribute}</b> week${toTribute === 1 ? '' : 's'}. You have ${run.gold}.${run.gold < due ? ` Short by ${due - run.gold}: if you can't pay, the Emperor takes all your Gold and ${-FAVOR.unpaidTribute} Favour.` : ''}</div>`
     : '';
-  const recent = run.log.slice(-9).reverse().map((l) => `<li class="${l.tone}">${esc(l.text)}</li>`).join('');
+  const recent = run.log.slice(-9).reverse().map((l) => `<li class="${safeTone(l.tone)}">${esc(l.text)}</li>`).join('');
   return `
     <section class="panel week">
       <h2>${formatDate(run.week)}</h2>
@@ -425,7 +462,7 @@ function weekPanel(run) {
       ${relicStrip(run)}
       ${festivalNote(run)}
       ${tribute}
-      ${run.summons ? `<div class="demand summons">⚜ <b>The Emperor's summons:</b> on this month's fight day, send one of your fighters to the Imperial Coliseum against one of its regulars (Power ${CIRCUITS[SUMMONS.tier - 1].oppPower[0]}), or refuse him and lose ${-SUMMONS.refuseFavor} Favour.</div>` : ''}
+      ${run.summons ? `<div class="demand summons">⚜ <b>The Emperor's summons:</b> on this month's fight day, send one of your fighters to the Imperial Coliseum against one of its regulars (Power ${getSummonsPower(run)}), or refuse him and lose ${-SUMMONS.refuseFavor} Favour.</div>` : ''}
       ${run.demand ? `<div class="demand${demandMet(run) ? ' met' : ''}">⚜ <b>The Emperor demands:</b> ${esc(DEMANDS[run.demand.id].goal)}, by the end of this month's fight day. ${demandMet(run) ? '✔ Done: he will be pleased.' : `Reward: +${DEMAND.favor} Favour and Gold; missing it costs ${-DEMAND.missFavor} Favour.`}</div>` : ''}
       <div class="row">
         ${run.bouts ? button('End week', 'advance', {}, blocked, 'btn primary') : `${button(`⚔ To fight day <small>(${weeksUntilTournament(run.week)} wk${weeksUntilTournament(run.week) === 1 ? '' : 's'})</small>`, 'advance-tournament', {}, blocked, 'btn primary')}
@@ -441,7 +478,7 @@ function weekPanel(run) {
       <h3 class="mini">House log</h3>
       <ul class="log">${recent}</ul>
       ${run.log.length > 9 ? `<details class="more" data-key="full-log"><summary>Full house log (${run.log.length} entries)</summary>
-        <ul class="log full">${[...run.log].reverse().map((l) => `<li class="${l.tone}"><small>${esc(formatDate(l.week))}</small> ${esc(l.text)}</li>`).join('')}</ul></details>` : ''}
+        <ul class="log full">${[...run.log].reverse().map((l) => `<li class="${safeTone(l.tone)}"><small>${esc(formatDate(l.week))}</small> ${esc(l.text)}</li>`).join('')}</ul></details>` : ''}
     </section>`;
 }
 
@@ -453,17 +490,16 @@ function nemesisNote(f) {
 
 // A three-match tournament: who waits in each round, and where your fighter is.
 function bracketLine(run, tier) {
-  if (!hasBracket(tier)) return '';
-  const b = bracketOf(run, tier);
-  const final = run.arenas[tier].opponent;
-  const foes = b ? [...b.foes, final] : [null, null, final];
-  const steps = BRACKET.rounds.map((r, i) => {
-    const f = foes[i];
-    const state = !b ? '' : i < b.round ? ' done' : i === b.round && b.fighterId ? ' now' : '';
-    return `<li class="${state.trim()}"><b>${r}</b><small>${f ? `${esc(f.name)} · Power ${effectivePower(f)}` : 'drawn on tournament week'}</small></li>`;
+  const info = getBracketInfo(run, tier);
+  if (!info) return '';
+  const steps = info.rounds.map((r) => {
+    const state = !info.open ? '' : r.index < info.round ? ' done' : r.index === info.round && info.fighterId ? ' now' : '';
+    const sub = r.opponent ? `${esc(r.opponent.name)} · Power ${r.power} · Speed ${effectiveSpeed(r.opponent)}` : 'drawn on tournament week';
+    return `<li class="${state.trim()}"><b>${esc(r.label)}</b><small>${sub}</small></li>`;
   }).join('');
-  const who = b?.fighterId && b.round > 0 ? findName(run, b.fighterId) : null;
-  return `<div class="bracket"><div class="label">Three matches: win all three to take the tournament${who ? `. ${esc(who)} is through to the ${BRACKET.rounds[b.round]}` : ''}</div><ol>${steps}</ol>
+  const who = info.fighterId && info.round > 0 ? findName(run, info.fighterId) : null;
+  const earlyPay = `Early wins: +${info.earlyPurse} Gold${info.earlyPrestige ? `, +${info.earlyPrestige} Prestige` : ''}.`;
+  return `<div class="bracket"><div class="label">Three matches: win all three to take the tournament${who ? `. ${esc(who)} is through to the ${esc(BRACKET.rounds[info.round])}` : ''}. <small>${earlyPay}</small></div><ol>${steps}</ol>
     ${who ? buttonWhy(`Withdraw ${esc(who)} (counts as capitulating)`, 'withdraw', { tier }, withdrawBlocker(run, tier), 'btn small danger') : ''}</div>`;
 }
 const findName = (run, id) => run.roster.find((f) => f.id === id)?.name ?? '';
@@ -472,15 +508,13 @@ const findName = (run, id) => run.roster.find((f) => f.id === id)?.name ?? '';
 export function houseTag(run, f) {
   const h = houseOf(run, f);
   if (!h) return 'Opponent';
-  // How long a grudge has left (playtest: "how long do feuds last?"): each one cools by a month at every fight day.
   const left = (n) => `${n} month${n === 1 ? '' : 's'} left`;
   const grudge = h.feud ? ` · ⚔ feud: +1 Power against you, ${left(h.feud)}` : h.owed ? ` · owes you a life: −1 Power against you, ${left(h.owed)}` : '';
   const vengeance = h.vengeance ? ` · vengeance: +5% win chance for you, ${left(h.vengeance)}` : '';
-  return `Opponent · <span style="color:${esc(h.color)}">${esc(h.name)}</span>${grudge}${vengeance}`;
+  return `Opponent · <span style="color:${safeColor(h.color)}">${esc(h.name)}</span>${grudge}${vengeance}`;
 }
 
 // The rival houses and your place among them.
-// v6: the people you freed (contacts), once there are any. Only the player's own memory of who they freed: no numbers.
 const CELL_NOTE = { officer: 'an old soldier', scribe: 'a palace clerk', priest: 'a priest', courier: 'a runner' };
 function friendsOutside(run) {
   const freed = run.plot?.freed ?? [];
@@ -492,9 +526,9 @@ export function standingsTable(run) {
   if (!run.houses) return '';
   const rows = standings(run).map((h, i) => {
     const notes = [h.feud ? `<span class="feud" title="You killed one of theirs: their fighters get +1 Power against you">⚔ feud · ${h.feud} month${h.feud === 1 ? '' : 's'} left</span>` : '',
-      h.owed && !h.feud ? `<span class="vengeance" title="You spared one of theirs when the crowd wanted blood: their fighters get −1 Power against you">owes you a life · ${h.owed} month${h.owed === 1 ? '' : 's'} left</span>` : '', // a feud overrides the debt (playtest LLM-11)
+      h.owed && !h.feud ? `<span class="vengeance" title="You spared one of theirs when the crowd wanted blood: their fighters get −1 Power against you">owes you a life · ${h.owed} month${h.owed === 1 ? '' : 's'} left</span>` : '',
       h.vengeance ? `<span class="vengeance" title="They killed one of yours: your fighters get +5% win chance against them">vengeance · ${h.vengeance} month${h.vengeance === 1 ? '' : 's'} left</span>` : ''].join('');
-    return `<tr class="${h.you ? 'you' : ''}"><td>${i + 1}</td><td><span class="house-dot" style="background:${esc(h.color)}"></span>${esc(h.name)}${h.motto ? `<small title="${esc(h.motto)}"> ❝</small>` : ''} ${notes}</td><td>${esc(arenaName(Math.min(h.tier, 4)).replace('The ', ''))}</td><td><b>${h.glory}</b></td></tr>`;
+    return `<tr class="${h.you ? 'you' : ''}"><td>${i + 1}</td><td><span class="house-dot" style="background:${safeColor(h.color)}"></span>${esc(h.name)}${h.motto ? `<small title="${esc(h.motto)}"> ❝</small>` : ''} ${notes}</td><td>${esc(arenaName(h.tier).replace('The ', ''))}</td><td><b>${h.glory}</b></td></tr>`;
   }).join('');
   return `<h3 class="mini" title="Glory: a win is worth its arena tier (three times that for a Boss); rivals fight their own bouts every tournament week">The houses</h3>
     <table class="standings"><thead><tr><th>#</th><th>House</th><th>Arena</th><th>Glory</th></tr></thead><tbody>${rows}</tbody></table>
@@ -506,7 +540,7 @@ const perkTagChips = (p) => perkTags(p).map((t) => ` <small class="tag-chip tag-
 
 function perkChooser(run, f) {
   if (!f.pendingPerks.length) return '';
-  const offer = f.pendingPerks[0].map((p) => `<button class="perk-opt" data-action="perk" data-id="${f.id}" data-perk="${p}" ${perkBlocker(run, f.id, p) ? 'disabled' : ''}>
+  const offer = f.pendingPerks[0].map((p) => `<button class="perk-opt" data-action="perk" data-id="${esc(f.id)}" data-perk="${esc(p)}" ${perkBlocker(run, f.id, p) ? 'disabled' : ''}>
     <b>${esc(PERKS[p].name)}${perkTagChips(p)}${PERKS[p].repeatable ? ' <small class="stacks">(stacks: can be taken again)</small>' : ''}${f.perks.includes(p) ? ` <small class="stacks">you have ×${f.perks.filter((x) => x === p).length}</small>` : ''}</b><small>${esc(PERKS[p].desc)}</small></button>`).join('');
   const temple = maxLevel(run, 'temple') ? `<div class="row">${buttonWhy(`🏛 Pray to Fortuna for three new choices (${prayPrice(run)} Gold)`, 'pray', { id: f.id }, prayBlocker(run, f.id), 'btn small')}</div>` : '';
   return `<div class="perk-choice"><div class="label">⭐ Level ${f.level - f.pendingPerks.length + 1}! Choose a perk:</div><div class="perk-list">${offer}</div>${temple}</div>`;
@@ -518,7 +552,7 @@ function equipPicker(run, f, slot) {
   const options = run.inventory.gear.map((k, i) => (GEAR[k].slot === slot && !equipBlocker(run, f.id, i)
     ? `<option value="${i}">${esc(GEAR[k].name)}: ${esc(gearText(GEAR[k]))}</option>` : '')).join('');
   return options
-    ? `<select class="gear-select equip" data-change="equip" data-id="${f.id}" aria-label="Equip a ${slot === 'weapon' ? 'weapon' : 'piece of armour'}"><option value="">${cur ? 'Swap for…' : 'Equip from the storeroom…'}</option>${options}</select>`
+    ? `<select class="gear-select equip" data-change="equip" data-id="${esc(f.id)}" aria-label="Equip a ${slot === 'weapon' ? 'weapon' : 'piece of armour'}"><option value="">${cur ? 'Swap for…' : 'Equip from the storeroom…'}</option>${options}</select>`
     : '';
 }
 // On the card, outside the fold-out: an empty slot with spare gear waiting (the designer: gear seemed to vanish).
@@ -556,7 +590,7 @@ function roomPanel(run, f) {
     <li>Fame: Renown ${f.renown} sets expectations at ${expects}.</li></ul>`;
   // Two tabs: the room (Morale) and its decor. Gear has its own fold-out (gearPanel).
   const tab = roomTabs[f.id] === 'room' ? 'room' : 'decor';
-  const tabs = [['room', 'Room'], ['decor', 'Decor']].map(([k, label]) => `<button class="seg${tab === k ? ' on' : ''}" data-action="room-tab" data-id="${f.id}" data-tab="${k}" aria-pressed="${tab === k}">${label}</button>`).join('');
+  const tabs = [['room', 'Room'], ['decor', 'Decor']].map(([k, label]) => `<button class="seg${tab === k ? ' on' : ''}" role="tab" aria-selected="${tab === k}" data-action="room-tab" data-id="${esc(f.id)}" data-tab="${k}">${label}</button>`).join('');
   const body = tab === 'room' ? room : `<div class="decor-list">${decor}</div>`;
   return { room: `<div class="segs room-tabs" role="tablist">${tabs}</div><div class="room-body">${body}</div>`, gear: `<div class="label">Gear (from the storeroom)</div>${gear}` };
 }
@@ -574,7 +608,7 @@ function compareTable(run) {
     return `<tr><td><a href="#card-${esc(f.id)}">${esc(f.name)}</a>${f.want ? ` <span title="${esc(WANTS[f.want.id].goal(f.want))}">💬</span>` : ''}<small>Lv ${f.level ?? 1}</small></td><td>${effectivePower(f)}</td><td>${f.speed + gearSpd(f)}</td><td${stressCls}>${f.stress}</td><td${moraleCls}>${f.morale}</td><td>${wounds}</td><td>${f.trained}/${trainCap(run)}</td><td>${jobLabel(run, f.job)}</td></tr>`;
   }).join('');
   return `<details class="more compare" data-key="compare" open><summary>📊 Compare</summary>
-    <div class="compare-wrap"><table class="compare-table"><thead><tr><th>Gladiator</th><th title="Power, with gear and Titles">Pow</th><th title="Speed, with gear">Spd</th><th title="Stress (50+: Overtrained)">Str</th><th title="Morale (under ${MORALE.restless}: won't train)">Mor</th><th title="Injuries">Inj</th><th title="Training points used of the Trainer cap">Trn</th><th>Job</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+    <div class="compare-wrap"><table class="compare-table"><thead><tr><th>Gladiator</th><th title="Power, with gear and Titles">Pow</th><th title="Speed, with gear">Spd</th><th title="Stress (50+: Overtrained)">Str</th><th title="Morale (under ${MORALE.restless}: won't train)">Mor</th><th title="Injuries">Inj</th><th title="Training weeks used of the Trainer cap">Trn</th><th>Job</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
 }
 
 function rosterPanel(run) {
@@ -583,22 +617,25 @@ function rosterPanel(run) {
   const reasons = run.roster.map(noTrain).filter(Boolean);
   const shared = [...new Set(reasons)].filter((r) => reasons.filter((x) => x === r).length > 1);
   const cards = run.roster.map((f) => {
+    const fid = esc(f.id);
+    const noTrainReason = noTrain(f);
+    const rp = roomPanel(run, f);
     const jobs = JOBS.map((job) => {
       const reason = f.job === job ? null : jobBlocker(run, f.id, job);
-      return `<button class="seg${f.job === job ? ' on' : ''}" data-action="job" data-id="${f.id}" data-job="${job}" ${reason ? `disabled title="${esc(reason)}"` : `title="${esc(jobHelp(run, job))}"`}>${jobLabel(run, job)}</button>`;
+      return `<button class="seg${f.job === job ? ' on' : ''}" data-action="job" data-id="${fid}" data-job="${job}" ${reason ? `disabled title="${esc(reason)}"` : `title="${esc(jobHelp(run, job))}"`}>${jobLabel(run, job)}</button>`;
     }).join('');
-    const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(inj.tag === 'fleshWound' ? 'Flesh Wound' : inj.tag)} (${surgeonPrice(run)}g)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
+    const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(INJURY_BY_TAG[inj.tag]?.name ?? inj.tag)} (${surgeonPrice(run)} Gold)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
     const augments = f.injuries.map((inj, i) => (['maimed', 'blinded'].includes(inj.tag) ? buttonWhy(`Replace the ${inj.tag === 'maimed' ? 'Maimed limb' : 'Blinded eye'}: ${AUGMENTS[inj.tag === 'maimed' ? 'arm' : 'eye'].name}`, 'augment', { id: f.id, index: i }, augmentBlocker(run, f.id, i)) : '')).join('');
     const actions = `${perkChooser(run, f)}<div class="actions">
       <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week${maxLevel(run, 'trainer') > trainCost(run) ? ` (${maxLevel(run, 'trainer')} from the Silver Coliseum)` : ''}</small></div>
       <div class="segs">${jobs}</div>
       ${spareGearPrompt(run, f)}
-      ${f.injuries.length > 1 ? `<div class="treat"><span class="label">Medbay treats first:</span> <select class="treat-select" data-change="treat-first" data-id="${f.id}" aria-label="Which injury the Medbay treats first">${f.injuries.map((inj, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${esc(INJURY_BY_TAG[inj.tag].name)} (${inj.weeksLeft} week${inj.weeksLeft === 1 ? '' : 's'})</option>`).join('')}</select></div>` : ''}
-      ${noTrain(f) && !shared.includes(noTrain(f)) ? `<div class="why-not">Can't train this week: ${esc(noTrain(f))}</div>` : ''}
-      <details class="more" data-key="room-${f.id}"><summary>Room &amp; decor${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f).room}</details>
-      <details class="more" data-key="gear-${f.id}"><summary>Gear${f.gear.weapon || f.gear.armor ? ` <small>(${[f.gear.weapon, f.gear.armor].filter(Boolean).map((k) => esc(GEAR[k].name)).join(', ')})</small>` : run.inventory.gear.length ? ' <small>(spare gear in the storeroom)</small>' : ''}</summary>${roomPanel(run, f).gear}</details>
-      ${f.story?.length ? `<details class="more" data-key="story-${f.id}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
-      <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, cyborg surgery, ${(f.scars ?? []).some((x) => x.id === 'afeared') ? 'fear, ' : ''}rename, retire, release</summary>
+      ${f.injuries.length > 1 ? `<div class="treat"><span class="label">Medbay treats first:</span> <select class="treat-select" data-change="treat-first" data-id="${fid}" aria-label="Which injury the Medbay treats first">${f.injuries.map((inj, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${esc(INJURY_BY_TAG[inj.tag].name)} (${inj.weeksLeft} week${inj.weeksLeft === 1 ? '' : 's'})</option>`).join('')}</select></div>` : ''}
+      ${noTrainReason && !shared.includes(noTrainReason) ? `<div class="why-not">Can't train this week: ${esc(noTrainReason)}</div>` : ''}
+      <details class="more" data-key="room-${fid}"><summary>Room &amp; decor${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${rp.room}</details>
+      <details class="more" data-key="gear-${fid}"><summary>Gear${f.gear.weapon || f.gear.armor ? ` <small>(${[f.gear.weapon, f.gear.armor].filter(Boolean).map((k) => esc(GEAR[k].name)).join(', ')})</small>` : run.inventory.gear.length ? ' <small>(spare gear in the storeroom)</small>' : ''}</summary>${rp.gear}</details>
+      ${f.story?.length ? `<details class="more" data-key="story-${fid}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
+      <details class="more" data-key="surgeon-${fid}"><summary>Surgeon, cyborg surgery, ${(f.scars ?? []).some((x) => x.id === 'afeared') ? 'fear, ' : ''}rename, retire, release</summary>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
         ${(f.scars ?? []).some((x) => x.id === 'afeared') ? `<div class="label">Afeared: win ${FEAR.conquerWins} fights against the style they fear to conquer it, or</div><div class="row">${buttonWhy(`🏛 Fortuna's rite: lift the fear (${ritePrice(run)} Gold)`, 'rite', { id: f.id }, riteBlocker(run, f.id), 'btn small')}</div>` : ''}
         ${augments ? `<div class="label">Cyborg surgery: replace the wound for good (${augmentPrice(run)} Gold, −1 Renown)</div><div class="row">${augments}</div>` : ''}
@@ -623,15 +660,17 @@ function rosterPanel(run) {
 
 function oddsRow(run, f, tier, oddsFor) {
   const bout = boutFor(run, tier);
+  const opp = opponentFor(run, tier);
+  const fp = fightPowers(run, f, tier);
   const odds = describeOdds(oddsFor(f, tier), oracleLevel(run));
   const pct = (p) => (p ? ` <small>${p}</small>` : '');
   const warn = fighterWarnings(run, f, tier).map((w) => esc(w.text));
   const tone = odds.win === 'Strong favourite' || odds.win === 'Favoured' ? 'good' : odds.win === 'Even fight' ? '' : 'bad';
   return `<div class="odds-row">
     <div class="who"><b>${esc(f.name)}</b> ${warn.length ? `<span class="warn">${warn.join(' · ')}</span>` : ''}</div>
-    <div class="o ${tone}" title="Chance to win ${hasBracket(tier) ? `the next match (against ${esc(opponentFor(run, tier).name)})` : 'the whole match (best of 3)'}, not one round">${hasBracket(tier) ? `Next (${esc(opponentFor(run, tier).name)})` : 'Match'}: ${odds.win}${pct(odds.winPct)}</div>
+    <div class="o ${tone}" title="Chance to win ${hasBracket(tier) ? `the next match (against ${esc(opp.name)})` : 'the whole match (best of 3)'}, not one round">${hasBracket(tier) ? `Next (${esc(opp.name)})` : 'Match'}: ${odds.win}${pct(odds.winPct)}</div>
     ${hasBracket(tier) && run.bouts?.[tier] === 'open' ? bracketOdds(run, f, tier, oddsFor, pct) : ''}
-    <div class="o" title="Round 1 Power with everything that applies before tactics: scouting, the Challenger bonus, feuds, festivals, decor and gear">Power ${fightPowers(run, f, tier).mine} vs ${fightPowers(run, f, tier).theirs}</div>
+    <div class="o" title="Round 1 Power and Speed with everything that applies before tactics: scouting, the Challenger bonus, feuds, festivals, decor and gear">Power ${fp.mine} vs ${fp.theirs} · Speed ${effectiveSpeed(f)} vs ${effectiveSpeed(opp)}</div>
     <div class="o" title="Chance of picking up at least one injury">Injury: ${odds.injury}${pct(odds.injuryPct)}</div>
     <div class="o ${odds.death === 'None' || odds.death === 'Low' ? '' : 'bad'}" title="Chance of dying if you never capitulate">Death: ${odds.death}${pct(odds.deathPct)}</div>
     ${run.bouts?.[tier] === 'open' ? buttonWhy(bracketOf(run, tier)?.fighterId === f.id && bracketOf(run, tier).round > 0 ? `Fight the ${bracketRound(run, tier)}` : `Send (−${bout.buyIn} Prestige)`, 'fight', { id: f.id, tier }, fightBlocker(run, f.id, tier), 'btn primary small') : ''}
@@ -654,8 +693,9 @@ function arenaBlock(run, tier, oddsFor) {
   const bout = boutFor(run, tier);
   const arena = run.arenas[tier];
   const state = run.bouts?.[tier];
+  const bInfo = getBracketInfo(run, tier);
   // The Dirt Pits Boss has no arena rule; the Oracle (Lv 2) previews the top Boss's rule early.
-  const revealed = run.plot?.reveal === tier; // v6: a rebel's visitor knew the Boss's arena rule
+  const revealed = run.plot?.reveal === tier;
   const ruleId = bout.boss ? bout.debuff : bout.top && (oracleLevel(run) >= 2 || revealed) && tier > 1 ? arena.debuff : null;
   const debuff = ruleId ? BOSS_DEBUFFS[ruleId] : null;
   const debuffNote = debuff
@@ -668,11 +708,18 @@ function arenaBlock(run, tier, oddsFor) {
     ? `<div class="row">${bout.boss ? button(`Forfeit (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour)`, 'forfeit', {}, forfeitBlocker(run), 'btn danger small') : button(`Skip (+${ECONOMY.skipGold} Gold, roster rests)`, 'skip', {}, skipBlocker(run), 'btn small')}</div>`
     : '';
   const buyIn = bout.pauper ? `Buy-in ${bout.buyIn} Prestige <i>(normally ${bout.fullBuyIn}: the Dirt Pits take whatever Prestige you have)</i>` : `Buy-in ${bout.buyIn} Prestige`;
+  const finalCard = `${arena.opponent.nemesis ? nemesisNote(arena.opponent) : ''}${fighterCard(arena.opponent, { compact: true, stress: false, opponent: { boss: bout.boss }, tag: `${arena.opponent.nemesis ? `☠ Nemesis: ${esc(arena.opponent.name)} ${esc(arena.opponent.nemesis.epithet)} · ` : ''}${hasBracket(tier) ? `Final · ${houseTag(run, arena.opponent)}` : houseTag(run, arena.opponent)}` })}`;
+  // In an open bracket before the Final, surface the actual QF/SF opponent card first and tuck the Finalist into a fold-out.
+  const showEarly = state === 'open' && bInfo?.open && bInfo.round < 2 && bInfo.nextOpponent;
+  const opponentSection = showEarly
+    ? `${fighterCard(bInfo.nextOpponent, { compact: true, stress: false, opponent: { boss: bout.boss, earlyRound: true }, tag: `${esc(BRACKET.rounds[bInfo.round])} · ${houseTag(run, bInfo.nextOpponent)}` })}
+      <details class="more" data-key="final-${tier}"><summary>Final opponent: <b>${esc(arena.opponent.name)}</b> (Power ${effectivePower(arena.opponent)}, Speed ${effectiveSpeed(arena.opponent)})</summary>${finalCard}</details>`
+    : finalCard;
   const body = `<p class="sub"><b>${esc(bout.name)}</b> · ${buyIn} · Win: +${bout.winGold} Gold <small title="Famous fighters draw a bigger purse: +1 Gold per ${RENOWN.goldPer} Renown">(+ fame)</small>, +${bout.winPrestige} Prestige · Loss: +${bout.lossGold} Gold</p>
       ${stakes ? `<p class="sub">${stakes}</p>` : ''}${rival}${debuffNote}
       ${bout.festival ? `<div class="festival now">🏛 <b>${esc(FESTIVAL_BY_ID[bout.festival].name)}</b>: ${esc(FESTIVAL_BY_ID[bout.festival].desc)}</div>` : ''}
       ${bracketLine(run, tier)}
-      ${arena.opponent.nemesis ? nemesisNote(arena.opponent) : ''}${fighterCard(arena.opponent, { compact: true, stress: false, opponent: { boss: boutFor(run, tier).boss }, tag: `${arena.opponent.nemesis ? `☠ Nemesis: ${esc(arena.opponent.name)} ${esc(arena.opponent.nemesis.epithet)} · ` : ''}${hasBracket(tier) ? `Final · ${houseTag(run, arena.opponent)}` : houseTag(run, arena.opponent)}` })}
+      ${opponentSection}
       ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your fighters vs ${esc(opponentFor(run, tier).name)}</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
       ${choice}${!bout.top && state === 'open' ? '<p class="sub">If nobody from your house fights here this week, the tournament goes ahead without you and the arena moves on.</p>' : ''}`;
   if (bout.top) return `<div class="arena-block top"><h3>${esc(arenaName(tier))} <small>your top arena</small></h3>${body}</div>`;
@@ -694,11 +741,11 @@ function boutPanel(run, oddsFor) {
     </section>`;
 }
 
-// The Emperor's summons on fight day (5.4.2): each free fighter's dropdown sends them with an order; a button refuses.
+// The Emperor's summons on fight day: each free fighter's dropdown sends them with an order; a button refuses.
 function summonsBlock(run) {
   if (!run.summons || !run.bouts) return '';
-  const opp = CIRCUITS[SUMMONS.tier - 1].oppPower[0];
-  const rows = run.roster.filter((f) => !summonsBlocker(run, f.id, 'yield')).map((f) => `<div class="row tight"><b>${esc(f.name)}</b> <small>Power ${effectivePower(f)}</small> <select class="gear-select" data-change="summons" data-id="${f.id}" aria-label="Send ${esc(f.name)} to the Emperor"><option value="">Send them…</option><option value="yield">told to yield at the Death Gate</option><option value="death">told to fight to the death</option></select></div>`).join('');
+  const opp = getSummonsPower(run);
+  const rows = run.roster.filter((f) => !summonsBlocker(run, f.id, 'yield')).map((f) => `<div class="row tight"><b>${esc(f.name)}</b> <small>Power ${effectivePower(f)}</small> <select class="gear-select" data-change="summons" data-id="${esc(f.id)}" aria-label="Send ${esc(f.name)} to the Emperor"><option value="">Send them…</option><option value="yield">told to yield at the Death Gate</option><option value="death">told to fight to the death</option></select></div>`).join('');
   return `<div class="arena-block summons"><h3>⚜ The Emperor's summons: the Imperial Coliseum</h3><p class="sub">One of your fighters against a regular of the Imperial Coliseum (Power ${opp}), played out at once. Stand to the end of Round 3: +${SUMMONS.surviveFavor} Favour, +${SUMMONS.surviveRenown} Renown. Win: +${SUMMONS.winFavor} Favour, +${SUMMONS.winRenown} Renown. Yield at the Death Gate: ${SUMMONS.yieldFavor} Favour. Die: the Temple of Vulcan gets a body.</p>${rows || '<p class="sub">Nobody is free to go.</p>'}<p>${buttonWhy(`Refuse (${SUMMONS.refuseFavor} Favour)`, 'refuse-summons', {}, refuseSummonsBlocker(run), 'btn small')}</p></div>`;
 }
 
@@ -709,7 +756,7 @@ function exhibitionBlock(run) {
   const rows = run.roster.map((f) => {
     const partners = run.roster.filter((g) => g !== f && !exhibitionBlocker(run, f.id, g.id));
     if (!partners.length) return '';
-    return `<div class="row tight"><b>${esc(f.name)}</b> <select class="gear-select" data-change="exhibition" data-id="${f.id}" aria-label="Exhibition partner for ${esc(f.name)}"><option value="">Spar against…</option>${partners.map((g) => `<option value="${g.id}">${esc(g.name)} (Power ${effectivePower(g)})</option>`).join('')}</select></div>`;
+    return `<div class="row tight"><b>${esc(f.name)}</b> <select class="gear-select" data-change="exhibition" data-id="${esc(f.id)}" aria-label="Exhibition partner for ${esc(f.name)}"><option value="">Spar against…</option>${partners.map((g) => `<option value="${esc(g.id)}">${esc(g.name)} (Power ${effectivePower(g)})</option>`).join('')}</select></div>`;
   }).join('');
   return `<div class="arena-block"><h3>⚔ Exhibition Ring</h3><p class="sub">Two fighters who aren't competing this week can put on a bout for the crowd: XP for both, Renown and Gold for the winner. Nobody dies in the ring, though the loser may take a Flesh Wound.</p>${rows || '<p class="sub">No two fighters are free and fit to spar.</p>'}</div>`;
 }
@@ -725,8 +772,9 @@ function buildingCard(run, b) {
   const pips = def.cost.map((_, i) => `<i class="${i < b.level ? 'on' : ''}"></i>`).join('');
   const nextLevel = b.level < def.cost.length ? b.level + 1 : null;
   const extra = def.extra ? `<div class="sub">${esc(def.extra(b.level))}</div>` : '';
+  const upWhy = nextLevel ? upgradeBlocker(run, b.id) : null;
   const up = nextLevel
-    ? `<div class="next">Next: ${esc(def.effect(def.per[b.level]))}${def.extra ? `; ${esc(def.extra(nextLevel))}` : ''}</div>${button(`Upgrade · ${def.cost[b.level]} Gold`, 'upgrade', { id: b.id }, upgradeBlocker(run, b.id), 'btn small primary')}${upgradeBlocker(run, b.id) ? `<div class="why-not">${esc(upgradeBlocker(run, b.id))}</div>` : ''}`
+    ? `<div class="next">Next: ${esc(def.effect(def.per[b.level]))}${def.extra ? `; ${esc(def.extra(nextLevel))}` : ''}</div>${button(`Upgrade · ${def.cost[b.level]} Gold`, 'upgrade', { id: b.id }, upWhy, 'btn small primary')}${upWhy ? `<div class="why-not">${esc(upWhy)}</div>` : ''}`
     : '<div class="next">Fully upgraded</div>';
   return `<div class="room built dept-${def.dept}">
     <div class="room-head"><span class="room-icon">${BUILDING_ICON[def.icon]}</span><b>${esc(def.name)}</b><span class="pips">${pips}</span></div>
@@ -838,7 +886,7 @@ export function marketTab(run) {
 // ---------- Help ----------
 
 export function helpModal() {
-  return `<div class="modal" role="dialog" aria-label="How to play"><div class="modal-body">
+  return `<div class="modal" role="dialog" aria-modal="true" aria-label="How to play"><div class="modal-body">
     <button class="close" data-action="help" aria-label="Close">×</button>
     <h2>How to play</h2>
     <ol>
@@ -848,7 +896,7 @@ export function helpModal() {
       <li><b>Fight</b> best-of-3 rounds. Between rounds you can capitulate to save a badly hurt fighter.</li>
       <li><b>Grow your fighters.</b> Matches give XP; each level lets you pick a perk. Wins bring Renown, and famous fighters want better rooms: keep their Morale up with decor, Quarters and entertainment.</li>
       <li><b>Equip them</b> from the storeroom: decor and gear belong to the house and pass on when a fighter falls.</li>
-      <li><b>Climb</b> four arenas (Tournament 1 → Tournament 2 → Boss), then win the Grand Tournament. Keep the Emperor's <b>Favour</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
+      <li><b>Climb</b> four arenas (Tournament → Boss in a season, or Tournament 1 → Tournament 2 → Boss on the Long Road), then win the Grand Tournament. Keep the Emperor's <b>Favour</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
       <li><b>Take Fortune's card.</b> Each month offers three: a <b>relic</b> the house keeps (up to 6, and some count a perk's tag, like Brute or Swift), a boon, gear, a fighter, or a wager. Spin again for Gold if none suit.</li>
       <li><b>Every career counts.</b> Win or lose, a career earns <b>Legacy XP</b>, and each Legacy level unlocks something for the careers after it: relics, a patron, house colours, legends who return. Win a career to unlock <b>Heat</b>: harder rules, a higher score, more XP.</li>
@@ -884,10 +932,11 @@ export function codexTab(codex, entries, sections, fresh, prog, isUnlocked, hasL
     if (list.some((e) => e.hidden) && !open.length) return null; // v6: the Rebellion section appears only once something in it is found
     const newHere = open.filter((e) => fresh.includes(e.key)).length;
     const items = open.map((e) => {
+      const loreUnlocked = Boolean(e.lore) && hasLore(codex, e);
       const lore = e.lore
-        ? hasLore(codex, e) ? `<p class="lore">${esc(e.lore)}</p>` : '<p class="lore locked">🔒 Lore: defeat one in the arena to learn its story.</p>'
+        ? loreUnlocked ? `<p class="lore">${esc(e.lore)}</p>` : '<p class="lore locked">🔒 Lore: defeat one in the arena to learn its story.</p>'
         : '';
-      return `<article class="entry${fresh.includes(e.key) ? ' fresh' : ''}" data-search="${esc(`${e.name} ${e.rules} ${e.lore ?? ''}`.toLowerCase())}"><h4>${esc(e.name)}${fresh.includes(e.key) ? ' <span class="new">new</span>' : ''}</h4><p>${esc(e.rules)}</p>${lore}</article>`;
+      return `<article class="entry${fresh.includes(e.key) ? ' fresh' : ''}" data-search="${esc(`${e.name} ${e.rules} ${loreUnlocked ? e.lore : ''}`.toLowerCase())}"><h4>${esc(e.name)}${fresh.includes(e.key) ? ' <span class="new">new</span>' : ''}</h4><p>${esc(e.rules)}</p>${lore}</article>`;
     }).join('');
     const locked = list.length - open.length;
     const count = cat === 'basics' ? '' : `<small>${open.length}/${list.length}</small>`;
@@ -926,7 +975,7 @@ export function nextBar(hint) {
 
 // The bug report box: shown when the game hits an error, or when the player asks for it.
 export function bugModal({ crashed, message, notes, status, version }) {
-  return `<div class="modal bug" role="dialog" aria-label="${crashed ? 'Something went wrong' : 'Report a bug'}"><div class="modal-body">
+  return `<div class="modal bug" role="dialog" aria-modal="true" aria-label="${crashed ? 'Something went wrong' : 'Report a bug'}"><div class="modal-body">
     ${crashed ? '' : '<button class="close" data-action="bug-close" aria-label="Close">×</button>'}
     <h2>${crashed ? '⚠ Something went wrong' : 'Report a bug'}</h2>
     ${crashed
@@ -1004,7 +1053,7 @@ export function fortunePanel(run, { animate = true } = {}) {
       <h3>${esc(fortuneTitle(c))}</h3>
       <p>${esc(fortuneText(c))}</p>
       ${c.kind === 'relic' && run.relics.length >= FORTUNE.maxRelics
-    ? `<div class="swap"><small>Your house holds ${FORTUNE.maxRelics} relics. Lay one down for it:</small>${run.relics.map((id) => button(`Lay down ${RELICS[id].name}`, 'fortune', { index: i, drop: id }, null, 'btn small')).join('')}</div>`
+    ? `<div class="swap"><small>Your house holds ${FORTUNE.maxRelics} relics. Lay one down for it:</small>${run.relics.map((id) => button(`Lay down ${esc(RELICS[id].name)}`, 'fortune', { index: i, drop: id }, fortuneBlocker(run, i, id), 'btn small')).join('')}</div>`
     : buttonWhy('Take it', 'fortune', { index: i }, why, 'btn primary')}
     </div>`;
   }).join('');
@@ -1020,6 +1069,6 @@ export function fortunePanel(run, { animate = true } = {}) {
     <p class="sub">Choose one. Relics stay with the house (${run.relics.length}/${FORTUNE.maxRelics}); boons, gear and fighters are yours at once.${full}</p>
     <div class="fortune-cards${animate ? ' fresh' : ''}">${cards}</div>
     <div class="row">${button(`↻ Spin again (${rerollPrice(run)} Gold)`, 'fortune-reroll', {}, rerollBlocker(run), 'btn small')}
-      ${button(`Let it pass (+${FORTUNE.pass} Gold)`, 'fortune-pass', {}, null, 'btn small')}</div>
+      ${button(`Let it pass (+${FORTUNE.pass} Gold)`, 'fortune-pass', {}, getIdleBlocker(run), 'btn small')}</div>
   </section>`;
 }

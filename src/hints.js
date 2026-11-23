@@ -6,6 +6,7 @@ import { weeksUntilWinter } from './calendar.js';
 
 export function nextHint(run) {
   if (run.status !== 'active') return null;
+  if (run.mercy) return { text: 'The crowd waits: decide the beaten opponent\'s fate (thumbs up or down).', tone: 'event' };
   if (!run.roster.length) {
     return run.gold >= marketPrice(run)
       ? { text: 'Recruit a gladiator in the Market.', action: 'tab', tab: 'market', label: 'Go to Market' }
@@ -25,8 +26,9 @@ export function nextHint(run) {
         tone: 'bad',
       };
     }
-    return { text: `Tournament week: send a fighter to ${arenaName(run.topTier)} (or skip it). Odds are on the right.`, tone: 'event' };
+    return { text: `Tournament week: send a fighter to ${arenaName(run.topTier)} (${bout.boss ? 'fight or forfeit' : 'or skip it'}). Odds are on the right.`, tone: 'event' };
   }
+  if (run.bouts && run.summons) return { text: 'The Emperor\'s summons waits: send a fighter to the Imperial Coliseum, or refuse him.', tone: 'event' };
   if (run.bouts) {
     const open = unlockedTiers(run).filter((t) => run.bouts[t] === 'open' && run.roster.some((f) => !fightBlocker(run, f.id, t)));
     if (open.length) return { text: `Optional: send a free fighter to ${open.map(arenaName).join(' or ')} for extra Gold and XP, or end the week.` };
@@ -40,5 +42,6 @@ export function nextHint(run) {
   if (restless) return { text: `${restless.name} is Discontented (Morale ${restless.morale}): place decor or upgrade their quarters.`, tone: 'warn' };
   const idle = run.roster.find((f) => f.job === 'rest' && f.stress + STRESS.train < STRESS.overtrained && !jobBlocker(run, f.id, 'trainPower'));
   if (idle) return { text: `${idle.name} is resting with Stress ${idle.stress}: they could train this week.` };
+  if (run.bouts) return { text: 'Jobs are set. End the week (Space).' };
   return { text: 'Jobs are set. Go to fight day (T), or end the week (Space).' };
 }

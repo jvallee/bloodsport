@@ -22,6 +22,7 @@ const ANCHORS = {
   'Boss arena rules': 'export const BOSS_DEBUFFS',
   Decor: 'export const DECOR',
   Scars: 'export const SCARS',
+  'Signature moves': 'export const SIGNATURES',
 };
 
 const QUOTES = /[`'"\\]/g;

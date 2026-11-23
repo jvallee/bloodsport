@@ -41,9 +41,8 @@ test('injury tier boundaries match the injury table', () => {
   for (const [score, tag] of cases) assert.equal(injuryForScore(score).tag, tag, `score ${score}`);
 });
 
-// Playtest #8 (deliberate change): Distracted is a passing daze (0); Poisoned, Maimed and Senseless weigh 2.
-test('injury weights toward the Death Gate: Distracted 0; Poisoned, Maimed and Senseless 2; the rest 1', () => {
-  const heavy = ['poisoned', 'maimed', 'senseless'];
+test('injury weights toward the Death Gate: Distracted 0; Poisoned, Maimed, Senseless and Blinded 2; the rest 1', () => {
+  const heavy = ['poisoned', 'maimed', 'senseless', 'blinded'];
   for (const i of INJURIES.filter((x) => x.tag !== 'death')) assert.equal(i.weight, i.tag === 'distracted' ? 0 : heavy.includes(i.tag) ? 2 : 1, i.tag);
 });
 

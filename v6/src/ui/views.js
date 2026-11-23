@@ -2,7 +2,7 @@
 
 import { MAX_CAREERS } from '../careers.js';
 import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
-import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR } from '../data.js';
+import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, unlockText, levelFor, nextUnlock, unlocksAt, heatUnlocked, houseColours, dailyStreak, returningFor, LEGACY_LEVELS, HEAT, HOUSE_COLOURS } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import {
@@ -10,7 +10,7 @@ import {
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, matchOptions, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker, fortuneBlocker, rerollBlocker, rerollPrice,
   isChampionOf, buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
-  trainGain,
+  trainGain, renameBlocker,
 } from '../run.js';
 import { stepText } from '../tutorial.js';
 import {
@@ -22,7 +22,7 @@ import { gearText, slotLabel } from '../codex.js';
 import { esc, button, buttonWhy, fighterCard, ICON, BUILDING_ICON, mercyChoices, gearSpd } from './components.js';
 import { portrait, npcPortrait } from './portrait.js';
 import { SPEAKERS, tipSpeaker } from '../dialogue.js';
-import { EVENT_BY_ID, choiceLabel, stakesText } from '../events.js';
+import { EVENT_BY_ID, MOOD_WEEKS, choiceLabel, stakesText } from '../events.js';
 import { RELICS, TAGS, KIND_LABELS, perkTags, fortuneTitle, fortuneText } from '../fortune.js';
 
 const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
@@ -429,7 +429,7 @@ function weekPanel(run) {
       ${run.demand ? `<div class="demand${demandMet(run) ? ' met' : ''}">⚜ <b>The Emperor demands:</b> ${esc(DEMANDS[run.demand.id].goal)}, by the end of this month's fight day. ${demandMet(run) ? '✔ Done: he will be pleased.' : `Reward: +${DEMAND.favor} Favour and Gold; missing it costs ${-DEMAND.missFavor} Favour.`}</div>` : ''}
       <div class="row">
         ${run.bouts ? button('End week', 'advance', {}, blocked, 'btn primary') : `${button(`⚔ To fight day <small>(${weeksUntilTournament(run.week)} wk${weeksUntilTournament(run.week) === 1 ? '' : 's'})</small>`, 'advance-tournament', {}, blocked, 'btn primary')}
-        ${button('One week', 'advance', {}, blocked, 'btn')}`}
+        ${button('End week', 'advance', {}, blocked, 'btn')}`}
         ${run.roster.length ? button('📋 Steward\'s plan', 'steward-plan', {}, stewardPlanBlocker(run), 'btn', 'Sets everyone\'s job: the hurt to the Medbay, the tired to Rest, the rest to training while there are rooms.') : ''}
       </div>
       ${blocked && !run.boutPending ? `<div class="why-not">${esc(blocked)}</div>` : ''}
@@ -598,10 +598,11 @@ function rosterPanel(run) {
       <details class="more" data-key="room-${f.id}"><summary>Room &amp; decor${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${roomPanel(run, f).room}</details>
       <details class="more" data-key="gear-${f.id}"><summary>Gear${f.gear.weapon || f.gear.armor ? ` <small>(${[f.gear.weapon, f.gear.armor].filter(Boolean).map((k) => esc(GEAR[k].name)).join(', ')})</small>` : run.inventory.gear.length ? ' <small>(spare gear in the storeroom)</small>' : ''}</summary>${roomPanel(run, f).gear}</details>
       ${f.story?.length ? `<details class="more" data-key="story-${f.id}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
-      <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, cyborg surgery, ${(f.scars ?? []).some((x) => x.id === 'afeared') ? 'fear, ' : ''}retire, release</summary>
+      <details class="more" data-key="surgeon-${f.id}"><summary>Surgeon, cyborg surgery, ${(f.scars ?? []).some((x) => x.id === 'afeared') ? 'fear, ' : ''}rename, retire, release</summary>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
         ${(f.scars ?? []).some((x) => x.id === 'afeared') ? `<div class="label">Afeared: win ${FEAR.conquerWins} fights against the style they fear to conquer it, or</div><div class="row">${buttonWhy(`🏛 Fortuna's rite: lift the fear (${ritePrice(run)} Gold)`, 'rite', { id: f.id }, riteBlocker(run, f.id), 'btn small')}</div>` : ''}
         ${augments ? `<div class="label">Cyborg surgery: replace the wound for good (${augmentPrice(run)} Gold, −1 Renown)</div><div class="row">${augments}</div>` : ''}
+        <div class="row">${buttonWhy(`✎ Rename (${Math.round(RENAME.chance * 100)}% chance they resent it: −${-RENAME.morale} Morale for ${MOOD_WEEKS} weeks)`, 'rename', { id: f.id }, renameBlocker(run, f.id), 'btn small')}</div>
         <div class="row">${buttonWhy(`Retire to the Hall of Champions (+${RETIRE.prestige} Prestige, roster +${RETIRE.morale} Morale)`, 'retire', { id: f.id }, retireBlocker(run, f.id), 'btn small')}</div>
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>
@@ -672,7 +673,7 @@ function arenaBlock(run, tier, oddsFor) {
       ${bout.festival ? `<div class="festival now">🏛 <b>${esc(FESTIVAL_BY_ID[bout.festival].name)}</b>: ${esc(FESTIVAL_BY_ID[bout.festival].desc)}</div>` : ''}
       ${bracketLine(run, tier)}
       ${arena.opponent.nemesis ? nemesisNote(arena.opponent) : ''}${fighterCard(arena.opponent, { compact: true, stress: false, opponent: { boss: boutFor(run, tier).boss }, tag: `${arena.opponent.nemesis ? `☠ Nemesis: ${esc(arena.opponent.name)} ${esc(arena.opponent.nemesis.epithet)} · ` : ''}${hasBracket(tier) ? `Final · ${houseTag(run, arena.opponent)}` : houseTag(run, arena.opponent)}` })}
-      ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your odds</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
+      ${state === 'done' ? '<p class="sub">✔ Settled this week. The opponent above is next month\'s.</p>' : `<h3 class="mini">Your fighters vs ${esc(opponentFor(run, tier).name)}</h3>${rows || '<div class="empty">No fighters to send.</div>'}`}
       ${choice}${!bout.top && state === 'open' ? '<p class="sub">If nobody from your house fights here this week, the tournament goes ahead without you and the arena moves on.</p>' : ''}`;
   if (bout.top) return `<div class="arena-block top"><h3>${esc(arenaName(tier))} <small>your top arena</small></h3>${body}</div>`;
   return `<details class="arena-block" data-key="arena-${tier}"${state === 'open' ? ' open' : ''}><summary><b>${esc(arenaName(tier))}</b> <small>${state === 'open' ? 'open this week' : state === 'done' ? 'settled' : 'lower arena'}</small></summary>${body}</details>`;
@@ -852,7 +853,7 @@ export function helpModal() {
       <li><b>Take Fortune's card.</b> Each month offers three: a <b>relic</b> the house keeps (up to 6, and some count a perk's tag, like Brute or Swift), a boon, gear, a fighter, or a wager. Spin again for Gold if none suit.</li>
       <li><b>Every career counts.</b> Win or lose, a career earns <b>Legacy XP</b>, and each Legacy level unlocks something for the careers after it: relics, a patron, house colours, legends who return. Win a career to unlock <b>Heat</b>: harder rules, a higher score, more XP.</li>
     </ol>
-    <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or plays one week · T goes to fight day · 1–4 switch tabs · ? opens this page.</p>
+    <p class="sub"><b>Shortcuts:</b> Space plays the next round, leaves a finished fight, or ends the week · T goes to fight day · 1–4 switch tabs · ? opens this page.</p>
     <p class="sub">Every rule, trait, perk and item is explained in the <b>Codex</b> tab as you discover it.</p>
     <div class="row"><button class="btn small" data-action="intro-replay">Replay the intro</button><button class="btn small" data-action="tutorial-replay">Restart the tutorial</button><button class="btn small" data-action="tab" data-tab="codex">Open the Codex</button></div>
     <div class="row"><button class="btn small" data-action="export-save" title="Download your career, Codex and Legacy as one file">Export save</button><button class="btn small" data-action="import-save" title="Load a save file as a new career (your other careers are kept)">Import save</button></div>
@@ -987,8 +988,12 @@ function fortuneFace(card) {
   return `<span class="fortune-icon">${KIND_ICON[card.kind]}</span>`;
 }
 
+// Which hand of cards is on the table: a new month, a spin or the Augur's gift deals a new one. main.js animates the
+// cards in only for a new hand, so redraws (a dialogue's Next, a notice) don't replay the deal.
+export const fortuneDealKey = (run) => (run.fortune ? `${run.seed}|${run.week}|${run.fortune.rerolls ?? 0}|${run.fortune.augur ? 'augur' : ''}` : null);
+
 // Three cards, pick one; spin again for Gold, or let it pass. PLACEHOLDER words.
-export function fortunePanel(run) {
+export function fortunePanel(run, { animate = true } = {}) {
   if (!run.fortune || run.mercy || run.event) return '';
   const cards = run.fortune.cards.map((c, i) => {
     const why = fortuneBlocker(run, i);
@@ -1008,12 +1013,12 @@ export function fortunePanel(run) {
     return `<section class="panel fortune-draft augur">
     <div class="label">Your patron</div><h2>The Augur reads the birds</h2>
     <p class="sub">Choose one relic for your house, before the first week.</p>
-    <div class="fortune-cards">${cards}</div></section>`;
+    <div class="fortune-cards${animate ? ' fresh' : ''}">${cards}</div></section>`;
   }
   return `<section class="panel fortune-draft" data-rolls="${run.fortune.rerolls}">
     <div class="label">This month</div><h2>Fortune's wheel turns</h2>
     <p class="sub">Choose one. Relics stay with the house (${run.relics.length}/${FORTUNE.maxRelics}); boons, gear and fighters are yours at once.${full}</p>
-    <div class="fortune-cards">${cards}</div>
+    <div class="fortune-cards${animate ? ' fresh' : ''}">${cards}</div>
     <div class="row">${button(`↻ Spin again (${rerollPrice(run)} Gold)`, 'fortune-reroll', {}, rerollBlocker(run), 'btn small')}
       ${button(`Let it pass (+${FORTUNE.pass} Gold)`, 'fortune-pass', {}, null, 'btn small')}</div>
   </section>`;

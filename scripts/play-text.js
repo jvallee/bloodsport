@@ -15,13 +15,15 @@ import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
 import { RELICS, TAGS, perkTags, fortuneTitle, fortuneText } from '../src/fortune.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, effectiveInjuries, suggestTactic, deathGateAt, deathRisk, signatureOf, useSignature, opponentHasSignature, hypeOf, opponentTell, tellForecast, opponentUnleashesNext, signatureBlocker } from '../src/fight.js';
+import * as runApi from '../src/run.js';
 import {
-  createRun, boutFor, unlockedTiers, arenaName, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
+  createRun, boutFor, unlockedTiers, arenaName, arenaPower, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed, chooseFortune, fortuneBlocker, rerollFortune, rerollPrice, passFortune,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
   bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardRewardText, risingProgress, archrival, checkQuests, answerSummons, refuseSummons, rite,
 } from '../src/run.js';
+const getSummonsPower = (run) => (typeof runApi.summonsPower === 'function' ? runApi.summonsPower(run) : arenaPower(run, SUMMONS.tier, 0));
 import { build, upgrade, buildBlocker, buildingKnown, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
 import { estimateOdds, describeOdds } from '../src/odds.js';
@@ -152,7 +154,8 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (f.spy) bits.push('writes to the palace (the spy you kept)');
     const gear = ['weapon', 'armor'].filter((s) => f.gear[s]).map((s) => `${GEAR[f.gear[s]].name} (${gearText(GEAR[f.gear[s]])})`);
     if (gear.length) bits.push(`Gear: ${gear.join('; ')}`);
-    const decor = Object.entries(f.decor).filter(([, n]) => n).map(([k, n]) => `${DECOR[k].name} ×${n}${DECOR[k].helps(f) ? '' : ' (comfort only)'}`);
+    const decorNote = (d) => (d.helps(f) ? '' : d.calm ? ` (−${d.calm} Stress/wk + comfort)` : d.renown ? ` (+${d.renown} Renown/win + comfort)` : ' (comfort only)');
+    const decor = Object.entries(f.decor).filter(([, n]) => n).map(([k, n]) => `${DECOR[k].name} ×${n}${decorNote(DECOR[k])}`);
     if (decor.length) bits.push(`Decor: ${decor.join(', ')}`);
     if (f.augments?.length) bits.push(`Augments: ${f.augments.map((k) => `${AUGMENTS[k].name} (${AUGMENTS[k].desc})`).join(', ')}`);
     return bits;
@@ -182,10 +185,23 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     return lines.join('\n');
   }
 
-  function opponentBlock(f, boss = false) {
+  function opponentBlock(f, boss = false, label = 'Opponent') {
     const bits = [`Power ${effectivePower(f)}${effectivePower(f) !== f.power ? ` (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')})` : ''}`, `Speed ${effectiveSpeed(f)}`, ...(opponentHasSignature(f, boss) ? [`Signature: ${SIGNATURES[f.cls].name} (${SIGNATURES[f.cls].desc} Used when behind, or in Round 3)`] : []), `Renown ${f.renown}`, ...(f.humor ? [`${HUMORS[f.humor].name}: ${HUMORS[f.humor].tell}`] : []), ...extras(f)];
     const house = houseOf(run, f);
-    return [`     Opponent: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ` (FEUD: +1 Power against you, ${plural(house.feud, 'month')} left)` : ''}${house.owed && !house.feud ? ` (OWES YOU A LIFE: −1 Power against you, ${plural(house.owed, 'month')} left)` : ''}${house.vengeance ? ` (your VENGEANCE: +5% win chance, ${plural(house.vengeance, 'month')} left)` : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}${f.nemesis ? ` · NEMESIS ${f.nemesis.epithet} (beat your house ${f.nemesis.wins}×${f.nemesis.victims.length ? `, killed ${f.nemesis.victims.join(' and ')}` : ''}; +${f.nemesis.bonus} Power)` : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
+    return [`     ${label}: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ` (FEUD: +1 Power against you, ${plural(house.feud, 'month')} left)` : ''}${house.owed && !house.feud ? ` (OWES YOU A LIFE: −1 Power against you, ${plural(house.owed, 'month')} left)` : ''}${house.vengeance ? ` (your VENGEANCE: +5% win chance, ${plural(house.vengeance, 'month')} left)` : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}${f.nemesis ? ` · NEMESIS ${f.nemesis.epithet} (beat your house ${f.nemesis.wins}×${f.nemesis.victims.length ? `, killed ${f.nemesis.victims.join(' and ')}` : ''}; +${f.nemesis.bonus} Power)` : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
+  }
+
+  function getBracketInfo(tier) {
+    if (typeof runApi.bracketInfo === 'function') return runApi.bracketInfo(run, tier);
+    if (!hasBracket(tier)) return null;
+    const b = bracketOf(run, tier);
+    return {
+      tier, open: run.bouts?.[tier] === 'open', round: b?.round ?? 0, fighterId: b?.fighterId ?? null,
+      earlyPurse: BRACKET.purse * tier,
+      earlyPrestige: BRACKET.prestigeTopOnly && tier !== run.topTier ? 0 : BRACKET.prestige,
+      nextOpponent: opponentFor(run, tier),
+      finalOpponent: run.arenas[tier].opponent,
+    };
   }
 
   function arenaBlock(tier) {
@@ -202,27 +218,40 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     const ruleId = bout.boss ? bout.debuff : bout.top && (oracleLevel(run) >= 2 || revealed) && tier > 1 ? arena.debuff : null;
     if (ruleId) lines.push(`     ${bout.boss ? 'Boss arena rule' : revealed && oracleLevel(run) < 2 ? 'A visitor whispered the Boss arena rule' : 'The Oracle foresees the Boss arena rule'}: ${BOSS_DEBUFFS[ruleId].name}. ${BOSS_DEBUFFS[ruleId].desc}`);
     else if (bout.boss && tier === 1) lines.push('     This first Boss fights without an arena rule.');
+    const bInfo = getBracketInfo(tier);
+    const b = hasBracket(tier) ? bracketOf(run, tier) : null;
+    const earlyOpen = bInfo && bInfo.open && bInfo.round < 2 && bInfo.nextOpponent;
     if (hasBracket(tier)) {
-      const b = bracketOf(run, tier);
       const foes = [...(b?.foes ?? [null, null]), arena.opponent];
-      lines.push(`     THREE MATCHES: ${BRACKET.rounds.map((r, i) => `${r}${foes[i] ? ` vs ${foes[i].name} (Power ${effectivePower(foes[i])})` : ''}${b && i < b.round ? ' [won]' : ''}`).join(' → ')}`);
+      lines.push(`     THREE MATCHES: ${BRACKET.rounds.map((r, i) => `${r}${foes[i] ? ` vs ${foes[i].name} (Power ${effectivePower(foes[i])}, Speed ${effectiveSpeed(foes[i])})` : ''}${b && i < b.round ? ' [won]' : ''}`).join(' → ')}`);
       if (b?.fighterId && b.round > 0 && state === 'open') lines.push(`     ${run.roster.find((x) => x.id === b.fighterId)?.name} is through to the ${BRACKET.rounds[b.round]}: \`fight ${b.fighterId} ${tier}\` to fight on, or \`withdraw ${tier}\` (counts as capitulating).`);
-      lines.push('     The Final:');
+      if (earlyOpen) {
+        const earlyPay = `+${bInfo.earlyPurse} Gold${bInfo.earlyPrestige ? `, +${bInfo.earlyPrestige} Prestige` : ''}`;
+        lines.push(`     Next match (${BRACKET.rounds[bInfo.round]} — win pays ${earlyPay}):`);
+        lines.push(opponentBlock(bInfo.nextOpponent, bout.boss, `${BRACKET.rounds[bInfo.round]} opponent`));
+        lines.push(`     The Final: ${arena.opponent.name} · Power ${effectivePower(arena.opponent)} · Speed ${effectiveSpeed(arena.opponent)}`);
+      } else {
+        lines.push('     The Final:');
+        lines.push(opponentBlock(arena.opponent, bout.boss));
+      }
+    } else {
+      lines.push(opponentBlock(arena.opponent, bout.boss));
     }
-    lines.push(opponentBlock(arena.opponent, bout.boss));
     if (state === 'done' || quiet || run.status !== 'active') return lines.join('\n');
+    const nextOpp = opponentFor(run, tier);
     for (const f of run.roster) {
       const o = describeOdds(oddsFor(f, tier), oracleLevel(run));
       const pct = (p) => (p ? ` ${p}` : '');
       const warn = fighterWarnings(run, f, tier).map((w) => w.text);
       const blocker = state === 'open' ? fightBlocker(run, f.id, tier) : null;
       // In a bracket, the match odds are for the next match only; the whole tournament is every match left, multiplied.
-      const b = hasBracket(tier) && state === 'open' ? bracketOf(run, tier) : null;
-      const left = b ? [...b.foes.slice(b.round), arena.opponent] : [];
+      const ob = hasBracket(tier) && state === 'open' ? bracketOf(run, tier) : null;
+      const left = ob ? [...ob.foes.slice(ob.round), arena.opponent] : [];
       const whole = left.length > 1 ? describeOdds({ win: left.reduce((p, x) => p * oddsFor(f, tier, x).win, 1), injury: 0, death: 0 }, oracleLevel(run)) : null;
-      lines.push(`     ${f.name} [${f.id}]: ${b ? `next match (${BRACKET.rounds[b.round]})` : 'match'} ${o.win}${pct(o.winPct)}${whole ? ` · whole tournament ${whole.win}${pct(whole.winPct)}` : ''} · Injury ${o.injury}${pct(o.injuryPct)} · Death ${o.death}${pct(o.deathPct)}${warn.length ? ` · ${warn.join(', ')}` : ''}${blocker ? ` · can't fight: ${blocker}` : ''}`);
+      lines.push(`     ${f.name} [${f.id}]: Power ${effectivePower(f)} vs ${effectivePower(nextOpp)} · Speed ${effectiveSpeed(f)} vs ${effectiveSpeed(nextOpp)} · ${ob ? `next match (${BRACKET.rounds[ob.round]})` : 'match'} ${o.win}${pct(o.winPct)}${whole ? ` · whole tournament ${whole.win}${pct(whole.winPct)}` : ''} · Injury ${o.injury}${pct(o.injuryPct)} · Death ${o.death}${pct(o.deathPct)}${warn.length ? ` · ${warn.join(', ')}` : ''}${blocker ? ` · can't fight: ${blocker}` : ''}`);
     }
-    if (bout.top && run.boutPending) lines.push(`     ${bout.boss ? `Bosses can't be skipped: fight or \`forfeit\` (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour).` : `Or \`skip\` (+${ECONOMY.skipGold} Gold, the roster rests).`}`);
+    const midBracket = b?.fighterId && b.round > 0 && state === 'open';
+    if (bout.top && run.boutPending && !midBracket) lines.push(`     ${bout.boss ? `Bosses can't be skipped: fight or \`forfeit\` (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour).` : `Or \`skip\` (+${ECONOMY.skipGold} Gold, the roster rests).`}`);
     return lines.join('\n');
   }
 
@@ -262,7 +291,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (match) return fightStatus();
     lowerShown = 0;
     const out = [header()];
-    if (run.summons) out.push(`\n⚜ THE EMPEROR SUMMONS one of your fighters to the Imperial Coliseum (a regular, Power ${CIRCUITS[SUMMONS.tier - 1].oppPower[0]}) on this month's fight day: \`summons <id> <yield|death>\` then, or \`refuse-summons\` (${SUMMONS.refuseFavor} Favour).`);
+    if (run.summons) out.push(`\n⚜ THE EMPEROR SUMMONS one of your fighters to the Imperial Coliseum (a regular, Power ${getSummonsPower(run)}) on this month's fight day: \`summons <id> <yield|death>\` then, or \`refuse-summons\` (${SUMMONS.refuseFavor} Favour).`);
     if (run.demand) out.push(`\n⚜ THE EMPEROR DEMANDS: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.${demandMet(run) ? ' (done)' : ''}`);
     // The Emperor's word on a demand met, and on one missed (as on the page; playtest LLM-11: only the page had them).
     if (run.demand && demandMet(run) && !scenesSeen.includes(`demand-met-${run.demand.week}`)) {
@@ -273,6 +302,9 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (judged && !judged.met && !scenesSeen.includes(`demand-missed-${judged.issued}`)) {
       scenesSeen.push(`demand-missed-${judged.issued}`);
       out.push(sceneText('demand-missed', demandMissedScene(DEMANDS[judged.id].goal, judged.favor)));
+    }
+    if (!scenesSeen.includes('opening') && (run.week > 0 || run.setup?.unlocks?.length || run.setup?.heat > 0)) {
+      scenesSeen.push('opening');
     }
     const due = scenesSeen.includes('opening') ? dueScene(run, scenesSeen) : 'opening';
     if (due) {

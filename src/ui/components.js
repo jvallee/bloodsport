@@ -10,6 +10,10 @@ import { powerParts } from '../run.js';
 import { WANTS } from '../quests.js';
 
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const HEX_COLOR = /^#[0-9a-f]{3,6}$/i;
+const VALID_TONES = new Set(['info', 'good', 'warn', 'bad', 'event']);
+export const safeColor = (c, fallback = '#d9b45a') => (HEX_COLOR.test(String(c ?? '')) ? String(c) : fallback);
+export const safeTone = (t) => (VALID_TONES.has(t) ? t : 'info');
 
 const svg = (path, cls = '') => `<svg class="icon ${cls}" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
 export const ICON = {
@@ -17,7 +21,6 @@ export const ICON = {
   speed: svg('<path d="M3 12h11M5 7h11M7 17h9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="m16 5 6 7-6 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>', 'i-speed'),
   gold: svg('<circle cx="12" cy="12" r="8" fill="currentColor"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/>', 'i-gold'),
   prestige: svg('<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" fill="currentColor"/>', 'i-prestige'),
-  strike: svg('<path d="M5 5l14 14M19 5 5 19" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>', 'i-strike'),
   stress: svg('<path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor"/>', 'i-stress'),
   injury: svg('<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z" fill="currentColor"/>', 'i-injury'),
 };
@@ -28,7 +31,7 @@ export const BUILDING_ICON = {
 
 export function button(label, action, data = {}, blocker = null, cls = 'btn small', help = null) {
   const attrs = Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ');
-  return `<button class="${cls}" data-action="${action}" ${attrs} ${blocker ? `disabled title="${esc(blocker)}"` : help ? `title="${esc(help)}"` : ''}>${label}</button>`;
+  return `<button class="${esc(cls)}" data-action="${esc(action)}" ${attrs} ${blocker ? `disabled title="${esc(blocker)}"` : help ? `title="${esc(help)}"` : ''}>${label}</button>`;
 }
 
 // A button that, when blocked, says why on the page (not only on hover: touchscreens can't hover).
@@ -97,7 +100,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
   const decor = Object.entries(f.decor).filter(([, n]) => n > 0)
     .map(([k, n]) => `<span class="chip decor" title="${esc(DECOR[k].effect)}">${DECOR[k].name} ×${n}</span>`).join('');
   const titles = (f.titles ?? []).map((t) => `<span class="chip title" title="+1 Power">🏆 ${esc(t)}</span>`).join('');
-  const scars = (f.scars ?? []).map((sc) => `<span class="chip scar" title="${esc(SCARS[sc.id].desc)}">🩹 ${esc(SCARS[sc.id].name)}${sc.vs ? ` (${sc.vs})` : ''}</span>`).join('');
+  const scars = (f.scars ?? []).map((sc) => `<span class="chip scar" title="${esc(SCARS[sc.id].desc)}">🩹 ${esc(SCARS[sc.id].name)}${sc.vs ? ` (${esc(sc.vs)})` : ''}</span>`).join('');
   const augs = (f.augments ?? []).map((k) => `<span class="chip augment" title="${esc(AUGMENTS[k].desc)}">⚙ ${esc(AUGMENTS[k].name)}</span>`).join('');
   const perks = (f.perks ?? []).map((p) => `<span class="chip perk" title="${esc(PERKS[p].desc)}">⭐ ${esc(PERKS[p].name)}</span>`).join('');
   const gear = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => `<span class="chip gear" title="${esc(gearSummary(GEAR[k]))}">⚒ ${esc(GEAR[k].name)}</span>`).join('');
@@ -113,7 +116,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
   const bond = f.bond ? `<span class="chip bond" title="Bonded with ${esc(f.bond.name)}: +8 comfort while both are in the house. A partner 3+ levels higher teaches 1 XP a week. If one dies, the other grieves.">🤝 ${esc(f.bond.name)}</span>` : '';
   const kills = f.kills ? `<span class="chip kills" title="Opponents killed in the arena. ${KILL_MARKS.map((k) => `${k.at} kills: ${k.name} (${k.desc})`).join(' ')}">💀 ${f.kills}</span>` : '';
   return `
-    <article ${anchor ? `id="card-${esc(f.id)}" ` : ''}class="card kind-${f.kind}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
+    <article ${anchor ? `id="card-${esc(f.id)}" ` : ''}class="card kind-${esc(f.kind)}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
       ${tag ? `<div class="card-tag">${tag}</div>` : ''}
       <div class="card-head">
         <div class="id-row">${portrait(f, compact ? 44 : 52)}<div class="who"><h3><span class="nm">${esc(f.name)}</span></h3><div class="kind">${levelLine} ${KINDS[f.kind].name} · ${clsName}</div></div></div>

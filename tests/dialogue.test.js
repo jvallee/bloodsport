@@ -48,7 +48,7 @@ test('the Emperor returns at turning points, once each per career', () => {
 test('the dialogue box shows who is talking, one beat at a time', () => {
   const first = dialogueModal('opening', SCENES.opening, 1);
   assert.match(first, /Emperor Silbannacus/);
-  assert.match(first, /aria-label="emperor"/, 'his portrait');
+  assert.match(first, /aria-label="Portrait of Emperor Silbannacus"/, 'his portrait');
   assert.match(first, /data-action="scene-next"[^>]*>Next</);
   assert.match(first, /data-action="scene-skip"/);
   const last = dialogueModal('opening', SCENES.opening, SCENES.opening.length - 1);

@@ -117,6 +117,7 @@ export const EVENTS = [
       { label: 'Wooden swords only', effects: { xp: { to: 'both', n: 1 } } },
       { label: 'Full strength', effects: { xp: { to: 'both', n: 3 }, chance: { p: 0.7, win: {}, lose: { injury: { to: 'g', tag: 'fleshWound' } } } } },
     ],
+    when: (run) => run.roster.filter((x) => x.job !== 'medbay').length >= 2,
   },
   {
     id: 'oldWound', who: 'any', title: 'An old wound aches',
@@ -125,6 +126,14 @@ export const EVENTS = [
       { label: 'Rest them this week', effects: { stress: { to: 'f', n: -20 } } },
       { label: 'Push through it', effects: { xp: { to: 'f', n: 2 }, chance: { p: 0.7, win: {}, lose: { injury: { to: 'f', tag: 'fleshWound' } } } } },
     ],
+    when: (run) => run.roster.some((x) => x.job === 'trainPower' || x.job === 'trainSpeed' || x.stress > 0 || x.injuries.length || (x.scars?.length ?? 0) > 0),
+    target: (run) => {
+      const training = run.roster.filter((x) => x.job === 'trainPower' || x.job === 'trainSpeed');
+      const worn = training.filter((x) => x.stress > 0 || x.injuries.length || (x.scars?.length ?? 0) > 0);
+      if (worn.length) return worn;
+      if (training.length) return training;
+      return run.roster.filter((x) => x.stress > 0 || x.injuries.length || (x.scars?.length ?? 0) > 0);
+    },
   },
   {
     id: 'poet', who: 'famous', title: 'A poet at the gate',
@@ -178,6 +187,7 @@ export const EVENTS = [
       { label: 'Keep the gates shut', effects: {} },
       { label: 'Open the gates', effects: { gold: 3, stress: { to: 'all', n: 5 }, morale: { to: 'all', n: 3 } } },
     ],
+    when: (run) => run.roster.some((x) => x.job === 'trainPower' || x.job === 'trainSpeed'),
   },
   {
     id: 'envoy', who: 'any', title: 'An imperial envoy',

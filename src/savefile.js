@@ -19,8 +19,10 @@ export function importSave(text) {
   } catch {
     throw new Error('That file is not a Blood and Circus save.');
   }
-  if (data?.kind !== SAVE_FILE_KIND || !data.career) throw new Error('That file is not a Blood and Circus save.');
+  if (data?.kind !== SAVE_FILE_KIND || !data.career || typeof data.career !== 'object' || Array.isArray(data.career)) {
+    throw new Error('That file is not a Blood and Circus save.');
+  }
   const career = JSON.stringify(data.career);
-  deserialize(career); // throws if the career can't be loaded
+  deserialize(career); // throws a readable error if the career can't be loaded
   return { career, codex: loadCodex(JSON.stringify(data.codex ?? null)), legacy: loadLegacy(JSON.stringify(data.legacy ?? null)) };
 }

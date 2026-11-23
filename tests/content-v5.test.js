@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { CONSUMABLES } from '../src/data.js';
+import { CONSUMABLES, GEAR } from '../src/data.js';
 import {
   createMatch, playRound, computePower, computeSpeed, computePhase2, applyRoundEnd, injuryCheck, deathGateAt, canThrowTowel, matchupsFor, mortalDanger,
 } from '../src/fight.js';
@@ -126,7 +126,7 @@ test('new items: Iron Tonic, Viper Venom, Berserker Mushroom, Throwing Net, Smel
 
 test('new gear: a Lion Pelt adds win chance', () => {
   const [A, B] = pair({ gear: { weapon: null, armor: 'lionPelt' } }, {});
-  assert.ok(computePhase2(A, B, 1).win.some((x) => x.source === 'Lion Pelt' && x.value === 5000));
+  assert.ok(computePhase2(A, B, 1).win.some((x) => x.source === 'Lion Pelt' && x.value === GEAR.lionPelt.win));
 });
 
 test('new perks: Bloodthirsty, Counterpuncher, Iron Will', () => {

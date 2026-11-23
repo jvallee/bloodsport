@@ -296,7 +296,7 @@ test('the Loyalist: naming names executes the political prisoners and the freed,
   assert.equal(run.status, 'active', 'the career goes on');
 });
 
-test('version 6: the Emperor adds a relic to the purse for the names (not one the house holds, nor past six)', () => {
+test('version 7: the Emperor adds a relic to the purse for the names, laying down the lowest-rarity relic if at six', () => {
   const { run } = withPrisoner();
   run.plot.stage = 'cause';
   card(run, 'theOffer', 1);
@@ -306,7 +306,7 @@ test('version 6: the Emperor adds a relic to the purse for the names (not one th
   full.relics = ['whetstone', 'knucklebone', 'aegis', 'purse', 'rod', 'trophyWall'];
   card(full, 'theOffer', 1);
   assert.equal(full.relics.length, 6);
-  assert.ok(!full.relics.includes(PLOT.betrayRelic));
+  assert.ok(full.relics.includes(PLOT.betrayRelic));
 });
 
 test('hidden effects never show on the buttons', () => {

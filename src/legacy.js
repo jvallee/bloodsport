@@ -6,7 +6,7 @@ import { PATRONS, DECREES, HEAT, LEGACY, LEGACY_LEVELS, HOUSE_COLOURS } from './
 
 export { PATRONS, DECREES, HEAT, LEGACY_LEVELS, HOUSE_COLOURS };
 
-const allFighters = (run) => [...run.roster, ...run.fallen];
+const allFighters = (run) => [...run.roster, ...run.fallen, ...(run.retired ?? [])];
 
 export const ACHIEVEMENTS = [
   { id: 'firstBoss', name: 'First Blood', desc: 'Beat a Boss.', check: (run) => run.history.some((h) => h.boss && h.won), unlock: { patron: 'veteran' } },
@@ -27,14 +27,15 @@ export const ACHIEVEMENTS = [
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 
 // Version 6: `xp` (Legacy XP, which sets the level and its unlocks), `maxHeat` (the highest Heat you may choose) and
-// `returned` (Hall legends who already came back once, by legendKey).
-export const createLegacy = () => ({ achievements: [], careers: 0, best: 0, past: [], hall: [], xp: 0, maxHeat: 0, returned: [] });
+// `returned` (Hall legends who already came back once, by legendKey). `recorded` tracks finished career keys beyond `past`.
+export const createLegacy = () => ({ achievements: [], careers: 0, best: 0, past: [], hall: [], xp: 0, maxHeat: 0, returned: [], recorded: [] });
 
 export function loadLegacy(text) {
   try {
     const data = JSON.parse(text ?? 'null');
     if (!data || !Array.isArray(data.achievements)) return createLegacy();
     const legacy = { ...createLegacy(), ...data };
+    if (!Array.isArray(legacy.recorded)) legacy.recorded = [];
     if (data.xp === undefined) migrateLegacy(legacy);
     return legacy;
   } catch {
@@ -55,7 +56,7 @@ export function migrateLegacy(legacy) {
 
 // ---------- Version 6: Legacy XP, levels and unlocks (docs/plan-v6-phase3.md) ----------
 
-const others = (run) => [...run.roster, ...run.fallen, ...(run.retired ?? [])];
+const others = (run) => allFighters(run);
 // What a career earned, win or lose: { total, lines: [{ label, xp }] }. Pure, so the end screen can show it again.
 export function careerXp(run) {
   const x = LEGACY.xp;
@@ -66,10 +67,13 @@ export function careerXp(run) {
   const bosses = new Set(run.history.filter((h) => h.boss && h.won).map((h) => h.tier)).size; // each arena's Boss once
   if (bosses) add(`${bosses} Boss${bosses > 1 ? 'es' : ''} beaten`, x.boss * bosses);
   // A legend who returned brings their old kills and Titles; only new ones count.
-  const kills = others(run).reduce((n, f) => n + Math.max(0, (f.kills ?? 0) - (f.carried?.kills ?? 0)), 0);
+  // Skip original fallen bodies that were raised as Revenants so pre-death kills are not double-counted.
+  const fighters = others(run);
+  const raisedIds = new Set(fighters.map((f) => f.revenantOf).filter(Boolean));
+  const kills = fighters.filter((f) => !raisedIds.has(f.id)).reduce((n, f) => n + Math.max(0, (f.kills ?? 0) - (f.carried?.kills ?? 0)), 0);
   if (kills) add(`${kills} kill${kills > 1 ? 's' : ''}`, x.kill * Math.min(kills, x.maxKills));
   // Each Title once, whoever holds it (a Boss can be beaten again by another fighter for the same Title).
-  const titles = new Set(others(run).flatMap((f) => (f.titles ?? []).slice(f.carried?.titles ?? 0))).size;
+  const titles = new Set(fighters.flatMap((f) => (f.titles ?? []).slice(f.carried?.titles ?? 0))).size;
   if (titles) add(`${titles} Title${titles > 1 ? 's' : ''}`, x.title * Math.min(titles, x.maxTitles));
   if (run.status === 'won') add('Master of the Games', x.won);
   if (run.ending === 'coup') add('The tyrant fell', x.coup);
@@ -152,10 +156,11 @@ export function careerScore(run) {
   return (run.glory ?? 0) + 25 * (run.topTier - 1) + 10 * (run.prestigeLevel - 1) + 2 * wins + (run.status === 'won' ? 200 + decrees : 0) + (run.ending === 'coup' ? 100 : 0);
 }
 
-// The career's best fighter: most wins, then Renown.
+// The career's best fighter: most wins, then Renown (includes retired champions).
 export function bestFighter(run) {
   const wins = (f) => winsOf(run, f);
-  return [...allFighters(run)].sort((a, b) => wins(b) - wins(a) || b.renown - a.renown || effectivePower(b) - effectivePower(a))[0] ?? null;
+  const power = (f) => (f.power !== undefined ? effectivePower(f) : f.level ?? 0);
+  return [...others(run)].sort((a, b) => wins(b) - wins(a) || (b.renown ?? 0) - (a.renown ?? 0) || power(b) - power(a))[0] ?? null;
 }
 
 // The daily Emperor's Challenge (fun idea #2): everyone gets the same short career on a given day. `day` is "YYYY-MM-DD".
@@ -164,10 +169,16 @@ export function dailySeed(day) {
 }
 export const dailySetup = (day) => ({ patron: null, decrees: [], classes: [], short: true, daily: day }); // no unlocks, Heat or legends: the same for everyone
 
+const careerRecordKey = (run) => run.careerId ?? `${run.seed}:${run.week}:${run.endReason ?? ''}:${run.history?.length ?? 0}:${run.actions?.length ?? 0}`;
+
 // Record a finished career (once).
 export function recordCareer(legacy, run) {
-  if (run.status === 'active' || legacy.past.some((p) => p.seed === run.seed && p.weeks === run.week)) return null;
-  const entry = { seed: run.seed, weeks: run.week, won: run.status === 'won', score: careerScore(run), endReason: run.endReason, topTier: run.topTier, short: Boolean(run.setup?.short), daily: run.setup?.daily ?? null };
+  if (run.status === 'active') return null;
+  const key = careerRecordKey(run);
+  const recorded = legacy.recorded ?? (legacy.recorded = []);
+  if (recorded.includes(key)) return null;
+  if (legacy.past.some((p) => !p.careerKey && p.seed === run.seed && p.weeks === run.week && p.endReason === run.endReason)) return null;
+  const entry = { careerKey: key, seed: run.seed, weeks: run.week, won: run.status === 'won', score: careerScore(run), endReason: run.endReason, topTier: run.topTier, short: Boolean(run.setup?.short), daily: run.setup?.daily ?? null };
   // Version 6: Legacy XP, the levels it reaches, what they unlock, and the next Heat for a win.
   const gained = careerXp(run);
   const from = levelFor(legacy.xp ?? 0).level;
@@ -178,6 +189,7 @@ export function recordCareer(legacy, run) {
   if (entry.won && !entry.daily) legacy.maxHeat = Math.min(HEAT.decrees.length, Math.max(heatBefore, heat + 1));
   Object.assign(entry, { heat, xp: gained.total, xpLines: gained.lines, xpBefore: legacy.xp - gained.total, from, to, unlocked: LEGACY_LEVELS.slice(from - 1, to - 1).map((u) => u.id), newHeat: legacy.maxHeat > heatBefore ? legacy.maxHeat : null });
   legacy.returned = [...new Set([...(legacy.returned ?? []), ...others(run).map((f) => f.returned).filter(Boolean)])];
+  recorded.push(key);
   legacy.careers += 1;
   legacy.best = Math.max(legacy.best, entry.score);
   if (entry.daily) legacy.daily = { ...(legacy.daily ?? {}), [entry.daily]: Math.max(legacy.daily?.[entry.daily] ?? 0, entry.score) };
@@ -185,10 +197,10 @@ export function recordCareer(legacy, run) {
   return entry;
 }
 
-// Retired legends join the Hall of Champions, which outlives every career.
+// Retired legends join the Hall of Champions, which outlives every career. Returning legends are skipped so they cannot clone.
 export function recordLegends(legacy, run) {
   const hall = legacy.hall ?? (legacy.hall = []);
-  const fresh = (run.retired ?? []).filter((l) => !hall.some((h) => h.seed === l.seed && h.id === l.id));
+  const fresh = (run.retired ?? []).filter((l) => !l.returned && !hall.some((h) => h.seed === l.seed && h.id === l.id));
   hall.unshift(...fresh);
   legacy.hall = hall.slice(0, 24);
   return fresh;

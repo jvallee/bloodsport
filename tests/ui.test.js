@@ -4,7 +4,7 @@ import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
 import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, advanceToTournament, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute, resolveMercy } from '../src/run.js';
 import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal, eventCard, setupModal, legacyPanel, roomTabs, today } from '../src/ui/views.js';
-import { TRIBUTE, LEGACY, LEGACY_LEVELS } from '../src/data.js';
+import { TRIBUTE, LEGACY, LEGACY_LEVELS, HEAT, DECREES } from '../src/data.js';
 import { createLegacy, recordCareer } from '../src/legacy.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress } from '../src/codex.js';
 import { INTRO, STEPS, FIGHT_STEPS } from '../src/tutorial.js';
@@ -272,7 +272,7 @@ test('the new-career dialog offers unlocked patrons, and Heat only after a win',
   assert.match(html, /Unlocked classes in the market: Thorn-Blade/);
   const hot = setupModal({ ...legacy, achievements: ['champion'], maxHeat: 1 }, { patron: '', heat: 0 });
   assert.match(hot, /name="heat" value="1"/);
-  assert.match(hot, /Heat 1: Harsh Judges/);
+  assert.match(hot, new RegExp(`Heat 1: ${DECREES[HEAT.decrees[0]].name}`));
   assert.doesNotMatch(hot, /name="heat" value="2"/);
   assert.match(hot, /Win at Heat 1 to unlock Heat 2/);
   assert.match(legacyPanel(legacy), /★ First Blood/);

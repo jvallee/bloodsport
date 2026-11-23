@@ -3,7 +3,7 @@
 // 2. Match win and death rates for a trained fighter against each tier's Boss (no debuff).
 
 import { createRng } from '../src/rng.js';
-import { KINDS, CLASSES, WEAPONS, TRAITS, CIRCUITS } from '../src/data.js';
+import { KINDS, CLASSES, WEAPONS, TRAITS, CIRCUITS, GRAND, SHORT, TRAIN_GAIN } from '../src/data.js';
 import { createMatch, autoPlay } from '../src/fight.js';
 import { createFighter } from '../src/run.js';
 
@@ -53,20 +53,48 @@ for (const r of rows) {
 const outside = rows.filter((r) => r.win > 0.7 || r.win < 0.3).length;
 console.log(`\n${outside} of ${rows.length} builds outside the 30–70% target.`);
 
-console.log('\nHuman fighter trained to the tier\'s Trainer cap (all Power, +1 Power per earlier Title) vs each Boss');
-const caps = [3, 5, 8, 13];
-for (const c of CIRCUITS) {
+console.log('\nSeason mode: Human fighter trained to realistic tier power/speed (+2 Power / +6 Speed per week, tier recruit + earlier Titles) vs each Boss');
+const pGain = Math.round(TRAIN_GAIN.power * SHORT.train);
+const sGain = Math.round(TRAIN_GAIN.speed * SHORT.train);
+const bosses = [
+  ...CIRCUITS.map((c, i) => ({
+    name: `${c.name} Boss`,
+    tier: c.tier,
+    bossPower: c.oppPower[2] + (SHORT.oppPower[i] ?? 0),
+    oppDecor: c.oppDecor,
+    oppSpeed: 3 + c.tier,
+    market: (c.marketPower ?? 0) + (SHORT.marketPower?.[i] ?? 0),
+    titles: i,
+    trainWeeks: [3, 5, 8, 13][i],
+    speedWeeks: [1, 1, 1, 2][i],
+  })),
+  {
+    name: GRAND.name,
+    tier: 5,
+    bossPower: GRAND.oppPower + SHORT.grandPower,
+    oppDecor: GRAND.oppDecor,
+    oppSpeed: 3 + CIRCUITS.length,
+    market: (CIRCUITS[3].marketPower ?? 0) + (SHORT.marketPower?.[3] ?? 0),
+    titles: 4,
+    trainWeeks: 16,
+    speedWeeks: 2,
+  },
+];
+for (const b of bosses) {
+  const playerPower = 5 + b.market + b.titles + (b.trainWeeks - b.speedWeeks) * pGain;
+  const playerSpeed = 3 + b.speedWeeks * sGain;
   let wins = 0;
   let deaths = 0;
   for (let i = 0; i < N; i++) {
     const f = createFighter(rng, { id: 'p', kind: 'human' });
-    f.power += caps[c.tier - 1] + (c.tier - 1);
-    const opp = createFighter(rng, { id: 'o', power: c.oppPower[2], decorLevel: c.oppDecor });
-    opp.speed = 3 + c.tier;
+    f.power = playerPower;
+    f.speed = playerSpeed;
+    const opp = createFighter(rng, { id: 'o', power: b.bossPower, decorLevel: b.oppDecor });
+    opp.speed = b.oppSpeed;
     const m = createMatch({ a: f, b: opp, rng });
     autoPlay(m);
     if (m.result.winner === 'A') wins++;
     if (!m.a.f.alive) deaths++;
   }
-  console.log(`  Power ${5 + caps[c.tier - 1] + c.tier - 1} vs ${c.name} Boss (Power ${c.oppPower[2]})`.padEnd(54) + `win ${pct(wins / N)}  death ${pct(deaths / N)}`);
+  console.log(`  P${playerPower}/S${playerSpeed} vs ${b.name} (P${b.bossPower}/S${b.oppSpeed})`.padEnd(56) + `win ${pct(wins / N)}  death ${pct(deaths / N)}`);
 }

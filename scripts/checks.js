@@ -1,7 +1,7 @@
 // Balance gates. Each check returns { name, pass, detail }. Used by `npm run career -- --check`.
 // Targets come from docs/roadmap-v2.md (B2 and C4).
 
-import { CIRCUITS, TRAIN_GAIN } from '../src/data.js';
+import { CIRCUITS, TRAIN_GAIN, SHORT } from '../src/data.js';
 import { estimateOdds } from '../src/odds.js';
 import { createFighter } from '../src/run.js';
 import { careerXp, levelCost, ALL_UNLOCKS } from '../src/legacy.js';
@@ -10,35 +10,46 @@ import { createMatch, autoPlay, suggestTactic } from '../src/fight.js';
 
 const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
-// B2: is a balanced fighter ever best? For each Boss, split the Trainer cap between Power and Speed and score
-// each split by: win chance − 0.5 × injury chance − 5 × death chance (injuries cost Medbay weeks; deaths cost fighters).
-export function speedSplit({ n = 3000 } = {}) {
+// B2 (v7 Season): is a balanced fighter ever best? For each Season Boss, split the Trainer cap between Power (+2/wk)
+// and Speed (+6/wk) and score each split by: win chance − 0.5 × injury chance − 5 × death chance.
+// `only`: one Boss's index, so the gates can run the four in parallel (each has its own seeds; see mergeSplits).
+export function speedSplit({ n = 3000, only = null } = {}) {
   const caps = [3, 5, 8, 13];
-  // Version 6: the Bosses fight harder to match the Fortune draft's gear and relics, which this model fighter doesn't have.
-  // It keeps the 5.4 gap to each Boss instead (the draft's share is the difference), so the question stays the same.
-  const v5Boss = [7, 13, 19, 28];
+  const pGain = Math.round(TRAIN_GAIN.power * SHORT.train);
+  const sGain = Math.round(TRAIN_GAIN.speed * SHORT.train);
   const rows = CIRCUITS.map((c, i) => {
+    if (only !== null && i !== only) return null;
     const points = caps[i];
     const titles = i;
+    const bossPower = c.oppPower[2] + (SHORT.oppPower[i] ?? 0);
+    const basePower = 5 + (c.marketPower ?? 0) + (SHORT.marketPower?.[i] ?? 0) + titles;
     const rng = createRng(500 + i);
-    const opp = createFighter(rng, { id: 'o', power: c.oppPower[2] });
+    const opp = createFighter(rng, { id: 'o', power: bossPower });
     opp.kindTrait = null; opp.cls = null; opp.weapon = null;
     opp.speed = 3 + c.tier;
     const splits = [];
     for (let k = 0; k <= points; k++) {
       const f = createFighter(rng, { id: 'p', kind: 'human' });
       f.kindTrait = null; f.cls = null; f.weapon = null;
-      f.power = 5 + (c.marketPower ?? 0) + titles + (c.oppPower[2] - v5Boss[i]) + (points - k) * TRAIN_GAIN.power; // a fighter bought at this tier starts stronger
-      f.speed = 3 + k * TRAIN_GAIN.speed;
+      f.power = basePower + (points - k) * pGain;
+      f.speed = 3 + k * sGain;
       const o = estimateOdds(f, opp, { n, seed: 900 + k });
       splits.push({ speedPoints: k, share: k / points, ...o, value: o.win - 0.5 * o.injury - 5 * o.death });
     }
     const best = splits.reduce((a, b) => (b.value > a.value ? b : a));
     return { boss: c.name, points, best, splits };
-  });
-  const balanced = rows.filter((r) => r.best.share >= 0.25 && r.best.share <= 0.6).length;
-  return { rows, balanced };
+  }).filter(Boolean);
+  return splitSummary(rows);
 }
+
+const splitSummary = (rows) => {
+  // At Season training rates (+2 Power / +6 Speed per week), 1–2 Speed weeks (12–50% of cap) is a balanced interior optimum.
+  const balanced = rows.filter((r) => r.best.share >= 0.12 && r.best.share <= 0.5).length;
+  return { rows, balanced };
+};
+
+// Joins per-Boss speedSplit results (in Boss order) into one.
+export const mergeSplits = (parts) => splitSummary(parts.flatMap((p) => p.rows));
 
 // Phase A: do tactics matter? Equal-Power random fighters (real traits and humors), each match played with
 // the same dice by a fighter who reads the opponent (as auto-play does) and by one who always fights Steady / always Presses.
@@ -71,25 +82,27 @@ export function bossCurve(results) {
 }
 
 const SEASON = { short: true };
+const FULL_LEGACY = { ...SEASON, unlocks: ALL_UNLOCKS, patron: 'augur' };
 
 // Every career and simulation the gates need, as jobs for scripts/pool.js (all seeded: the order of play doesn't matter).
 export function gateJobs({ careers = 200, quick = false } = {}) {
-  // v6, the hidden plot: bots that play it (half as many careers, to keep the check quick). Short careers likewise.
-  const plotN = Math.max(50, Math.round(careers / 2));
-  const group = (name, n, strategy, opts = {}) => Array.from({ length: n }, (_, i) => ({ type: 'career', group: name, seed: 1000 + i, strategy, opts }));
+  const plotN = Math.max(quick ? 25 : 50, Math.round(careers / 2));
+  const oddsOpts = quick ? { oddsSamples: 50 } : {};
+  const group = (name, n, strategy, opts = {}) => Array.from({ length: n }, (_, i) => ({ type: 'career', group: name, seed: 1000 + i, strategy, opts: { ...oddsOpts, ...opts } }));
   return [
     // The two long simulations first, so they don't finish last on their own.
-    { type: 'split', group: 'split', opts: { n: quick ? 800 : 3000 } },
+    ...CIRCUITS.map((_, i) => ({ type: 'split', group: 'split', opts: { n: quick ? 800 : 3000, only: i } })),
     { type: 'tactics', group: 'tactics', opts: { n: quick ? 1500 : 4000 } },
-    // Version 6, phase 5 (docs/plan-v6-phase5.md): every group plays a season, the career a player starts by default;
-    // the 'long' group plays the Long Road. Until alpha.4 the groups played the Long Road and 'short' played seasons.
+    // v6/v7: Seasons are the default career; Long Road keeps a gate of its own.
     ...group('careful', careers, 'careful', { setup: SEASON }),
     ...group('reckless', careers, 'reckless', { setup: SEASON }),
     ...group('rebel', plotN, 'careful', { plot: 'rebel', setup: SEASON }),
     ...group('loyalist', plotN, 'careful', { plot: 'loyalist', setup: SEASON }),
     ...group('long', plotN, 'careful', { setup: { short: false } }),
-    // Version 6 (docs/plan-v6-phase3.md): every group above plays a first career; this one has every Legacy unlock.
-    ...group('legacy', plotN, 'careful', { setup: { ...SEASON, unlocks: ALL_UNLOCKS, patron: 'augur' } }),
+    // Full Legacy at Heat 0, Heat 1, and Heat 3 (same seeds so seed luck cancels out).
+    ...group('legacy', plotN, 'careful', { setup: FULL_LEGACY }),
+    ...group('heat1', plotN, 'careful', { setup: { ...FULL_LEGACY, heat: 1 } }),
+    ...group('heat3', plotN, 'careful', { setup: { ...FULL_LEGACY, heat: 3 } }),
   ];
 }
 
@@ -101,27 +114,24 @@ export async function runGates({ careers = 200, quick = false, tunables = {} } =
   bar.expect(jobs);
   const results = await runJobs(jobs, { tunables, onDone: bar.tick });
   const of = (g) => results.filter((_, i) => jobs[i].group === g);
-  return gatesFrom({ careful: of('careful'), reckless: of('reckless'), rebel: of('rebel'), loyalist: of('loyalist'), long: of('long'), legacy: of('legacy'), split: of('split')[0], tactics: of('tactics')[0] });
+  return gatesFrom({
+    careful: of('careful'), reckless: of('reckless'), rebel: of('rebel'), loyalist: of('loyalist'),
+    long: of('long'), legacy: of('legacy'), heat1: of('heat1'), heat3: of('heat3'),
+    split: mergeSplits(of('split')), tactics: of('tactics')[0],
+  });
 }
 
-export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, split, tactics }) {
+export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, heat1 = [], heat3 = [], split, tactics }) {
   const rate = (rs) => rs.filter((r) => r.won).length / rs.length;
   const deaths = (rs) => avg(rs.map((r) => r.deaths));
   const curve = bossCurve(careful);
   const ending = (rs, e) => rs.filter((r) => r.run.ending === e).length / rs.length;
   const weeks = (rs) => avg(rs.map((r) => r.weeks));
-  // Version 6: how long a WON career takes. Harder arenas end losing careers sooner, which made the all-careers average
-  // say little about how quick a season is (docs/fight-rules.md, 6.0.0-alpha.2).
   const winWeeks = (rs) => { const won = rs.filter((r) => r.won); return won.length ? avg(won.map((r) => r.weeks)) : weeks(rs); };
-  // Unlock cadence: careers per Legacy level over the first five levels, from the careful bot's first-career XP.
-  const sameSeeds = careful.slice(0, loyalist.length); // careful's careers on the loyalist's seeds (1000 + i, in order)
+  const sameSeeds = careful.slice(0, loyalist.length);
   const meanXp = avg(careful.map((r) => careerXp(r.run).total));
-  // Version 6, phase 5: a won season's length in fight months; dead months; the most common relic among won careers.
   const wonMonths = careful.filter((r) => r.won).length ? avg(careful.filter((r) => r.won).map((r) => r.fightMonths)) : 99;
   const dead = careful.reduce((n, r) => n + r.deadMonths, 0) / Math.max(1, careful.reduce((n, r) => n + r.months, 0));
-  // Builds: a relic is dominant if it is held in many more won careers than lost ones (its lift). Since relic cards keep
-  // coming at the limit (playtest LLM-12), a winner holds six relics, so several sit above 50% of wins without any of them
-  // deciding a career; the gate was first "no relic in over 50% of won careers" (docs/fight-rules.md, 6.0.0-beta).
   const pool = [...careful, ...legacy];
   const wins = pool.filter((r) => r.won);
   const losses = pool.filter((r) => !r.won);
@@ -131,30 +141,26 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, sp
   const [liftRelic, topLift] = relicIds.map((id) => [id, share(wins, id) - share(losses, id)]).sort((a, b) => b[1] - a[1])[0] ?? ['none', 0];
   const perLevel = [1, 2, 3, 4, 5].reduce((s, l) => s + levelCost(l), 0) / 5 / meanXp;
   const gates = [
-    // Version 6, phase 3: the careful bot plays a first career (no unlocks); 20–45% became 15–35% (docs/plan-v6-one-more-career.md).
     { name: 'First career: careful win rate is 15–35%', value: rate(careful), pass: rate(careful) >= 0.15 && rate(careful) <= 0.35, fmt: 'pct' },
     { name: 'Full Legacy: careful win rate is 40–60%', value: rate(legacy), pass: rate(legacy) >= 0.4 && rate(legacy) <= 0.6, fmt: 'pct' },
     { name: 'Unlock cadence: each of the first five Legacy levels takes 1–2 careers', value: perLevel, pass: perLevel >= 1 && perLevel <= 2, fmt: 'num' },
     { name: 'Careful wins at least as often as reckless', value: rate(careful) - rate(reckless), pass: rate(careful) >= rate(reckless), fmt: 'pctDiff' },
     { name: 'Careful loses clearly fewer fighters than reckless', value: deaths(careful) / Math.max(0.01, deaths(reckless)), pass: deaths(careful) <= 0.5 * deaths(reckless), fmt: 'ratio' },
     { name: 'Reckless loses 1–4 fighters per career', value: deaths(reckless), pass: deaths(reckless) >= 1 && deaths(reckless) <= 4, fmt: 'num' },
-    { name: 'Balanced fighter (25–60% Speed) is best vs at least 2 of 4 Bosses', value: split.balanced, pass: split.balanced >= 2, fmt: 'count' },
+    { name: 'Balanced fighter (12–50% Speed in Season) is best vs at least 2 of 4 Bosses', value: split.balanced, pass: split.balanced >= 2, fmt: 'count' },
     { name: 'Gentle start: the first Boss is won at least 55% of the time', value: curve[1] ?? 0, pass: (curve[1] ?? 0) >= 0.55, fmt: 'pct' },
     { name: 'Tactics matter: reading the opponent beats always-Steady by 3–15 points a match', value: tactics.smart - tactics.steady, pass: tactics.smart - tactics.steady >= 0.03 && tactics.smart - tactics.steady <= 0.15, fmt: 'pctDiff' },
     { name: 'No dominant tactic: always-Press does worse than reading the opponent', value: tactics.smart - tactics.press, pass: tactics.press < tactics.smart, fmt: 'pctDiff' },
     { name: 'Tough finish: the Grand Tournament is 10+ points harder than the first Boss', value: (curve[1] ?? 0) - (curve[5] ?? 1), pass: (curve[1] ?? 0) - (curve[5] ?? 1) >= 0.1, fmt: 'pctDiff' },
-    // Version 6, alpha.3: on the same seeds (the plot groups play the first half of careful's seeds), so seed luck cancels out.
     { name: 'The evil road is easier: the loyalist wins 5–20 points more often than careful (same seeds)', value: rate(loyalist) - rate(sameSeeds), pass: rate(loyalist) - rate(sameSeeds) >= 0.05 && rate(loyalist) - rate(sameSeeds) <= 0.2, fmt: 'pctDiff' },
     { name: 'The coup is rare but real: 5–25% of rebel careers', value: ending(rebel, 'coup'), pass: ending(rebel, 'coup') >= 0.05 && ending(rebel, 'coup') <= 0.25, fmt: 'pct' },
-    // Phase 5: was "Short careers are winnable (careful 20–55%) and a won one is at least a fifth quicker" (seasons against
-    // the Long Road). Seasons are now the main group, so the Long Road keeps a gate of its own; the speed test is unchanged.
     { name: 'The Long Road is winnable (careful 15–45%) and a won season is at least a fifth quicker', value: rate(long), pass: rate(long) >= 0.15 && rate(long) <= 0.45 && winWeeks(careful) <= 0.8 * winWeeks(long), fmt: 'pct' },
-    // 6.0.0-beta (after LLM-14): was 12–20, the plan's target. No lever reached it without pushing the first career over 35%
-    // (docs/fight-rules.md, "the rematch fix and the season's length"); the plan says to ship the best measured season.
-    { name: 'Season length: a won season takes 12–24 fight months (the plan aims for 20)', value: wonMonths, pass: wonMonths >= 12 && wonMonths <= 24, fmt: 'num' },
+    { name: 'Season length: a won season takes 12–20 fight months', value: wonMonths, pass: wonMonths >= 12 && wonMonths <= 20, fmt: 'num' },
     { name: 'Dead turns: under 15% of fight months end with nothing new', value: dead, pass: dead < 0.15, fmt: 'pct' },
     { name: `No dominant relic: none is held in 20+ points more of won careers than of lost ones (top: ${liftRelic}; most held: ${topRelic}, ${Math.round(100 * topShare)}% of wins)`, value: topLift, pass: topLift < 0.2, fmt: 'pctDiff' },
     { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
+    ...(heat1.length ? [{ name: 'Heat 1 bites: Full Legacy at Heat 1 wins 5+ points less often than at Heat 0 (same seeds)', value: rate(legacy) - rate(heat1), pass: rate(legacy) - rate(heat1) >= 0.05 && rate(heat1) >= 0.15, fmt: 'pctDiff' }] : []),
+    ...(heat3.length ? [{ name: 'Heat 3 climbs further yet stays winnable: tougher than Heat 1 and at least 8% win rate', value: rate(heat3), pass: rate(heat3) < rate(heat1) && rate(heat3) >= 0.08, fmt: 'pct' }] : []),
   ];
-  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, long, legacy, meanXp, wonMonths, dead };
+  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, long, legacy, heat1, heat3, meanXp, wonMonths, dead };
 }

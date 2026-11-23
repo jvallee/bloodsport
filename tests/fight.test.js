@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/rng.js';
-import { deltaRow } from '../src/data.js';
+import { deltaRow, TACTICS } from '../src/data.js';
 import {
   createMatch, playRound, autoPlay, throwTowel, canThrowTowel, mortalDanger, makeCombatant,
   computePower, computeSpeed, computePhase2, initiative, injurySeverity, injuryCheck, applyRoundEnd, effectiveInjuries, deathGateAt,
@@ -31,8 +31,9 @@ test('round-1 win rate matches the Power Delta table (plus First Strike) for Del
   }
 });
 
-test('round-1 injury rates match the table for winners and losers', () => {
+test('round-1 injury rates match the table (plus Steady stance) for winners and losers', () => {
   const N = 20000;
+  const steadySelf = TACTICS.steady.self ?? 0;
   for (const delta of [0, 2, 4]) {
     const rng = createRng(77 + delta);
     const n = { win: 0, winHurt: 0, lose: 0, loseHurt: 0 };
@@ -45,8 +46,8 @@ test('round-1 injury rates match the table for winners and losers', () => {
       }
     }
     const row = deltaRow(delta);
-    assert.ok(Math.abs(n.winHurt / n.win - row.winnerInjury / 100000) <= 0.015, `winner at Delta ${delta}`);
-    assert.ok(Math.abs(n.loseHurt / n.lose - row.loserInjury / 100000) <= 0.015, `loser at Delta ${delta}`);
+    assert.ok(Math.abs(n.winHurt / n.win - Math.max(0, row.winnerInjury + steadySelf) / 100000) <= 0.015, `winner at Delta ${delta}`);
+    assert.ok(Math.abs(n.loseHurt / n.lose - Math.max(0, row.loserInjury + steadySelf) / 100000) <= 0.015, `loser at Delta ${delta}`);
   }
 });
 
@@ -239,11 +240,11 @@ test('Sagittarius First Volley follows the coin flip and is disabled when Blinde
   assert.equal(computePhase2(A, B, 1, { A: 'win' }).win.length, 0);
 });
 
-test('Ornitharius Birds of Prey needs an injury and scales with Birds', () => {
-  const [A, B] = pair({ cls: 'ornitharius', decor: { bird: 3, fireBrazier: 0 } }, {});
-  assert.equal(computePhase2(A, B, 1).enemy.length, 0);
-  A.f.injuries = injuries('concussed');
-  assert.deepEqual(sources(computePhase2(A, B, 1).enemy), ['Birds of Prey:15000']);
+test('Ornitharius Birds of Prey is always active (+5% base + 5% per Bird)', () => {
+  const [A, B] = pair({ cls: 'ornitharius', decor: { bird: 0, fireBrazier: 0 } }, {});
+  assert.deepEqual(sources(computePhase2(A, B, 1).enemy), ['Birds of Prey:5000']);
+  A.f.decor.bird = 3;
+  assert.deepEqual(sources(computePhase2(A, B, 1).enemy), ['Birds of Prey:20000']);
 });
 
 test('Hateful adds +10% injure chance', () => {
@@ -309,12 +310,13 @@ test('armour lowers injure chance unless the attacker pierces', () => {
   assert.equal(check.pierced, true);
 });
 
-test('Sword parries 20% of hits and gains Riposte next round', () => {
-  const m = matchOf({}, { cls: 'fighter', weapon: 'sword' }, [e5(1), e5(20000)]);
+test('Sword parries 25% of hits and gains Riposte (+3 Speed, +5% win) next round', () => {
+  const m = matchOf({}, { cls: 'fighter', weapon: 'sword' }, [e5(1), e5(25000)]);
   const check = injuryCheck(m, m.a, m.b, roundRecord({ winner: 'A' }), 'x');
   assert.equal(check.parry.success, true);
   assert.equal(m.b.f.injuries.length, 0);
   assert.equal(m.b.riposteRound, 2);
+  assert.ok(sources(computePhase2(m.b, m.a, 2).win).includes('Riposte:5000'));
 });
 
 test('Flail ignores parries', () => {
@@ -352,11 +354,14 @@ test('armour modifiers in a check are labeled with the defender', () => {
   assert.deepEqual(check.mods.map((x) => [x.source, x.side]), [['Alloyed Skin', 'B']]);
 });
 
-test('Distracted disables 1 slot; Maimed disables one per effective injury', () => {
+test('Distracted disables 1 slot; Maimed disables 1 slot at 0–1 prior injuries and 2 at 2+', () => {
   const d = matchOf({}, { kindTrait: 'hateful', cls: 'cestus' }, [e5(1), pct(10), 0]);
   injuryCheck(d, d.a, d.b, roundRecord({ winner: 'A' }), 'x');
   assert.equal(d.b.disabled.length, 1);
-  const mm = matchOf({}, { kindTrait: 'hateful', cls: 'cestus', injuries: injuries('concussed') }, [e5(1), pct(55), 0, 0]); // 55 + 20 = 75 → Maimed
+  const m1 = matchOf({}, { kindTrait: 'hateful', cls: 'cestus', injuries: injuries('concussed') }, [e5(1), pct(50), 0]); // 50 + 25 = 75 → Maimed
+  injuryCheck(m1, m1.a, m1.b, roundRecord({ winner: 'B' }), 'x');
+  assert.equal(m1.b.disabled.length, 1);
+  const mm = matchOf({}, { kindTrait: 'hateful', cls: 'cestus', injuries: injuries('poisoned') }, [e5(1), pct(25), 0, 0]); // 25 + 50 = 75 → Maimed
   injuryCheck(mm, mm.a, mm.b, roundRecord({ winner: 'B' }), 'x');
   assert.deepEqual([...mm.b.disabled].sort(), ['class', 'kind']);
   assert.equal(computePhase2(mm.b, mm.a, 1).enemy.length, 0, 'disabled traits stop firing');
@@ -490,7 +495,7 @@ test('gear adds Power, Speed, injure chance and armour', () => {
   const [M] = pair({ gear: { weapon: 'warMaul', armor: null } }, {});
   assert.deepEqual(sources(computeSpeed(M, 1).mods), ['War Maul:-1']);
   const p = computePhase2(A, B, 1);
-  assert.deepEqual(sources(p.enemy), ['Trident:5000']);
+  assert.deepEqual(sources(p.enemy), ['Trident:8000']);
   assert.deepEqual(p.self, [{ source: 'Bronze Cuirass', value: -10000, armor: true }]);
 });
 
@@ -562,9 +567,9 @@ test('tactics: Press, Guard and Feint change the odds; the counter gets +10% win
   A.stance = 'press';
   B.stance = 'feint';
   const pa = computePhase2(A, B, 1);
-  assert.deepEqual(sources(pa.win), ['Press:3000', 'Counter (Press beats Feint):10000']);
+  assert.deepEqual(sources(pa.win), ['Press:1500', 'Counter (Press beats Feint):10000']);
   assert.deepEqual(sources(pa.enemy), ['Press:5000']);
-  assert.ok(sources(pa.self).includes('Press:7500'));
+  assert.ok(sources(pa.self).includes('Press:10000'));
   A.stance = 'guard';
   B.stance = 'press';
   const pg = computePhase2(A, B, 1);

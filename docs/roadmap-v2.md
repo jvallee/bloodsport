@@ -209,3 +209,46 @@ Opponents get the new traits and perks too, so careful careers dropped from 32% 
 Variant runs: without Underdog 27%, without Bloodlust 21%, Underdog at +1 26%, Underdog only at a 2+ Power gap 27%. So no single change caused the drop.
 The user accepted the harder game, and the careful win gate is now 20–45%.
 Results: careful 23%, first Boss 55%, Grand +23 points harder, reckless deaths 2.18, and all gates pass.
+
+## Balance snapshot v7.0.0 (2026-11-23)
+
+The v7 numbers were tuned against `career-sim.js 100 --quick --check`, which passes 20/20. The official gate,
+`npm run check` (300 careers, full bot odds samples), **fails 3 of 20**. `--quick` changes the result, not only the
+speed: its bots estimate odds from fewer samples (50, not 150) and play worse.
+
+| Measure | `100 --quick` | `npm run check` (300) | Gate |
+|---|---|---|---|
+| First career, careful | 27% | **37%** ❌ | 15–35% |
+| Reckless | 6% | 5% | — |
+| Full Legacy, Heat 0 / 1 / 3 | 54% / 38% / 34% | 52% / 51% / 35% | 40–60% |
+| Heat 1 bites (Heat 0 − Heat 1) | +16 pts | **+1 pt** ❌ | 5+ pts |
+| The evil road (loyalist − careful) | +10 pts | **+21 pts** ❌ | 5–20 pts |
+| Boss win per attempt T1–T5 | 93 · 69 · 39 · 19 · 33% | 91 · 70 · 39 · 22 · 48% | — |
+| Won season | 14.8 fight months | 14.9 | 12–20 |
+| Long Road, careful | 28% | 36% | 15–45% |
+| Coup (rebel careers) | 10% | 12% | 5–25% |
+
+Every other gate passes in both runs. To do before v7.0.0 ships: sweep the levers behind the three failing gates at
+full samples (first-career difficulty, the Heat 1 decree now that Iron Bosses comes first, and the loyalist's edge).
+
+### v7.0.0 after the fix (`npm run check`, 300 careers): 20/20
+
+Swept at full bot strength on the gate seeds (`DECREES.ironBosses.power` is now a tunable):
+
+| Setting | First career | Evil road | Heat 0 / 1 / 3 |
+|---|---|---|---|
+| patch as sent (purses ×1.7, Iron Bosses first) | 37% | +21 | 52 / 51 / 35% |
+| purses ×1.6 | 34% | +14 | — |
+| purses ×1.5 | 26% | +11 | — |
+| ×1.6, Iron Bosses first (+1 / +2 / +3 Boss Power) | | | 42 / 48, 41, 50 / 24, 19, 21% |
+| ×1.6, Harsh Judges first, then Greedy, Iron | | | 42 / 21 / 24% |
+| ×1.6, Harsh Judges, Greedy, Hungry Lions | | | — / 21 / 20% |
+| ×1.6, Harsh Judges, Lean Fortunes, Greedy | | | — / 21 / 19% |
+| **×1.6, Harsh Judges, Lean Fortunes, Hungry Lions** | | | **42 / 21 / 11%** |
+
+Boss Power barely bites: the careful bot trains longer before a Boss, so Iron Bosses at +3 didn't lower its win rate. Favour
+(Harsh Judges) and fewer resources (Lean Fortunes) and every opponent stronger (Hungry Lions) do.
+
+Chosen: purses ×1.6 (the v6 value) and Heat order Harsh Judges → Lean Fortunes → Hungry Lions → Greedy Emperor → Iron Bosses.
+Full check: first career 34%, reckless 5%, full Legacy 42% (Heat 1 21%, Heat 3 11%), evil road +14, coup 15%, Long Road
+36%, a won season 15.5 fight months, Boss win per attempt 91 · 69 · 37 · 22 · 40%. All 20 gates pass.

@@ -111,9 +111,9 @@ test('Heat: winning at Heat N unlocks N+1 (up to the last); a loss or the daily 
 test('Heat N plays the first N decrees and adds their score', () => {
   const run = createRun(12, { heat: 3 });
   assert.deepEqual(run.setup.decrees, HEAT.decrees.slice(0, 3));
-  assert.ok(hasDecree(run, 'ironBosses') && !hasDecree(run, 'leanFortune'));
+  assert.ok(hasDecree(run, 'harshJudges') && hasDecree(run, 'hungryLions') && !hasDecree(run, 'greedyEmperor'));
   const won = (r) => Object.assign(r, { status: 'won' });
-  assert.equal(careerScore(won(createRun(12, { heat: 3 }))) - careerScore(won(createRun(12))), 20 + 20 + 30);
+  assert.equal(careerScore(won(createRun(12, { heat: 3 }))) - careerScore(won(createRun(12))), 20 + 25 + 40);
 });
 
 test('Hungry Lions (Heat 5): every opponent fights with +1 Power, Bosses with +2 (Iron Bosses too)', () => {
@@ -198,6 +198,7 @@ test('a returned legend who retires again is not dealt again in that career', ()
   recruit(run, run.market[0].id);
   Object.assign(run.roster[0], { returned: 'legend:999:f3', level: 5 });
   run.roster[0].job = 'rest';
+  run.history.push({ won: true, fighterId: run.roster[0].id });
   retire(run, run.roster[0].id);
   assert.deepEqual(returningLegends(run), []);
 });

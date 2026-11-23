@@ -40,6 +40,6 @@ export const festivalOn = (week) => (isTournamentWeek(week) ? FESTIVALS[dateOf(w
 
 // The next festival from this week on: { festival, weeks } (weeks = 0 if it's this week).
 export function nextFestival(week) {
-  for (let n = 0; n <= 44; n++) if (festivalOn(week + n)) return { festival: festivalOn(week + n), weeks: n };
+  for (let n = 0; n <= WEEKS_PER_YEAR; n++) if (festivalOn(week + n)) return { festival: festivalOn(week + n), weeks: n };
   return null;
 }
