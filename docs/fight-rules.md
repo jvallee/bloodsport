@@ -999,3 +999,59 @@ quicker and its purses and Prestige richer, so a loss stings more.
 
 **The Long Road after the fixes: careful wins 26%** (44% at dev.2; its gate is 15–45%). Its numbers didn't change, but the
 LLM-14 fixes apply to it too (the Fortune catch-up as training, the Feint, Underdog). A won Long Road takes 140 weeks.
+
+## 7.0.0: Season curve, combat outliers and rule fixes
+
+Placeholder numbers, chosen on the machine where v7 was built (balance gates in `docs/roadmap-v2.md`, "v7.0.0").
+
+### Numbers changed (before → after)
+
+| What | Before | After |
+|---|---|---|
+| Steady | no change | −2.5% chance to be injured |
+| Press | +3% win, +5% injure, +7.5% to be injured | +1.5% win, +5% injure, +10% to be injured |
+| Blinded (injury tier 7) | weight 1 | weight 2 (counts as two; weights now rise 0 / 1 / 2 / death) |
+| Sword (Riposte) | 20% parry; a parry gives +3 Speed next round | 25% parry; +3 Speed and +5% win chance next round |
+| Axe (Cleave) | +15 on the injury roll | +5% chance to injure and +15 on the injury roll |
+| Ornitharius (Birds of Prey) | once injured: +5% injure per Bird | always: +5% injure, plus +5% per Bird |
+| Haymaker (Cestus) | +2 Power, +10% to be injured | +2 Power, +5% to be injured |
+| Aimed Shot (Sagittarius) | +10% win, +20% injure | +12% win, +20% injure |
+| Cast the Net (Retiarius) | foe −5 Speed, −10% win | foe −4 Speed, −5% win |
+| Viper Venom | +10% injure | +15% injure and +15 on the injury roll |
+| Hunter's Bow | 12 Gold, +2 Speed | 14 Gold, +1 Speed, +3% win |
+| Light Greaves | 12 Gold, +2 Speed | 14 Gold, +1 Speed, −3% to be injured |
+| Trident | 11 Gold, +1 Power, +5% injure | 10 Gold, +1 Power, +8% injure |
+| Executioner's Axe | 24 Gold, +2 Power, +10% injure | 22 Gold, +2 Power, +12% injure |
+| Lorica Segmentata | 24 Gold, −12% to be injured, +1 Power | 22 Gold, −15%, +1 Power |
+| Lion Pelt | 20 Gold, −5% to be injured, +5% win | 18 Gold, −8%, +6% win |
+| Silver Coliseum opponents | 22 / 22 / 23 | 21 / 21 / 22 |
+| Imperial Coliseum opponents | 31 / 32 / 33 | 30 / 31 / 32 |
+| Grand Tournament | 36 | 35 |
+| Season (`SHORT`) purses | ×1.6 | ×1.7 |
+| Season extra opponent Power (Dirt … Imperial, Grand) | +2 / +3 / +10 / +17, +18 | +2 / +4 / +9 / +12, +19 |
+| Season Market and Liaison recruits (new `SHORT.marketPower`) | — | +0 / +2 / +6 / +10 Power by arena tier |
+| Training fee | at most 2 Gold until the Silver Coliseum, then the Trainer's level | 2 Gold (Dirt, Bronze), 3 Gold (Silver), the Trainer's level from the Imperial up |
+| Early Boss loss (Quarter- or Semi-final) | ½ of the Boss's Favour loss, the usual loss purse | ¾ of the Favour loss, 0 Gold (`BRACKET.earlyBossLossGold`) |
+| Heat decree order | Harsh Judges, Greedy Emperor, Iron Bosses, Lean Fortune, Hungry Lions | Iron Bosses, Greedy Emperor, Harsh Judges, Lean Fortune, Hungry Lions |
+| Steward assignments (`QUESTS.goldScale`) | ×0.2 | ×0.5, and at least 1 Gold when the task pays any |
+| A Purse of Coin (Fortune boon) | 1 + 2 × tier Gold | 2 + 3 × tier Gold |
+| Patron Lounge hosting | 3 Gold × tier | 2 Gold × tier |
+| Plot offer (`PLOT.offerAfter`) | week 16 | week 15 |
+| Emperor's summons swept 0–2 (new `SUMMONS.sweptFavor`) | — | −5 Favour, no Renown |
+
+### Rules clarified or fixed
+- **First Injury Counts Double** makes a real wound (weight 1 or more) weigh 2. It no longer turns Distracted (weight 0) into a wound, or a weight-2 wound into 3.
+- **Maimed** disables one slot per effective injury the fighter had *before* Maimed (at least 1, at most 2).
+- **Blood Drinker** also heals on a killing blow. Healing a Distracted wound also switches its disabled slot back on.
+- **Signature moves** can't be used while the class slot is disabled, or in the round after Fists disarm it.
+- **Matchups that need armour** count only armour that works: not under Stripped of Armour, and not a piece with no guard. They need the class slot active.
+- **Opponent intent and Oracle tells** come from the match's own seeds, so showing them never moves the fight dice. An opponent who adapts but can't counter All In uses its usual temper.
+- **The summons:** surviving three rounds pays `surviveFavor`/`surviveRenown`. Swept 0–2 while alive (not yielding) costs `sweptFavor`.
+- **The Fates' Wager:** Gold you can't pay on a lost wager costs Favour instead, 1 for every 2 Gold short (rounded up).
+- **Lower Tribute** discounts at most one year's tribute per enactment.
+- **Surprise events:** at most one non-plot event a month outside fight weeks.
+- **Mid-bracket fighters** can't be released, retired, or picked by an event.
+- **Hall legends** (returning fighters) must win at least once before they can retire again, and aren't recorded as new legends.
+
+### Saves
+- Career save format **4**. Version 3 saves are checked for their core fields, and the missing decor and temper are filled in on every fighter. The house log is capped at 400 lines. Version 2 saves migrate again (houses are set up before the arenas open). A save from a newer version is refused with a clear message.

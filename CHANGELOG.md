@@ -4,13 +4,47 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## 7.0.0
 
-Version 6.0.5 is frozen and playable at `v6/` (with isolated `bloodsport.v6.*` storage keys). Version 7 hardens the engine, modularises career state, smooths the Season and Heat curves, and fixes a full audit of combat, campaign, UI, audio, and accessibility bugs.
+Version 7 smooths the season from start to Grand Tournament, rebalances the weapons, gear and tactics that were too strong or too weak, and fixes a long list of bugs found in a full review. Version 6.0.5 is frozen and playable at `/v6/`, with its own saves, so a career there and one here never overwrite each other. Your current careers carry over to version 7.
 
-- **Season & Heat balance overhaul:** smoothed Season Boss progression (`9 / 20 / 31 / 44 / 54`) so the Silver/Imperial wall no longer eclipses the Grand Tournament climax (won Seasons now average ~15 fight months); scaled Season Market and Liaison recruits so mid/late recruits stay competitive; introduced a 3-step training fee curve (`2g` at T1–T2, `3g` at T3, full fee from T4); lifted steward assignment rewards (`goldScale: 0.5`, min `1g`) and Fortune Gold boons; reduced Patron Lounge hosting to `2g`; reordered Heat decrees (`ironBosses → greedyEmperor → harshJudges → leanFortune → hungryLions`) for a monotonic Heat 1→3 ramp; and rebalanced combat outliers (`Fighter Axe`, `Fighter Sword` parry/riposte, always-active `Ornitharius`, `Viper Venom` severity, `Haymaker`, `Cast the Net`, `Aimed Shot`, `Press` vs `Steady`, gear value ratios, and `Blinded` at injury weight 2).
-- **Critical & campaign bugfixes:** blocked releasing, retiring, or event-targeting fighters mid-bracket (eliminating bracket softlocks and withdrawal crashes); preserved mid-match `round` and `disabled` state so reloading mid-fight under Blood Faith no longer bricks saves; fixed `Phlegmatic` opponents crashing when adapting after `All In`; fixed `skipBout` creating phantom Tournament 2 stages in Season mode; applied `recruitDiscount` consistently across Liaison hires and bankruptcy checks; stopped Hall of Champions legend cloning and stripped stale `spy`/quest fields on Revenant reanimation; fixed legacy v2 save migration (`houses` initialisation before `openArena`) and upgraded saves cleanly to `SAVE_VERSION = 4` with structural validation and a 400-line house log cap; closed Boss QF/SF and Summons 0–2 sweep exploits, Fates' Wager unpaid shortfall loopholes, and `lowerTribute` double-dipping; fixed Medbay auto-vacating on boon/event heals, `stewardPlan`/`resumeTraining`/`advanceToTournament` stress relief accounting, and `event`/`mercy`/`fight`/`withdraw` modal blockers.
-- **Combat & replay determinism:** moved Oracle tells and opponent tactics onto pure per-match `intentSeed`/`tellSeed` streams so UI rendering never mutates `run.rng.fight` or breaks bug-report replays; fixed `firstInjuryDouble` (leaving `Distracted` at weight 0 and weight-2 wounds at 2), `Blood Drinker` slot cleanup on healed `Distracted` and killing-blow heals, Fists disarm and disabled-class signature guards, `Maimed` prior-injury slot scaling, `matchupsFor` under `Stripped of Armour`, `suggestTactic` under `Concussed`/`Footwork`, per-round hype clamping, and `estimateOdds` (`oracle` forwarding, signature usage, and weight-0 injury filtering).
-- **Fight animation, audio, UI & accessibility:** added pre-round `r.before` snapshots so animated rounds no longer spoil deaths, injuries, or live Power changes at `t = 0s`, and reordered match-end banners, reports, and controls chronologically; caught rejected `AudioContext.resume()` promises (preventing fatal crash modals), added `stopAllSounds()`, cached the shared noise buffer, and synced initiative/blow SFX; surfaced immediate Quarter-/Semi-final opponent cards, Speed previews, and accurate Season Summons Power in both the Web UI and text port (`scripts/play-text.js`); unified modal keyboard-shortcut gating and career-switch UI reset; escaped all interpolated save/state values and sanitised log tones and house colours; separated high-contrast crimson `--danger*` tokens from house accent colours; fixed sticky header/Codex overlap, `prefers-reduced-motion`, 2-column room tabs with ARIA tab roles, `:focus-visible`, portrait rename stability, Basa ears, unlockable class gear art, Surgeon injury names, locked Codex search leaks, and Season copy across Help, Codex, tutorial, hints, and the text port.
-- **Architecture, tests & balance harness:** split the 3,479-line `src/run.js` monolith into 10 strictly acyclic modules under `src/run/` behind a 100% backwards-compatible `src/run.js` re-export barrel; expanded the test suite to 670 passing tests (including `src/game.js` action dispatch and `src/ui/sound.js` coverage); and updated `scripts/checks.js`, `scripts/bots.js`, `scripts/simulate.js`, and `scripts/probes/gold-flow.js` for Season mode and Heat 1/3 balance gates (20/20 gates passing).
+**A smoother season**
+- **The Silver and Imperial walls are lower:** their opponents are a little weaker, and the Grand Tournament is now the hardest fight of a season, as it should be. A won season takes about 15 fight months.
+- **Recruits keep up:** in a season, the Market's and the Liaison's fighters arrive stronger in the higher arenas, so a new recruit is still worth hiring late on.
+- **Training costs rise in steps:** 2 Gold a week in the Dirt Pits and Bronze Circuit, 3 in the Silver Coliseum, and the full price from the Imperial Coliseum on (it used to jump straight to full price at Silver).
+- **Small purses are worth taking:** the steward's early tasks now pay at least 1 Gold (some paid nothing), a Purse of Coin from Fortune is richer (5 Gold in the Dirt Pits), and hosting the Patron Lounge costs 2 Gold a tier (was 3).
+- **Heat climbs in order:** each step of Heat is now harder than the one before. The first decree is Iron Bosses.
+
+**Fights**
+- **Tactics:** Steady now lowers the chance to be injured (−2.5%). Press gives less win chance (+1.5%, was +3%) and makes you easier to wound (+10%, was +7.5%).
+- **Weapons:** the Sword parries more often (25%, was 20%) and a parry also gives +5% win chance next round. The Axe adds +5% chance to injure on top of its worse wounds.
+- **Classes and moves:** Birds of Prey (Ornitharius) works from the first blow, not only once your fighter is hurt. Haymaker is safer (+5% to be injured, was +10%), Aimed Shot is stronger (+12% win, was +10%), and Cast the Net is weaker (−4 Speed and −5% win, was −5 and −10%).
+- **Blinded counts as two injuries**, like the other wounds that bad.
+- **Viper Venom** is stronger: +15% chance to injure and worse wounds next round.
+- **Gear:** the Hunter's Bow and Light Greaves trade a point of Speed for win chance or armour and cost 14 Gold (was 12); the Trident, Executioner's Axe, Lorica Segmentata and Lion Pelt are cheaper and/or stronger.
+- **The Oracle's tells stay put:** what the Oracle shows you no longer changes how the fight plays out, so a bug report replays the fight exactly.
+- **No spoilers in the fight animation:** the fighters' cards show the state before the round until the blow lands, so you no longer see a death or wound before it happens.
+
+**Rules that now hold**
+- **Losing early to a Boss isn't a cheap way out:** losing in a Boss Quarter- or Semi-final pays no Gold and costs three quarters of the Boss's Favour (was half).
+- **The Emperor's summons:** surviving pays only if your fighter lasts all three rounds; being swept 0–2 costs 5 Favour.
+- **The Fates' Wager:** if you can't pay a lost wager in full, the rest is taken in Favour.
+- **Lower Tribute** discounts one year's tribute, not every year.
+- **At most one surprise event a month** while you plan, outside fight days.
+
+**Fixes**
+- A fighter in the middle of a Boss bracket can no longer be released, retired or sent away by an event (this could lock up the bracket).
+- Reloading in the middle of a fight no longer breaks the save (it did for Orcs with Blood Faith).
+- Phlegmatic opponents no longer crash the fight after you go All In.
+- Skipping a bout in a season no longer creates a phantom second tournament.
+- The Liaison's discount now applies to every recruit, and the game no longer ends your career for being "too poor to recruit" when a discounted fighter was affordable.
+- Returning legends from the Hall can no longer be retired and returned again and again.
+- A healed fighter leaves the Medbay however they were healed.
+- The Emperor's summons shows the opponent's real Power (it showed 18 too few).
+- Boss brackets show the opponent you face next, with their Power, Speed and purse, and the Final's opponent below.
+- Very old saves (version 2) load again; a damaged or newer save gives a clear message instead of failing.
+- Sound: a browser blocking sound no longer opens the error box, and sounds stop when you leave a fight or switch career.
+- Easier to read: higher-contrast danger colours, a header that no longer covers the Codex, keyboard focus outlines, screen-reader labels on tabs and portraits, and "reduce motion" respected everywhere.
+- A renamed fighter keeps their face; Basa have the right ears; the unlockable classes have their own gear in portraits.
+- The Surgeon names each injury properly, and locked Codex entries no longer show up in search.
 
 ## 6.0.5
 

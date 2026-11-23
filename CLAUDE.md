@@ -32,7 +32,7 @@ Turn-based gladiator-house management roguelike, built as a static site and host
   - Meta, story & persistence: `src/events.js` weekly event cards · `src/plot.js` hidden plot cards · `src/quests.js` steward/want/summons tables · `src/fortune.js` relics and boons · `src/dialogue.js` Emperor/steward/rebel scenes · `src/digest.js` monthly digest · `src/hints.js` contextual next-step bar · `src/codex.js` unlockable glossary · `src/tutorial.js` intro and tutorial steps · `src/legacy.js` Legacy XP, unlocks, Heat, achievements, score · `src/careers.js` multi-career index · `src/savefile.js` save export/import · `src/game.js` every player action (recorded for replays) · `src/debug.js` bug reports and replay.
 - UI & text port: `src/ui/components.js`, `src/ui/views.js`, `src/ui/fightView.js`, `src/ui/portrait.js` (generated SVG faces) return HTML strings (pure, no DOM); `src/ui/sound.js` plays synthesized WebAudio effects; `src/main.js` holds UI state, `localStorage` persistence, and DOM events; `scripts/play-text.js` is the playable CLI text port. Every career-changing action goes through `applyGameAction` in `src/game.js` (never call `src/run.js` directly from `src/main.js`), so careers stay replayable. Rule refusals throw `Refused` (`src/errors.js`); anything else thrown opens the bug report box.
 - `scripts/bots.js`: careful and reckless career bots used by `career-sim.js`, `checks.js`, `probes/`, and tests.
-- Every rules change gets re-checked with `npm run check` before it ships. When a gate fails, sweep the relevant values and show the table rather than guessing.
+- Every rules change gets re-checked with `npm run check` before it ships; record the numbers in `docs/roadmap-v2.md`. When a gate fails, sweep the relevant values and show the table rather than guessing.
 - `tests/`: per-module and release test suites, plus `tests/helpers.js` (blank fighters, scripted RNG). `tests/setup.js` (loaded by `npm test`) switches weekly events off so unrelated tests stay deterministic; `tests/events.test.js` switches them back on.
 
 ## Working practices
@@ -43,5 +43,6 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - **Fix bugs test-first.** Write a failing test that reproduces the bug, then fix it.
 - **Version notes:** add every player-visible change to `CHANGELOG.md` (newest first, in plain player-facing language) in the same commit. When freezing a version, move the "Unreleased" notes under the new version's heading.
 - Don't change balance numbers or rules without saying so. Record each new placeholder decision in `docs/fight-rules.md`.
+- Current plan: `docs/roadmap-v2.md`. Deferred features stay deferred unless asked.
 - `v1/` to `v6/` are frozen playable archives (`v1.0`, `v2.2`, `v3.0`, `v4.0`, `v5.4.3`, `v6.0.5`) with isolated `localStorage` keys (`bloodsport.v6.*`, etc.). Don't edit them unless the user asks.
 - Check that the site works when opened from GitHub Pages (relative paths only, no absolute `/` links).
