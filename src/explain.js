@@ -1,29 +1,31 @@
 // Player-facing explanations shared by the web UI and the text port, so both always say the same thing. Pure.
 
-import { ECONOMY, FAVOR, MORALE, STRESS, BRACKET } from './data.js';
-import { computePower, computeSpeed, effectiveInjuries } from './fight.js';
+import { ECONOMY, FAVOR, MORALE, STRESS, BRACKET, HOUSES, SIGNATURES } from './data.js';
+import { computePower, computeSpeed, effectiveInjuries, deathGateAt, opponentUnleashesNext } from './fight.js';
 import { boutFor, matchOptions, fightPowers, isChampionOf, bossLossFavor, GRAND_TIER, houseOf, opponentFor, crushingGapFor, hasBracket } from './run.js';
 
 // Warnings about sending this fighter to this arena. Each has text and a tone ('warn' | 'bad' | 'info').
 export function fighterWarnings(run, f, tier) {
   const bout = boutFor(run, tier);
   const opp = opponentFor(run, tier);
+  const opts = matchOptions(run, f, tier);
   const out = [];
   if (f.stress >= STRESS.overtrained) out.push({ tone: 'bad', text: `Overtrained (Stress ${f.stress}): −1 Power and one ability lost` });
-  const hurt = effectiveInjuries(f); // Poisoned counts as two
-  if (hurt) out.push({ tone: 'warn', text: `${hurt} injur${hurt === 1 ? 'y' : 'ies'}` });
+  const hurt = effectiveInjuries(f);
+  const gate = deathGateAt(f, opts.debuff);
+  if (hurt >= gate) out.push({ tone: 'bad', text: `Death Gate open (${hurt} injuries): can die on a lost round` });
+  else if (hurt) out.push({ tone: 'warn', text: `${hurt} injur${hurt === 1 ? 'y' : 'ies'}` });
   if (!bout.top && tier !== GRAND_TIER) {
     const { mine, theirs } = fightPowers(run, f, tier);
     const gap = mine - theirs;
     if (isChampionOf(f, tier)) out.push({ tone: 'bad', text: `Champion here: a win earns no Prestige or Renown, and costs ${-FAVOR.championReturn} Favour and ${-MORALE.crowdJeers} Morale` });
-    else if (f.renown >= ECONOMY.knownRenown && gap >= crushingGapFor(run, tier)) out.push({ tone: 'bad', text: `Crushing mismatch (+${gap} Power, ${f.renown} Renown): a win costs ${-FAVOR.crushingWin} Favour and ${-MORALE.crowdJeers} Morale` });
+    else if (f.renown >= ECONOMY.knownRenown && gap >= crushingGapFor(run, tier)) out.push({ tone: 'bad', text: `Crushing mismatch (+${gap} Power, ${f.renown} Renown): a win earns no Renown and costs ${-FAVOR.crushingWin} Favour and ${-MORALE.crowdJeers} Morale` });
     else if (f.renown < ECONOMY.knownRenown) out.push({ tone: 'info', text: 'Rookie: the crowd won\'t jeer them here' });
   }
-  const opts = matchOptions(run, f, tier);
   if (opts.scouted) out.push({ tone: 'warn', text: `Scouted: opponent +${opts.scouted} Power (your fighter fought here last month, so they've been studied; a month out of the top arena resets it)` });
   if (opts.grudge > 0) out.push({ tone: 'bad', text: `Feud: ${houseOf(run, opp).name} wants revenge (opponent +${opts.grudge} Power)` });
   if (opts.grudge < 0) out.push({ tone: 'info', text: `${houseOf(run, opp).name} owes you a life (opponent ${opts.grudge} Power)` });
-  if (opts.vengeance) out.push({ tone: 'info', text: `Vengeance on ${houseOf(run, opp).name}: +5% win chance` });
+  if (opts.vengeance) out.push({ tone: 'info', text: `Vengeance on ${houseOf(run, opp).name}: +${HOUSES.vengeanceWin / 1000}% win chance` });
   if (opts.challenger) out.push({ tone: 'warn', text: `Challenger: opponent +${opts.challenger} Power (famous fighters draw tougher opponents)` });
   return out;
 }
@@ -39,16 +41,32 @@ export function arenaStakes(run, tier) {
   }
   if (!bout.boss) return '';
   if (tier === GRAND_TIER) return `Win: the career. Lose: ${bossLossFavor(tier, run)} Favour and try again next month.`;
-  return `Win: the arena's Title (+1 Power) for a fighter who isn't its Champion yet, +${FAVOR.bossWin} Favour and the next arena. Lose: ${bossLossFavor(tier, run)} Favour${hasBracket(tier) && !run.setup?.decrees?.includes('harshJudges') ? ` (${Math.round(bossLossFavor(tier, run) * BRACKET.earlyBossLoss)} if you fall before the Final${BRACKET.bossFinalRefund ? '; lose the Final itself and the buy-in comes back' : ''})` : ''}. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour.`;
+  const notes = [];
+  if (hasBracket(tier) && !run.setup?.decrees?.includes('harshJudges')) {
+    notes.push(`${Math.round(bossLossFavor(tier, run) * BRACKET.earlyBossLoss)} if you fall before the Final`);
+  }
+  if (hasBracket(tier) && BRACKET.bossFinalRefund) {
+    notes.push('lose the Final itself and the buy-in comes back');
+  }
+  const detail = notes.length ? ` (${notes.join('; ')})` : '';
+  return `Win: the arena's Title (+1 Power) for a fighter who isn't its Champion yet, +${FAVOR.bossWin} Favour and the next arena. Lose: ${bossLossFavor(tier, run)} Favour${detail}. Forfeit: ${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour.`;
 }
 
-// The Power and Speed each side brings to the next round (everything included: gear, Titles,
-// Scouted, Challenger, items, injuries, arena rules).
+// Power and Speed each side brings to the next round, including queued and guaranteed opponent signatures.
 export function roundStats(match) {
   const round = Math.min(3, match.round + (match.over ? 0 : 1)) || 1;
+  let a = match.a;
+  let b = match.b;
+  if (opponentUnleashesNext(match)) {
+    const sig = SIGNATURES[b.f.cls];
+    if (sig) {
+      a = { ...a, boosts: sig.foe ? [...(a.boosts ?? []), { ...sig.foe, name: sig.name, round }] : a.boosts };
+      b = { ...b, boosts: sig.boost ? [...(b.boosts ?? []), { ...sig.boost, name: sig.name, round }] : b.boosts, ash: sig.ash ? (b.ash ?? 0) + sig.ash : b.ash };
+    }
+  }
   const side = (c, o) => {
     const p = computePower(c, o, round);
     return { power: p.total, speed: computeSpeed(c, round).total, mods: p.mods };
   };
-  return { round, A: side(match.a, match.b), B: side(match.b, match.a) };
+  return { round, A: side(a, b), B: side(b, a) };
 }

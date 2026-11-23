@@ -45,7 +45,7 @@ export const tagCount = (f, tag) => Math.min(FORTUNE.tagCap, (f.perks ?? []).fil
 
 // One-off boons. `tiered` amounts are multiplied by the arena tier (1–4). `needs` hides a boon that would do nothing.
 export const BOONS = {
-  gold: { name: 'A Purse of Coin', rarity: 'common', gold: 1, goldPerTier: 2 },
+  gold: { name: 'A Purse of Coin', rarity: 'common', gold: 2, goldPerTier: 3 },
   calm: { name: 'A Day at the Baths', rarity: 'common', stress: -30 },
   items: { name: "A Trader's Crate", rarity: 'common', items: 2 },
   favour: { name: "A Senator's Nod", rarity: 'common', favor: 5 },

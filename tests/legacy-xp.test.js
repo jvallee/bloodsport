@@ -198,6 +198,7 @@ test('a returned legend who retires again is not dealt again in that career', ()
   recruit(run, run.market[0].id);
   Object.assign(run.roster[0], { returned: 'legend:999:f3', level: 5 });
   run.roster[0].job = 'rest';
+  run.history.push({ won: true, fighterId: run.roster[0].id });
   retire(run, run.roster[0].id);
   assert.deepEqual(returningLegends(run), []);
 });

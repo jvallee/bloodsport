@@ -56,16 +56,16 @@ test('trainer levels raise the cap and the weekly cost', () => {
   const run = richRun(5);
   const t = idOf(run, 'trainer');
   for (let i = 0; i < 4; i++) upgrade(run, t);
-  run.topTier = 3;
+  run.topTier = 4;
   assert.deepEqual([trainCap(run), trainCost(run)], [21, 5]);
 });
 
-test('below the Silver Coliseum, training costs at most 2 Gold a fighter-week (the Bronze wall, 5.4.0)', () => {
+test('training fees step up with the arena tier (2g in T1–T2, 3g in T3, full fee in T4+)', () => {
   const run = richRun(5);
   const t = idOf(run, 'trainer');
   assert.equal(trainCost(run), 1);
   for (let i = 0; i < 4; i++) upgrade(run, t);
-  for (const [tier, fee] of [[1, 2], [2, 2], [3, 5], [4, 5], [5, 5]]) {
+  for (const [tier, fee] of [[1, 2], [2, 2], [3, 3], [4, 5], [5, 5]]) {
     run.topTier = tier;
     assert.equal(trainCost(run), fee, `top arena tier ${tier}`);
   }

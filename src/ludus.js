@@ -22,7 +22,11 @@ export const trainerRooms = (run) => ofType(run, 'trainer').length;
 export const trainCap = (run) => effectAt('trainer', maxLevel(run, 'trainer')) + (run.setup?.short && maxLevel(run, 'trainer') > 0 ? SHORT.trainCap : 0); // a season trains further (SHORT.trainCap)
 export const trainCost = (run) => {
   const fee = Math.max(1, maxLevel(run, 'trainer'));
-  return run.topTier < TRAINING.fullFeeFrom ? Math.min(fee, TRAINING.cheapFee) : fee;
+  const midTier = TRAINING.midTier ?? 3;
+  const midFee = TRAINING.midFee ?? 3;
+  if (run.topTier < midTier) return Math.min(fee, TRAINING.cheapFee);
+  if (run.topTier < TRAINING.fullFeeFrom) return Math.min(fee, midFee);
+  return fee;
 };
 // A stranger hidden in the Medbay (v6's hidden plot) takes up one bed.
 export const medbaySlots = (run) => Math.max(0, ofType(run, 'medbay').reduce((s, b) => s + effectAt('medbay', b.level), 0) - (run.plot?.hidden ? 1 : 0));
@@ -40,6 +44,7 @@ export function buildBlocker(run, type) {
   if (!def || !buildingKnown(run, type)) return 'Unknown building.';
   if (run.status !== 'active') return 'The run is over.';
   if (run.inMatch) return 'A match is in progress.';
+  if (run.mercy) return "First decide the beaten opponent's fate: thumbs up or down.";
   if (run.prestigeLevel < def.req[0]) return `Unlocks at Prestige level ${def.req[0]}.`;
   if (def.unique && ofType(run, type).length) return 'You already have one. Upgrade it instead.';
   if (plotsFree(run) <= 0) return 'No free plots. Raise your Prestige level for more.';
@@ -61,6 +66,7 @@ export function upgradeBlocker(run, id) {
   if (!b) return 'Unknown building.';
   if (run.status !== 'active') return 'The run is over.';
   if (run.inMatch) return 'A match is in progress.';
+  if (run.mercy) return "First decide the beaten opponent's fate: thumbs up or down.";
   const def = BUILDINGS[b.type];
   if (b.level >= def.cost.length) return 'Fully upgraded.';
   if (run.prestigeLevel < def.req[b.level]) return `Needs Prestige level ${def.req[b.level]}.`;

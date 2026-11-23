@@ -37,8 +37,8 @@ test('a signature move boosts only the next round, once per fight, and the story
 test('foe effects hit the opponent: Cast the Net slows them and cuts their win chance', () => {
   const m = createMatch({ a: blank({ cls: 'retiarius', level: 3 }), b: blank(), rng: createRng(1) });
   useSignature(m);
-  assert.ok(computeSpeed(m.b, 1).mods.some((x) => x.source === 'Cast the Net' && x.value === -5));
-  assert.ok(computePhase2(m.b, m.a, 1).win.some((x) => x.source === 'Cast the Net' && x.value === -10000));
+  assert.ok(computeSpeed(m.b, 1).mods.some((x) => x.source === 'Cast the Net' && x.value === -4));
+  assert.ok(computePhase2(m.b, m.a, 1).win.some((x) => x.source === 'Cast the Net' && x.value === -5000));
   const ash = createMatch({ a: blank({ cls: 'ashHungry', level: 3 }), b: blank(), rng: createRng(1) });
   useSignature(ash);
   assert.equal(ash.a.ash, 1);
@@ -51,11 +51,12 @@ test('seasoned opponents unleash theirs once they fall behind, or in Round 3', (
     const r1 = playRound(m);
     assert.equal(r1.signatures.length, 0, 'never in Round 1');
     if (m.over) continue;
+    const canR2 = !m.b.disabled.includes('class');
     const r2 = playRound(m);
     const used = r2.signatures.some((x) => x.side === 'B');
-    assert.equal(used, r1.winner === 'A', 'used in Round 2 only when behind');
+    assert.equal(used, canR2 && r1.winner === 'A', 'used in Round 2 only when behind and class active');
     if (used) seen++;
-    if (!m.over && !used) assert.ok(playRound(m).signatures.some((x) => x.side === 'B'), 'Round 3 if not used yet');
+    if (!m.over && !used && !m.b.disabled.includes('class')) assert.ok(playRound(m).signatures.some((x) => x.side === 'B'), 'Round 3 if not used yet');
   }
   assert.ok(seen > 0);
 });

@@ -7,7 +7,7 @@
 
 import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE, FORTUNE } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
-import { isMonthStart, isWinter } from '../src/calendar.js';
+import { isMonthStart, isWinter, weeksUntilWinter } from '../src/calendar.js';
 import { coupBonus } from '../src/plot.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic, effectiveInjuries, signatureBlocker, useSignature } from '../src/fight.js';
 import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap, plotsFree } from '../src/ludus.js';
@@ -15,12 +15,13 @@ import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom, recruitPrice,
-  buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, resolveMercy,
+  buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, withdrawBlocker, resolveMercy,
   betOdds, betCap, betBlocker, placeBet, hostBlocker, host, enactBlocker, enact, raisable, reanimateBlocker, reanimate,
-  summonsBlocker, answerSummons, refuseSummons, effectivePower, chooseFortune, fortuneBlocker, passFortune,
+  summonsBlocker, answerSummons, refuseSummons, effectivePower, effectiveSpeed, chooseFortune, fortuneBlocker, passFortune,
+  tributeDue, tributePaid,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
-import { RELICS, perkTags } from '../src/fortune.js';
+import { RELICS, perkTags, tagCount } from '../src/fortune.js';
 
 const PERK_PRIORITY = ['tactician', 'duelist', 'juggernaut', 'mighty', 'killer', 'thickSkin', 'survivor', 'closer', 'fastStart', 'swift', 'ironConstitution', 'crowdPleaser'];
 
@@ -37,24 +38,37 @@ function pickPerks(run) {
   }
 }
 
-// Version 6: the Fortune draft. Both bots take the card they value most: a fighter while the house is small, a relic
-// (the rarer the better), then gear, then boons; the reckless bot loves the Fates' Wager, the careful one avoids it.
+// Contextual relic value (v7): combines rarity, combat strength, perk-tag synergy, and career stage.
 const RARITY_BONUS = { common: 0, rare: 1, legendary: 3 };
+const RELIC_BASE = { common: 4, rare: 8, legendary: 12 };
+const RELIC_COMBAT = { eagle: 2, laurel: 2, proserpina: 2, aegis: 1, whetstone: 1, knucklebone: 0.5 };
+function relicValue(run, id) {
+  const r = RELICS[id];
+  if (!r) return 0;
+  let score = (RELIC_BASE[r.rarity] ?? 4) + (RELIC_COMBAT[id] ?? 0);
+  if (id === 'ledger' && run.topTier >= 3) score -= 2;
+  if (id === 'trophyWall' && run.prestigeLevel >= 5) score -= 2;
+  if (id === 'rod' && run.topTier >= 4) score -= 1;
+  if (id === 'purse' && run.gold > 60) score -= 1;
+  if (r.tag && !run.roster.some((f) => tagCount(f, r.tag) > 0)) score -= 1;
+  return score;
+}
+
+// Version 6/7: the Fortune draft. Evaluates fighters, contextual relic value, gear, boons, and wagers.
 function fortuneScore(run, c, strategy) {
   if (c.kind === 'fighter' || c.kind === 'legend') return run.roster.length < 3 ? 9 : 3 + RARITY_BONUS[c.rarity];
-  if (c.kind === 'relic') return 6 + RARITY_BONUS[c.rarity];
+  if (c.kind === 'relic') return 5 + relicValue(run, c.id) / 3;
   if (c.kind === 'gear') return 3 + GEAR[c.id].tier;
   if (c.kind === 'wager') return strategy === 'careful' ? 1 : 8;
   if (c.id === 'surgeon') return run.roster.some((f) => f.injuries.length > 1) ? 7 : 3;
   if (c.id === 'favour') return run.favor < 40 ? 8 : 3;
   return { gold: 4, prestige: 5, sparring: 4, calm: 2, items: 2, blessing: 9 }[c.id] ?? 2;
 }
-// At the relic limit (LLM-13: relic cards keep coming), a bot lays down its least rare relic for a rarer one.
-const RANK = { common: 0, rare: 1, legendary: 2 };
+// At the relic limit, swap out the lowest-value held relic when the offered relic is meaningfully better.
 function swapFor(run, c) {
   if (c.kind !== 'relic' || run.relics.length < FORTUNE.maxRelics) return null;
-  const worst = [...run.relics].sort((a, b) => RANK[RELICS[a].rarity] - RANK[RELICS[b].rarity])[0];
-  return RANK[c.rarity] > RANK[RELICS[worst].rarity] ? worst : undefined; // undefined: not worth a swap
+  const worst = [...run.relics].sort((a, b) => relicValue(run, a) - relicValue(run, b))[0];
+  return relicValue(run, c.id) > relicValue(run, worst) + 1.5 ? worst : undefined; // undefined: not worth a swap
 }
 function draftFortune(run, strategy) {
   const best = run.fortune.cards.map((c, i) => {
@@ -76,7 +90,6 @@ function spend(run, reserve, opts = {}) {
   const tryBuild = (type) => {
     if (!buildBlocker(run, type) && run.gold - BUILDINGS[type].cost[0] >= reserve) buildRoom(run, type);
   };
-  // The bot reads exact odds and never needs cheap recruits, so it skips the Oracle and Liaison.
   if (opts.plot) tryBuild('liaison'); // v6: the plot starts with the Liaison's prisoners
   // 5.4.0: a rebel answers the cause's request for the Whispering Gallery before anything else.
   if (opts.plot === 'rebel' && run.quests?.rebel?.some((q) => q.id === 'gallery') && !buildBlocker(run, 'gallery')) buildRoom(run, 'gallery');
@@ -85,8 +98,11 @@ function spend(run, reserve, opts = {}) {
   tryBuild('armourer');
   tryUp('quarters');
   tryUp('medbay');
+  // v7: Oracle provides live combat tells (70%/85% accuracy), worth building once core rooms & reserve are healthy.
+  if (opts.oracle !== false && plotsFree(run) > 1 && run.gold - BUILDINGS.oracle.cost[0] >= reserve + 6) tryBuild('oracle');
   tryUp('entertainment');
   tryUp('armourer');
+  if (opts.oracle !== false && run.topTier >= 3 && run.gold - BUILDINGS.oracle.cost[1] >= reserve + 8) tryUp('oracle');
   if (run.roster.length >= rosterCap(run)) tryBuild('quarters');
   // The Patron Lounge (5.2.0) comes last, and only while a plot is to spare for more Fighter Quarters.
   if (opts.lounge !== false && plotsFree(run) > 1) tryBuild('lounge');
@@ -116,10 +132,11 @@ function useLounge(run, opts) {
 // Betting: before Round 1, the careful bot backs a fighter it thinks is a clear favourite, with Gold it can spare.
 // The bookmaker's odds come from a plain simulation; the bot's tactics, items and signature move are its edge.
 function maybeBet(run, m) {
+  const stake = [...BET.stakes].reverse().find((x) => x <= betCap(run, m) && run.gold - x >= 10);
+  if (!stake) return;
   const p = BET.cut / betOdds(run, m);
   if (p < 0.6) return;
-  const stake = [...BET.stakes].reverse().find((x) => x <= betCap(run, m) && run.gold - x >= 10);
-  if (stake && !betBlocker(run, m, stake)) placeBet(run, m, stake);
+  if (!betBlocker(run, m, stake)) placeBet(run, m, stake);
 }
 
 function equipAll(run, reserve) {
@@ -138,14 +155,14 @@ function equipAll(run, reserve) {
   }
 }
 
-function keepHappy(run) {
+function keepHappy(run, reserve = 6) {
   // Place decor where Morale is heading below Inspired, preferring decor that also helps in combat.
   for (const f of run.roster) {
     for (let guard = 0; guard < 6 && moraleTarget(run, f).target < MORALE.inspired; guard++) {
       const item = Object.keys(DECOR).find((k) => DECOR[k].helps(f) && f.decor[k] < decorCap(run)) ?? Object.keys(DECOR).find((k) => f.decor[k] < decorCap(run));
       if (!item) break;
       if (!run.inventory.decor[item]) {
-        if (buyDecorBlocker(run, item) || run.gold - DECOR[item].price < 6) break;
+        if (buyDecorBlocker(run, item) || run.gold - DECOR[item].price < reserve) break;
         buyDecor(run, item);
       }
       if (assignDecorBlocker(run, f.id, item)) break;
@@ -156,10 +173,11 @@ function keepHappy(run) {
 
 function carefulWeek(run, opts) {
   pickPerks(run);
-  if (opts.build !== false) spend(run, 6, opts);
+  const saveForTribute = !isWinter(run.week) && !tributePaid(run) && weeksUntilWinter(run.week) <= 8 ? tributeDue(run) : 0;
+  if (opts.build !== false) spend(run, Math.max(6, saveForTribute), opts);
   else for (const b of run.buildings) if (b.type === 'trainer' && !upgradeBlocker(run, b.id)) upgrade(run, b.id);
-  if (opts.gear !== false) equipAll(run, 4);
-  if (opts.morale !== false) keepHappy(run);
+  if (opts.gear !== false) equipAll(run, Math.max(4, saveForTribute));
+  if (opts.morale !== false) keepHappy(run, Math.max(6, saveForTribute));
   useLounge(run, opts);
   raiseTheDead(run, opts);
 
@@ -204,10 +222,24 @@ function playMatch(run, f, tier, towel, items = false, tactic = 'smart', bet = f
     pickPerks(run);
     const bout = boutFor(run, tier);
     const fighter = run.roster.find((x) => x.id === f.id);
-    if (towel && effectiveInjuries(fighter) >= 2 && !(bout.top && bout.boss)) return withdraw(run, tier);
+    if (towel && effectiveInjuries(fighter) >= 2 && !(bout.top && bout.boss) && !withdrawBlocker(run, tier)) return withdraw(run, tier);
     summary = playOneMatch(run, fighter, tier, towel, items, tactic, bet);
   }
   return summary;
+}
+
+// Pick the best Boss-fight consumable currently held in inventory, avoiding risky items when in danger.
+function pickBossItem(run, m) {
+  const inv = run.inventory.items;
+  const speedGap = effectiveSpeed(m.a.f) - effectiveSpeed(m.b.f);
+  const powerGap = effectivePower(m.a.f) - effectivePower(m.b.f);
+  const safe = !mortalDanger(m.a);
+  if (speedGap < 4 && inv.adrenaline && m.a.f.stress + (CONSUMABLES.adrenaline.stressAfter ?? 0) < STRESS.overtrained) return 'adrenaline';
+  if (speedGap < 4 && inv.throwingNet) return 'throwingNet';
+  if (safe && powerGap <= 0 && inv.berserkerMushroom) return 'berserkerMushroom';
+  for (const id of ['warPaint', 'ironTonic', 'adrenaline', 'throwingNet']) if (inv[id]) return id;
+  if (safe && inv.berserkerMushroom) return 'berserkerMushroom';
+  return null;
 }
 
 function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart', bet = false) {
@@ -215,12 +247,16 @@ function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart', bet 
   const m = startMatch(run, f.id, tier);
   if (bet) maybeBet(run, m);
   if (!signatureBlocker(m)) useSignature(m); // both bots open with their signature move
+  if (items && bout.top && bout.boss && !m.over) {
+    const open = pickBossItem(run, m);
+    if (open && !useItemBlocker(run, m, open)) useItem(run, m, open);
+  }
   while (!m.over) {
     playRound(m, { stance: tactic === 'smart' ? suggestTactic(m) : tactic });
     if (items && !m.over) {
-      // In danger and not ahead: a Blessed Bandage. In a top-arena Boss fight: War Paint.
+      // In danger and not ahead: a Blessed Bandage. In a top-arena Boss fight: remaining offensive/tempo item.
       const danger = mortalDanger(m.a) && m.a.roundsWon <= m.b.roundsWon;
-      const pick = danger && run.inventory.items.blessedBandage ? 'blessedBandage' : bout.top && bout.boss && run.inventory.items.warPaint ? 'warPaint' : null;
+      const pick = danger && run.inventory.items.blessedBandage ? 'blessedBandage' : bout.top && bout.boss ? pickBossItem(run, m) : null;
       if (pick && !useItemBlocker(run, m, pick)) useItem(run, m, pick);
     }
     if (towel && !m.over && canThrowTowel(m) && mortalDanger(m.a) && m.a.roundsWon <= m.b.roundsWon && !bout.boss) throwTowel(m);
@@ -231,14 +267,34 @@ function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart', bet 
   return summary;
 }
 
-// Before a top-arena Boss, stock one War Paint (and a Bandage for an injured star) if Gold allows.
+// Before a top-arena Boss, stock one situational Boss consumable (and a Bandage for an injured fighter) if Gold allows.
 function stockItems(run) {
   const bout = boutFor(run, run.topTier);
   if (!bout.boss) return;
   const reserve = 4;
-  if (!run.inventory.items.warPaint && run.gold - CONSUMABLES.warPaint.price >= reserve && !buyItemBlocker(run, 'warPaint')) buyItem(run, 'warPaint');
+  const buy = (id) => {
+    if (!run.inventory.items[id] && run.gold - CONSUMABLES[id].price >= reserve && !buyItemBlocker(run, id)) {
+      buyItem(run, id);
+      return true;
+    }
+    return false;
+  };
   const hurtStar = run.roster.some((f) => f.injuries.length);
-  if (hurtStar && !run.inventory.items.blessedBandage && run.gold - CONSUMABLES.blessedBandage.price >= reserve && !buyItemBlocker(run, 'blessedBandage')) buyItem(run, 'blessedBandage');
+  if (hurtStar) buy('blessedBandage');
+  const bossItems = ['adrenaline', 'throwingNet', 'berserkerMushroom', 'ironTonic', 'warPaint'];
+  if (bossItems.some((id) => run.inventory.items[id])) return;
+  const star = [...run.roster].filter((f) => !fightBlocker(run, f.id, run.topTier)).sort((a, b) => effectivePower(b) - effectivePower(a))[0];
+  const opp = opponentFor(run, run.topTier);
+  if (!star || !opp) return;
+  const speedGap = effectiveSpeed(star) - effectiveSpeed(opp);
+  const powerGap = effectivePower(star) - effectivePower(opp);
+  if (speedGap < 4) {
+    if (star.stress + (CONSUMABLES.adrenaline.stressAfter ?? 0) < STRESS.overtrained && buy('adrenaline')) return;
+    if (buy('throwingNet')) return;
+  }
+  if (!star.injuries.length && powerGap <= 0 && buy('berserkerMushroom')) return;
+  if (buy('ironTonic')) return;
+  buy('warPaint');
 }
 
 function carefulBouts(run, n, opts) {

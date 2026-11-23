@@ -6,12 +6,13 @@ import { runGates } from './checks.js';
 
 const args = process.argv.slice(2);
 const check = args.includes('--check');
+const quick = args.includes('--quick');
 const N = Number(args.find((a) => /^\d+$/.test(a))) || 200;
 const tunables = args.includes('--tune') ? JSON.parse(args[args.indexOf('--tune') + 1]) : {};
 const pct = (x) => `${(x * 100).toFixed(0)}%`;
 const avg = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
-const { gates, careful, reckless, split, rebel, loyalist, long, legacy, meanXp, wonMonths, dead } = await runGates({ careers: N, tunables });
+const { gates, careful, reckless, split, curve, rebel, loyalist, long, legacy, heat1, heat3, meanXp, wonMonths, dead } = await runGates({ careers: N, quick, tunables });
 
 for (const [name, results] of [['CAREFUL', careful], ['RECKLESS', reckless]]) {
   const wins = results.filter((r) => r.won);
@@ -31,6 +32,8 @@ for (const [name, results] of [['CAREFUL', careful], ['RECKLESS', reckless]]) {
   console.log(`  Losses by cause     ${JSON.stringify(reasons)}`);
 }
 
+console.log(`\nBoss win rate per attempt (careful): ${[1, 2, 3, 4, 5].map((t) => `T${t} ${curve[t] != null ? pct(curve[t]) : '-'}`).join(' · ')}`);
+
 console.log('\nBest Power/Speed split per Boss (value = win − 0.5×injury − 5×death)');
 for (const r of split.rows) {
   console.log(`  ${r.boss.padEnd(24)} ${r.points} pts → best: ${r.best.speedPoints} Speed pts (${pct(r.best.share)})  win ${pct(r.best.win)} injured ${pct(r.best.injury)} death ${(r.best.death * 100).toFixed(1)}%`);
@@ -44,7 +47,7 @@ const meanWeeks = (rs) => Math.round(rs.reduce((n, r) => n + r.weeks, 0) / Math.
 // Version 6, phase 5: the groups above play seasons (the default career); the Long Road is a group of its own.
 console.log(`\nSeasons: ${meanWeeks(careful)} weeks on average, ${meanWeeks(careful.filter((r) => r.won))} when won (${wonMonths.toFixed(1)} fight months); dead months ${(100 * dead).toFixed(1)}%`);
 console.log(`The Long Road (${long.length}): won ${Math.round(100 * long.filter((r) => r.won).length / long.length)}%, ${meanWeeks(long)} weeks on average, ${meanWeeks(long.filter((r) => r.won))} when won`);
-console.log(`\nLegacy: a first career earns ${meanXp.toFixed(0)} XP on average; with a full Legacy (${legacy.length} careers) careful wins ${Math.round(100 * legacy.filter((r) => r.won).length / legacy.length)}%`);
+console.log(`\nLegacy: a first career earns ${meanXp.toFixed(0)} XP on average; with a full Legacy (${legacy.length} careers) careful wins ${pct(legacy.filter((r) => r.won).length / legacy.length)} (Heat 1: ${pct(heat1.filter((r) => r.won).length / Math.max(1, heat1.length))}, Heat 3: ${pct(heat3.filter((r) => r.won).length / Math.max(1, heat3.length))})`);
 console.log('\nGates');
 for (const g of gates) console.log(`  ${g.pass ? 'PASS' : 'FAIL'}  ${g.name}: ${fmt(g)}`);
 if (check && gates.some((g) => !g.pass)) {

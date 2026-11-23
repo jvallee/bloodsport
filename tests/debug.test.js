@@ -7,6 +7,7 @@ import { buildReport, parseReport, replay, stateDigest, REPORT_KIND } from '../s
 // Play a few months through the shared action table, the way the web UI does.
 function playCareer(seed, { months = 4, reloadMidFight = false } = {}) {
   const state = { run: createRun(seed), match: null };
+  let reloaded = false;
   const act = (name, data) => {
     try { applyGameAction(state, name, data); } catch { /* refused actions are shown and the game carries on */ }
   };
@@ -20,7 +21,8 @@ function playCareer(seed, { months = 4, reloadMidFight = false } = {}) {
     if (!f || !state.run.boutPending) break;
     act('fight', { id: f.id, tier: state.run.topTier });
     act('next-round');
-    if (reloadMidFight && m === 1 && !state.match.over) {
+    if (reloadMidFight && !reloaded && !state.match.over) {
+      reloaded = true;
       state.run = deserialize(serialize(state.run)); // the player reloads the page
       state.match = null;
       continue;
@@ -65,7 +67,7 @@ test('a report carries the error, its stack, the last action and a readable save
   const report = buildReport(played.run, played.match, error, { version: 'test', where: 'action', lastAction: ['equip', { id: 'f99', index: '0' }], notes: 'clicked equip' });
   assert.equal(report.kind, REPORT_KIND);
   assert.match(report.error.message, /No such fighter|storeroom/);
-  assert.match(report.error.stack, /run\.js/);
+  assert.match(report.error.stack, /src\/run(\/|\.js)/);
   assert.equal(report.save.seed, played.run.seed);
   assert.equal(report.notes, 'clicked equip');
   assert.deepEqual(report.actions.at(-1), ['equip', { id: 'f99', index: '0' }]);

@@ -98,14 +98,15 @@ test('tournament crowds forgive mismatches: never jeered in the Quarter- or Semi
   assert.equal(finishMatch(run, m).crushing, false, '+4 in a Final is not a crushing win');
 });
 
-test('a wound from this round appears on the card only when the story reaches the blow', () => {
+test('a wound from this round stays hidden on the card until the story reaches the blow', () => {
   for (let seed = 1; seed <= 50; seed++) {
     const m = createMatch({ a: blank({ power: 20 }), b: blank(), rng: createRng(seed) });
     const r = playRound(m);
     if (!r.checks.some((c) => c.defender === 'B' && c.injury && c.injury.tag !== 'death')) continue;
     const html = fightView(m, { animateRound: 1, showMath: false }, { name: 'Test', tier: 1, buyIn: 1 });
-    assert.match(html, /class="chip injury late" style="animation-delay:[\d.]+s"/);
-    assert.doesNotMatch(fightView(m, { animateRound: 0, showMath: false }, { name: 'Test', tier: 1, buyIn: 1 }), /chip injury late/, 'shown at once after the animation');
+    assert.doesNotMatch(html, /class="chip injury/, 'hidden on initial animated render before blow lands');
+    assert.match(html, /class="hit-pop" style="animation-delay:[\d.]+s"/, 'blow timing pop is delayed');
+    assert.match(fightView(m, { animateRound: 0, showMath: false }, { name: 'Test', tier: 1, buyIn: 1 }), /class="chip injury/, 'shown at once after the animation');
     return;
   }
   assert.fail('no seed wounded the opponent');

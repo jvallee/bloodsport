@@ -194,6 +194,10 @@ export const SURGERY = { cost: 10, perTier: 4, renown: -1, medbay: 2 }; // playt
 // Retiring a veteran (level 4+ or a Title) to the Hall of Champions.
 export const RETIRE = { level: 4, prestige: 5, morale: 10 };
 
+// Renaming a fighter (the designer, 6.0.3): free, but `chance` of the time they resent it: `morale` Morale for MOOD_WEEKS
+// weeks (like an event's). Names are 1 to `maxLength` characters and can't be anyone else's.
+export const RENAME = { chance: 0.65, morale: -10, maxLength: 20 };
+
 // Brackets (playtester request): from the Silver Coliseum up, a tournament is three matches in a row for one fighter.
 // The Quarter- and Semi-final opponents are weaker than the listed (Final) opponent by `power`; each early win pays `purse` Gold × tier.
 // Early (Quarter- and Semi-final) wins pay `purse` × tier Gold and `prestige` flat Prestige. Prestige drives House level and

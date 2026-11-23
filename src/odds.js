@@ -2,19 +2,25 @@
 // so previewing never changes the career's fight rolls. Pure.
 
 import { createRng } from './rng.js';
-import { createMatch, autoPlay, suggestTactic } from './fight.js';
+import { createMatch, autoPlay, suggestTactic, signatureBlocker, useSignature } from './fight.js';
 
-export function estimateOdds(fighter, opponent, { debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, n = 500, seed = 12345 } = {}) {
+export function estimateOdds(fighter, opponent, { debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, oracle = 0, useSignatures = true, n = 500, seed = 12345 } = {}) {
   const rng = createRng(seed);
+  const startInjuries = fighter.injuries.filter((i) => i.weight > 0).length;
   let win = 0;
   let hurt = 0;
   let death = 0;
   for (let i = 0; i < n; i++) {
-    const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger, festival, grudge, vengeance, boss, earlyRound, rebels, relics });
-    autoPlay(m, suggestTactic); // odds assume the tactics auto-play would pick
+    const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger, festival, grudge, vengeance, boss, earlyRound, rebels, relics, oracle });
+    autoPlay(m, (match) => {
+      if (useSignatures && !signatureBlocker(match) && (match.a.roundsWon < match.b.roundsWon || match.round >= 1)) {
+        useSignature(match);
+      }
+      return suggestTactic(match);
+    });
     if (m.result.winner === 'A') win++;
     if (!m.a.f.alive) death++;
-    else if (m.a.f.injuries.length > fighter.injuries.length) hurt++;
+    else if (m.a.f.injuries.filter((inj) => inj.weight > 0).length > startInjuries) hurt++;
   }
   return { win: win / n, injury: (hurt + death) / n, death: death / n };
 }

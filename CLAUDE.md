@@ -12,24 +12,28 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - Plain HTML/CSS/JavaScript (ES modules). No build step: what's in the repo is what Pages serves.
 - Keep game logic (fight engine, economy, RNG) in pure modules with no DOM access, so it can be tested in Node.
 - Use a seeded RNG for all randomness so careers replay exactly from a seed. `Math.random` is only allowed in `randomSeed()` (choosing a new career's seed).
-- Keep the game static: no server, no build step, `localStorage` only. Version the career save format (`SAVE_VERSION` in `src/run.js`) and migrate old saves; the Codex is stored separately and must survive career-format changes.
+- Keep the game static: no server, no build step, `localStorage` only. Version the career save format (`SAVE_VERSION = 4` in `src/run/helpers.js`, re-exported by `src/run.js`) and migrate old saves in `src/run/migrations.js`; the Codex and Legacy are stored separately and must survive career-format changes.
 - Tests use Node's built-in runner: `node --test`. No test framework dependencies.
 
 ## Commands
 - `npm test`: run all tests (no install needed).
 - `npm run serve`: play locally at http://localhost:8000 (ES modules don't load from `file://`).
 - `npm run simulate`: build win rates at equal Power, and trained fighters vs each Boss.
-- `npm run career [n]`: whole-career balance report (careful and reckless bots).
-- `npm run check`: **balance gates** (pass/fail, exits non-zero). Every balance or rules change must pass it before shipping.
+- `npm run career [n]`: whole-career balance report (careful and reckless bots; pass `--quick` for a faster local check).
+- `npm run check`: **balance gates** (20 Season/Long Road/Heat gates; pass/fail, exits non-zero). Every balance or rules change must pass it before shipping.
 - `npm run sweep -- [--evasion | --favor | --fine] [n]`: sweep balance levers and print a table to choose values from.
 - `npm run replay -- report.json [--stop N] [--steps]`: replay a playtester's bug report (see `docs/bug-reports.md`).
+- `npm run text-index -- [--check]`: refresh or verify `docs/text-to-rewrite.md` source links.
 
 ## Layout
-- Pure logic: `src/rng.js` seeded RNG · `src/data.js` all tables and tunable numbers · `src/fight.js` fight engine · `src/calendar.js` weeks · `src/ludus.js` estate · `src/run.js` career coordinator · `src/odds.js` pre-fight odds · `src/narrate.js` text · `src/codex.js` unlockable glossary · `src/tutorial.js` intro and tutorial steps · `src/game.js` every player action (recorded for replays) · `src/debug.js` bug reports and replay. · `src/events.js` weekly event cards · `src/legacy.js` achievements, patrons, decrees, score · `src/savefile.js` save export/import.
-- UI: `src/ui/components.js`, `src/ui/views.js`, `src/ui/fightView.js`, `src/ui/portrait.js` (generated faces) return HTML strings; `src/ui/sound.js` plays synthesized effects; `src/main.js` holds state, saving and events. Every career-changing action goes through `applyGameAction` in `src/game.js` (never call run.js directly from main.js), so careers stay replayable. Rule refusals throw `Refused` (`src/errors.js`); anything else thrown opens the bug report box.
-- `scripts/bots.js`: careful and reckless career bots used by `career-sim.js` and tests.
-- Every rules change gets re-checked with `npm run check` before it ships; record the numbers in `docs/roadmap-v2.md`. When a gate fails, sweep the relevant values and show the table rather than guessing.
-- `tests/`: one file per module, plus `tests/helpers.js` (blank fighters, scripted RNG). `tests/setup.js` (loaded by `npm test`) switches weekly events off so unrelated tests stay deterministic; `tests/events.test.js` switches them back on.
+- Pure logic:
+  - Core & combat: `src/rng.js` seeded RNG · `src/data.js` all tables and tunable numbers · `src/fight.js` fight engine · `src/odds.js` pre-fight odds · `src/narrate.js` fight narration · `src/explain.js` pre-fight stakes and warnings · `src/calendar.js` weeks and festivals · `src/ludus.js` estate and buildings · `src/errors.js` `Refused` rule-error type · `src/version.js` version string.
+  - Career engine (`src/run.js` pure re-export barrel over 10 strictly acyclic layers in `src/run/`): `helpers.js` (L0 constants, fighter factory, canonical blockers/helpers, `SAVE_VERSION = 4`), `plotEngine.js` (L1a hidden plot), `houses.js` (L1b rival houses, arenas, brackets, `summonsPower`, `bracketInfo`, Patron Lounge), `roster.js` (L2 recruitment, training, gear, decor, medbay, retirement, Vulcan/Fortuna rites), `questsEngine.js` (L3a steward tasks, wants, rebel quests), `fortuneEngine.js` (L3b Fortune's wheel, boons, relics, Fates' Wager), `eventsEngine.js` (L3c weekly events), `tournaments.js` (L4 bouts, brackets, betting, mercy, Emperor's summons), `weekly.js` (L5 `createRun`, weekly progression, tribute), `migrations.js` (L6 serialization, `validateRun`, v2 → v3 → v4 migrations).
+  - Meta, story & persistence: `src/events.js` weekly event cards · `src/plot.js` hidden plot cards · `src/quests.js` steward/want/summons tables · `src/fortune.js` relics and boons · `src/dialogue.js` Emperor/steward/rebel scenes · `src/digest.js` monthly digest · `src/hints.js` contextual next-step bar · `src/codex.js` unlockable glossary · `src/tutorial.js` intro and tutorial steps · `src/legacy.js` Legacy XP, unlocks, Heat, achievements, score · `src/careers.js` multi-career index · `src/savefile.js` save export/import · `src/game.js` every player action (recorded for replays) · `src/debug.js` bug reports and replay.
+- UI & text port: `src/ui/components.js`, `src/ui/views.js`, `src/ui/fightView.js`, `src/ui/portrait.js` (generated SVG faces) return HTML strings (pure, no DOM); `src/ui/sound.js` plays synthesized WebAudio effects; `src/main.js` holds UI state, `localStorage` persistence, and DOM events; `scripts/play-text.js` is the playable CLI text port. Every career-changing action goes through `applyGameAction` in `src/game.js` (never call `src/run.js` directly from `src/main.js`), so careers stay replayable. Rule refusals throw `Refused` (`src/errors.js`); anything else thrown opens the bug report box.
+- `scripts/bots.js`: careful and reckless career bots used by `career-sim.js`, `checks.js`, `probes/`, and tests.
+- Every rules change gets re-checked with `npm run check` before it ships. When a gate fails, sweep the relevant values and show the table rather than guessing.
+- `tests/`: per-module and release test suites, plus `tests/helpers.js` (blank fighters, scripted RNG). `tests/setup.js` (loaded by `npm test`) switches weekly events off so unrelated tests stay deterministic; `tests/events.test.js` switches them back on.
 
 ## Working practices
 - **Commit early and often.** Make small, focused commits, each with a clear message, after every working step. Don't batch unrelated changes.
@@ -39,6 +43,5 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - **Fix bugs test-first.** Write a failing test that reproduces the bug, then fix it.
 - **Version notes:** add every player-visible change to `CHANGELOG.md` (newest first, in plain player-facing language) in the same commit. When freezing a version, move the "Unreleased" notes under the new version's heading.
 - Don't change balance numbers or rules without saying so. Record each new placeholder decision in `docs/fight-rules.md`.
-- Current plan: `docs/roadmap-v2.md`. Deferred features stay deferred unless asked.
-- `v1/` to `v6/` are frozen copies of tags `v1.0`, `v2.2`, `v3.0`, `v4.0`, `v5.0` and `v6.0`. Don't edit them unless the user asks (v2 was refreshed on request in v2.2).
+- `v1/` to `v6/` are frozen playable archives (`v1.0`, `v2.2`, `v3.0`, `v4.0`, `v5.4.3`, `v6.0.5`) with isolated `localStorage` keys (`bloodsport.v6.*`, etc.). Don't edit them unless the user asks.
 - Check that the site works when opened from GitHub Pages (relative paths only, no absolute `/` links).

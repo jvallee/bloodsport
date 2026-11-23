@@ -16,8 +16,8 @@ import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
 import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene } from './dialogue.js';
 import { DEMANDS, DEMAND, CIRCUITS, SUMMONS } from './data.js';
 import { snapshot, monthDigest } from './digest.js';
-import { fightView, DICE_TIME, revealTime, roundEndTime } from './ui/fightView.js';
-import { roundSounds, setSound, sfx } from './ui/sound.js';
+import { fightView, DICE_TIME, roundTiming, roundEndTime, sideCardHtml } from './ui/fightView.js';
+import { roundSounds, setSound, stopAllSounds, sfx } from './ui/sound.js';
 
 const app = document.getElementById('app');
 const fightEl = document.getElementById('fight');
@@ -37,7 +37,9 @@ let noticePage = 0;
 let tab = 'ludus';
 let showHelp = false;
 let autoTimer = null;
+let revealTimer = null;
 let roundStartedAt = 0; // when the latest round began playing (auto-play waits for its story to finish, not for a fresh wait)
+const reducedMotion = () => Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 const ui = { animateRound: 0, showMath: false, auto: false, open: {} }; // open: fold-outs the player opened or closed, by data-key
 let prefs = { tutorial: [], showMath: false, introSeen: false, sound: true };
 let codex = loadCodex(null);
@@ -201,6 +203,42 @@ for (const type of ['click', 'change']) {
     setTimeout(() => { clickAnchor = null; }); // only for the render this event causes, never a later one
   }, true);
 }
+function activeModal() {
+  if (bug) return 'bug';
+  if (careersOpen) return 'careers';
+  if (overtrainWarn) return 'overtrain';
+  if (setupChoice) return 'setup';
+  if (scene) return 'scene';
+  if (eventResult) return 'result';
+  if (showHelp) return 'help';
+  if (tutorialStep()) return 'tutorial';
+  return null;
+}
+
+function resetCareerUiState() {
+  clearTimeout(autoTimer);
+  clearTimeout(revealTimer);
+  stopAllSounds();
+  match = null;
+  summaries = [];
+  noticePage = 0;
+  stewardNotes = [];
+  achieved = [];
+  scene = null;
+  eventResult = null;
+  overtrainWarn = null;
+  setupChoice = null;
+  showHelp = false;
+  careersOpen = false;
+  monthBefore = null;
+  dealtHand = null;
+  ui.animateRound = 0;
+  ui.auto = false;
+  ui.open = {};
+  for (const k of Object.keys(roomTabs)) delete roomTabs[k];
+  oddsCache.clear();
+}
+
 function render() {
   if (discover(codex, run).length) saveCodex();
   // Legacy: achievements as they happen, and the career once it ends.
@@ -221,30 +259,25 @@ function render() {
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
-  // Panels that scroll on their own (the Ludus columns, the logs) keep their place across re-renders on the same tab
-  // (the designer: clicking in Your gladiators jumped its column back to the top).
   const SCROLLERS = '.grid > .panel, .log, .feed';
-  // Keyed by class and place among elements of that class, so a scroller appearing or vanishing doesn't shift the others.
   const scrollKeys = () => {
     const seen = {};
     return [...app.querySelectorAll(SCROLLERS)].map((el) => {
-      const c = [...el.classList].slice(0, 2).join('.'); // e.g. panel.bout, whether or not it's "live" this week
+      const c = [...el.classList].slice(0, 2).join('.');
       seen[c] = (seen[c] ?? 0) + 1;
       return [`${c}#${seen[c]}`, el];
     });
   };
   const scrolled = renderedTab === tab ? Object.fromEntries(scrollKeys().map(([k, el]) => [k, el.scrollTop])) : {};
   renderedTab = tab;
-  // The Fortune cards deal in once per hand, not on every redraw (the designer: each dialogue Next replayed it).
   const fortune = fortunePanel(run, { animate: fortuneDealKey(run) !== dealtHand });
   if (fortune) dealtHand = fortuneDealKey(run);
-  document.body.dataset.house = run.setup?.colour ?? ''; // version 6: the house colour (a Legacy unlock)
+  document.body.dataset.house = run.setup?.colour ?? '';
   app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run))}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${modal}`;
-  // Re-rendering rebuilds the page, so restore any fold-outs the player opened or closed.
+  const stickyHead = app.querySelector('.sticky-head');
+  if (stickyHead) document.documentElement.style.setProperty('--head-h', `${stickyHead.offsetHeight + 8}px`);
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
   for (const [k, el] of scrollKeys()) if (scrolled[k]) el.scrollTop = scrolled[k];
-  // Then keep the card you clicked where it was on screen: a line appearing on a card above it (a notice, a reason) would
-  // otherwise push it away from the pointer (the designer: the Ludus still jumped when clicking).
   if (clickAnchor && renderedTab === clickAnchor.tab) {
     const el = document.getElementById(clickAnchor.id);
     const shift = el ? el.getBoundingClientRect().top - clickAnchor.top : 0;
@@ -259,8 +292,8 @@ function render() {
     document.querySelector(scrollAfterRender)?.scrollIntoView({ block: 'start' });
     scrollAfterRender = null;
   }
-  // The tutorial month: make the button to press glow.
   if (guide?.focus && tab === guide.tab) for (const el of app.querySelectorAll(guide.focus)) if (!el.disabled) el.classList.add('tut-focus');
+  if (modal) app.querySelector('.modal [autofocus], .modal button')?.focus?.();
   renderFight();
 }
 
@@ -283,6 +316,7 @@ function act(name, data = {}) {
 }
 
 function renderFight() {
+  clearTimeout(revealTimer);
   if (!match) {
     fightEl.hidden = true;
     fightEl.innerHTML = '';
@@ -296,6 +330,32 @@ function renderFight() {
   fightEl.innerHTML = fightView(match, ui, { ...match.bout, keepsBuyIn: keepsBuyIn(run, match.bout.tier) }, tutorialCard(fightTutorial(), 'fight'), run.inventory.items, nextBlocker, run.mercy && { ...run.mercy, favorWhy: spareFavorWhy(run), owedLeft: owedLeft(run) }, bracketView(run, match.bout.tier));
   const feed = document.getElementById('feed');
   if (feed) feed.scrollTop = feed.scrollHeight;
+  // Swap side cards from pre-round snapshot to post-round state at blow impact so death/wounds never spoil t=0s.
+  const last = match.rounds.at(-1);
+  if (last && last.round === ui.animateRound && last.before && !reducedMotion()) {
+    const timing = roundTiming(match, last, ui.showMath);
+    const snapMatch = match;
+    const snapRound = last.round;
+    revealTimer = setTimeout(() => {
+      if (match !== snapMatch || match.rounds.at(-1)?.round !== snapRound) return;
+      const aEl = document.getElementById('side-card-A');
+      const bEl = document.getElementById('side-card-B');
+      if (aEl) aEl.innerHTML = sideCardHtml(match, 'A', ui, { revealed: true });
+      if (bEl) bEl.innerHTML = sideCardHtml(match, 'B', ui, { revealed: true });
+    }, Math.max(0, Math.round(timing.shake * 1000)));
+  }
+}
+
+function playRoundSound() {
+  if (!match?.rounds.length) return;
+  const last = match.rounds.at(-1);
+  const timing = roundTiming(match, last, ui.showMath);
+  roundSounds(match, last, {
+    diceTime: DICE_TIME,
+    revealAt: timing.reveal,
+    blowTimes: timing.blowTimes,
+    hype: hypeOf(match),
+  });
 }
 
 // Auto-play: one round after another (each once its winner is announced), pausing whenever the capitulate decision really matters.
@@ -303,34 +363,30 @@ function scheduleAuto() {
   clearTimeout(autoTimer);
   if (!ui.auto || !match || match.over) return; // one match only: the next match of a tournament starts paused
   if (match.round > 0 && mortalDanger(match.a) && canThrowTowel(match)) return;
+  const wait = match.round === 0 || ui.animateRound === 0 || reducedMotion()
+    ? 300
+    : Math.max(300, roundStartedAt + (roundEndTime(match, match.rounds.at(-1), ui.showMath) + 1.5) * 1000 - Date.now());
   autoTimer = setTimeout(() => guard('auto-play', () => {
     if (!match || match.over) return;
     const stance = suggestTactic(match);
     lastAction = ['next-round', { stance }];
     act('next-round', { stance });
     roundStartedAt = Date.now();
-    ui.animateRound = match.round;
-    roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath), hype: hypeOf(match) });
+    ui.animateRound = reducedMotion() ? 0 : match.round;
+    if (!reducedMotion()) playRoundSound();
     save();
     render();
     scheduleAuto();
-  }), match.round === 0 ? 300 : Math.max(300, roundStartedAt + (roundEndTime(match, match.rounds.at(-1), ui.showMath) + 1.5) * 1000 - Date.now())); // let the round sink in
+  }), wait);
 }
 
 // ---------- Careers ----------
 
-// `opening: false` when the opening has just played (before the patron choice).
-// Every new career gets its own save; the one before stays in the Careers list.
-// Version 6: a new career is a season (the short shape) unless the player chooses the Long Road.
 function newRun(seed, setup = careerSetup(legacy), { opening = true } = {}) {
+  resetCareerUiState();
   run = createRun(seed ?? undefined, setup);
   careerId = freshId(careers, Date.now());
-  achieved = [];
-  setupChoice = null;
-  match = null;
-  summaries = [];
   tab = 'market';
-  oddsCache.clear();
   scene = opening ? { id: 'opening', beat: 0 } : null; // every career opens with the Emperor pulling you through (skippable)
   if (!opening) markSceneSeen('opening');
   const url = new URL(location.href);
@@ -353,14 +409,10 @@ function openCareer(id) {
   const saved = loadCareerText(storage, id);
   if (saved) {
     try {
-      run = deserialize(saved);
+      const loaded = deserialize(saved);
+      resetCareerUiState();
+      run = loaded;
       careerId = id;
-      match = null;
-      summaries = [];
-      stewardNotes = [];
-      achieved = [];
-      scene = null;
-      oddsCache.clear();
       const url = new URL(location.href);
       url.searchParams.set('seed', run.seed);
       history.replaceState(null, '', url);
@@ -392,9 +444,6 @@ const actions = {
   'new-run': () => {
     if (!roomForCareer()) return; // the career being played is kept in the Careers list
     careersOpen = false;
-    // Once a past career has unlocked something, choose a patron and decrees first.
-    // The opening plays first, then the patron and decree choice, then the career (without a second opening).
-    // Every new career offers its length and the daily challenge now (fun idea #2), so the dialog always follows.
     scene = { id: 'opening', beat: 0, then: 'setup' };
     render();
   },
@@ -463,10 +512,10 @@ const actions = {
   },
   'notice-page': (d) => { noticePage = Number(d.page); },
   'auto-play': () => { ui.auto = !ui.auto; },
-  // Skip the animation: the rest of the match at once, with the suggested tactic (the designer, 5.4.0). Like auto-play,
-  // it stops when the Death Gate is open and capitulating is still possible, so a death is never skipped past.
   'skip-fight': () => {
     clearTimeout(autoTimer);
+    clearTimeout(revealTimer);
+    stopAllSounds();
     while (match && !match.over && !(match.round > 0 && mortalDanger(match.a) && canThrowTowel(match))) act('next-round', { stance: suggestTactic(match) });
     ui.animateRound = 0;
   },
@@ -533,7 +582,7 @@ const before = {
   'event-choice': () => { logMark = run.log.length; return true; },
   fortune: () => { logMark = run.log.length; return true; },
   release: () => confirm('Release this fighter for good?'),
-  rename: (data) => { // the new name is asked for here, and recorded with the action so a replay needs no prompt
+  rename: (data) => {
     const f = run.roster.find((x) => x.id === data.id);
     const name = prompt(`A new name for ${f?.name ?? 'this fighter'}:`, f?.name ?? '');
     if (name === null) return false;
@@ -543,26 +592,23 @@ const before = {
   retire: () => confirm('Retire this fighter to the Hall of Champions? They leave your roster for good.'),
   forfeit: () => confirm('Forfeit the Boss? It costs more Imperial Favour than losing the fight.'),
   withdraw: () => confirm('Withdraw from the tournament? It counts as capitulating; your fighter is safe.'),
-  // Unequip all strips everyone (the designer's bug report: it looked like gear vanished): say who first.
   'unequip-all': () => {
     const worn = run.roster.filter((f) => f.gear.weapon || f.gear.armor);
     return confirm(`Take the gear off ${worn.map((f) => f.name).join(', ')}? It all goes back to the storeroom.`);
   },
   'refuse-summons': () => confirm(`Refuse the Emperor? It costs ${-SUMMONS.refuseFavor} Imperial Favour.`),
   advance: () => {
-    // Whenever End week would overtrain someone, the steward checks first (the designer: 5.4.0 asked once a career, 5.4.3 every time).
     const at = overtrainedByWeek(run);
     if (at.length) { overtrainWarn = at.map((f) => ({ id: f.id, name: f.name, stress: f.stress })); return false; }
     summaries = []; achieved = []; stewardNotes = []; return true;
   },
   'advance-tournament': () => {
     summaries = []; achieved = []; stewardNotes = [];
-    monthBefore = { snap: snapshot(run), mark: run.log.length }; // for the month's digest (version 6)
+    monthBefore = { snap: snapshot(run), mark: run.log.length };
     return true;
   },
 };
 const after = {
-  // Version 6, the month is the turn: what the weeks did, in one popup (training summed, news kept).
   'advance-tournament': () => {
     if (!monthBefore) return;
     const lines = monthDigest(monthBefore.snap, run, run.log.slice(monthBefore.mark));
@@ -570,22 +616,32 @@ const after = {
     if (lines.length) eventResult = { title: run.bouts ? 'The month, to fight day' : 'The month so far', lines };
   },
   fight: () => {
+    clearTimeout(revealTimer);
+    stopAllSounds();
     ui.animateRound = 0;
-    ui.auto = false; // every match starts paused: auto-play covers one match (the designer, 5.4.0)
+    ui.auto = false;
   },
   'next-round': () => {
     roundStartedAt = Date.now();
-    ui.animateRound = match?.round ?? 0;
-    if (match?.rounds.length) roundSounds(match, match.rounds.at(-1), { diceTime: DICE_TIME, revealAt: revealTime(match, match.rounds.at(-1), ui.showMath), hype: hypeOf(match) });
+    ui.animateRound = reducedMotion() ? 0 : (match?.round ?? 0);
+    if (!reducedMotion()) playRoundSound();
   },
   'event-choice': () => {
     sfx.event();
-    // Show everything the choice changed, from the house log (the first line is "Title: choice. Effects.").
     const lines = run.log.slice(logMark);
-    if (lines.length) eventResult = { title: lines[0].text.split(':')[0], lines: lines.map((l, i) => ({ tone: l.tone, text: i ? l.text : l.text.slice(l.text.indexOf(':') + 1).trim() })) };
+    if (lines.length) {
+      const titledIdx = lines.findIndex((l) => l.text.includes(':'));
+      const title = titledIdx >= 0 ? lines[titledIdx].text.slice(0, lines[titledIdx].text.indexOf(':')) : 'Event';
+      eventResult = {
+        title,
+        lines: lines.map((l, i) => ({
+          tone: l.tone,
+          text: i === titledIdx ? l.text.slice(l.text.indexOf(':') + 1).trim() : l.text,
+        })),
+      };
+    }
   },
   mercy: () => { sfx.cheer(0); },
-  // Version 6: the Fortune card taken, said once in a popup (its log lines, without the "Fortune: " prefix).
   fortune: () => {
     sfx.event();
     const lines = run.log.slice(logMark).map((l) => ({ tone: l.tone, text: l.text.replace(/^Fortune: /, '') }));
@@ -593,16 +649,27 @@ const after = {
   },
   'fortune-reroll': () => { sfx.event(); },
   withdraw: () => {
-    match = null; // the withdrawal is settled: leave the fight screen
+    clearTimeout(autoTimer);
+    clearTimeout(revealTimer);
+    stopAllSounds();
+    match = null;
     ui.auto = false;
     tab = 'ludus';
   },
   'leave-fight': () => {
+    clearTimeout(autoTimer);
+    clearTimeout(revealTimer);
+    stopAllSounds();
     ui.auto = false;
     tab = 'ludus';
     window.scrollTo(0, 0);
   },
 };
+
+const SKIP_SAVE_ACTIONS = new Set([
+  'new-run', 'replay-seed', 'start-career', 'daily-challenge', 'bug-reload', 'career-load',
+  'bug-copy', 'bug-download', 'export-save', 'import-save',
+]);
 
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-action]');
@@ -611,11 +678,12 @@ document.addEventListener('click', (e) => {
   if (!actions[name] && !isGameAction(name)) return;
   const data = { ...el.dataset };
   delete data.action;
+  let cancelled = false;
   guard('action', () => {
     try {
       if (name !== 'next-round') ui.animateRound = 0; // only a new round plays its animation (not items, toggles...)
       if (isGameAction(name)) {
-        if (before[name] && !before[name](data)) return;
+        if (before[name] && !before[name](data)) { cancelled = true; return; }
         gameAction(name, data);
       } else {
         actions[name](data);
@@ -625,7 +693,11 @@ document.addEventListener('click', (e) => {
       alert(err.message);
     }
   });
-  if (name === 'new-run' || name === 'replay-seed' || name === 'start-career' || name === 'daily-challenge' || name === 'bug-reload' || name === 'career-load') return;
+  if (SKIP_SAVE_ACTIONS.has(name)) return;
+  if (cancelled) {
+    if (overtrainWarn) guard('render', () => render());
+    return;
+  }
   guard('render', () => {
     save();
     render();
@@ -634,13 +706,11 @@ document.addEventListener('click', (e) => {
 });
 
 // Touch screens have no hover: tapping something with help text (a stat, chip or badge) shows it in a small popup.
-// Buttons, links, fold-outs and form controls work as usual; tapping anywhere else closes the popup.
 const touchTip = document.createElement('div');
 touchTip.className = 'touch-tip';
 touchTip.hidden = true;
 document.body.appendChild(touchTip);
 const isTouch = () => window.matchMedia?.('(hover: none)').matches;
-// Chips marked ⓘ (.tip) open their popup on a click with a mouse too (5.4.0: the descriptions moved off the cards).
 document.addEventListener('click', (e) => {
   if (!isTouch() && !e.target.closest?.('.tip')) { touchTip.hidden = true; return; }
   const el = e.target.closest?.('[title]');
@@ -648,11 +718,13 @@ document.addEventListener('click', (e) => {
   touchTip.textContent = el.getAttribute('title');
   touchTip.hidden = false;
   const r = el.getBoundingClientRect();
-  const top = r.bottom + 8 + window.scrollY;
+  const tipH = touchTip.offsetHeight || 60;
+  const below = r.bottom + 8 + tipH <= window.innerHeight - 8;
+  const top = (below ? r.bottom + 8 : Math.max(8, r.top - tipH - 8)) + window.scrollY;
   touchTip.style.top = `${top}px`;
   touchTip.style.left = `${Math.max(8, Math.min(window.innerWidth - 288, r.left + window.scrollX))}px`;
 }, true);
-document.addEventListener('scroll', () => { touchTip.hidden = true; }, { passive: true, capture: true }); // the Ludus columns scroll on their own
+document.addEventListener('scroll', () => { touchTip.hidden = true; }, { passive: true, capture: true });
 
 // Dropdowns (gear): choosing an option runs the action, like a button would.
 document.addEventListener('change', (e) => {
@@ -665,7 +737,6 @@ document.addEventListener('change', (e) => {
       lastAction = [name, data];
       const mark = run.log.length;
       act(name, data);
-      // An exhibition bout's result pops up, like an event's.
       if (name === 'exhibition') eventResult = { title: 'Exhibition Ring', lines: run.log.slice(mark).map((l) => ({ tone: l.tone, text: l.text.replace(/^Exhibition: /, '') })) };
       if (name === 'summons') eventResult = { title: 'The Emperor\'s summons', lines: run.log.slice(mark).map((l) => ({ tone: l.tone, text: l.text.replace(/^The Emperor's summons: /, '') })) };
     } catch (err) {
@@ -724,23 +795,44 @@ const pressButton = (selector) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select')) return;
-  if (e.key === 'Escape' && (showHelp || scene)) {
-    showHelp = false;
-    if (scene) closeScene();
-    render();
-    return;
-  }
-  if (overtrainWarn || careersOpen) { // the overtraining question and the Careers list: Escape closes them
-    if (e.key === 'Escape') { overtrainWarn = null; careersOpen = false; render(); }
-    return;
-  }
-  if (eventResult) { // the result popup: any of Space, Enter or Escape closes it
-    if ([' ', 'Enter', 'Escape'].includes(e.key)) { e.preventDefault(); eventResult = null; render(); }
-    return;
-  }
-  if (scene) { // a character is talking: Space or Enter goes on (unless you're asked to answer)
-    if ((e.key === ' ' || e.key === 'Enter') && !sceneBeats()[scene.beat].replies) { e.preventDefault(); actions['scene-next'](); render(); }
-    return;
+  const topModal = activeModal();
+  if (topModal) {
+    if (topModal === 'bug') {
+      if (e.key === 'Escape' && !bug?.error) { bug = null; bugStatus = ''; renderBug(); }
+      return;
+    }
+    if (topModal === 'careers') {
+      if (e.key === 'Escape') { careersOpen = false; render(); }
+      return;
+    }
+    if (topModal === 'overtrain') {
+      if (e.key === 'Escape') { overtrainWarn = null; render(); }
+      return;
+    }
+    if (topModal === 'setup') {
+      if (e.key === 'Escape') { setupChoice = null; render(); }
+      return;
+    }
+    if (topModal === 'scene') {
+      if (e.key === 'Escape') { closeScene(); render(); }
+      else if ((e.key === ' ' || e.key === 'Enter') && !sceneBeats()[scene.beat].replies) { e.preventDefault(); actions['scene-next'](); render(); }
+      return;
+    }
+    if (topModal === 'result') {
+      if ([' ', 'Enter', 'Escape'].includes(e.key)) { e.preventDefault(); eventResult = null; render(); }
+      return;
+    }
+    if (topModal === 'help') {
+      if (e.key === 'Escape') { showHelp = false; render(); }
+      return;
+    }
+    if (topModal === 'tutorial') {
+      if (e.key === 'Escape' || e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        pressButton('.modal.tutorial [data-action=tutorial-done]');
+      }
+      return;
+    }
   }
   if (e.key === ' ' || e.key === 'Enter') {
     if (e.target.closest?.('button, summary')) return; // let focused buttons and fold-outs work as usual
@@ -792,6 +884,8 @@ function renderBug() {
 function crash(err, where) {
   console.error(err);
   clearTimeout(autoTimer);
+  clearTimeout(revealTimer);
+  stopAllSounds();
   if (bug?.error) return; // keep the first error: later ones are usually knock-on effects
   bug = { error: err, where };
   bugStatus = '';
