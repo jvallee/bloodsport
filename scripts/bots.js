@@ -5,7 +5,7 @@
 //          freshly fallen fighter at the Unnatural Temple of Vulcan (building it then, if it must).
 // reckless: trains one star nonstop, heals only with the Surgeon, fights only the top arena, always Presses, never towels.
 
-import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE, FORTUNE } from '../src/data.js';
+import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE, FORTUNE, ESPIONAGE } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
 import { isMonthStart, isWinter, weeksUntilWinter } from '../src/calendar.js';
 import { coupBonus } from '../src/plot.js';
@@ -14,6 +14,7 @@ import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
+  espState, canNarrow, investigate, investigateBlocker,
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom, recruitPrice,
   buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, withdrawBlocker, resolveMercy,
   betOdds, betCap, betBlocker, placeBet, hostBlocker, host, enactBlocker, enact, raisable, reanimateBlocker, reanimate,
@@ -155,6 +156,21 @@ function equipAll(run, reserve) {
   }
 }
 
+// 7.4: with clues of a mole, investigate one fighter a week (named suspects first, then the unhappiest); the careful
+// event order executes an unmasked mole.
+function hunt(run, reserve = 6) {
+  const st = espState(run);
+  if (!st.clues.length) delete st.searched; // a new mole starts a new search
+  if (!st.clues.length || run.gold - ESPIONAGE.investigate < reserve) return;
+  st.searched ??= [];
+  const order = [...(canNarrow(run) && st.suspects ? st.suspects.map((id) => run.roster.find((f) => f.id === id)).filter(Boolean) : []),
+    ...[...run.roster].sort((a, b) => a.morale - b.morale)];
+  const f = order.find((x) => !st.searched.includes(x.id) && !investigateBlocker(run, x.id));
+  if (!f) return;
+  st.searched.push(f.id);
+  investigate(run, f.id);
+}
+
 function keepHappy(run, reserve = 6) {
   // 7.1: an Afeared fighter gets a Rock Garden to meditate the fear away (one, if the house can spare the Gold).
   for (const f of run.roster) {
@@ -218,6 +234,7 @@ function carefulWeek(run, opts) {
       if (!jobBlocker(run, f.id, want)) setJob(run, f.id, want);
     }
   }
+  hunt(run, Math.max(6, saveForTribute)); // last: an unmasked mole opens an event
 }
 
 // `tactic`: 'smart' reads the opponent's humor (as auto-play does); anything else is used every round.
@@ -450,6 +467,7 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
     }
     if (strategy === 'careful') carefulWeek(run, opts);
     else recklessWeek(run);
+    if (run.event) continue; // a mole unmasked this week: decide it first
     advanceWeek(run);
   }
   const fought = run.history.filter((h) => !h.skipped && !h.forfeit);
