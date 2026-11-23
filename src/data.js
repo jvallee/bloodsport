@@ -379,8 +379,21 @@ export const FAVOR = {
 // Tribute is due at the start of each winter: perYear × the year number. Warning a month ahead.
 export const TRIBUTE = { perYear: 15 };
 
-// House revolt: average Morale below this for `weeks` weeks in a row ends the career.
+// House revolt before 7.3: average Morale below this for `weeks` weeks in a row ended the career (kept for old saves' fields).
 export const REVOLT = { morale: 20, weeks: 4 };
+// 7.3 Unrest (docs/roadmap-v7.md, Phase 3). Mutinous fighters add unrest each week; at `warn` the house is warned, and at
+// `threshold` (after a warning week) The Chains Break. It cools by `cool` a week while nobody is Mutinous.
+// Agitation: a Restless fighter who is Choleric, overtrained or sleeps by a Skull Rack drags a bonded partner (`bondDrag`).
+// Incidents: each Mutinous fighter has `incident` chance a week of a brawl, a theft (`theftPerTier` × tier Gold) or an
+// escape attempt (caught: +`escapeStress` Stress). The crisis: the coffers (`coffersPerFighter` Gold a fighter: unrest 0,
+// +`calmMood` Morale for 4 weeks), the guards (loyalists at Morale `loyalMorale`+ and a garrison of `garrisonPerLevel` ×
+// House level, against mutineers below `mutineerMorale`: put down = the ringleader Concussed or Maimed, `putDownFavor`,
+// unrest `afterPutDown`; overrun = the career ends), or the Palatine (the plot at cause or ready, once a career).
+export const UNREST = {
+  threshold: 8, warn: 5, cool: 2, incident: 0.25, theftPerTier: 2, escapeStress: 20, bondDrag: -3,
+  coffersPerFighter: 4, calmMood: 15, garrisonPerLevel: 10, loyalMorale: 50, mutineerMorale: 30,
+  putDownFavor: -6, afterPutDown: 2, palatineSuspicion: 15, palatineTrust: -1,
+};
 
 // Speed trains three times as fast as Power: Speed's edge levels off, so it needs to be cheap to be worth a week (tuned with the balanced-fighter gate).
 export const TRAIN_GAIN = { power: 1, speed: 3 };

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { autoPlay, playRound } from '../src/fight.js';
 import { rosterCap } from '../src/ludus.js';
-import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, advanceToTournament, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute, resolveMercy } from '../src/run.js';
+import { createRun, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, advanceToTournament, startMatch, finishMatch, fightBlocker, skipBlocker, skipBout, forfeitBout, boutFor, unlockedTiers, choosePerk, payTribute, resolveMercy, chooseEvent, eventChoiceBlocker } from '../src/run.js';
 import { topbar, endBanner, summaryBanner, ludusTab, estateTab, marketTab, helpModal, codexTab, introModal, tutorialCard, noticePager, bugModal, eventCard, setupModal, legacyPanel, roomTabs, today } from '../src/ui/views.js';
 import { TRIBUTE, LEGACY, LEGACY_LEVELS, HEAT, DECREES } from '../src/data.js';
 import { createLegacy, recordCareer } from '../src/legacy.js';
@@ -33,6 +33,11 @@ test('every screen renders cleanly through whole careers', () => {
     run.gold += 60;
     for (let step = 0; step < 600 && run.status === 'active'; step++) {
       for (const f of run.roster) while (f.pendingPerks.length) choosePerk(run, f.id, f.pendingPerks[0][0]);
+      if (run.event) { // 7.3: The Chains Break opens even with random events off; render it, then answer it
+        assert.doesNotMatch(eventCard(run), BAD);
+        chooseEvent(run, [0, 1, 2].find((i) => !eventChoiceBlocker(run, i)));
+        continue;
+      }
       if (run.roster.length < rosterCap(run) && run.market[0] && !recruitBlocker(run, run.market[0].id)) recruit(run, run.market[0].id);
       for (const f of run.roster) {
         const job = f.injuries.length ? 'medbay' : f.stress >= 40 ? 'rest' : 'trainPower';

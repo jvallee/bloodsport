@@ -3,14 +3,14 @@
 import { createRng, int, pick } from '../rng.js';
 import {
   decorComfort, ECONOMY, STRESS, TRAIN_GAIN, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, BOSS_DEBUFFS,
-  XP, PERKS, MORALE, GEAR, DECOR, FAVOR, REVOLT, HUMORS, AUGMENTS, TITLES, RECRUIT, SHORT, QUESTS, HEAT, CONSUMABLES,
+  XP, PERKS, MORALE, GEAR, DECOR, FAVOR, HUMORS, AUGMENTS, TITLES, RECRUIT, SHORT, QUESTS, HEAT, CONSUMABLES,
 } from '../data.js';
 import { relicSum } from '../fortune.js';
 import { Refused } from '../errors.js';
 import { formatDate, dateOf } from '../calendar.js';
 import { prestigeLevelFor, stressRelief } from '../ludus.js';
 
-export const SAVE_VERSION = 5; // 5 (7.1): new decor slots and f.humourDrift (backfilled on load)
+export const SAVE_VERSION = 6; // 5 (7.1): Temperament decor, f.humourDrift; 6 (7.3): run.unrest (backfilled on load)
 export const GRAND_TIER = CIRCUITS.length + 1;
 export const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
 export const NAME_MEMORY = 90;
@@ -300,12 +300,6 @@ export function checkLoss(run) {
   if (run.favor <= 0) {
     run.status = 'lost';
     run.endReason = `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.`;
-    run.fortune = null;
-    return;
-  }
-  if (run.revoltWeeks >= REVOLT.weeks) {
-    run.status = 'lost';
-    run.endReason = 'Your gladiators revolt and burn the Ludus.';
     run.fortune = null;
     return;
   }

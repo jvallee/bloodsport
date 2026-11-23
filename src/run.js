@@ -61,5 +61,6 @@ export {
 } from './run/weekly.js';
 
 export {
-  serialize, deserialize, validateRun, migrateV2ToV3, migrateV3ToV4, migrateV4ToV5,
+  serialize, deserialize, validateRun, migrateV2ToV3, migrateV3ToV4, migrateV4ToV5, migrateV5ToV6,
 } from './run/migrations.js';
+export { isMutinous, isRestless, isAgitated, unrestFrom, ringleader, revoltSides, unrestWeek, openCrisis } from './run/unrest.js';

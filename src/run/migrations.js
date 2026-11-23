@@ -87,6 +87,8 @@ function normalizeRun(run) {
   run.event ??= null;
   run.relics ??= [];
   run.fortune ??= null;
+  run.unrest ??= 0;
+  run.unrestStats ??= { incidents: 0, crises: 0 };
   run.setup ??= { patron: null, decrees: [], classes: [] };
   run.setup.heat ??= 0;
   run.setup.unlocks ??= [];
@@ -121,6 +123,13 @@ export function migrateV3ToV4(run) {
 export function migrateV4ToV5(run) {
   validateRun(run);
   run.version = 5;
+  return run;
+}
+
+// v5 → v6 (7.3): house unrest replaces the average-Morale revolt (normalizeRun backfills run.unrest).
+export function migrateV5ToV6(run) {
+  validateRun(run);
+  run.version = 6;
   return run;
 }
 
@@ -159,6 +168,7 @@ export function deserialize(text) {
   if (run.version === 2) run = migrateV2ToV3(run);
   if (run.version === 3) run = migrateV3ToV4(run);
   if (run.version === 4) run = migrateV4ToV5(run);
+  if (run.version === 5) run = migrateV5ToV6(run);
   validateRun(run);
   normalizeRun(run);
   backfillFighters(run);

@@ -2,7 +2,7 @@
 
 import { createRng, deriveSeed, int, pick, randomSeed } from '../rng.js';
 import {
-  ECONOMY, STRESS, STARTING_BUILDINGS, XP, MORALE, FAVOR, TRIBUTE, REVOLT, INJURY_BY_TAG,
+  ECONOMY, STRESS, STARTING_BUILDINGS, XP, MORALE, FAVOR, TRIBUTE, INJURY_BY_TAG,
   HOUSES, PATRONS, BRACKET, SHORT, FORTUNE,
 } from '../data.js';
 import { RELICS, relicSum } from '../fortune.js';
@@ -29,6 +29,7 @@ import { checkQuests, wantsMonth, rebelQuestsMonth } from './questsEngine.js';
 import { fortuneMonth, loseWager, relicInPool } from './fortuneEngine.js';
 import { rollEvent } from './eventsEngine.js';
 import { summonsMonth } from './tournaments.js';
+import { unrestWeek } from './unrest.js';
 
 // ---------- Career setup ----------
 
@@ -68,7 +69,8 @@ export function createRun(seed = randomSeed(), setup = {}) {
     endReason: null,
     inMatch: false,
     matchInfo: null,
-    revoltWeeks: 0,
+    unrest: 0,
+    unrestStats: { incidents: 0, crises: 0 },
     history: [],
     log: [],
     actions: [],
@@ -218,9 +220,7 @@ export function advanceWeek(run) {
     if (f.morale < MORALE.mutinous) log(run, `${f.name} is mutinous and refuses to fight.`, 'bad');
   }
   tendBonds(run);
-  const avg = run.roster.length ? run.roster.reduce((s, f) => s + f.morale, 0) / run.roster.length : 100;
-  run.revoltWeeks = avg < REVOLT.morale ? run.revoltWeeks + 1 : 0;
-  if (run.revoltWeeks) log(run, `The gladiators are close to revolt (${run.revoltWeeks}/${REVOLT.weeks} weeks).`, 'bad');
+  unrestWeek(run); // 7.3: replaces the house-average revolt
 
   if (run.bouts) for (const f of run.roster) if (f.foughtTopWeek !== run.week) f.topStreak = 0;
   if (run.bouts) for (const tier of unlockedTiers(run)) if (tier < run.topTier && run.bouts[tier] === 'open') arenaMovesOn(run, tier);

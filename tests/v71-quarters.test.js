@@ -184,14 +184,14 @@ test('the new pieces are bought and placed like any decor', () => {
 });
 
 test('save version 5: a version-4 career loads with the new decor slots', () => {
-  assert.equal(SAVE_VERSION, 5);
+  assert.equal(SAVE_VERSION, 6);
   const { run, f } = fighter(10);
   const old = JSON.parse(serialize(run));
   old.version = 4;
   for (const x of [...old.roster, ...old.market]) for (const k of TEMPERAMENT) delete x.decor[k];
   for (const k of TEMPERAMENT) delete old.inventory.decor[k];
   const loaded = deserialize(JSON.stringify(old));
-  assert.equal(loaded.version, 5);
+  assert.equal(loaded.version, SAVE_VERSION);
   const g = loaded.roster.find((x) => x.id === f.id);
   for (const k of TEMPERAMENT) {
     assert.equal(g.decor[k], 0);
