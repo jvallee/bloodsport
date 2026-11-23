@@ -1,7 +1,7 @@
 // App state, saving, coach tips and event wiring. Game rules live in run.js / fight.js; markup in src/ui/.
 
 import { mortalDanger, canThrowTowel, suggestTactic, hypeOf } from './fight.js';
-import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betOdds, betCap, spareFavorWhy, owedLeft, keepsBuyIn, overtrainedByWeek, demandMet } from './run.js';
+import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betOdds, betCap, spareFavorWhy, owedLeft, keepsBuyIn, overtrainedByWeek, demandMet, espionageOdds } from './run.js';
 import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
@@ -91,10 +91,12 @@ const save = () => run && careerId && saveCareer(storage, careers, careerId, run
 const oddsCache = new Map();
 function oddsFor(f, tier = run.topTier, opp = opponentFor(run, tier)) {
   const opts = matchOptions(run, f, tier);
-  const key = JSON.stringify([f, opp, opts]);
+  // 7.4: stolen plans, a double agent and this month's covert op change the real fight, so the odds include them.
+  const spy = espionageOdds(run, opp);
+  const key = JSON.stringify([f, spy, opts]);
   if (!oddsCache.has(key)) {
     if (oddsCache.size > 200) oddsCache.clear();
-    oddsCache.set(key, estimateOdds(f, opp, { ...opts, n: 400 }));
+    oddsCache.set(key, estimateOdds(f, spy.opp, { ...opts, boostsA: spy.boostsA, boostsB: spy.boostsB, vengeanceB: spy.vengeanceB, n: 400 }));
   }
   return oddsCache.get(key);
 }

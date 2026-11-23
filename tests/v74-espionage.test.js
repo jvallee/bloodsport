@@ -278,3 +278,18 @@ test('a palace mole cannot be turned even from an older save\'s event, and the r
   run.gold = 0;
   assert.match(eventChoiceBlocker(run, 1), /palace/);
 });
+
+test('the odds preview sees espionage without using this month\'s op', async () => {
+  const { espionageOdds } = await import('../src/run.js');
+  const { run } = house(44, 1);
+  run.buildings.push({ id: 'b99', type: 'liaison', level: 1 });
+  quietWeek(run);
+  const saved = ESPIONAGE.ops.armourer.chance;
+  ESPIONAGE.ops.armourer.chance = 1;
+  try { covertOp(run, 'armourer'); } finally { ESPIONAGE.ops.armourer.chance = saved; }
+  const target = opTarget(run);
+  const preview = espionageOdds(run, target);
+  assert.equal(preview.opp.gear?.armor ?? null, null);
+  assert.ok(espState(run).op, 'not used up by the preview');
+  assert.notEqual(preview.opp, target, 'a copy');
+});

@@ -192,7 +192,7 @@ export function covertOp(run, type) {
 }
 
 // At the start of a match (startMatch): stolen plans, a double agent's false playbook, and this month's covert op.
-export function espionageAtMatch(run, m) {
+export function espionageAtMatch(run, m, { consume = true } = {}) {
   const st = espState(run);
   const opp = m.b.f;
   const house = houseOf(run, opp);
@@ -204,7 +204,7 @@ export function espionageAtMatch(run, m) {
   }
   const op = st.op;
   if (!op || op.oppId !== opp.id) return;
-  st.op = null;
+  if (consume) st.op = null;
   if (op.result === 'caught') {
     if (op.type === 'playbook') m.b.vengeance = true;
     return;
@@ -218,4 +218,11 @@ export function espionageAtMatch(run, m) {
   } else if (op.type === 'armourer') {
     m.b.f.gear = { ...(m.b.f.gear ?? {}), armor: null };
   }
+}
+
+// What espionage would do to a fight against `opp`, for the odds shown before choosing a fighter (nothing is used up).
+export function espionageOdds(run, opp) {
+  const m = { a: { boosts: [] }, b: { f: structuredClone(opp), boosts: [] } };
+  espionageAtMatch(run, m, { consume: false });
+  return { opp: m.b.f, boostsA: m.a.boosts, boostsB: m.b.boosts, vengeanceB: Boolean(m.b.vengeance) };
 }

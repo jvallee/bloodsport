@@ -64,4 +64,4 @@ export {
   serialize, deserialize, validateRun, migrateV2ToV3, migrateV3ToV4, migrateV4ToV5, migrateV5ToV6, migrateV6ToV7,
 } from './run/migrations.js';
 export { isMutinous, isRestless, isAgitated, unrestFrom, ringleader, revoltSides, unrestWeek, openCrisis } from './run/unrest.js';
-export { espState, moleOf, masterName, canNarrow, espionageWeek, plantMole, investigateBlocker, investigate, opTarget, opChance, covertOpBlocker, covertOp, espionageAtMatch } from './run/espionage.js';
+export { espState, moleOf, masterName, canNarrow, espionageWeek, plantMole, investigateBlocker, investigate, opTarget, opChance, covertOpBlocker, covertOp, espionageAtMatch, espionageOdds } from './run/espionage.js';
