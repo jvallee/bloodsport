@@ -266,7 +266,7 @@ End-screen titles and closing lines:
 
 | Where | Text |
 |---|---|
-| [src/run/tournaments.js:780](../src/run/tournaments.js#L780) | 'You won the Grand Tournament. The Emperor names you Master of the Games.' |
+| [src/run/tournaments.js:788](../src/run/tournaments.js#L788) | 'You won the Grand Tournament. The Emperor names you Master of the Games.' |
 | [src/run/helpers.js:301](../src/run/helpers.js#L301) | `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.` |
 | [src/run/helpers.js:307](../src/run/helpers.js#L307) | 'Your gladiators revolt and burn the Ludus.' |
 | [src/run/helpers.js:314](../src/run/helpers.js#L314) | 'No fighters left and not enough Gold to buy one. Your house falls.' |
@@ -504,20 +504,20 @@ Lines the house steward writes each week. The plot's lines are in section 4.
 | [src/run/roster.js:492](../src/run/roster.js#L492) | `Sold a ${GEAR[key].name} for ${sellPrice(key)} Gold.` |
 | [src/run/roster.js:605](../src/run/roster.js#L605) | `${f.name} wakes with a ${AUGMENTS[key].name}. The crowd mutters about machines.`, 'event' |
 | [src/run/roster.js:630](../src/run/roster.js#L630) | `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good' |
-| [src/run/tournaments.js:320](../src/run/tournaments.js#L320) | `You skip ${bout.name}: +${ECONOMY.skipGold} Gold, and the roster rests.` |
-| [src/run/tournaments.js:723](../src/run/tournaments.js#L723) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event' |
-| [src/run/tournaments.js:428](../src/run/tournaments.js#L428) | `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn' |
-| [src/run/tournaments.js:431](../src/run/tournaments.js#L431) | `The crowd jeers ${fighter.name} for crushing a much weaker opponent.`, 'warn' |
-| [src/run/tournaments.js:581](../src/run/tournaments.js#L581) | `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good' |
-| [src/run/tournaments.js:542](../src/run/tournaments.js#L542) | `${fighter.name} is scarred: ${SCARS[id].name} against ${vs} fighters.`, 'warn' |
-| [src/run/tournaments.js:551](../src/run/tournaments.js#L551) | `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad' |
+| [src/run/tournaments.js:328](../src/run/tournaments.js#L328) | `You skip ${bout.name}: +${ECONOMY.skipGold} Gold, and the roster rests.` |
+| [src/run/tournaments.js:731](../src/run/tournaments.js#L731) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event' |
+| [src/run/tournaments.js:436](../src/run/tournaments.js#L436) | `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn' |
+| [src/run/tournaments.js:439](../src/run/tournaments.js#L439) | `The crowd jeers ${fighter.name} for crushing a much weaker opponent.`, 'warn' |
+| [src/run/tournaments.js:589](../src/run/tournaments.js#L589) | `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good' |
+| [src/run/tournaments.js:550](../src/run/tournaments.js#L550) | `${fighter.name} is scarred: ${SCARS[id].name} against ${vs} fighters.`, 'warn' |
+| [src/run/tournaments.js:559](../src/run/tournaments.js#L559) | `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad' |
 | [src/run/helpers.js:241](../src/run/helpers.js#L241) | `House Prestige level ${run.prestigeLevel}! New buildings and room plots unlocked.`, 'event' |
-| [src/run/tournaments.js:637](../src/run/tournaments.js#L637) | `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good' |
-| [src/run/tournaments.js:682](../src/run/tournaments.js#L682) | `Overnight, every chalk mark on your doors is washed away.`, 'warn' |
-| [src/run/tournaments.js:717](../src/run/tournaments.js#L717) | `Thumbs down: ${fighter.name} finishes ${opp}.`, 'warn' |
-| [src/run/tournaments.js:723](../src/run/tournaments.js#L723) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${out.mark}: ${marks.at(-1).desc}`, 'event' |
-| [src/run/tournaments.js:737](../src/run/tournaments.js#L737) | `The crowd roars its approval for ${fighter.name}.`, 'good' |
-| [src/run/tournaments.js:804](../src/run/tournaments.js#L804) | `${opp.name} will remember this, and will be waiting for you.`, 'warn' |
+| [src/run/tournaments.js:645](../src/run/tournaments.js#L645) | `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good' |
+| [src/run/tournaments.js:690](../src/run/tournaments.js#L690) | `Overnight, every chalk mark on your doors is washed away.`, 'warn' |
+| [src/run/tournaments.js:725](../src/run/tournaments.js#L725) | `Thumbs down: ${fighter.name} finishes ${opp}.`, 'warn' |
+| [src/run/tournaments.js:731](../src/run/tournaments.js#L731) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${out.mark}: ${marks.at(-1).desc}`, 'event' |
+| [src/run/tournaments.js:745](../src/run/tournaments.js#L745) | `The crowd roars its approval for ${fighter.name}.`, 'good' |
+| [src/run/tournaments.js:812](../src/run/tournaments.js#L812) | `${opp.name} will remember this, and will be waiting for you.`, 'warn' |
 
 ## 10. Tutorial and coach tips
 
@@ -688,9 +688,9 @@ Every line below is a first draft. The rows show the code around the words; chan
 | [src/run/houses.js:435](../src/run/houses.js#L435) | `${a.name} and ${b.name} have become fast friends: each is happier while the other is in the house.`, 'good' |
 | [src/run/houses.js:464](../src/run/houses.js#L464) | `Grieved for ${f.bond.name}.` |
 | [src/run/houses.js:465](../src/run/houses.js#L465) | `${f.name} grieves for ${f.bond.name}.`, 'bad' |
-| [src/run/tournaments.js:273](../src/run/tournaments.js#L273) | `You bet ${stake} Gold on ${match.a.f.name} at ×${odds.toFixed(2)}: a win returns ${match.bet.payout} Gold (+${match.bet.payout - stake}).`, 'event' |
-| [src/run/tournaments.js:294](../src/run/tournaments.js#L294) | `The bookmakers pay out ${match.bet.payout} Gold on your ${match.bet.stake} Gold bet: +${match.bet.payout - match.bet.stake} profit.`, 'good' |
-| [src/run/tournaments.js:301](../src/run/tournaments.js#L301) | } else log(run, `The ${match.bet.stake} Gold bet is lost.`, 'bad' |
+| [src/run/tournaments.js:281](../src/run/tournaments.js#L281) | `You bet ${stake} Gold on ${match.a.f.name} at ×${odds.toFixed(2)}: a win returns ${match.bet.payout} Gold (+${match.bet.payout - stake}).`, 'event' |
+| [src/run/tournaments.js:302](../src/run/tournaments.js#L302) | `The bookmakers pay out ${match.bet.payout} Gold on your ${match.bet.stake} Gold bet: +${match.bet.payout - match.bet.stake} profit.`, 'good' |
+| [src/run/tournaments.js:309](../src/run/tournaments.js#L309) | } else log(run, `The ${match.bet.stake} Gold bet is lost.`, 'bad' |
 
 **The steward's news**
 
@@ -857,8 +857,8 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/run/tournaments.js:466](../src/run/tournaments.js#L466) | log(run, `Reaching the Boss earns respect: the ${bout.buyIn} Prestige buy-in is returned.`, 'event'); |
-| [src/run/tournaments.js:804](../src/run/tournaments.js#L804) | log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn'); |
+| [src/run/tournaments.js:474](../src/run/tournaments.js#L474) | log(run, `Reaching the Boss earns respect: the ${bout.buyIn} Prestige buy-in is returned.`, 'event'); |
+| [src/run/tournaments.js:812](../src/run/tournaments.js#L812) | log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn'); |
 | [src/ui/views.js](../src/ui/views.js) `overtrainModal` | The steward's overtraining question: "Before you end the week: another week of training and … will be Overtrained (Stress 50+)." |
 
 **The crowd remembers its dead** (a Revenant's first fight back)
@@ -866,8 +866,8 @@ Every line below is a first draft. The rows show the code around the words; chan
 | Where | Text |
 |---|---|
 | [src/ui/fightView.js:394](../src/ui/fightView.js#L394) | ${m.a.f.risen && !m.rounds?.length ? `<div class="sub chant">📣 The crowd remembers ${esc(m.a.f.name)}. They chant the name they buried: +${HYPE.risen} hype.</div>` : ''} |
-| [src/run/tournaments.js:510](../src/run/tournaments.js#L510) | `Fought again, back from the dead. The crowd chanted their name.` |
-| [src/run/tournaments.js:511](../src/run/tournaments.js#L511) | `The crowd chants ${fighter.name}'s name: the dead fighter walks the sand again.`, 'event' |
+| [src/run/tournaments.js:518](../src/run/tournaments.js#L518) | `Fought again, back from the dead. The crowd chanted their name.` |
+| [src/run/tournaments.js:519](../src/run/tournaments.js#L519) | `The crowd chants ${fighter.name}'s name: the dead fighter walks the sand again.`, 'event' |
 
 **Lower arenas** (5.3.0)
 
