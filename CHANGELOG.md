@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## 7.0.0
+## 7.0.0 (2026-11-23): sharper seasons, a fairer Heat, and a full bug sweep
 
 Version 7 smooths the season from start to Grand Tournament, rebalances the weapons, gear and tactics that were too strong or too weak, and fixes a long list of bugs found in a full review. Version 6.0.5 is frozen and playable at `/v6/`, with its own saves, so a career there and one here never overwrite each other. Your current careers carry over to version 7.
 

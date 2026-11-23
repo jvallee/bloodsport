@@ -1,6 +1,6 @@
 # Blood and Circus (formerly Bloodsport): handoff for the next agent
 
-Last updated 2026-11-13, at **version 6.0.5** (6.0.0 frozen into `/v6/`, tag `v6.0`; 6.0.1 to 6.0.5 are small fixes not in `/v6/`: the fight-day odds heading, the Fortune cards animate once per hand, "End week", renaming, the first-victory banner; pushed and live; sections 3 onward keep older states for reference). Read this file first, then `CLAUDE.md` (the project rules), `docs/fight-rules.md` (every rule and number) and `CHANGELOG.md` (what changed, version by version).
+Last updated 2026-11-23, at **version 7.0.0** (live at the root; 6.0.5 frozen into `/v6/`; tag `v7.0`). 7.0.0 split `src/run.js` into `src/run/`, fixed a long audit of bugs, and rebalanced Seasons and Heat: all 20 gates pass (`docs/roadmap-v2.md`, "v7.0.0"). Next: the designer's 7.1–7.4 plan in `docs/roadmap-v7.md` (Phase 1, living quarters, first).
 
 ## 1. What this is
 
@@ -8,7 +8,7 @@ Last updated 2026-11-13, at **version 6.0.5** (6.0.0 frozen into `/v6/`, tag `v6
 
 - **Repo:** `/Users/jasonvallee/Documents/claude_practice/Blood Sport`. The branch is `main`, pushed to GitHub.
 - **Live game:** https://jvallee.github.io/bloodsport/ (GitHub Pages serves `main` as-is).
-- **Frozen versions:** `/v1/` to `/v6/`, tags `v1.0`, `v2.2`, `v3.0`, `v4.0`, `v5.0`, `v6.0`.
+- **Frozen versions:** `/v1/` to `/v6/`, tags `v1.0`, `v2.2`, `v3.0`, `v4.0`, `v5.0`, `v6.0`; `v7.0` tags 7.0.0 (not frozen into a folder yet).
 - **Stack:** plain HTML/CSS/JavaScript ES modules. No build step and no dependencies. Saves go to `localStorage`. Tests use `node --test`.
 - **The user** is the designer and owner. A local design doc (`Bloodsport — Game Design Document & UE5 Proposal.md`, not committed) holds the original vision.
 
@@ -17,7 +17,7 @@ Last updated 2026-11-13, at **version 6.0.5** (6.0.0 frozen into `/v6/`, tag `v6
 - **Be autonomous.** Implement worthwhile feedback without asking, then report clearly what changed and why. The user often hands over a batch of requests and goes to sleep. Finish everything, playtest, and leave a clear morning report.
 - **Goal:** make the game "very user friendly, fun, addictive and immersive". The user welcomes proactive fun ideas (end reports with a few), and likes it when you go ahead and build the small ones you suggest (2026-11-01).
 - **Commit often** with clear messages. Run `npm test` before every commit. **Never weaken, skip or delete a test.** When a deliberate rule change breaks a test, update the expected value and say so.
-- **Balance:** every balance or rules change must pass `npm run check` (18 gates since 6.0.0-beta, measured on seasons; it takes 10–25 minutes, so run it in the background). When a gate fails, sweep the values and pick from a table; don't guess.
+- **Balance:** every balance or rules change must pass `npm run check` (20 gates since 7.0.0, measured on seasons; it takes about 12 minutes on 4 cores, so run it in the background). When a gate fails, sweep the values and pick from a table; don't guess.
 - **Docs:** record every number change in `docs/fight-rules.md`, and every player-visible change in `CHANGELOG.md` under "Unreleased" (the user likes a summary of changes between versions).
 - **Versions:**
   - A new major version is frozen into `/vN/` with a tag.
