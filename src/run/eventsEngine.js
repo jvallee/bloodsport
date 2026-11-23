@@ -71,8 +71,8 @@ export function eventChoiceBlocker(run, index) {
   if (!run.event) return 'No event to decide.';
   const choice = EVENT_BY_ID[run.event.id]?.choices[index];
   if (!choice) return 'No such choice.';
-  if (choice.cost && run.gold < choice.cost) return `Needs ${choice.cost} Gold.`;
-  return choice.needs?.(run, run.event) ?? null;
+  // The choice's own reason first: "Needs 4 Gold" would hide why it can never be taken.
+  return choice.needs?.(run, run.event) ?? (choice.cost && run.gold < choice.cost ? `Needs ${choice.cost} Gold.` : null);
 }
 
 export function applyEventEffects(run, eff, ev, out) {

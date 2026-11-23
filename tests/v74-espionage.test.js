@@ -270,3 +270,11 @@ test('bets are priced on the real fight: stolen plans and doctored wine move the
   m.b.boosts = [1, 2, 3].map((round) => ({ power: -3, round, name: 'Doctored wine' }));
   assert.ok(betOdds(run, m) < fair, 'a weakened opponent pays less');
 });
+
+test('a palace mole cannot be turned even from an older save\'s event, and the reason beats the Gold cost', () => {
+  const { run, fs: [a] } = house(43);
+  a.mole = { master: 'palace', since: 1, clues: 1, exposed: false };
+  run.event = { id: 'moleUnmasked', f: a.id, house: 'the palace' }; // no palace flag
+  run.gold = 0;
+  assert.match(eventChoiceBlocker(run, 1), /palace/);
+});

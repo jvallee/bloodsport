@@ -103,7 +103,7 @@ export function investigate(run, id) {
   const f = findFighter(run, id);
   run.gold -= ESPIONAGE.investigate;
   if (f.mole && !f.mole.exposed) {
-    run.event = { id: 'moleUnmasked', f: f.id, house: masterName(run, f.mole.master), palace: f.mole.master === 'palace' };
+    run.event = { id: 'moleUnmasked', f: f.id, house: masterName(run, f.mole.master) };
     log(run, `${f.name} is unmasked: they report to ${masterName(run, f.mole.master)}.`, 'event');
     return true;
   }
