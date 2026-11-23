@@ -323,3 +323,14 @@ test('a Revenant feels nothing: no drift, no meditation, and the room says so', 
   assert.equal(f.stress, 50);
   assert.match(temperNote(f, 'spikyBed'), /Revenant/);
 });
+
+test('a fight that gives Battle-Hardened and a scar reports both', () => {
+  let both = null;
+  for (let seed = 200; seed < 260 && !both; seed++) {
+    const { run, f } = fighter(seed, 'sanguine');
+    const s = winWith(run, f, [{ tag: 'concussed', weight: 1 }, { tag: 'fleshWound', weight: 1 }]);
+    if ((f.scars ?? []).some((x) => x.vs)) both = s;
+  }
+  assert.ok(both, 'some seed scarred them');
+  assert.match(both.scar, /^Battle-Hardened, (Enraged|Afeared) \((melee|ranged)\)$/);
+});
