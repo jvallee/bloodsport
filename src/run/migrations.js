@@ -89,6 +89,7 @@ function normalizeRun(run) {
   run.fortune ??= null;
   run.unrest ??= 0;
   run.unrestStats ??= { incidents: 0, crises: 0 };
+  run.espionage ??= { clues: [], suspects: null, opMonth: null, op: null, leak: null };
   run.setup ??= { patron: null, decrees: [], classes: [] };
   run.setup.heat ??= 0;
   run.setup.unlocks ??= [];
@@ -133,6 +134,13 @@ export function migrateV5ToV6(run) {
   return run;
 }
 
+// v6 → v7 (7.4): espionage state (normalizeRun backfills run.espionage).
+export function migrateV6ToV7(run) {
+  validateRun(run);
+  run.version = 7;
+  return run;
+}
+
 function backfillFighters(run) {
   const fighters = [
     ...run.roster,
@@ -169,6 +177,7 @@ export function deserialize(text) {
   if (run.version === 3) run = migrateV3ToV4(run);
   if (run.version === 4) run = migrateV4ToV5(run);
   if (run.version === 5) run = migrateV5ToV6(run);
+  if (run.version === 6) run = migrateV6ToV7(run);
   validateRun(run);
   normalizeRun(run);
   backfillFighters(run);

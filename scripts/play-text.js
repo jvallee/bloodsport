@@ -9,7 +9,7 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup, ALL_UNLOCKS, careerXp, levelFor, LEGACY_LEVELS } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort } from '../src/data.js';
+import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort, ESPIONAGE } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
@@ -69,6 +69,9 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   use <item>                    during a fight, before Round 1 or between rounds: one of each kind per fight
   bet <gold>                    during a fight, before Round 1: back your fighter at their real odds
   lounge / host / enact <id>    the Patron Lounge: see policies, host the Senate (Influence), pass a policy
+  whispers                      clues of a mole in the house, and covert ops (with a Liaison or the Whispering Gallery)
+  investigate <id>              search a fighter for a mole (needs a clue; an innocent fighter resents it)
+  covert-op <${Object.keys(ESPIONAGE.ops).join('|')}>   one a month, before fight day, against your next top-arena opponent
   place <id> <item> | remove <id> <item>      put decor in a fighter's room, or take it back
   buy-gear <stock#> | equip <id> <storeroom#> | unequip <id> <weapon|armour> | sell-gear <storeroom#> (half price)
   build <type> | upgrade <buildingId>         types: ${Object.keys(BUILDINGS).filter((k) => !BUILDINGS[k].secret).join(', ')}
@@ -656,6 +659,27 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       if (!match) throw new Error('Bets are placed during a match, before Round 1.');
       const b = placeBet(run, match, Number(amount));
       return `You bet ${b.stake} Gold on ${match.a.f.name} at ×${b.odds.toFixed(2)}: a win returns ${b.payout} Gold (+${b.payout - b.stake}).`;
+    },
+    whispers: () => {
+      const st = runApi.espState(run);
+      const out = [st.clues.length ? `Whispers: ${st.clues.map((c) => c.text).join(' / ')}` : 'No whispers in the house.'];
+      if (st.clues.length && runApi.canNarrow(run) && st.suspects) out.push(`Suspects: ${st.suspects.map((id) => run.roster.find((x) => x.id === id)?.name).filter(Boolean).join(' or ')}`);
+      const target = runApi.opTarget(run);
+      for (const [k, o] of Object.entries(ESPIONAGE.ops)) {
+        const why = runApi.covertOpBlocker(run, k);
+        out.push(`  ${k} · ${o.name} · ${o.cost} Gold · ${Math.round(100 * runApi.opChance(run, k))}%${target ? ` vs ${target.name}` : ''}: ${o.desc}${why ? ` (can't: ${why})` : ''}`);
+      }
+      return out.join('\n');
+    },
+    investigate: ([id]) => {
+      need([id].filter(Boolean), 1, 'investigate <id>');
+      const found = runApi.investigate(run, id);
+      return found ? 'Unmasked! Decide their fate (see the event).' : 'Clean. They resent being searched.';
+    },
+    'covert-op': ([op]) => {
+      need([op].filter(Boolean), 1, 'covert-op <op>');
+      const r = runApi.covertOp(run, op);
+      return r.result === 'success' ? `${ESPIONAGE.ops[op].name}: it worked.` : `${ESPIONAGE.ops[op].name}: your agent was caught.`;
     },
     host: () => {
       const gain = host(run);

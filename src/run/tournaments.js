@@ -29,6 +29,7 @@ import {
   houseOf, houseForArena, houseTier, matchOptions, recordNemesis, nemesisFalls,
   rivalChampionResult, rivalChampionKilled,
 } from './houses.js';
+import { espionageAtMatch } from './espionage.js';
 import { faceFear } from './roster.js';
 import { relicRewards, settleWager } from './fortuneEngine.js';
 
@@ -206,7 +207,9 @@ export function startMatch(run, id, tier = run.topTier) {
   if (bracket) Object.assign(bracket, { fighterId: id, buyIn });
   run.inMatch = true;
   run.matchInfo = { fighterId: id, tier, buyIn };
-  return createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, ...matchOptions(run, fighter, tier) });
+  const m = createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, ...matchOptions(run, fighter, tier) });
+  espionageAtMatch(run, m);
+  return m;
 }
 
 export function recordMatchProgress(run, match) {

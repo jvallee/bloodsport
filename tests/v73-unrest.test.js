@@ -152,14 +152,14 @@ test('unrest has its own dice: a house with no Mutinous fighter never touches th
 });
 
 test('save version 6: a version-5 career loads with no unrest', () => {
-  assert.equal(SAVE_VERSION, 6);
+  assert.equal(SAVE_VERSION, 7);
   const { run } = house(10, 1);
   const old = JSON.parse(serialize(run));
   old.version = 5;
   delete old.unrest;
   delete old.unrestStats;
   const loaded = deserialize(JSON.stringify(old));
-  assert.equal(loaded.version, 6);
+  assert.equal(loaded.version, SAVE_VERSION);
   assert.equal(loaded.unrest, 0);
   assert.deepEqual(loaded.unrestStats, { incidents: 0, crises: 0 });
 });

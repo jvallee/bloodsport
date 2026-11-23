@@ -663,6 +663,26 @@ export const REBEL_QUEST = { galleryTrust: 1, lobbyTrust: 2, missTrust: -1, afte
 export const SUMMONS = { fromWeek: 5, chance: 0.1, refuseFavor: -40, surviveFavor: 5, surviveRenown: 3, sweptFavor: -5, winFavor: 15, winRenown: 8, yieldFavor: -5, tier: 4 };
 
 // The Emperor's spy (5.4.0): executing them lowers the hidden plot's suspicion by `suspicion`; keeping them raises it.
+// 7.4 Espionage (docs/roadmap-v7.md, Phase 4; src/run/espionage.js, its own dice). Moles: a Mutinous fighter may be flipped
+// (`flip` a week) by a feuding house, or by the palace once suspicion is `palaceSuspicion`+; some months (`plant`) one Market
+// fighter is a rival's mole, cheap for their Power. A mole leaves no trace their first week; then each week `clue` chance of
+// a clue, and once seen, `act` chance to act: tell their house your plans (+`leakPower` Power to its fighters against you on
+// the next fight day) or, for the palace, +`palaceLeak` suspicion. Investigate any fighter (`investigate` Gold) once a clue
+// is found; an Oracle Lv 2 or the Whispering Gallery names two suspects. Unmasked: execute (`executeSuspicion` for a palace
+// mole, or `executeGlory` from their house; `executeMorale` house-wide), turn them (`turnCost` Gold: +`falsePlaybook` Round-1
+// win against their house), or ransom them back (`ransom` Gold, the feud ends). Covert ops: at most one a month, with a
+// Liaison or the Whispering Gallery, against the next top-arena opponent.
+export const ESPIONAGE = {
+  flip: 0.25, palaceSuspicion: 40, plant: 0.15, plantDiscount: 0.5, clue: 0.5, act: 0.3, investigate: 2, offended: -5,
+  leakPower: 1, palaceLeak: 3, executeSuspicion: -15, executeGlory: -3, executeMorale: -5, turnCost: 4, falsePlaybook: 10000, ransom: 8,
+  caughtFavor: -5, feudMonths: 3,
+  ops: {
+    playbook: { name: 'Steal the Playbook', cost: 3, chance: 0.75, galleryBonus: 0.1, desc: "Read the opponent's Round-1 tactic exactly. Caught: they fight with Vengeance (+5% win)." },
+    wine: { name: 'Doctor the Wine', cost: 6, chance: 0.6, agentBonus: 0.15, desc: 'The opponent arrives Bleeding, or sluggish (−1 Power). Caught: −5 Favour and a 3-month feud with their house.' },
+    armourer: { name: 'Bribe the Armourer', cost: 7, chance: 0.6, desc: "The opponent's armour gear does nothing in the bout. Caught: −5 Favour, and the Gold is gone." },
+  },
+};
+
 export const SPY = { suspicion: 15, perMonth: 2 }; // perMonth: suspicion each month while a spy you kept is in the house
 
 export const PLOT = {

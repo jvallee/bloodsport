@@ -10,7 +10,7 @@ import { Refused } from '../errors.js';
 import { formatDate, dateOf } from '../calendar.js';
 import { prestigeLevelFor, stressRelief } from '../ludus.js';
 
-export const SAVE_VERSION = 6; // 5 (7.1): Temperament decor, f.humourDrift; 6 (7.3): run.unrest (backfilled on load)
+export const SAVE_VERSION = 7; // 5 (7.1): Temperament decor, f.humourDrift; 6 (7.3): run.unrest; 7 (7.4): run.espionage, f.mole
 export const GRAND_TIER = CIRCUITS.length + 1;
 export const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
 export const NAME_MEMORY = 90;
@@ -169,7 +169,8 @@ export const bossLossFavor = (tier, run = null) => Math.round(FAVOR.bossLoss[Mat
 export const tierMarketPower = (run) => circuitInfo(run).marketPower + (isShort(run) ? (SHORT.marketPower?.[Math.min(run.topTier, CIRCUITS.length) - 1] ?? 0) : 0);
 export const marketPrice = (run) => circuitInfo(run).price;
 export const liaisonOffer = (run, id) => (run.liaisonOffers ?? []).find((f) => f.id === id) ?? null;
-export const recruitPrice = (run, f) => Math.max(1, (liaisonOffer(run, f.id) ? f.price : marketPrice(run) + RECRUIT.perLevel * ((f.level ?? 1) - 1)) - relicSum(run, 'recruitDiscount'));
+// `f.mole.cut` (7.4): a planted mole comes suspiciously cheap.
+export const recruitPrice = (run, f) => Math.max(1, (liaisonOffer(run, f.id) ? f.price : marketPrice(run) + RECRUIT.perLevel * ((f.level ?? 1) - 1)) - relicSum(run, 'recruitDiscount') - (f.mole?.cut ?? 0));
 
 export function cheapestRecruitPrice(run) {
   const offers = [

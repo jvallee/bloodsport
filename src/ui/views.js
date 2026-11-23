@@ -2,7 +2,7 @@
 
 import { MAX_CAREERS } from '../careers.js';
 import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
-import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR, HUMORS, HUMOUR_DRIFT, UNREST } from '../data.js';
+import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR, HUMORS, HUMOUR_DRIFT, UNREST, ESPIONAGE } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, unlockText, levelFor, nextUnlock, unlocksAt, heatUnlocked, houseColours, dailyStreak, returningFor, LEGACY_LEVELS, HEAT, HOUSE_COLOURS } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import * as runApi from '../run.js';
@@ -11,7 +11,7 @@ import {
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, effectiveSpeed, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker, fortuneBlocker, rerollBlocker, rerollPrice,
   buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
-  trainGain, renameBlocker, dominantTemperament,
+  trainGain, renameBlocker, dominantTemperament, espState, canNarrow, investigateBlocker, opTarget, opChance, covertOpBlocker,
 } from '../run.js';
 import { stepText } from '../tutorial.js';
 import {
@@ -670,6 +670,7 @@ function rosterPanel(run) {
         <div class="row">${buttonWhy(`Retire to the Hall of Champions (+${RETIRE.prestige} Prestige, roster +${RETIRE.morale} Morale)`, 'retire', { id: f.id }, retireBlocker(run, f.id), 'btn small')}</div>
         <div class="row">${button('Release fighter', 'release', { id: f.id }, releaseBlocker(run, f.id), 'btn small ghost')}</div>
       </details>
+      ${espState(run).clues.length ? `<div class="row investigate">${buttonWhy(`🔍 Investigate (${ESPIONAGE.investigate} Gold)${canNarrow(run) && espState(run).suspects?.includes(f.id) ? ' · a suspect' : ''}`, 'investigate', { id: f.id }, investigateBlocker(run, f.id), 'btn small')}</div>` : ''}
     </div>`;
     return fighterCard(f, { actions, morale: moraleTarget(run, f), anchor: true });
   }).join('');
@@ -834,7 +835,26 @@ export function estateTab(run) {
         <div class="roof"></div>
         <div class="rooms">${built.map((b) => buildingCard(run, b)).join('')}${Array.from({ length: free }, () => emptyPlot(run)).join('')}${locked}</div>
       </div>
-    </section>${loungePanel(run)}`;
+    </section>${loungePanel(run)}${espionagePanel(run)}`;
+}
+
+// 7.4 Whispers and covert ops: clues of a mole in the house, and at most one covert op a month against the next opponent.
+export function espionagePanel(run) {
+  const st = espState(run);
+  const agents = maxLevel(run, 'liaison') || maxLevel(run, 'gallery');
+  if (!st.clues.length && !agents) return '';
+  const suspects = canNarrow(run) && st.suspects ? st.suspects.map((id) => run.roster.find((x) => x.id === id)?.name).filter(Boolean) : null;
+  const clues = st.clues.length
+    ? `<div class="label">Whispers in the house</div><ul>${st.clues.map((c) => `<li><small>${esc(formatDate(c.week))}</small> ${esc(c.text)}</li>`).join('')}</ul>
+      <p class="sub">Someone in your house reports to another. Investigate a fighter from their card (${ESPIONAGE.investigate} Gold; an innocent fighter resents it).${suspects ? ` Your ${oracleLevel(run) >= 2 ? 'Oracle' : 'Whispering Gallery'} points at <b>${suspects.map(esc).join('</b> or <b>')}</b>.` : ' An Oracle Lv 2 or the Whispering Gallery would narrow it down.'}</p>`
+    : '';
+  const target = opTarget(run);
+  const op = st.op;
+  const ops = agents ? `<div class="label">Covert ops · one a month, before fight day${target ? `, against ${esc(target.name)}` : ''}</div>
+    ${op ? `<p class="sub">This month: ${esc(ESPIONAGE.ops[op.type].name)}, ${op.result === 'success' ? 'done: it will tell on fight day' : 'your agent was caught'}.</p>` : ''}
+    ${Object.entries(ESPIONAGE.ops).map(([k, o]) => `<div class="shop-row"><div><b>${esc(o.name)}</b> · ${o.cost} Gold · ${Math.round(100 * opChance(run, k))}%<br><small>${esc(o.desc)}</small></div>
+      ${buttonWhy('Send agents', 'covert-op', { op: k }, covertOpBlocker(run, k), 'btn small')}</div>`).join('')}` : '';
+  return `<section class="panel espionage"><h2>🗡 Knives in the dark</h2>${clues}${ops}</section>`;
 }
 
 // The Patron Lounge (fun idea #7): host the Senate for Influence, and spend it on policies.
@@ -860,6 +880,7 @@ export function marketTab(run) {
   const price = marketPrice(run);
   const recruitCard = (f, tag) => fighterCard(f, {
     stress: false, tag,
+    notes: f.mole?.tell ? `<div class="record"><div class="label">Something is off</div><div>${esc(f.mole.tell)}.</div></div>` : '',
     actions: `<div class="actions">${button(`Recruit · ${recruitPrice(run, f)} Gold`, 'recruit', { id: f.id }, recruitBlocker(run, f.id), 'btn primary small')}</div>`,
   });
   const cards = run.market.map((f) => recruitCard(f)).join('');

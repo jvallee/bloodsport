@@ -97,12 +97,13 @@ export function opponentIntent(m, round = m.round + 1) {
   if ((m.tellSeed !== undefined || m.tells) && humorOf(m.b)) {
     const tellRng = m.tellSeed !== undefined ? createRng(deriveSeed(m.tellSeed, round)) : m.tells;
     const others = ROUND_TACTICS.filter((k) => k !== 'steady' && k !== stance);
-    tell = next(tellRng) < tellAccuracy(m) ? stance : pick(tellRng, others);
+    tell = next(tellRng) < tellAccuracy(m, round) ? stance : pick(tellRng, others);
   }
   m.b.intent = { round, stance, tell };
   return m.b.intent;
 }
-export const tellAccuracy = (m) => INTENT.accuracy[Math.min(m.oracle ?? 0, INTENT.accuracy.length - 1)];
+// A stolen playbook (7.4 covert op) makes the Round-1 tell exact.
+export const tellAccuracy = (m, round = m.round + 1) => (m.playbook && round === 1 ? 1 : INTENT.accuracy[Math.min(m.oracle ?? 0, INTENT.accuracy.length - 1)]);
 export const opponentTell = (m) => ((m.tellSeed !== undefined || m.tells) && !m.over ? opponentIntent(m).tell : null);
 export const tellForecast = (m) => {
   const tell = opponentTell(m);

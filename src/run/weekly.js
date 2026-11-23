@@ -30,6 +30,7 @@ import { fortuneMonth, loseWager, relicInPool } from './fortuneEngine.js';
 import { rollEvent } from './eventsEngine.js';
 import { summonsMonth } from './tournaments.js';
 import { unrestWeek } from './unrest.js';
+import { espionageWeek, plantMole } from './espionage.js';
 
 // ---------- Career setup ----------
 
@@ -71,6 +72,7 @@ export function createRun(seed = randomSeed(), setup = {}) {
     matchInfo: null,
     unrest: 0,
     unrestStats: { incidents: 0, crises: 0 },
+    espionage: { clues: [], suspects: null, opMonth: null, op: null, leak: null },
     history: [],
     log: [],
     actions: [],
@@ -221,6 +223,7 @@ export function advanceWeek(run) {
   }
   tendBonds(run);
   unrestWeek(run); // 7.3: replaces the house-average revolt
+  espionageWeek(run); // 7.4
 
   if (run.bouts) for (const f of run.roster) if (f.foughtTopWeek !== run.week) f.topStreak = 0;
   if (run.bouts) for (const tier of unlockedTiers(run)) if (tier < run.topTier && run.bouts[tier] === 'open') arenaMovesOn(run, tier);
@@ -235,6 +238,7 @@ export function advanceWeek(run) {
   const monthStart = isMonthStart(run.week);
   if (monthStart) {
     refreshMarket(run);
+    plantMole(run);
     refreshLiaison(run);
     refreshArmourer(run);
     plotMonth(run);
