@@ -1,7 +1,7 @@
 // Balance gates. Each check returns { name, pass, detail }. Used by `npm run career -- --check`.
 // Targets come from docs/roadmap-v2.md (B2 and C4).
 
-import { CIRCUITS, TRAIN_GAIN, SHORT } from '../src/data.js';
+import { CIRCUITS, TRAIN_GAIN, SHORT, DECOR } from '../src/data.js';
 import { estimateOdds } from '../src/odds.js';
 import { createFighter } from '../src/run.js';
 import { careerXp, levelCost, ALL_UNLOCKS } from '../src/legacy.js';
@@ -140,6 +140,11 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, he
   const [topRelic, topShare] = relicIds.map((id) => [id, share(wins, id)]).sort((a, b) => b[1] - a[1])[0] ?? ['none', 0];
   const [liftRelic, topLift] = relicIds.map((id) => [id, share(wins, id) - share(losses, id)]).sort((a, b) => b[1] - a[1])[0] ?? ['none', 0];
   const perLevel = [1, 2, 3, 4, 5].reduce((s, l) => s + levelCost(l), 0) / 5 / meanXp;
+  // 7.1: no Temperament piece is in more than 55% of winning careful houses (none becomes mandatory).
+  const wonCareful = careful.filter((r) => r.won);
+  const holds = (r, k) => r.run.roster.some((f) => f.decor?.[k] > 0);
+  const [topDecor, decorShare] = Object.keys(DECOR).filter((k) => DECOR[k].group === 'temperament')
+    .map((k) => [k, wonCareful.length ? wonCareful.filter((r) => holds(r, k)).length / wonCareful.length : 0]).sort((a, b) => b[1] - a[1])[0];
   const gates = [
     { name: 'First career: careful win rate is 15–35%', value: rate(careful), pass: rate(careful) >= 0.15 && rate(careful) <= 0.35, fmt: 'pct' },
     { name: 'Full Legacy: careful win rate is 40–60%', value: rate(legacy), pass: rate(legacy) >= 0.4 && rate(legacy) <= 0.6, fmt: 'pct' },
@@ -157,6 +162,7 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, he
     { name: 'The Long Road is winnable (careful 15–45%) and a won season is at least a fifth quicker', value: rate(long), pass: rate(long) >= 0.15 && rate(long) <= 0.45 && winWeeks(careful) <= 0.8 * winWeeks(long), fmt: 'pct' },
     { name: 'Season length: a won season takes 12–20 fight months', value: wonMonths, pass: wonMonths >= 12 && wonMonths <= 20, fmt: 'num' },
     { name: 'Dead turns: under 15% of fight months end with nothing new', value: dead, pass: dead < 0.15, fmt: 'pct' },
+    { name: `No dominant Temperament decor: none is in more than 55% of winning careful houses (most: ${DECOR[topDecor].name})`, value: decorShare, pass: decorShare <= 0.55, fmt: 'pct' },
     { name: `No dominant relic: none is held in 20+ points more of won careers than of lost ones (top: ${liftRelic}; most held: ${topRelic}, ${Math.round(100 * topShare)}% of wins)`, value: topLift, pass: topLift < 0.2, fmt: 'pctDiff' },
     { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
     ...(heat1.length ? [{ name: 'Heat 1 bites: Full Legacy at Heat 1 wins 5+ points less often than at Heat 0 (same seeds)', value: rate(legacy) - rate(heat1), pass: rate(legacy) - rate(heat1) >= 0.05 && rate(heat1) >= 0.15, fmt: 'pctDiff' }] : []),
