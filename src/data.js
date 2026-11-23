@@ -185,7 +185,7 @@ export const DECREES = {
 
 // Version 6, Heat (docs/plan-v6-phase3.md): numbered levels of the decrees, each adding one rule to the last.
 // Winning a career at Heat N unlocks Heat N+1. Legacy XP gains `xpPerHeat` × the Heat level.
-export const HEAT = { decrees: ['harshJudges', 'leanFortune', 'hungryLions', 'greedyEmperor', 'ironBosses'], xpPerHeat: 0.2 };
+export const HEAT = { decrees: ['harshJudges', 'greedyEmperor', 'hungryLions', 'leanFortune', 'ironBosses'], xpPerHeat: 0.2 };
 
 // Version 6, Legacy XP and the unlock tree (src/legacy.js). Level 2 needs `first` XP; each level after needs `step` more.
 // Past level 12 a level still comes, but unlocks nothing new.
