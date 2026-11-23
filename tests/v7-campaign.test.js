@@ -312,13 +312,14 @@ test('#6.14 stewardPlan and advanceToTournament use net training stress (decorCa
 });
 
 test('#6.15 save v4 validation, log cap 400, importSave guard, and recordCareer dedup beyond 10 past careers', () => {
-  assert.equal(SAVE_VERSION, 4);
+  assert.equal(SAVE_VERSION, 5);
   assert.throws(() => deserialize('{bad json'), /corrupted/);
   assert.throws(() => deserialize('[]'), /corrupted/);
   assert.throws(() => deserialize(JSON.stringify({ version: 1 })), /older version/);
   assert.throws(() => deserialize(JSON.stringify({ version: SAVE_VERSION + 1 })), /newer version/);
   assert.throws(() => deserialize(JSON.stringify({ version: 3 })), /incomplete or corrupted/);
   assert.throws(() => deserialize(JSON.stringify({ version: 4 })), /incomplete or corrupted/);
+  assert.throws(() => deserialize(JSON.stringify({ version: 5 })), /incomplete or corrupted/);
   assert.throws(() => importSave(JSON.stringify({ kind: 'bloodsport-save', career: 'bad' })), /not a Blood and Circus save/);
 
   // v3 migration upgrades cleanly to v4 and caps oversized log

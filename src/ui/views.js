@@ -2,7 +2,7 @@
 
 import { MAX_CAREERS } from '../careers.js';
 import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
-import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR } from '../data.js';
+import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR, HUMORS, HUMOUR_DRIFT } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, unlockText, levelFor, nextUnlock, unlocksAt, heatUnlocked, houseColours, dailyStreak, returningFor, LEGACY_LEVELS, HEAT, HOUSE_COLOURS } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import * as runApi from '../run.js';
@@ -11,7 +11,7 @@ import {
   skipBlocker, forfeitBlocker, advanceBlocker, releaseBlocker, perkBlocker, buyDecorBlocker, assignDecorBlocker, removeDecorBlocker,
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, effectiveSpeed, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker, fortuneBlocker, rerollBlocker, rerollPrice,
   buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
-  trainGain, renameBlocker,
+  trainGain, renameBlocker, dominantTemperament,
 } from '../run.js';
 import { stepText } from '../tutorial.js';
 import {
@@ -568,14 +568,40 @@ function storeroomLine(run) {
   return items.length ? `<p class="sub storeroom-line">🗄 In the storeroom, unworn: ${items.join(', ')}.</p>` : '';
 }
 
+// Decor groups in the quarters drawer and the shop (7.1).
+export const DECOR_GROUPS = [['comfort', 'Comfort'], ['temperament', 'Temperament'], ['craft', 'Arena Craft']];
+const decorByGroup = (render) => DECOR_GROUPS.map(([g, label]) => {
+  const rows = Object.entries(DECOR).filter(([, d]) => (d.group ?? 'comfort') === g).map(([k, d]) => render(k, d)).join('');
+  return rows ? `<div class="label decor-group">${label}</div>${rows}` : '';
+}).join('');
+
+// What a Temperament piece does to this fighter's Humour right now (7.1).
+export function temperNote(f, k) {
+  const to = DECOR[k].humor;
+  if (!to) return '';
+  if (to === f.humor) return `Already ${HUMORS[to].name}: keeps them so.`;
+  const drift = f.humourDrift?.to === to ? f.humourDrift.weeks : 0;
+  return `Would make them ${HUMORS[to].name} after ${HUMOUR_DRIFT.weeks} weeks as the room's main Temperament piece${drift ? ` (${drift}/${HUMOUR_DRIFT.weeks} so far)` : ''}.`;
+}
+
+// The fighter's temper: their Humour and any drift under way (7.1).
+export function temperLine(f) {
+  const dom = dominantTemperament(f);
+  const now = f.humor ? `Temper: <b>${HUMORS[f.humor].name}</b>.` : '';
+  if (f.humourDrift) return `${now} Turning <b>${HUMORS[f.humourDrift.to].name}</b>: ${f.humourDrift.weeks}/${HUMOUR_DRIFT.weeks} weeks.`;
+  if (dom?.tied) return `${now} Temperament tied: no piece leads, so their temper holds.`;
+  return now;
+}
+
 function roomPanel(run, f) {
-  const decor = Object.entries(DECOR).map(([k, d]) => {
+  const decor = decorByGroup((k, d) => {
     const helps = d.helps(f);
+    const temper = temperNote(f, k);
     return `<div class="decor-opt"><div class="row tight"><span><b>${esc(d.name)}</b> ×${f.decor[k]}</span>
       ${button(`+ Place (${run.inventory.decor[k]} in storeroom)`, 'assign-decor', { id: f.id, item: k }, assignDecorBlocker(run, f.id, k))}
       ${button('− Take back', 'remove-decor', { id: f.id, item: k }, removeDecorBlocker(run, f.id, k))}</div>
-      <small>${helps ? '✦ ' : ''}${esc(d.effect)}</small></div>`;
-  }).join('');
+      <small>${helps ? '✦ ' : ''}${esc(d.effect)}${temper ? ` <b>${esc(temper)}</b>` : ''}</small></div>`;
+  });
   const { target, comfort, expects, revenant } = moraleTarget(run, f);
   const gear = ['weapon', 'armor'].map((slot) => {
     const cur = f.gear[slot];
@@ -591,7 +617,7 @@ function roomPanel(run, f) {
   // Two tabs: the room (Morale) and its decor. Gear has its own fold-out (gearPanel).
   const tab = roomTabs[f.id] === 'room' ? 'room' : 'decor';
   const tabs = [['room', 'Room'], ['decor', 'Decor']].map(([k, label]) => `<button class="seg${tab === k ? ' on' : ''}" role="tab" aria-selected="${tab === k}" data-action="room-tab" data-id="${esc(f.id)}" data-tab="${k}">${label}</button>`).join('');
-  const body = tab === 'room' ? room : `<div class="decor-list">${decor}</div>`;
+  const body = tab === 'room' ? room : `<div class="decor-list">${f.humor ? `<p class="sub temper-line">${temperLine(f)}</p>` : ''}${decor}</div>`;
   return { room: `<div class="segs room-tabs" role="tablist">${tabs}</div><div class="room-body">${body}</div>`, gear: `<div class="label">Gear (from the storeroom)</div>${gear}` };
 }
 
@@ -847,8 +873,8 @@ export function marketTab(run) {
   const liaison = offers.length
     ? `<div class="cards two">${offers.map((offer) => fighterCard(offer, { tag: `Liaison · ${esc(offer.origin)}`, notes: offer.record?.length ? `<div class="record"><div class="label">Prison record</div>${offer.record.map((c) => `<div>“${esc(c)}”</div>`).join('')}</div>` : '', actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })).join('')}</div>`
     : maxLevel(run, 'liaison') ? '<p class="sub">No prisoners on offer this month.</p>' : `<p class="sub">Build a Liaison${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for cheap monthly prisoners.</p>`;
-  const decorShop = Object.entries(DECOR).map(([k, d]) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small> <span class="chip small good" title="This item adds ${decorComfort(d)} comfort to the room it's in: that fighter's Morale drifts ${decorComfort(d)} points higher.">+${decorComfort(d)} comfort</span>${d.calm ? ` <span class="chip small" title="Lowers Stress each week. A room's decor lowers Stress by at most ${STRESS.decorCalm} a week in all.">−${d.calm} Stress/wk</span>` : ''}<br><small>${esc(d.effect)}</small></div>
-    ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`).join('');
+  const decorShop = decorByGroup((k, d) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small> ${decorComfort(d) ? `<span class="chip small good" title="This item adds ${decorComfort(d)} comfort to the room it's in: that fighter's Morale drifts ${decorComfort(d)} points higher.">+${decorComfort(d)} comfort</span>` : '<span class="chip small bad" title="This item adds no comfort: it does nothing for Morale.">no comfort</span>'}${d.calm ? ` <span class="chip small" title="Lowers Stress each week. A room's decor lowers Stress by at most ${STRESS.decorCalm} a week in all.">−${d.calm} Stress/wk</span>` : ''}<br><small>${esc(d.effect)}</small></div>
+    ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`);
   const armourer = maxLevel(run, 'armourer')
     ? run.armourerStock.length
       ? run.armourerStock.map((k, i) => `<div class="shop-row"><div><b>${esc(GEAR[k].name)}</b> · ${GEAR[k].price} Gold <small>${slotLabel(GEAR[k].slot)}</small><br><small>${esc(gearText(GEAR[k]))}</small></div>

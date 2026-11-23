@@ -1,7 +1,7 @@
 // The Codex: an unlockable glossary that persists across careers. Pure.
 // Rules entries unlock the first time you see something; lore unlocks when you defeat it.
 
-import { ECONOMY, KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE, FAVOR, BLOODIED, KILL_MARKS, TACTICS, HUMORS, FESTIVALS, SCARS, AUGMENTS, SIGNATURES, SIGNATURE, MERCY, HOUSES } from './data.js';
+import { ECONOMY, KINDS, TRAITS, CLASSES, WEAPONS, INJURIES, BOSS_DEBUFFS, BUILDINGS, DECOR, HEAL_WEEKS, STRESS, PERKS, GEAR, TRIBUTE, FAVOR, BLOODIED, KILL_MARKS, TACTICS, HUMORS, FESTIVALS, SCARS, AUGMENTS, SIGNATURES, SIGNATURE, MERCY, HOUSES, HUMOUR_DRIFT } from './data.js';
 import { oracleLevel } from './ludus.js';
 import { boutFor, unlockedTiers } from './run.js';
 
@@ -83,7 +83,7 @@ const BASICS = [
   ['morale', 'Morale', 'Drifts each week toward comfort (Quarters level, decor, Entertainment Room) minus expectations (Renown). 80+: Inspired, +5% win chance. Below 40: Discontented, won\'t train. Below 20: Mutinous, refuses to fight. A house that stays below 20 on average for 4 weeks revolts. A Revenant feels nothing: their Morale settles at 50 whatever the room.'],
   ['items', 'Fight items', 'Single-use items from the Apothecary (in the Market): War Paint, Adrenaline Draught, Blessed Bandage, Crowd Bribe. Use them before Round 1 or between rounds: one of each kind per fight, but different items can be combined. Boosts last the next round only.'],
   ['gear', 'Gear and the storeroom', 'Each fighter has a weapon and an armour slot. Gear and decor belong to the house: buy them, hand them out, take them back. A fallen or released fighter\'s things return to the storeroom. Beaten opponents sometimes drop their gear (Bosses always do). Spare gear sells back for half its price.'],
-  ['decor', 'Room decor', `Items for a fighter's quarters. Every item adds comfort (Morale). ${Object.values(DECOR).map((d) => `${d.name}: ${d.effect}`).join(' ')}`],
+  ['decor', 'Room decor', `Items for a fighter's quarters, in three groups. Comfort pieces add comfort (Morale); Arena Craft pieces help certain fighters in a fight; Temperament pieces reshape a fighter's Humour: the piece with the most copies in a room turns its sleeper after ${HUMOUR_DRIFT.weeks} weeks, for good (a tie holds the drift). Most items add comfort; the Spiky Bed adds none. ${Object.values(DECOR).map((d) => `${d.name}: ${d.effect}`).join(' ')}`],
 ];
 
 function ruleText(cat, id) {

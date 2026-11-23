@@ -282,16 +282,34 @@ export const WEAPONS = {
   dagger: { name: 'Dagger', ability: 'Backstab', desc: 'Striking first: +10% chance to injure that round.' },
 };
 
-export const decorComfort = (d) => 2 + d.price;
+// Comfort for Morale: 2 + price, unless an item sets its own (`comfort`).
+export const decorComfort = (d) => d.comfort ?? 2 + d.price;
+// `group` sorts the quarters drawer: comfort, temperament (shapes a fighter's Humour, 7.1) or craft (helps a build in fights).
+// `helps`: the ✦ mark and the careful bot's first pick: a build-specific or combat use. Temperament pieces don't set it;
+// their room line says what they would do to that fighter's temper instead.
+// Temperament pieces: `humor` is where a fighter drifts after HUMOUR_DRIFT.weeks weeks with that piece dominant in their room.
 export const DECOR = {
-  bird: { price: 1, calm: 5, name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale and −5 Stress a week. Ornitharius fighters also get +5% injure chance per Bird (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
-  fireBrazier: { price: 1, calm: 5, name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale and −5 Stress a week. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
-  trophy: { price: 2, name: 'Trophy Rack', feeds: 'Morale', effect: 'Comfort for Morale: a famous fighter likes to see their victories on the wall.', helps: () => false },
-  shrine: { price: 3, calm: 10, name: 'Shrine of Mars', feeds: 'Stress', effect: 'Comfort for Morale and −10 Stress a week: prayer steadies a fighter between bouts.', helps: () => false },
-  bathhouse: { price: 4, calm: 15, name: 'Bathhouse', feeds: 'Stress', effect: 'Comfort for Morale and −15 Stress a week: hot water heals more than the Medbay admits.', helps: () => false },
-  lionCage: { price: 5, name: 'Lion Cage', feeds: 'Basa', effect: 'Comfort for Morale. Basa fighters with a Lion Cage get +1 Power (they train with the beasts).', helps: (f) => f.kind === 'basa' },
-  warBanner: { price: 4, renown: 1, name: 'War Banner', feeds: 'Renown', effect: 'Comfort for Morale, and +1 Renown for every win (per Banner): the crowd learns their colours.', helps: () => true },
+  bird: { group: 'craft', price: 1, calm: 5, name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale and −5 Stress a week. Ornitharius fighters also get +5% injure chance per Bird (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
+  fireBrazier: { group: 'craft', price: 1, calm: 5, name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale and −5 Stress a week. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
+  trophy: { group: 'comfort', price: 2, name: 'Trophy Rack', feeds: 'Morale', effect: 'Comfort for Morale: a famous fighter likes to see their victories on the wall.', helps: () => false },
+  shrine: { group: 'comfort', price: 3, calm: 10, name: 'Shrine of Mars', feeds: 'Stress', effect: 'Comfort for Morale and −10 Stress a week: prayer steadies a fighter between bouts.', helps: () => false },
+  bathhouse: { group: 'comfort', price: 4, calm: 15, name: 'Bathhouse', feeds: 'Stress', effect: 'Comfort for Morale and −15 Stress a week: hot water heals more than the Medbay admits.', helps: () => false },
+  lionCage: { group: 'craft', price: 5, name: 'Lion Cage', feeds: 'Basa', effect: 'Comfort for Morale. Basa fighters with a Lion Cage get +1 Power (they train with the beasts).', helps: (f) => f.kind === 'basa' },
+  warBanner: { group: 'comfort', price: 4, renown: 1, name: 'War Banner', feeds: 'Renown', effect: 'Comfort for Morale, and +1 Renown for every win (per Banner): the crowd learns their colours.', helps: () => true },
+  // 7.1 Temperament pieces (PLACEHOLDER words for the designer).
+  rockGarden: { group: 'temperament', humor: 'phlegmatic', price: 3, comfort: 5, calm: 8, name: 'Rock Garden', feeds: 'Phlegmatic', effect: 'Comfort for Morale and −8 Stress a week; shapes a Phlegmatic temper. On a Rest week they meditate: −10 more Stress, +1 XP, and half a step toward conquering a fear.', helps: () => false },
+  spikyBed: { group: 'temperament', humor: 'melancholic', price: 2, comfort: 0, name: 'Spiky Bed', feeds: 'Melancholic', effect: 'No comfort at all; shapes a Melancholic temper. A win taken with even one wound makes them Battle-Hardened (usually it takes two).', helps: () => false },
+  skullRack: { group: 'temperament', humor: 'choleric', price: 3, comfort: 3, name: 'Skull Rack', feeds: 'Choleric', effect: 'A little comfort; shapes a Choleric temper. A severe wound scars them Enraged, never Afeared.', helps: () => false },
+  wineAmphora: { group: 'temperament', humor: 'sanguine', price: 3, comfort: 7, name: 'Wine Amphora', feeds: 'Sanguine', effect: 'Plenty of comfort; shapes a Sanguine temper. The crowd warms to them: each fight starts with +5 Hype.', helps: () => false },
 };
+
+// 7.1 Temperament drift: a dominant Temperament piece turns a fighter's Humour after `weeks` weeks (a visible count).
+export const HUMOUR_DRIFT = { weeks: 4 };
+// 7.1 A Rock Garden on a Rest week: extra Stress relief, XP, and progress toward conquering Afeared (in wins).
+export const MEDITATION = { stress: 10, xp: 1, fear: 0.5 };
+// 7.1 Hype a fighter with a Wine Amphora starts each fight with; injuries a Spiky Bed sleeper needs for Battle-Hardened.
+export const AMPHORA_HYPE = 5;
+export const SPIKY_HARDENED_AT = 1;
 
 export const ECONOMY = {
   startGold: 12,

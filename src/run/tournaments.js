@@ -3,7 +3,7 @@
 import { createRng, deriveSeed, next, pick } from '../rng.js';
 import {
   ECONOMY, STRESS, HEAL_WEEKS, CIRCUITS, STAGES, XP, RENOWN, MORALE, GEAR, DECOR, FAVOR,
-  INJURY_BY_TAG, CONSUMABLES, BLOODIED, FESTIVAL_BY_ID, HOUSES, SCARS, SCAR_CHANCE, SCAR_AFEARED,
+  INJURY_BY_TAG, CONSUMABLES, BLOODIED, FESTIVAL_BY_ID, HOUSES, SCARS, SCAR_CHANCE, SCAR_AFEARED, SPIKY_HARDENED_AT,
   SEVERE, BRACKET, MERCY, SHORT, BET, HYPE, SUMMONS,
 } from '../data.js';
 import { hasRelic, relicSum, relicFight } from '../fortune.js';
@@ -533,16 +533,18 @@ export function finishMatch(run, match) {
     if (summary.mark) chronicle(run, fighter, `Earned the mark ${summary.mark}.`);
     if (bout.boss && !summary.title) chronicle(run, fighter, `Beat the Boss ${opp.name}.`);
   }
-  if (fighter.alive && bloodied && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
+  const hardening = bloodied || (won && fighter.decor?.spikyBed > 0 && effectiveInjuries(fighter) >= SPIKY_HARDENED_AT);
+  if (fighter.alive && hardening && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
     fighter.scars = [...(fighter.scars ?? []), { id: 'hardened' }];
     summary.scar = 'Battle-Hardened';
-    chronicle(run, fighter, 'Won bloodied and became Battle-Hardened.');
+    chronicle(run, fighter, bloodied ? 'Won bloodied and became Battle-Hardened.' : 'Won wounded, slept on spikes, and became Battle-Hardened.');
   }
   const severe = fighter.alive && newInjuries.length && match.a.f.injuries.some((i) => i.weeksLeft === undefined && SEVERE.includes(i.tag));
   if (severe && next(run.rng.growth) < SCAR_CHANCE) {
     const vs = meleeOnly(match.b ?? { f: opp }) ? 'melee' : 'ranged';
     const afeared = SCAR_AFEARED[fighter.humor] ?? SCAR_AFEARED.other;
-    const id = afeared > 0 && next(run.rng.growth) < afeared ? 'afeared' : 'enraged';
+    const roll = afeared > 0 ? next(run.rng.growth) : 1;
+    const id = !(fighter.decor?.skullRack > 0) && roll < afeared ? 'afeared' : 'enraged';
     if (!(fighter.scars ?? []).some((sc) => sc.vs === vs)) {
       fighter.scars = [...(fighter.scars ?? []), { id, vs }];
       summary.scar = `${SCARS[id].name} (${vs})`;
@@ -613,6 +615,10 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
       summary.scar = 'Battle-Hardened';
       chronicle(run, fighter, 'Won bloodied and became Battle-Hardened.');
     }
+  } else if (fighter.decor?.spikyBed > 0 && effectiveInjuries(fighter) >= SPIKY_HARDENED_AT && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
+    fighter.scars = [...(fighter.scars ?? []), { id: 'hardened' }];
+    summary.scar = 'Battle-Hardened';
+    chronicle(run, fighter, 'Won wounded, slept on spikes, and became Battle-Hardened.');
   }
   if (opp.rivalChampion) {
     rivalChampionResult(run, opp, fighter, tier, true, summary);

@@ -10,7 +10,7 @@ import { Refused } from '../errors.js';
 import { formatDate, dateOf } from '../calendar.js';
 import { prestigeLevelFor, stressRelief } from '../ludus.js';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5; // 5 (7.1): new decor slots and f.humourDrift (backfilled on load)
 export const GRAND_TIER = CIRCUITS.length + 1;
 export const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
 export const NAME_MEMORY = 90;

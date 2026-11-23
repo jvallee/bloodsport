@@ -32,6 +32,7 @@ export {
   sellPrice, sellGearBlocker, sellGear, unequipBlocker, unequip, unequipAllBlocker, unequipAll,
   buyItemBlocker, buyItem, surgeonPrice, surgeonBlocker, surgeon, treatFirstBlocker, treatFirst,
   augmentPrice, augmentBlocker, augment, retireBlocker, retire, renameBlocker, rename,
+  dominantTemperament, driftHumour, meditate,
 } from './run/roster.js';
 
 export {
@@ -60,5 +61,5 @@ export {
 } from './run/weekly.js';
 
 export {
-  serialize, deserialize, validateRun, migrateV2ToV3, migrateV3ToV4,
+  serialize, deserialize, validateRun, migrateV2ToV3, migrateV3ToV4, migrateV4ToV5,
 } from './run/migrations.js';

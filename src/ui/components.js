@@ -1,6 +1,6 @@
 // Shared UI pieces: escaping, buttons, icons, the fighter card. Returns HTML strings.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS, SIGNATURES, SIGNATURE } from '../data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS, SIGNATURES, SIGNATURE, HUMOUR_DRIFT } from '../data.js';
 
 const HUMOR_ICON = { choleric: '🔥', sanguine: '💨', melancholic: '🪨', phlegmatic: '💧' };
 import { effectiveInjuries, mortalDanger, deathGateAt, killMarks, signatureOf, opponentHasSignature } from '../fight.js';
@@ -129,7 +129,7 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
         ${trait ? `<span class="chip trait tip${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
         ${f.cls ? `<span class="chip ability tip${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
         ${signatureChip(f, opponent)}
-        ${f.humor ? `<span class="chip humor tip" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}
+        ${f.humor ? `<span class="chip humor tip" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}${f.humor && f.humourDrift && HUMORS[f.humourDrift.to] ? `<span class="chip small drift tip" title="Their room is changing their temper: ${HUMOUR_DRIFT.weeks} weeks as the main Temperament piece turns them ${HUMORS[f.humourDrift.to].name}.">→ ${HUMOR_ICON[f.humourDrift.to]} ${f.humourDrift.weeks}/${HUMOUR_DRIFT.weeks}</span>` : ''}
         ${want}${spy}${wins}${bond}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
       </div>
       ${compact ? '' : `<details class="more card-more" data-key="what-${esc(f.id)}"><summary>ⓘ What they do</summary><div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div></details>`}

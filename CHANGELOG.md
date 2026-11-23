@@ -2,6 +2,15 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## Unreleased (7.1.0): living quarters
+
+- **Temperament decor:** four new pieces for a fighter's room, each shaping their temper. Keep one as the room's main piece for 4 weeks and their Humour changes for good: the **Rock Garden** makes them Phlegmatic, the **Spiky Bed** Melancholic, the **Skull Rack** Choleric and the **Wine Amphora** Sanguine. The fighter card shows a change under way ("→ 2/4"), and each piece says what it would do to that fighter.
+- **Rock Garden:** −8 Stress a week, and a fighter resting beside it meditates: −10 more Stress, +1 XP, and half a step toward conquering a fear.
+- **Spiky Bed:** no comfort at all, but a win taken with even one wound makes them Battle-Hardened.
+- **Skull Rack:** a severe wound scars them Enraged, never Afeared.
+- **Wine Amphora:** the most comfortable piece, and the crowd warms to them: every fight starts with a little Hype.
+- **Decor is grouped** in the shop and the room: Comfort, Temperament and Arena Craft.
+
 ## 7.0.0 (2026-11-23): sharper seasons, a fairer Heat, and a full bug sweep
 
 Version 7 smooths the season from start to Grand Tournament, rebalances the weapons, gear and tactics that were too strong or too weak, and fixes a long list of bugs found in a full review. Version 6.0.5 is frozen and playable at `/v6/`, with its own saves, so a career there and one here never overwrite each other. Your current careers carry over to version 7.

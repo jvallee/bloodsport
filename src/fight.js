@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick, createRng, deriveSeed } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, COMBAT, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, HOUSES, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG, HYPE, INTENT, ROUND_TACTICS } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, COMBAT, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, HOUSES, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG, HYPE, AMPHORA_HYPE, INTENT, ROUND_TACTICS } from './data.js';
 import { Refused } from './errors.js';
 import { relicMods } from './fortune.js';
 
@@ -674,7 +674,7 @@ export function deathRisk(m, stance = 'steady', n = 400) {
 export const canThrowTowel = (m) => !m.over && m.round >= 1 && m.debuff !== 'emperorsGaze';
 // Live crowd hype meter (0–100) for side A, clamped per round.
 export function hypeOf(m) {
-  let h = m.a?.f?.risen ? HYPE.risen : 0;
+  let h = (m.a?.f?.risen ? HYPE.risen : 0) + (m.a?.f?.decor?.wineAmphora > 0 && m.a.arena !== 'ironRules' ? AMPHORA_HYPE : 0);
   for (const r of m.rounds ?? []) {
     if (r.winner === 'A' && r.win?.chance < 40000) h += HYPE.upset;
     for (const c of r.checks ?? []) if (c.attacker === 'A' && c.injury) h += c.injury.tag === 'death' ? HYPE.kill : HYPE.wound;

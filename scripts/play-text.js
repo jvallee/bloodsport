@@ -9,7 +9,7 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup, ALL_UNLOCKS, careerXp, levelFor, LEGACY_LEVELS } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE } from '../src/data.js';
+import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT } from '../src/data.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
@@ -157,6 +157,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     const decorNote = (d) => (d.helps(f) ? '' : d.calm ? ` (−${d.calm} Stress/wk + comfort)` : d.renown ? ` (+${d.renown} Renown/win + comfort)` : ' (comfort only)');
     const decor = Object.entries(f.decor).filter(([, n]) => n).map(([k, n]) => `${DECOR[k].name} ×${n}${decorNote(DECOR[k])}`);
     if (decor.length) bits.push(`Decor: ${decor.join(', ')}`);
+    if (f.humourDrift && HUMORS[f.humourDrift.to]) bits.push(`Temper: turning ${HUMORS[f.humourDrift.to].name} (${f.humourDrift.weeks}/${HUMOUR_DRIFT.weeks} weeks)`);
     if (f.augments?.length) bits.push(`Augments: ${f.augments.map((k) => `${AUGMENTS[k].name} (${AUGMENTS[k].desc})`).join(', ')}`);
     return bits;
   }
@@ -393,7 +394,10 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     }
     if (lv && !raisable(run).length) out.push('  No bodies to raise.');
     out.push('\nDecor merchant:');
-    for (const [k, d] of Object.entries(DECOR)) out.push(`  ${k} · ${d.name} · ${d.price} Gold (${run.inventory.decor[k]} in storeroom): ${d.effect}`);
+    for (const [g, label] of [['comfort', 'Comfort'], ['temperament', 'Temperament (shapes a Humour)'], ['craft', 'Arena Craft']]) {
+      out.push(`  ${label}:`);
+      for (const [k, d] of Object.entries(DECOR).filter(([, x]) => (x.group ?? 'comfort') === g)) out.push(`    ${k} · ${d.name} · ${d.price} Gold (${run.inventory.decor[k]} in storeroom): ${d.effect}`);
+    }
     out.push('\nApothecary (single-use fight items, `buy-item <item>`; use one between rounds with `use <item>`):');
     for (const [k, c] of Object.entries(CONSUMABLES)) out.push(`  ${k} · ${c.name} · ${c.price} Gold (${run.inventory.items?.[k] ?? 0} in storeroom): ${c.desc}`);
     out.push('\nArmourer:');

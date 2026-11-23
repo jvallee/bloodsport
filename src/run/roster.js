@@ -4,6 +4,7 @@ import { createRng, deriveSeed, int, next, pick } from '../rng.js';
 import {
   ECONOMY, STRESS, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CIRCUITS, XP, PERKS, MORALE, GEAR, DECOR,
   CONSUMABLES, AUGMENTS, SURGERY, RETIRE, RENAME, LIAISON, RECRUIT, EXHIBITION, BOND, REANIMATE, FEAR, deltaRow,
+  HUMORS, HUMOUR_DRIFT, MEDITATION,
 } from '../data.js';
 import { WANTS, LIAISON_LINES } from '../quests.js';
 import { meleeOnly } from '../fight.js';
@@ -285,15 +286,61 @@ export function faceFear(run, f, oppSide) {
   const vs = meleeOnly(oppSide) ? 'melee' : 'ranged';
   const sc = (f.scars ?? []).find((x) => x.id === 'afeared' && x.vs === vs);
   if (!sc) return null;
-  sc.faced = (sc.faced ?? 0) + 1;
+  return fearStep(run, f, sc, 1, `${f.name} beat a ${vs} fighter, the kind they fear`, `Faced their fear of ${vs} fighters, and beat it.`);
+}
+
+// Progress toward conquering one Afeared scar (`amount` in wins); conquered at FEAR.conquerWins.
+function fearStep(run, f, sc, amount, progressLine, chronicleLine) {
+  sc.faced = (sc.faced ?? 0) + amount;
   if (sc.faced < FEAR.conquerWins) {
-    log(run, `${f.name} beat a ${vs} fighter, the kind they fear (${sc.faced}/${FEAR.conquerWins} to conquer it).`, 'event');
+    log(run, `${progressLine} (${sc.faced}/${FEAR.conquerWins} to conquer it).`, 'event');
     return null;
   }
   f.scars = f.scars.filter((x) => x !== sc);
-  chronicle(run, f, `Faced their fear of ${vs} fighters, and beat it.`);
-  log(run, `${f.name} has conquered their fear: no longer Afeared of ${vs} fighters.`, 'good');
-  return `No longer Afeared (${vs})`;
+  chronicle(run, f, chronicleLine);
+  log(run, `${f.name} has conquered their fear: no longer Afeared of ${sc.vs} fighters.`, 'good');
+  return `No longer Afeared (${sc.vs})`;
+}
+
+// ---------- 7.1 Temperament: Humour drift and meditation ----------
+
+// The Temperament piece with strictly the most copies in a fighter's room: { item, humor } or { tied: true } or null.
+export function dominantTemperament(f) {
+  const pieces = Object.entries(f.decor ?? {}).filter(([k, n]) => n > 0 && DECOR[k]?.humor);
+  if (!pieces.length) return null;
+  const top = Math.max(...pieces.map(([, n]) => n));
+  const leaders = pieces.filter(([, n]) => n === top);
+  if (leaders.length > 1) return { tied: true };
+  return { item: leaders[0][0], humor: DECOR[leaders[0][0]].humor };
+}
+
+// Weekly: a dominant Temperament piece for another Humour advances the drift; at HUMOUR_DRIFT.weeks the Humour changes for
+// good (until reshaped). A tie pauses the drift; no piece, or one matching their Humour, clears it.
+export function driftHumour(run, f) {
+  const dom = dominantTemperament(f);
+  if (dom?.tied) return;
+  if (!dom || dom.humor === f.humor) {
+    delete f.humourDrift;
+    return;
+  }
+  f.humourDrift = f.humourDrift?.to === dom.humor ? { to: dom.humor, weeks: f.humourDrift.weeks + 1 } : { to: dom.humor, weeks: 1 };
+  if (f.humourDrift.weeks < HUMOUR_DRIFT.weeks) return;
+  const name = HUMORS[dom.humor].name;
+  f.humor = dom.humor;
+  delete f.humourDrift;
+  chronicle(run, f, `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} changed their temper: now ${name}.`);
+  log(run, `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} have changed ${f.name}: now ${name}.`, 'event');
+}
+
+// A Rest week with a Rock Garden: extra Stress relief, a little XP, and half a step toward conquering each fear.
+export function meditate(run, f) {
+  if (f.job !== 'rest' || !(f.decor?.rockGarden > 0)) return;
+  f.stress = clamp(f.stress - MEDITATION.stress, 0, STRESS.max);
+  gainXp(run, f, MEDITATION.xp);
+  log(run, `${f.name} meditates in the Rock Garden.`, 'good');
+  for (const sc of (f.scars ?? []).filter((x) => x.id === 'afeared')) {
+    fearStep(run, f, sc, MEDITATION.fear, `${f.name} sits with their fear of ${sc.vs} fighters`, `Meditated on their fear of ${sc.vs} fighters, and let it go.`);
+  }
 }
 
 export const ritePrice = (run) => FEAR.ritePrice + FEAR.ritePerTier * Math.min(run.topTier, CIRCUITS.length);

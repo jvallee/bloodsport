@@ -113,7 +113,14 @@ function normalizeRun(run) {
 export function migrateV3ToV4(run) {
   validateRun(run);
   normalizeRun(run);
-  run.version = SAVE_VERSION;
+  run.version = 4;
+  return run;
+}
+
+// v4 → v5 (7.1): the four Temperament decor slots; backfillFighters adds them to every fighter on load.
+export function migrateV4ToV5(run) {
+  validateRun(run);
+  run.version = 5;
   return run;
 }
 
@@ -151,6 +158,7 @@ export function deserialize(text) {
   }
   if (run.version === 2) run = migrateV2ToV3(run);
   if (run.version === 3) run = migrateV3ToV4(run);
+  if (run.version === 4) run = migrateV4ToV5(run);
   validateRun(run);
   normalizeRun(run);
   backfillFighters(run);

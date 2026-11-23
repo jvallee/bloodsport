@@ -1056,3 +1056,34 @@ Placeholder numbers, chosen on the machine where v7 was built (balance gates in 
 
 ### Saves
 - Career save format **4**. Version 3 saves are checked for their core fields, and the missing decor and temper are filled in on every fighter. The house log is capped at 400 lines. Version 2 saves migrate again (houses are set up before the arenas open). A save from a newer version is refused with a clear message.
+
+## 7.1.0: living quarters, Temperament decor (design: docs/roadmap-v7.md, Phase 1)
+
+Placeholder numbers.
+
+- **Decor groups:** Comfort (Trophy Rack, Shrine of Mars, Bathhouse, War Banner), Temperament (new), Arena Craft (Bird, Fire
+  Brazier, Lion Cage). Comfort is still 2 + price unless an item sets its own (`comfort`).
+- **New Temperament pieces:**
+
+| Item | Price | Comfort | Humour | Also |
+|---|---|---|---|---|
+| Rock Garden | 3 | 5 | Phlegmatic | −8 Stress a week (counts toward the decor calm cap); meditation on Rest weeks |
+| Spiky Bed | 2 | 0 | Melancholic | A win with 1+ effective injury makes them Battle-Hardened (normally 2+, a Bloodied Victory) |
+| Skull Rack | 3 | 3 | Choleric | A severe-wound scar is always Enraged, never Afeared (same dice as before) |
+| Wine Amphora | 3 | 7 | Sanguine | +5 Hype at the start of each fight (`AMPHORA_HYPE`; not under Iron Rules) |
+
+- **Humour drift** (`HUMOUR_DRIFT.weeks = 4`): each week, the Temperament piece with strictly the most copies in a fighter's
+  room, if it's for another Humour, adds a week to `f.humourDrift = { to, weeks }`; at 4 the Humour changes for good, with a
+  log line and a story entry. A tie pauses the count; a different leader restarts it at 1; no piece, or one for their own
+  Humour, clears it. Removing the piece afterwards doesn't change them back (designer's decision 2).
+- **Meditation** (`MEDITATION`): a fighter on Rest with a Rock Garden loses 10 more Stress, gains 1 XP, and each Afeared scar
+  gains 0.5 toward `FEAR.conquerWins` (2): four meditation weeks conquer a fear, or two plus one win.
+- **Not yet:** the roadmap's Arena Craft pieces (Viper Terrarium, Whetstone Rack) wait for wound affinities (7.2), and the
+  Skull Rack's unrest risk waits for unrest (7.3).
+- **Bots don't use Temperament pieces yet.** The careful bot places the first decor item that `helps` a fighter. Marking the
+  new pieces as helping everyone made it put a Rock Garden in every room (the new gate read 100%, and full Legacy fell to
+  39%, since every fighter turned Phlegmatic). Temperament pieces don't set `helps` (their room line explains them), so
+  bot careers play exactly as in 7.0.0 (same log, Gold, Favour and history on the fingerprint seeds). The decor-diversity
+  gate passes trivially until a bot chooses these pieces on purpose.
+- **Saves:** version 5. Version-4 careers load unchanged; the new decor slots are filled with 0 on load.
+- **New gate:** no Temperament piece is in more than 55% of winning careful houses.

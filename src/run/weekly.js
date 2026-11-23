@@ -23,6 +23,7 @@ import {
 } from './houses.js';
 import {
   refreshMarket, refreshLiaison, refreshArmourer, trainBlocker, switchToRest, resumeTraining, moraleTarget,
+  meditate, driftHumour,
 } from './roster.js';
 import { checkQuests, wantsMonth, rebelQuestsMonth } from './questsEngine.js';
 import { fortuneMonth, loseWager, relicInPool } from './fortuneEngine.js';
@@ -204,6 +205,8 @@ export function advanceWeek(run) {
     }
     const calm = decorCalm(f);
     f.stress = clampStress(f.stress - relief - calm);
+    meditate(run, f);
+    driftHumour(run, f);
     const { target } = moraleTarget(run, f);
     f.morale = f.morale < target ? Math.min(target, f.morale + MORALE.drift) : Math.max(target, f.morale - MORALE.driftDown);
     if (f.mood && --f.mood.weeks <= 0) delete f.mood;

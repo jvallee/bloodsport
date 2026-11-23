@@ -77,7 +77,8 @@ test('Market sections fold away, and the Decor merchant shows each item\'s comfo
   const html = marketTab(createRun(1));
   for (const key of ['fighters', 'vulcan', 'liaison', 'storeroom', 'apothecary', 'decor', 'armourer']) assert.match(html, new RegExp(`<details class="panel fold" data-key="market-${key}" open>`));
   // Playtest #8: each item shows its own comfort, scaled by price.
-  for (const d of Object.values(DECOR)) assert.match(html, new RegExp(`${d.name}</b>[^]*?\\+${decorComfort(d)} comfort`));
+  // 7.1: an item with no comfort (the Spiky Bed) says so.
+  for (const d of Object.values(DECOR)) assert.match(html, new RegExp(`${d.name}</b>[^<]*<small>[^<]*</small> ${decorComfort(d) ? `<span[^>]*>\\+${decorComfort(d)} comfort` : '<span[^>]*>no comfort'}`));
   assert.ok(decorComfort(DECOR.bird) < decorComfort(DECOR.lionCage));
 });
 
