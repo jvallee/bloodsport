@@ -94,7 +94,8 @@ export function opponentIntent(m, round = m.round + 1) {
   if (m.b.intent?.round === round) return m.b.intent;
   const stance = opponentTactic(m, round);
   let tell = null;
-  if ((m.tellSeed !== undefined || m.tells) && humorOf(m.b)) {
+  // No tell at 0% accuracy (a stolen playbook without an Oracle only reads Round 1): a sure-wrong tell would mislead.
+  if ((m.tellSeed !== undefined || m.tells) && humorOf(m.b) && tellAccuracy(m, round) > 0) {
     const tellRng = m.tellSeed !== undefined ? createRng(deriveSeed(m.tellSeed, round)) : m.tells;
     const others = ROUND_TACTICS.filter((k) => k !== 'steady' && k !== stance);
     tell = next(tellRng) < tellAccuracy(m, round) ? stance : pick(tellRng, others);

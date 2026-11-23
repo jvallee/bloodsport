@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## Unreleased (7.4.1): fixes
+
+- **Steal the Playbook without an Oracle:** you now get the exact Round 1 tactic and no tell after it (it showed a false tell at "about 0%" in later rounds, and the suggested tactic followed it).
+
 ## 7.4.0 (2026-11-23): blood, unrest and knives in the dark (7.2–7.4)
 
 - **Bleeding:** a new wound between a Flesh Wound and a Concussion. It counts as one injury and makes a fighter easier to hit (+10%, or +5% while Guarding) until it heals. A Blessed Bandage staunches it for the fight, and Blood Drinkers can drink it.

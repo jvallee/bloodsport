@@ -293,3 +293,19 @@ test('the odds preview sees espionage without using this month\'s op', async () 
   assert.ok(espState(run).op, 'not used up by the preview');
   assert.notEqual(preview.opp, target, 'a copy');
 });
+
+// 7.4.1 review fixes.
+test('a stolen playbook without an Oracle: an exact tell in Round 1, none after (never a false one)', async () => {
+  const { createMatch, tellForecast, opponentIntent } = await import('../src/fight.js');
+  const { createRng } = await import('../src/rng.js');
+  for (let seed = 1; seed <= 30; seed++) {
+    const { fs: [a] } = house(50 + seed, 1);
+    const b = { ...structuredClone(a), id: 'opp', humor: 'choleric' };
+    const m = createMatch({ a, b, rng: createRng(seed), oracle: 0 });
+    m.playbook = true;
+    m.tellSeed ??= 99 + seed;
+    assert.equal(opponentTell(m), m.b.intent.stance, 'Round 1: exact');
+    assert.equal(tellForecast(m), 100);
+    assert.equal(opponentIntent(m, 2).tell, null, 'Round 2: no tell');
+  }
+});
