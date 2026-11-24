@@ -1,6 +1,7 @@
 // Turns structured round records from fight.js into readable lines. Pure: no DOM.
 
 import { TRAITS, CLASSES, WEAPONS, TACTICS, deltaRow } from './data.js';
+import { styleId } from './fight.js';
 
 export function fmtPct(e5) {
   const p = e5 / 1000;
@@ -132,7 +133,31 @@ const INJURY_STORY = {
   blinded: 'Blinded (counts as two injuries!)',
 };
 
-const variant = (r, list) => list[(r.roll + r.round) % list.length];
+const variant = (r, list, salt = 0) => list[(r.roll + r.round + salt) % list.length];
+
+// 7.8 (review brief 2.9): how a blow lands, by the attacker's style (styleId: weapon for a Fighter, else class).
+// PLACEHOLDER words for the designer (docs/text-to-rewrite.md).
+const own = (n) => `${n}'${/s$/.test(n) ? '' : 's'}`;
+const STRIKES = {
+  club: (a, d) => `${own(a)} club crashes through ${own(d)} guard`,
+  fists: (a, d) => `${a} gets inside and hammers ${d}`,
+  bow: (a, d) => `${own(a)} arrow finds ${d}`,
+  spear: (a, d) => `${own(a)} spear darts past ${own(d)} reach`,
+  sword: (a, d) => `${own(a)} blade opens ${own(d)} guard`,
+  flail: (a, d) => `${own(a)} flail whips round ${own(d)} guard`,
+  gun: (a, d) => `${own(a)} volley tears into ${d}`,
+  axe: (a, d) => `${own(a)} axe bites deep into ${d}`,
+  dagger: (a, d) => `${a} slips the dagger in under ${own(d)} arm`,
+  cestus: (a, d) => `${own(a)} iron fists rock ${d}`,
+  sagittarius: (a, d) => `${own(a)} shaft takes ${d} mid-stride`,
+  ornitharius: (a, d) => `${own(a)} birds dive at ${d}`,
+  retiarius: (a, d) => `${own(a)} net drags ${d} down, and the trident follows`,
+  ashHungry: (a, d) => `${a} comes through the ash at ${d}`,
+  bloodBearer: (a, d) => `${own(a)} blade drinks from ${d}`,
+  thornBlade: (a, d) => `${own(a)} thorned edge rakes ${d}`,
+  samnite: (a, d) => `${a} drives the shield's rim into ${d}`,
+};
+const strikeClause = (r, styleId, a, d) => (STRIKES[styleId]?.(a, d) ?? variant(r, [`${a} lands a brutal blow`, `${a} breaks through`, `${a} catches ${d} cleanly`], 2));
 
 export function narrateStory(m, r) {
   const name = (side) => (side === 'A' ? m.a : m.b).f.name;
@@ -144,7 +169,7 @@ export function narrateStory(m, r) {
   const second = name(init.first === 'A' ? 'B' : 'A');
   if (init.reason === 'concussed') add('init', `${second} is still dazed. ${name(init.first)} moves first.`);
   else if (init.reason === 'footwork') add('init', `${name(init.first)} darts in first on quick feet.`);
-  else add('init', `${name(init.first)} strikes first.`);
+  else add('init', variant(r, [`${name(init.first)} strikes first.`, `${name(init.first)} is first off the mark.`, `${name(init.first)} gets there first.`, `${name(init.first)} moves before ${second} can.`], 1));
 
   const winnerChance = r.winner === 'A' ? r.win.chance : 100000 - r.win.chance;
   if (winnerChance < 40000) add('roll', `Against the odds, ${name(r.winner)} takes Round ${r.round}!`);
@@ -163,15 +188,20 @@ export function narrateStory(m, r) {
     const inj = c.injury;
     if (inj) {
       if (inj.tag === 'death') {
-        add('death', `${att} lands a killing blow. ${def} falls and does not rise.`);
+        add('death', variant(r, [`${att} lands a killing blow. ${def} falls and does not rise.`, `${att} finds the opening. ${def} goes down and does not get up.`,
+          `The crowd is on its feet: ${def} is dead before they hit the sand.`, `${att} ends it. ${def} lies still, and the arena goes quiet.`], 3));
       } else {
-        let text = inj.deflected ? `${att} lands a crippling blow, but ${def}'s ${inj.deflected} takes it: only a Flesh Wound.` : `${att} lands a brutal blow${inj.steered ? ` (${inj.steered.source})` : ''}: ${def} is ${INJURY_STORY[inj.tag]}.`;
+        let text = inj.deflected ? `${att} lands a crippling blow, but ${def}'s ${inj.deflected} takes it: only a Flesh Wound.` : `${strikeClause(r, styleId((c.attacker === 'A' ? m.a : m.b).f), att, def)}${inj.steered ? ` (${inj.steered.source})` : ''}: ${def} is ${INJURY_STORY[inj.tag]}.`;
         if (inj.doubled) text += ' First blood counts double!';
         if (inj.disabled?.length) text += ` ${def} loses ${inj.disabled.map((s) => slotName((c.defender === 'A' ? m.a : m.b).f, s)).join(' and ')} for this match.`;
         add('injury', text);
       }
     }
     if (c.drained) add('effect', `${att} drinks deep: their ${c.drained === 'fleshWound' ? 'Flesh Wound' : 'Distraction'} closes.`);
+  }
+  // A round where nobody draws blood still gets a line (7.8).
+  if (!r.checks.some((c) => c.injury || c.parry?.success || (c.counter && c.hit) || c.allIn)) {
+    add('quiet', variant(r, ['Neither draws blood. They walk back to their marks.', 'Steel rings on steel, and no one bleeds.', 'They part, both still standing, both still whole.'], 4));
   }
   for (const e of r.endEffects) add('effect', `${name(e.side)} is ${e.text}.`);
   return lines;

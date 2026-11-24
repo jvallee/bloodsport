@@ -138,3 +138,24 @@ test('2.6 phone fight screen: the decision block holds the Death Gate alert, the
   run.inMatch = true;
   assert.doesNotMatch(topbar(run, 'ludus', 0, true), /jump-bout/);
 });
+
+test('2.9 narration varies: rotating first-strike lines, a strike by style, quiet rounds, several death lines', async () => {
+  const { narrateStory } = await import('../src/narrate.js');
+  const styles = [{ cls: 'fighter', weapon: 'club' }, { cls: 'fighter', weapon: 'flail' }, { cls: 'retiarius' }, { cls: null }];
+  const lines = [];
+  for (let seed = 1; seed <= 400; seed++) {
+    const st = styles[seed % styles.length];
+    const gate = seed % 2 ? [{ tag: 'poisoned', weight: 2 }] : []; // half start at the Death Gate, so deaths happen
+    const m = createMatch({ a: blank({ name: 'Atticus', power: 6, ...st, injuries: [...gate] }), b: blank({ id: 'b', name: 'Thessaly', power: 6, ...st, injuries: [...gate] }), rng: createRng(seed) });
+    autoPlay(m, suggestTactic);
+    for (const r of m.rounds) lines.push(...narrateStory(m, r));
+  }
+  const init = lines.filter((l) => l.type === 'init').map((l) => l.text);
+  assert.ok(init.filter((t) => /strikes first\.$/.test(t)).length / init.length < 0.5, 'not one line for every round');
+  const wounds = lines.filter((l) => l.type === 'injury').map((l) => l.text);
+  assert.ok(wounds.some((t) => /club crashes through/.test(t)) && wounds.some((t) => /flail whips round/.test(t)) && wounds.some((t) => /net drags/.test(t)));
+  assert.ok(wounds.filter((t) => /lands a brutal blow/.test(t)).length / wounds.length < 0.3);
+  assert.ok(lines.some((l) => l.type === 'quiet'), 'a round with no blood still gets a line');
+  const deaths = new Set(lines.filter((l) => l.type === 'death').map((l) => l.text.replace(/Atticus|Thessaly/g, 'X')));
+  assert.ok(deaths.size >= 3, `${deaths.size} death lines`);
+});

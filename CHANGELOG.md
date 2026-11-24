@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.8.0)
 
+- **Livelier fight stories:** a wound is now described by the weapon or style that dealt it (a club crashes through a guard, a net drags a fighter down), first strikes and deaths have several ways of being told, and a round where nobody draws blood gets a line of its own.
 - **Fights on a phone:** your choice for the round (the tactics, Capitulate, and any MORTAL DANGER warning) now stays pinned to the bottom of the screen, and the "Fight day" button no longer floats over the fight.
 - **The rules in brief:** How to play has a second tab with how you win, how you lose, and how Power, Speed and luck work (the Power-gap odds among them). These pages were written for the intro but could no longer be reached.
 - **A fighter's death is remembered:** when a fighter dies, the fight screen now gives their epitaph and the last chapters of their story. The house log no longer says "lost" straight after "died", and the end of a career shows the names of the fallen under their faces.
