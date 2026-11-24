@@ -380,6 +380,17 @@ export function overtrainModal(list) {
   return dialogueBox({ speaker: 'steward', title: 'Overtraining', html }, actions, 'ask');
 }
 
+// Ending a fight week with fighters who could still fight (7.9.2, the designer).
+export function freeFightModal(free) {
+  const names = free.fighters.map((f) => `<b>${esc(f.name)}</b>`);
+  const who = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+  const arenas = free.tiers.map((t) => esc(arenaName(t))).join(' and ');
+  const html = `<p>It's still fight day. ${who} could fight in ${arenas}, and ${free.fighters.length > 1 ? "they haven't" : "hasn't"} yet.</p>
+    <p>Every match pays Gold and XP, even a loss (the buy-in is Prestige). End the week now and today's fights are gone.</p>`;
+  const actions = `<button class="btn small" data-action="freefight-back" autofocus>Back to the fights</button><span class="ask-choices"><button class="btn" data-action="freefight-go">End the week anyway</button></span>`;
+  return dialogueBox({ speaker: 'steward', title: 'Fighters still free', html }, actions, 'ask');
+}
+
 export function resultModal(title, lines) {
   // A gamble's outcome leads, in large type (playtest: "It went badly" was buried mid-sentence).
   const text = lines.map((l) => l.text).join(' ');
