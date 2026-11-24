@@ -209,6 +209,7 @@ export function startMatch(run, id, tier = run.topTier) {
   run.matchInfo = { fighterId: id, tier, buyIn };
   const m = createMatch({ a: fighter, b: opponentFor(run, tier), rng: run.rng.fight, ...matchOptions(run, fighter, tier) });
   espionageAtMatch(run, m);
+  run.matchInfo.match = m; // 7.5.1: saved with the career, so a reload resumes the fight (deserialize)
   return m;
 }
 

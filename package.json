@@ -12,5 +12,5 @@
     "replay": "node scripts/replay.js",
     "text-index": "node scripts/text-index.js"
   },
-  "version": "7.5.0"
+  "version": "7.5.1"
 }

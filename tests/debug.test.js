@@ -31,8 +31,7 @@ function playCareer(seed, { months = 4, reloadMidFight = false } = {}) {
     if (reloadMidFight && !reloaded && !state.match.over) {
       reloaded = true;
       state.run = deserialize(serialize(state.run)); // the player reloads the page
-      state.match = null;
-      continue;
+      state.match = state.run.inMatch ? state.run.matchInfo?.match ?? null : null; // 7.5.1: the fight resumes
     }
     while (state.match && !state.match.over) act('next-round');
     act('leave-fight');

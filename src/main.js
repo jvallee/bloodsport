@@ -445,6 +445,7 @@ function openCareer(id) {
       resetCareerUiState();
       run = loaded;
       careerId = id;
+      match = run.inMatch ? run.matchInfo?.match ?? null : null; // 7.5.1: a fight in progress resumes
       const url = new URL(location.href);
       url.searchParams.set('seed', run.seed);
       history.replaceState(null, '', url);

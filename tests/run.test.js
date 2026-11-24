@@ -663,13 +663,15 @@ test('save and load round-trip the whole career', () => {
   assert.equal(serialize(deserialize(serialize(run))), serialize(run));
 });
 
-test('reloading in the middle of a match counts as throwing in the towel', () => {
+test('reloading in the middle of a match resumes it: the buy-in stays paid and nothing is settled (7.5.1, D1)', () => {
+  // Was: a reload counted as throwing in the towel. The fight is now saved and resumes (tests/resume-fight.test.js).
   const { run, f } = atBout();
   startMatch(run, f.id);
   const loaded = deserialize(serialize(run));
-  assert.equal(loaded.inMatch, false);
-  assert.equal(loaded.prestige, 5 - 1, 'buy-in stays lost');
-  assert.equal(loaded.arenas[1].stage, 1);
+  assert.equal(loaded.inMatch, true);
+  assert.ok(loaded.matchInfo.match && !loaded.matchInfo.match.over);
+  assert.equal(loaded.prestige, 5 - 1, 'buy-in stays paid');
+  assert.equal(loaded.arenas[1].stage, 0, 'the bout is not settled');
   assert.equal(loaded.roster[0].alive, true);
 });
 
@@ -856,9 +858,15 @@ test('reloading mid-match keeps the injuries taken in the rounds already played 
   const m = startMatch(run, f.id);
   m.a.f.injuries = [{ tag: 'concussed', weight: 1 }];
   recordMatchProgress(run, m);
+  // 7.5.1: the fight resumes with the wound still on.
   const loaded = deserialize(serialize(run));
-  assert.deepEqual(loaded.roster[0].injuries.map((i) => i.tag), ['concussed']);
-  assert.equal(loaded.roster[0].injuries[0].weeksLeft, 2);
+  assert.deepEqual(loaded.matchInfo.match.a.f.injuries.map((i) => i.tag), ['concussed']);
+  // An older save without the stored fight settles it, and the wound is kept.
+  const old = JSON.parse(serialize(run));
+  delete old.matchInfo.match;
+  const settled = deserialize(JSON.stringify(old));
+  assert.deepEqual(settled.roster[0].injuries.map((i) => i.tag), ['concussed']);
+  assert.equal(settled.roster[0].injuries[0].weeksLeft, 2);
 });
 
 // ---------- Championships and rookies ----------

@@ -181,11 +181,15 @@ export function deserialize(text) {
   validateRun(run);
   normalizeRun(run);
   backfillFighters(run);
-  // A match in progress isn't saved: reloading mid-fight counts as capitulating (or dying if already felled).
+  // A match in progress resumes after a reload (7.5.1): the saved fight rolls the career's fight dice again, so nothing
+  // is undone or re-rolled. An older save without the stored fight counts as capitulating (or dying if already felled).
   if (run.inMatch) {
     run.actions.push(['reload']);
     const live = run.matchInfo ? findFighter(run, run.matchInfo.fighterId) : null;
-    if (!live || !run.arenas?.[run.matchInfo.tier]) {
+    const saved = run.matchInfo?.match;
+    if (live && saved && !saved.over && saved.a?.f?.alive !== false && run.arenas?.[run.matchInfo.tier]) {
+      saved.rng = run.rng.fight;
+    } else if (!live || !run.arenas?.[run.matchInfo.tier]) {
       run.inMatch = false;
       run.matchInfo = null;
     } else {

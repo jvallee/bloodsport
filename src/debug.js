@@ -58,9 +58,9 @@ export function replay(report, { stopAt = Infinity, onStep = null } = {}) {
   actions.forEach(([name, data], index) => {
     try {
       if (name === 'reload') {
-        // The player reloaded mid-fight: the match counts as capitulated (deserialize records the reload again).
+        // The player reloaded mid-fight: the fight resumes (deserialize records the reload again; 7.5.1).
         state.run = deserialize(serialize(state.run));
-        state.match = null;
+        state.match = state.run.inMatch ? state.run.matchInfo?.match ?? null : null;
       } else {
         applyGameAction(state, name, data ?? {}); // re-recorded, so the replay's actions match the report's
       }

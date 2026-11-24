@@ -129,7 +129,7 @@ All numbers live in `src/data.js` and were tuned with `npm run career` (see `doc
 - *One only* buildings are capped because only the best one would count; a second would be a trap.
 
 ### Saves
-- The career autosaves to the browser after every action. Reloading during a match counts as capitulating, so quitting can't undo a bad fight.
+- The career autosaves to the browser after every action. *(7.5.1: a match is saved with the career and resumes after a reload, with the same dice, so quitting still can't undo a bad fight. Before 7.5.1, reloading during a match counted as capitulating.)*
 
 ## v2 rules (supersede the career rules above where they differ)
 
@@ -167,7 +167,7 @@ All numbers live in `src/data.js`; balance is checked with `npm run check` (see 
 - **Calming decor:** each Bird or Fire Brazier in a fighter's quarters gives −5 Stress a week (Trophy Racks are Morale only).
 - **Fight items** (Apothecary, in the Market): War Paint (+1 Power next round, 10 Gold), Adrenaline Draught (+3 Speed next round, +15 Stress after, 8), Blessed Bandage (−10% to be injured next round, not armor, 10), Crowd Bribe (no Favor or Renown lost for capitulating this fight; a Boss loss still counts, 12). Used before Round 1 or between rounds, one of each kind per fight (different items can be combined; it was one item per fight, and after Round 1 only).
 - **"Throw in the towel" is now "capitulate"** in all player-facing text.
-- **Reloading mid-match** counts as capitulating, but keeps any injuries (or death) from rounds already played.
+- **Reloading mid-match** counts as capitulating, but keeps any injuries (or death) from rounds already played. *(Replaced in 7.5.1: the fight resumes; an older save without the stored fight still settles this way.)*
 - **Revolt:** if the roster's average Morale stays below 20 for 4 weeks in a row, the career is lost. *(Replaced in 7.3 by unrest and The Chains Break: see "7.3.0" at the end.)*
 
 ### Fighter growth

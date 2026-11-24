@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.5.1 (2026-11-24): a fight survives a reload
+
+- **Reloading during a fight no longer counts as capitulating:** the fight is saved with your career and picks up exactly where it was, with the same dice, so nothing can be undone and nothing is lost. A phone discarding the tab, or a reload before Round 1, no longer costs you the buy-in, Favour or a new nemesis.
+
 ## 7.5.0 (2026-11-24): safer saves and fights
 
 - **No accidental rounds at the Death Gate:** while a round is still playing out, Space, Enter or a click only finishes showing it, so you always see the next round's choices (and any MORTAL DANGER warning) before acting. While MORTAL DANGER shows, Space and Enter do nothing: fighting on or capitulating takes a deliberate click.
