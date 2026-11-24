@@ -2,6 +2,15 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.9.0 (2026-11-24): balance, and a cousin in the cells
+
+- **Wound items are worth buying:** Viper Venom, Blood Thinner and Blinding Powder now also give +3% win chance for the round you use them. Before, they wounded the opponent without helping you win the match.
+- **A revolt put down stays down:** after the guards break The Chains Break, the mutineers are cowed (Morale at least 30), so the barracks don't rise again a fortnight later.
+- **The Grand Tournament is the hardest fight in a Season again:** the Imperial Coliseum's Boss is 2 Power weaker, so the Grand is the real climax.
+- **Covert ops are worth the risk:** they cost less (Steal the Playbook 2 Gold, Doctor the Wine 4, Bribe the Armourer 5), and getting caught costs 2 Favour instead of 5.
+- **Orcs start at Power 5,** like every other kind. Their extra point was meant to make up for having no fighting trait, and they have three now.
+- **A cousin in the cells:** once you reach the Bronze Arena, one of your fighters (or your steward, if the barracks are empty) begs you to buy their cousin out of the city cells before he is executed. The Liaison offers him for 8 weeks; the next-step bar counts down the time. Buy him and your fighter is grateful (+10 Morale); leave him and they grieve (−10).
+
 ## 7.8.1 (2026-11-24): fixes
 
 - **Phones:** the fight report no longer ends in half a screen of empty space once the fight is over.

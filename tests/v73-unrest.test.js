@@ -210,3 +210,16 @@ test('The Chains Break: a palace mole leading the revolt tips off the palace ins
   assert.equal(run.plot.suspicion, 10 + UNREST.palatineSuspicion + UNREST.moleTip);
   assert.equal(run.unrest, 0, 'the barracks still calm');
 });
+
+test('7.9 (4.2): a revolt put down leaves its fighters cowed, not still Mutinous, so it does not break out again at once', () => {
+  const { run, fs } = house(5, 3);
+  fs[0].morale = 0;
+  fs[1].morale = 80;
+  fs[2].morale = 80;
+  run.unrest = UNREST.threshold;
+  openCrisis(run);
+  chooseEvent(run, 1);
+  assert.equal(UNREST.cowedMorale, 30);
+  assert.ok(fs[0].morale >= UNREST.cowedMorale, `ringleader Morale ${fs[0].morale}`);
+  assert.ok(fs[0].morale >= MORALE.mutinous, 'no longer Mutinous');
+});

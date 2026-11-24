@@ -1,6 +1,6 @@
 // "What should I do next?": the single most useful prompt for the current state. Pure.
 
-import { STRESS, MORALE, UNREST, ESPIONAGE } from './data.js';
+import { STRESS, MORALE, UNREST, ESPIONAGE, BUILDINGS } from './data.js';
 import { arenaName, unlockedTiers, fightBlocker, jobBlocker, tributeDue, tributePaid, marketPrice, boutFor, espState, covertOpBlocker, opTarget } from './run.js';
 import { weeksUntilWinter, weeksUntilTournament } from './calendar.js';
 
@@ -38,6 +38,14 @@ export function nextHint(run) {
   const due = tributeDue(run);
   const weeks = weeksUntilWinter(run.week);
   if (weeks > 0 && weeks <= 4 && run.gold < due && !tributePaid(run)) return { text: `Save Gold: the ${due} Gold tribute is due in ${weeks} week${weeks === 1 ? '' : 's'} and you have ${run.gold}.`, tone: 'bad' };
+  // 7.9: the cousin in the cells, while there is still time.
+  const c = run.cousin;
+  if (c && !c.done) {
+    const left = c.until - run.week;
+    const when = `${left} week${left === 1 ? '' : 's'}`;
+    if (c.f) return { text: `${c.name} is executed in ${when} unless you buy him from the Liaison.`, tone: 'warn', action: 'tab', tab: 'market', label: 'Go to Market' };
+    return { text: `A prisoner is executed in ${when}: build a Liaison in the Estate to buy him out of the cells${run.prestigeLevel < BUILDINGS.liaison.req[0] ? ` (it needs Prestige level ${BUILDINGS.liaison.req[0]})` : ''}.`, tone: 'warn', action: 'tab', tab: 'estate', label: 'Go to Estate' };
+  }
   // 7.7: unrest, moles and covert ops, ahead of the gentler hints.
   const mutinous = run.roster.find((f) => f.morale < MORALE.mutinous);
   if (mutinous) return { text: `${mutinous.name} is Mutinous (Morale ${mutinous.morale}): they refuse to fight and stir unrest${run.unrest ? ` (${run.unrest}/${UNREST.threshold})` : ''}. Calm them with decor, a better room or a win.`, tone: 'bad' };

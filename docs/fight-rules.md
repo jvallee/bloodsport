@@ -1189,3 +1189,40 @@ Placeholder numbers (`ESPIONAGE`). Own dice (`run.rng.espionage`).
 - The Chains Break, Palatine choice: a palace mole as ringleader is unmasked and adds `UNREST.moleTip` (15) suspicion on
   top of the usual 15, instead of becoming the plot's champion. The unrest still calms.
 - The careful bot's Morale decor only picks pieces that add comfort and aren't Temperament pieces.
+
+## 7.9.0: balance from the review brief (Phase 4)
+
+| Number | Before → after | Why |
+|---|---|---|
+| `SHORT.oppPower` (Season Boss bonus per arena) | [2, 4, 9, 12] → [2, 4, 9, 10] | 4.1: the Imperial Boss was won less often per attempt (21%) than the Grand Tournament (31%). |
+| `SHORT.grandPower` | 19 (unchanged) | 4.1: swept with the Imperial Boss at 10 (careful / full Legacy / Heat 1 / Heat 3, 300 careers): 19 → 23 / 43 / 23 / 13%; 20 → 19 / 40 / 19 / 11%; 21 → 17 / 37 / 20 / 8%. 21 alone (first try) failed the full-Legacy and Heat 1 gates. A new gate keeps the Grand harder per attempt than the Imperial Boss. |
+| `KINDS.orc.basePower` | 6 → 5 | 4.4: Power 6 made up for the Orc having no combat trait; it now has three, about as strong as other kinds' (52.5% at equal Power vs 52–55%), and at its natural Power it won 58.5% against a Power-5 field. Every kind now starts at 5, as the Basa did in v6. |
+
+### The cousin in the cells (the designer, 7.9)
+The first political prisoner was too easy to miss. Now, from the Bronze Arena (`COUSIN.fromTier` 2), before any political
+prisoner has joined the house and unless Purge the Prisons is in force, the first fighter in your roster asks you to buy
+their cousin out of the cells (the steward asks if the roster is empty). The cousin is a political prisoner (as the Liaison's
+usual one: cheap, with a telling prison record), offered by the Liaison at once if it stands, or the moment it is built,
+and kept on offer through monthly refreshes until bought or `COUSIN.weeks` (8) after the ask. Bought: the asker +10
+Morale (`savedMorale`). Not bought in time: he is executed and the asker −10 Morale (`missMorale`). The plea doesn't say
+he is a rebel. Rolled on the plot's dice, so the Market is unchanged. The year-2 guaranteed political prisoner stays as before.
+
+### Repeated Chains Break (4.2)
+Putting a revolt down left the ringleader Mutinous, so it broke out again within weeks (one bot career: weeks 39, 41, 43,
+45, 47). Now every Mutinous fighter is cowed to at least Morale 30 (`UNREST.cowedMorale`, Discontented but not Mutinous).
+Probe (reckless bot, 60 Season careers each): as built 1.10 crises a career, 0.70 repeats within 6 weeks, longest chain 13;
+`afterPutDown` 0: 1.03 / 0.63 / 10; `cool` 4: no change; cowed at 20: 1.00 / 0.60 / 12; **cowed at 30: 0.63 / 0.13 / 3**
+(chosen); win rates unchanged (3%). The brawler bot never met a crisis.
+
+### Wound items (4.3)
+Viper Venom, Blood Thinner and Blinding Powder wounded the opponent but changed match win rates by about 0 (−0.3, −0.4,
++0.1 points), so no price could bring them to the 0.4–0.65 points-per-Gold target. Each now also gives **+3% win chance**
+that round (`boost.win: 3000`), prices unchanged. Probe (`scripts/probes/item-value.js`, 6,000 even fights): a +2% rider gives
+0.26–0.30 points per Gold; **+3% gives Viper Venom 0.47, Blood Thinner 0.44, Blinding Powder 0.43** (chosen).
+
+### Covert ops (review finding)
+Covert ops cost a careful player wins. Probe (`scripts/probes/bot-options.js`, careful bot with ops on, 300 Season careers,
+seeds from 1000): no ops 18%; as built 14%; caught −2 Favour 15%; −2 Favour with Doctor the Wine 4 and Bribe the Armourer 5
+Gold 17%; **−2 Favour with costs 2 / 4 / 5 Gold 19%** (chosen: ops now break even for a sound player, and pay for a
+player who picks their moments). `ESPIONAGE.caughtFavor` −5 → −2; Steal the Playbook 3 → 2, Doctor the Wine 6 → 4,
+Bribe the Armourer 7 → 5 Gold. Chances unchanged.

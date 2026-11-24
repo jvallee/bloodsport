@@ -306,3 +306,24 @@ ops 59%, wound items 30%; reckless: The Chains Break 31%.
 - Wound items, Temperament decor and the Liaison make no measurable difference to win rates (within ±8).
 - Heat 3 sits on its 8% floor; the next balance change should watch it.
 - A first try that gave every star a Wine Amphora put it in 96% of winning houses: the decor gate measures the bot's policy.
+
+### v7.9.0 (review brief Phase 4 and the cousin quest; `npm run check`, 300 careers): 24/24
+
+New gate: the Grand Tournament is won less often per attempt than the Imperial Boss. Changes: the Imperial Boss's Season
+bonus 12 → 10 (the Grand stays at 19, chosen from a sweep), the Orc at Power 5, a put-down revolt leaves its fighters
+cowed (Morale 30), wound items +3% win, covert ops cheaper with −2 Favour when caught, and the cousin quest.
+
+| | 7.6 taught bots | 7.9.0 |
+|---|---|---|
+| First career, careful | 29% ±5 | 23% ±5 |
+| Full Legacy (Heat 1 / Heat 3) | 38% (16 / 8) | 43% (23 / 13) |
+| Evil road | +9 | +19 |
+| Coup | 7% | 7% |
+| Long Road | 28% | 27% |
+| Boss win per attempt | 91 · 66 · 36 · 21 · 31 | 90 · 57 · 37 · 24 · 21 |
+| Brawler win rate | 25% ±7 | 21% ±6 |
+| Reckless careers with The Chains Break | 31% | 44% (repeats within weeks now rare) |
+
+Notes: first careers are 6 points below the 7.6 measurement (the designer's comfort range was 1–4); the full Legacy and
+Heat groups gained. The climax gate passes by 3 points (Imperial 24%, Grand 21%). A first try with the Grand at 21 failed
+the full-Legacy (34%) and Heat 1 (14%) gates.

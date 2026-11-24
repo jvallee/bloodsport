@@ -169,6 +169,7 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, he
     { name: 'Tactics matter: reading the opponent beats always-Steady by 3–15 points a match', value: tactics.smart - tactics.steady, pass: tactics.smart - tactics.steady >= 0.03 && tactics.smart - tactics.steady <= 0.15, fmt: 'pctDiff' },
     { name: 'No dominant tactic: always-Press does worse than reading the opponent', value: tactics.smart - tactics.press, pass: tactics.press < tactics.smart, fmt: 'pctDiff' },
     { name: 'Tough finish: the Grand Tournament is 10+ points harder than the first Boss', value: (curve[1] ?? 0) - (curve[5] ?? 1), pass: (curve[1] ?? 0) - (curve[5] ?? 1) >= 0.1, fmt: 'pctDiff' },
+    { name: 'A real climax: the Grand Tournament is won less often per attempt than the Imperial Boss', value: (curve[4] ?? 0) - (curve[5] ?? 1), pass: (curve[5] ?? 1) < (curve[4] ?? 0), fmt: 'pctDiff' },
     { name: 'The evil road is easier: the loyalist wins 5–20 points more often than careful (same seeds)', value: rate(loyalist) - rate(sameSeeds), pass: rate(loyalist) - rate(sameSeeds) >= 0.05 && rate(loyalist) - rate(sameSeeds) <= 0.2, fmt: 'pctDiff' },
     { name: 'The coup is rare but real: 5–25% of rebel careers', value: ending(rebel, 'coup'), pass: ending(rebel, 'coup') >= 0.05 && ending(rebel, 'coup') <= 0.25, fmt: 'pct' },
     { name: 'The Long Road is winnable (careful 15–45%) and a won season is at least a fifth quicker', value: rate(long), pass: rate(long) >= 0.15 && rate(long) <= 0.45 && winWeeks(careful) <= 0.8 * winWeeks(long), fmt: 'pct' },

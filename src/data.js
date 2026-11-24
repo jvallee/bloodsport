@@ -264,7 +264,7 @@ export const KINDS = {
   human: { name: 'Human', basePower: 5, traits: ['hateful', 'masochist', 'underdog'] },
   android: { name: 'Android', basePower: 5, traits: ['quantumAnalyzer', 'alloyedSkin', 'perpetualMotion'] },
   elf: { name: 'Elf', basePower: 5, traits: ['firebug', 'footwork', 'egoArmour', 'elvenEyes'] },
-  orc: { name: 'Orc', basePower: 6, traits: ['bloodFaith', 'unbreakable', 'bloodlust'] },
+  orc: { name: 'Orc', basePower: 5, traits: ['bloodFaith', 'unbreakable', 'bloodlust'] },
   vampire: { name: 'Vampire', basePower: 5, traits: ['bloodDrinker', 'nightborn', 'mesmerize'] },
   basa: { name: 'Basa', basePower: 5, traits: ['thickHide', 'pounce', 'rampage'] },
   revenant: { name: 'Revenant', basePower: 5, traits: ['deathless', 'graveChill', 'cinderHeart'], exotic: true },
@@ -393,6 +393,7 @@ export const UNREST = {
   threshold: 8, warn: 5, cool: 2, incident: 0.25, theftPerTier: 2, escapeStress: 20, bondDrag: -3,
   coffersPerFighter: 4, calmMood: 15, garrisonPerLevel: 10, loyalMorale: 50, mutineerMorale: 30,
   putDownFavor: -6, afterPutDown: 2, palatineSuspicion: 15, palatineTrust: -1,
+  cowedMorale: 30, // 7.9 (4.2): a put-down revolt leaves its fighters at this Morale, so it doesn't break out again at once
   moleTip: 15, // 7.4.1: a palace mole at the head of the revolt tells the palace everything
 };
 
@@ -535,9 +536,9 @@ export const CONSUMABLES = {
   adrenaline: { name: 'Adrenaline Draught', price: 3, desc: '+3 Speed next round; +15 Stress after the fight.', boost: { speed: 3 }, stressAfter: 15 },
   blessedBandage: { name: 'Blessed Bandage', price: 3, desc: '−10% chance to be injured next round, and staunches one Bleeding wound for the rest of the fight.', boost: { guard: 10000 }, staunch: true },
   ironTonic: { name: 'Iron Tonic', price: 3, desc: '+5% win chance next round.', boost: { win: 5000 } },
-  viperVenom: { name: 'Viper Venom', price: 3, desc: '+10% chance to injure next round; 65% of wounds it lands turn to Poison (a hard hit can make a lighter wound Poisoned).', boost: { injure: 10000, affinity: { style: 'poison', chance: 65000, upWeight: 1 } } },
-  bloodThinner: { name: 'Blood Thinner', price: 3, desc: '+10% chance to injure next round; 75% of light wounds it lands bleed.', boost: { injure: 10000, affinity: { style: 'bleed', chance: 75000, upWeight: 1 } } },
-  blindingPowder: { name: 'Blinding Powder', price: 4, desc: 'Next round, 60% of wounds go for the eyes: a hard hit Blinds, a light one only Distracts. A Cyborg Eye shrugs it off.', boost: { affinity: { style: 'blindPowder', chance: 60000, upWeight: 1 } } },
+  viperVenom: { name: 'Viper Venom', price: 3, desc: '+3% win chance and +10% chance to injure next round; 65% of wounds it lands turn to Poison (a hard hit can make a lighter wound Poisoned).', boost: { win: 3000, injure: 10000, affinity: { style: 'poison', chance: 65000, upWeight: 1 } } },
+  bloodThinner: { name: 'Blood Thinner', price: 3, desc: '+3% win chance and +10% chance to injure next round; 75% of light wounds it lands bleed.', boost: { win: 3000, injure: 10000, affinity: { style: 'bleed', chance: 75000, upWeight: 1 } } },
+  blindingPowder: { name: 'Blinding Powder', price: 4, desc: 'Next round, +3% win chance, and 60% of wounds go for the eyes: a hard hit Blinds, a light one only Distracts. A Cyborg Eye shrugs it off.', boost: { win: 3000, affinity: { style: 'blindPowder', chance: 60000, upWeight: 1 } } },
   berserkerMushroom: { name: 'Berserker Mushroom', price: 4, desc: '+2 Power next round, but +10% chance to be injured.', boost: { power: 2, self: 10000 } },
   throwingNet: { name: 'Throwing Net', price: 4, desc: 'The opponent has −3 Speed next round.', foe: { speed: -3 } },
   smellingSalts: { name: 'Smelling Salts', price: 3, desc: 'Clears a Distracted or Concussed wound for the rest of this fight (it still needs healing after).', salts: true },
@@ -647,7 +648,7 @@ export const DEMANDS = {
 export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] };
 
 // Season mode (short career): Tournament -> Boss per tier, scaled purses, training, market, and opponent Power.
-export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 12], grandPower: 19, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
+export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 10], grandPower: 19, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],
@@ -655,6 +656,8 @@ export const NEMESIS = {
 export const EXHIBITION = { xpWin: 2, xpLoss: 1, renown: 1, goldPerTier: 1, woundChance: 0.15 };
 export const LIAISON = { convictPrice: 2, elitePrice: 3, elitePerTier: 2, elitePower: -1, offers: [2, 3] };
 export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClue: 0.25 };
+// 7.9: the cousin in the cells (src/run/roster.js cousinWeek): asked at this arena tier; executed after `weeks`.
+export const COUSIN = { fromTier: 2, weeks: 8, savedMorale: 10, missMorale: -10 };
 export const QUESTS = { stewardFromWeek: 4, goldScale: 0.5, prestige: 0, talkPerWeek: 2 };
 export const FIGHTER_WANTS = { chance: 0.35, max: 2, metMorale: 10, metRenown: 2, metXp: 2, missMorale: -10, roomItems: ['bathhouse', 'shrine', 'trophy'], titleReach: 3 };
 export const RIVAL = { championFrom: 2, minWeeks: 12, chance: 0.35, power: 1, maxBonus: 2, beatGold: 4, beatRenown: 3, beatGlory: 5, winGlory: 3, poachChance: 0.15, monthGlory: 2, oppShare: 0.07, earlyAtFinal: true };
@@ -676,11 +679,11 @@ export const SUMMONS = { fromWeek: 5, chance: 0.1, refuseFavor: -40, surviveFavo
 export const ESPIONAGE = {
   flip: 0.25, palaceSuspicion: 40, plant: 0.15, plantDiscount: 0.5, clue: 0.5, act: 0.3, investigate: 2, offended: -5,
   leakPower: 1, palaceLeak: 3, executeSuspicion: -15, executeGlory: -3, executeMorale: -5, turnCost: 4, falsePlaybook: 10000, ransom: 8,
-  caughtFavor: -5, feudMonths: 3,
+  caughtFavor: -2, feudMonths: 3, // 7.9: -5 -> -2 and ops cheaper (3/6/7 -> 2/4/5): ops had cost a careful player wins
   ops: {
-    playbook: { name: 'Steal the Playbook', cost: 3, chance: 0.75, galleryBonus: 0.1, desc: "Read the opponent's Round-1 tactic exactly. Caught: they fight with Vengeance (+5% win)." },
-    wine: { name: 'Doctor the Wine', cost: 6, chance: 0.6, agentBonus: 0.15, desc: 'The opponent arrives Bleeding, or sluggish (−1 Power). Caught: −5 Favour and a 3-month feud with their house.' },
-    armourer: { name: 'Bribe the Armourer', cost: 7, chance: 0.6, desc: "The opponent's armour gear does nothing in the bout. Caught: −5 Favour, and the Gold is gone." },
+    playbook: { name: 'Steal the Playbook', cost: 2, chance: 0.75, galleryBonus: 0.1, desc: "Read the opponent's Round-1 tactic exactly. Caught: they fight with Vengeance (+5% win)." },
+    wine: { name: 'Doctor the Wine', cost: 4, chance: 0.6, agentBonus: 0.15, desc: 'The opponent arrives Bleeding, or sluggish (−1 Power). Caught: −2 Favour and a 3-month feud with their house.' },
+    armourer: { name: 'Bribe the Armourer', cost: 5, chance: 0.6, desc: "The opponent's armour gear does nothing in the bout. Caught: −2 Favour, and the Gold is gone." },
   },
 };
 
