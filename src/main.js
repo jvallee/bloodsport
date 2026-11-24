@@ -7,6 +7,7 @@ import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
 import { saveFailedBanner, loadFailedModal, summaryKey, otherTabBanner } from './ui/views.js';
+import { fightKey } from './ui/keys.js';
 import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom, careerKey } from './careers.js';
 import { estimateOdds } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
@@ -39,6 +40,15 @@ let tab = 'ludus';
 let showHelp = false;
 let autoTimer = null;
 let revealTimer = null;
+// Until when (performance.now()) a round is still being revealed: its controls and any MORTAL DANGER warning aren't
+// visible yet, so a key or click only finishes the reveal (7.5, see src/ui/keys.js).
+let revealingUntil = 0;
+function finishReveal() {
+  revealingUntil = 0;
+  ui.animateRound = 0;
+  clearTimeout(revealTimer);
+  render();
+}
 let roundStartedAt = 0; // when the latest round began playing (auto-play waits for its story to finish, not for a fresh wait)
 const reducedMotion = () => Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 const ui = { animateRound: 0, showMath: false, auto: false, open: {} }; // open: fold-outs the player opened or closed, by data-key
@@ -346,8 +356,10 @@ function renderFight() {
   if (feed) feed.scrollTop = feed.scrollHeight;
   // Swap side cards from pre-round snapshot to post-round state at blow impact so death/wounds never spoil t=0s.
   const last = match.rounds.at(-1);
+  revealingUntil = 0;
   if (last && last.round === ui.animateRound && last.before && !reducedMotion()) {
     const timing = roundTiming(match, last, ui.showMath);
+    revealingUntil = performance.now() + (timing.end + 0.4) * 1000; // the controls fade in 0.3 s after the last line
     const snapMatch = match;
     const snapRound = last.round;
     revealTimer = setTimeout(() => {
@@ -833,6 +845,15 @@ const pressButton = (selector) => {
   return Boolean(b && !b.disabled);
 };
 
+// A click on the fight screen while a round is still being revealed only finishes the reveal (no hidden control fires).
+fightEl.addEventListener('click', (e) => {
+  if (performance.now() < revealingUntil && e.target.closest?.('[data-action]')) {
+    e.preventDefault();
+    e.stopPropagation();
+    finishReveal();
+  }
+}, true);
+
 // Two tabs on one career would overwrite each other's saves; the tab that didn't save last steps back.
 window.addEventListener('storage', (e) => {
   if (careerId && e.key === careerKey(careerId) && e.newValue !== null) {
@@ -885,6 +906,11 @@ document.addEventListener('keydown', (e) => {
       }
       return;
     }
+  }
+  if (match) {
+    const k = fightKey({ key: e.key, revealing: performance.now() < revealingUntil, danger: !match.over && mortalDanger(match.a), over: match.over });
+    if (k === 'finish-reveal') { e.preventDefault(); finishReveal(); return; }
+    if (k === 'ignore') { e.preventDefault(); return; }
   }
   if (e.key === ' ' || e.key === 'Enter') {
     if (e.target.closest?.('button, summary')) return; // let focused buttons and fold-outs work as usual

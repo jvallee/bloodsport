@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.5.0)
 
+- **No accidental rounds at the Death Gate:** while a round is still playing out, Space, Enter or a click only finishes showing it, so you always see the next round's choices (and any MORTAL DANGER warning) before acting. While MORTAL DANGER shows, Space and Enter do nothing: fighting on or capitulating takes a deliberate click.
 - **Two tabs on one career:** if you play a career in another tab, the older tab says so and stops saving, so it can't overwrite your newer progress.
 - **Importing a save keeps your own Codex and Legacy** unless you choose to replace them.
 - **Boss bracket notices:** each of a bracket's results can now be dismissed on its own (dismissing one closed them all).
