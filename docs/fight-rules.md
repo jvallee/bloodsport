@@ -1206,3 +1206,10 @@ usual one: cheap, with a telling prison record), offered by the Liaison at once 
 and kept on offer through monthly refreshes until bought or `COUSIN.weeks` (8) after the ask. Bought: the asker +10
 Morale (`savedMorale`). Not bought in time: he is executed and the asker −10 Morale (`missMorale`). The plea doesn't say
 he is a rebel. Rolled on the plot's dice, so the Market is unchanged. The year-2 guaranteed political prisoner stays as before.
+
+### Repeated Chains Break (4.2)
+Putting a revolt down left the ringleader Mutinous, so it broke out again within weeks (one bot career: weeks 39, 41, 43,
+45, 47). Now every Mutinous fighter is cowed to at least Morale 30 (`UNREST.cowedMorale`, Discontented but not Mutinous).
+Probe (reckless bot, 60 Season careers each): as built 1.10 crises a career, 0.70 repeats within 6 weeks, longest chain 13;
+`afterPutDown` 0: 1.03 / 0.63 / 10; `cool` 4: no change; cowed at 20: 1.00 / 0.60 / 12; **cowed at 30: 0.63 / 0.13 / 3**
+(chosen); win rates unchanged (3%). The brawler bot never met a crisis.

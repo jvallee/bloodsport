@@ -4,6 +4,9 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.9.0)
 
+- **A revolt put down stays down:** after the guards break The Chains Break, the mutineers are cowed (Morale at least 30), so the barracks don't rise again a fortnight later.
+- **The Grand Tournament is the hardest fight in a Season again:** the Imperial Coliseum's Boss is 2 Power weaker and the Grand's champion 2 Power stronger.
+- **Orcs start at Power 5,** like every other kind. Their extra point was meant to make up for having no fighting trait, and they have three now.
 - **A cousin in the cells:** once you reach the Bronze Arena, one of your fighters (or your steward, if the barracks are empty) begs you to buy their cousin out of the city cells before he is executed. The Liaison offers him for 8 weeks; the next-step bar counts down the time. Buy him and your fighter is grateful (+10 Morale); leave him and they grieve (−10).
 
 ## 7.8.0 (2026-11-24): fights with more feeling

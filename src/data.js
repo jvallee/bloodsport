@@ -393,6 +393,7 @@ export const UNREST = {
   threshold: 8, warn: 5, cool: 2, incident: 0.25, theftPerTier: 2, escapeStress: 20, bondDrag: -3,
   coffersPerFighter: 4, calmMood: 15, garrisonPerLevel: 10, loyalMorale: 50, mutineerMorale: 30,
   putDownFavor: -6, afterPutDown: 2, palatineSuspicion: 15, palatineTrust: -1,
+  cowedMorale: 30, // 7.9 (4.2): a put-down revolt leaves its fighters at this Morale, so it doesn't break out again at once
   moleTip: 15, // 7.4.1: a palace mole at the head of the revolt tells the palace everything
 };
 
