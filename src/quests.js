@@ -164,9 +164,21 @@ export const MOLE_CLUES = [
 ];
 export const MOLE_TELLS = ['suspiciously cheap for their Power', 'a brand scar under the tunic, the mark of another house', 'asks a great many questions about your other fighters'];
 
+// 7.8 (review brief 2.11): what is said after The Chains Break and an unmasked mole. PLACEHOLDER lines for the designer;
+// the steward's voice is the designer's to write.
+export const AFTERMATH_LINES = {
+  coffers: 'Gold. Fine. It fills bellies. It does not fill the place where the chain was.',
+  palatine: 'So you are one of us after all. Then we stop shouting, and start planning.',
+  palatineMole: (name) => `${name} went straight from the barracks to the palace. Expect questions, and soon.`,
+  putDown: 'You have put the chains back on. They are never as tight the second time.',
+  turned: 'They will hear what you want them to hear. I hope you pay better than they did.',
+  ransomed: (name, house) => `${name} is bundled into a cart for ${house}, and does not look back.`,
+  executed: 'It is done. The yard is quiet, and the whole house watches you differently now.',
+};
+
 export const SUMMONS_LINES = {
   ask: 'The games in my Coliseum have grown dull, Lanista. I want new blood on the Imperial sand. Send me one of yours on this month\'s fight day.',
-  steward: (favor) => `A summons, not a request. He doesn't make requests. On fight day, send a fighter to the Imperial Coliseum against one of its regulars, told to yield at the Death Gate or to fight to the death. Or refuse him, and lose ${-favor} Favour.`,
+  steward: (favor) => `A summons, not a request. He doesn't make requests. On fight day, send a fighter to the Imperial Coliseum against one of its regulars, told to capitulate at the Death Gate or to fight to the death. Or refuse him, and lose ${-favor} Favour.`,
   refused: 'You refuse me? I will remember the name of your house, Lanista. I will remember it at every dinner.',
   won: (f) => `${f} beat my champion? On my own sand? Well. Someone bring me that fighter's name, I want to say it again.`,
   survived: (f) => `${f} lost, but still stood at the end. The crowd liked them. So, for a moment, did I.`,

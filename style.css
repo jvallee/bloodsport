@@ -391,6 +391,11 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .init-auto { font-size: 14px; color: var(--gold); }
 /* 7.7 Quick pace (#fight.quick): the dice tumble in 0.5 s instead of 1.3 s (fightView's diceTime). */
 /* 7.7 the first-strike chance under the tactic label */
+/* 7.8 a death: the eulogy on the fight screen, and names under the fallen's faces */
+.eulogy { margin: 8px auto; max-width: 560px; color: var(--muted); font-style: italic; text-align: center; }
+.eulogy ul { list-style: none; padding: 0; margin: 6px 0 0; font-size: 13px; }
+.fallen-face { display: inline-flex; flex-direction: column; align-items: center; margin: 0 4px; }
+.fallen-face small { font-size: 11px; color: var(--muted); }
 .first-strike { font-size: 13px; color: var(--muted); margin: 2px 0 6px; }
 .first-strike b { color: var(--text); }
 #fight.quick .die::before { animation: dice-faces 0.17s steps(1) 3, fade-out 0s 0.5s forwards; }
@@ -792,6 +797,11 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 .top-menu > summary::-webkit-details-marker { display: none; }
 .top-menu-list { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; display: grid; gap: 6px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 160px; }
 .jump-bout { display: none; }
+/* 7.8 on a phone: the fight's decision (Death Gate alert, tactics, Capitulate) stays pinned to the bottom of the screen. */
+@media (max-width: 600px) {
+  #fight .decide { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; max-height: 55vh; overflow-y: auto; background: var(--bg); padding: 8px 12px 12px; border-top: 1px solid var(--line); box-shadow: 0 -8px 14px rgba(0, 0, 0, 0.55); }
+  #fight .fight { padding-bottom: 58vh; } /* room to scroll the story above the pinned decision */
+}
 @media (max-width: 760px) {
   .top-actions { display: none; }
   .top-menu { display: block; }

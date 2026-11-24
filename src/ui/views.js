@@ -13,7 +13,7 @@ import {
   buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
   trainGain, renameBlocker, dominantTemperament, espState, canNarrow, investigateBlocker, opTarget, opChance, covertOpBlocker,
 } from '../run.js';
-import { stepText } from '../tutorial.js';
+import { stepText, INTRO } from '../tutorial.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, buildingKnown, upgradeBlocker, levelInfo, maxLevel, effectAt,
 } from '../ludus.js';
@@ -127,7 +127,7 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
       </header>
       <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate', estateBadge)}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>
     </div>
-    ${run.bouts && run.boutPending && tab === 'ludus' ? '<button class="jump-bout" data-action="jump-bout">⚔ Fight day ↓</button>' : ''}`;
+    ${run.bouts && run.boutPending && tab === 'ludus' && !run.inMatch ? '<button class="jump-bout" data-action="jump-bout">⚔ Fight day ↓</button>' : ''}`;
 }
 
 // The coming bouts in your top arena, up to its Boss.
@@ -186,7 +186,7 @@ export function endBanner(run, legacy = null) {
     <div class="end-grid">
       <div><div class="label">The career</div>${formatDate(run.week)}<br>${wins} won, ${fought.length - wins} lost · ${kills} kill${kills === 1 ? '' : 's'}<br>Top arena: ${esc(arenaName(run.topTier))}<br>House rank: #${rank} of ${standings(run).length} · Glory ${run.glory ?? 0}</div>
       ${best ? `<div class="end-best">${portrait(best, 64)}<div><div class="label">Best fighter</div><b>${esc(best.name)}</b> (${esc(KINDS[best.kind].name)})<br>${bestWins} win${bestWins === 1 ? '' : 's'} · Renown ${best.renown}${best.titles?.length ? `<br>🏆 ${esc(best.titles.join(', '))}` : ''}${best.alive ? '' : '<br>Fell in the arena'}</div></div>` : ''}
-      ${deaths ? `<div><div class="label">The fallen</div><div class="fallen-faces">${run.fallen.map((f) => `<span title="${esc(f.name)}">${portrait(f, 40)}</span>`).join('')}</div></div>` : ''}
+      ${deaths ? `<div><div class="label">The fallen</div><div class="fallen-faces">${run.fallen.map((f) => `<span class="fallen-face">${portrait(f, 40)}<small>${esc(f.name)}</small></span>`).join('')}</div></div>` : ''}
     </div>
     <div class="row"><button class="btn primary" data-action="new-run">New career</button><button class="btn" data-action="replay-seed">Replay seed ${esc(run.seed)}</button></div></div>`;
 }
@@ -777,8 +777,8 @@ function boutPanel(run, oddsFor) {
 function summonsBlock(run) {
   if (!run.summons || !run.bouts) return '';
   const opp = getSummonsPower(run);
-  const rows = run.roster.filter((f) => !summonsBlocker(run, f.id, 'yield')).map((f) => `<div class="row tight"><b>${esc(f.name)}</b> <small>Power ${effectivePower(f)}</small> <select class="gear-select" data-change="summons" data-id="${esc(f.id)}" aria-label="Send ${esc(f.name)} to the Emperor"><option value="">Send them…</option><option value="yield">told to yield at the Death Gate</option><option value="death">told to fight to the death</option></select></div>`).join('');
-  return `<div class="arena-block summons"><h3>⚜ The Emperor's summons: the Imperial Coliseum</h3><p class="sub">One of your fighters against a regular of the Imperial Coliseum (Power ${opp}), played out at once. Stand to the end of Round 3: +${SUMMONS.surviveFavor} Favour, +${SUMMONS.surviveRenown} Renown. Win: +${SUMMONS.winFavor} Favour, +${SUMMONS.winRenown} Renown. Yield at the Death Gate: ${SUMMONS.yieldFavor} Favour. Die: the Temple of Vulcan gets a body.</p>${rows || '<p class="sub">Nobody is free to go.</p>'}<p>${buttonWhy(`Refuse (${SUMMONS.refuseFavor} Favour)`, 'refuse-summons', {}, refuseSummonsBlocker(run), 'btn small')}</p></div>`;
+  const rows = run.roster.filter((f) => !summonsBlocker(run, f.id, 'yield')).map((f) => `<div class="row tight"><b>${esc(f.name)}</b> <small>Power ${effectivePower(f)}</small> <select class="gear-select" data-change="summons" data-id="${esc(f.id)}" aria-label="Send ${esc(f.name)} to the Emperor"><option value="">Send them…</option><option value="yield">told to capitulate at the Death Gate</option><option value="death">told to fight to the death</option></select></div>`).join('');
+  return `<div class="arena-block summons"><h3>⚜ The Emperor's summons: the Imperial Coliseum</h3><p class="sub">One of your fighters against a regular of the Imperial Coliseum (Power ${opp}), played out at once. Stand to the end of Round 3: +${SUMMONS.surviveFavor} Favour, +${SUMMONS.surviveRenown} Renown. Win: +${SUMMONS.winFavor} Favour, +${SUMMONS.winRenown} Renown. Capitulate at the Death Gate: ${SUMMONS.yieldFavor} Favour. Die: the Temple of Vulcan gets a body.</p>${rows || '<p class="sub">Nobody is free to go.</p>'}<p>${buttonWhy(`Refuse (${SUMMONS.refuseFavor} Favour)`, 'refuse-summons', {}, refuseSummonsBlocker(run), 'btn small')}</p></div>`;
 }
 
 // The Exhibition Ring on fight day: pick a fighter's sparring partner from a dropdown (it runs the bout).
@@ -937,9 +937,19 @@ export function marketTab(run) {
 
 // ---------- Help ----------
 
-export function helpModal() {
+// How to play: the short list ('play'), or the intro's pages on winning, losing, and Power and Speed ('rules', 7.8).
+export function helpModal(tab = 'play') {
+  const tabs = [['play', 'How to play'], ['rules', 'The rules in brief']].map(([k, label]) => `<button class="seg${tab === k ? ' on' : ''}" role="tab" aria-selected="${tab === k}" data-action="help-tab" data-tab="${k}">${label}</button>`).join('');
+  if (tab === 'rules') {
+    return `<div class="modal" role="dialog" aria-modal="true" aria-label="How to play"><div class="modal-body">
+    <button class="close" data-action="help" aria-label="Close">×</button>
+    <div class="segs help-tabs" role="tablist">${tabs}</div>
+    ${INTRO.slice(1).map((p) => `<h3>${esc(p.title)}</h3>${p.body}`).join('')}
+  </div></div>`;
+  }
   return `<div class="modal" role="dialog" aria-modal="true" aria-label="How to play"><div class="modal-body">
     <button class="close" data-action="help" aria-label="Close">×</button>
+    <div class="segs help-tabs" role="tablist">${tabs}</div>
     <h2>How to play</h2>
     <ol>
       <li><b>Recruit</b> gladiators in the Market.</li>

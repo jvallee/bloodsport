@@ -93,7 +93,7 @@ export function injuryForScore(score) {
 export const TRAITS = {
   hateful: { name: 'Hateful', desc: '+10% chance to injure the opponent.' },
   masochist: { name: 'Masochist', desc: '+1 Power per effective injury. Injuries never switch this trait off.' },
-  quantumAnalyzer: { name: 'Quantum Analyzer', desc: 'Each round lost gives +1 Power for the rest of the match.' },
+  quantumAnalyzer: { name: 'Quantum Analyser', desc: 'Each round lost gives +1 Power for the rest of the match.' },
   alloyedSkin: { name: 'Alloyed Skin', desc: 'Armour: −10% chance to be injured.' },
   perpetualMotion: { name: 'Perpetual Motion Machine', desc: 'After winning a round: +10% win chance and +5% chance to be injured next round.' },
   firebug: { name: 'Firebug', desc: '+1 Power per Fire Brazier in quarters.' },

@@ -215,10 +215,11 @@ test('Bow gives +1 Power in rounds 1–2 against melee-only opponents', () => {
   assert.deepEqual(sources(computePower(Z, W, 1).mods), ['Blinded:-2']);
 });
 
+// 7.8: the display name is spelt Analyser (the id quantumAnalyzer is unchanged).
 test('Quantum Analyzer adds its stacks; Blinded is −2 per instance', () => {
   const [A, B] = pair({ kindTrait: 'quantumAnalyzer', injuries: injuries('blinded') }, {});
   A.analyzed = 2;
-  assert.deepEqual(sources(computePower(A, B, 2).mods), ['Quantum Analyzer:2', 'Blinded:-2']);
+  assert.deepEqual(sources(computePower(A, B, 2).mods), ['Quantum Analyser:2', 'Blinded:-2']);
 });
 
 // ---- Phase 2 percentages ----

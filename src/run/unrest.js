@@ -4,7 +4,8 @@
 import { createRng, deriveSeed, next, pick } from '../rng.js';
 import { UNREST, MORALE, STRESS, HEAL_WEEKS, INJURY_BY_TAG, CIRCUITS } from '../data.js';
 import { MOOD_WEEKS } from '../events.js';
-import { log, chronicle, bumpMorale, effectivePower, changeFavor, findFighter } from './helpers.js';
+import { log, chronicle, bumpMorale, effectivePower, changeFavor, findFighter, talk } from './helpers.js';
+import { AFTERMATH_LINES } from '../quests.js';
 import { plotActive, changeSuspicion } from './plotEngine.js';
 import { bondmate } from './houses.js';
 
@@ -109,6 +110,9 @@ function calm(run, out) {
   out.push(`the barracks calm: everyone +${UNREST.calmMood} Morale for ${MOOD_WEEKS} weeks`);
 }
 
+// The leader speaks once the dust settles (7.8); cosmetic.
+const aftermath = (run, f, text) => talk(run, `revolt-${run.week}`, [f ? { speaker: 'fighter', fighterId: f.id, text } : { speaker: 'steward', text }]);
+
 // The Chains Break: the player's answer (applyEventEffects).
 export function resolveRevolt(run, how, ev, out) {
   const leader = findFighter(run, ev.f);
@@ -116,6 +120,7 @@ export function resolveRevolt(run, how, ev, out) {
     run.gold -= ev.price;
     out.push(`−${ev.price} Gold`);
     calm(run, out);
+    aftermath(run, leader, AFTERMATH_LINES.coffers);
   } else if (how === 'palatine') {
     run.palatineUsed = true;
     run.plot.trust = Math.max(0, run.plot.trust + UNREST.palatineTrust);
@@ -127,10 +132,12 @@ export function resolveRevolt(run, how, ev, out) {
       chronicle(run, leader, 'Led a revolt in the barracks, then sold it to the palace: they were its mole all along.');
       log(run, `${leader.name} was the palace's mole: the Palatine hears of the cause before nightfall.`, 'bad');
       out.push(`${leader.name} runs to the palace: they were its mole`);
+      aftermath(run, null, AFTERMATH_LINES.palatineMole(leader.name));
     } else if (leader) {
       run.plot.champion = leader.id;
       chronicle(run, leader, 'Led a revolt in the barracks, and turned it toward the Palatine.');
       out.push(`${leader.name} joins the cause`);
+      aftermath(run, leader, AFTERMATH_LINES.palatine);
     }
     calm(run, out);
   } else if (ev.loyal >= ev.mutineers) {
@@ -139,6 +146,7 @@ export function resolveRevolt(run, how, ev, out) {
       leader.injuries.push({ tag, weight: INJURY_BY_TAG[tag].weight, weeksLeft: HEAL_WEEKS[tag] });
       chronicle(run, leader, `Led a revolt in the barracks; the guards put it down (${INJURY_BY_TAG[tag].name}).`);
       out.push(`the revolt is put down; ${leader.name} is ${INJURY_BY_TAG[tag].name}`);
+      aftermath(run, leader, AFTERMATH_LINES.putDown);
     }
     changeFavor(run, UNREST.putDownFavor, 'a revolt in your barracks');
     out.push(`${UNREST.putDownFavor} Favour`);

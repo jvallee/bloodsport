@@ -119,6 +119,46 @@ export function dueScene(run, seen = []) {
   return RETURNS.find((r) => !seen.includes(r.id) && r.when(run))?.id ?? null;
 }
 
+// ---------- How the career ended (7.8, review brief 2.11) ----------
+// One last scene when a career ends, by how it ended. PLACEHOLDER lines for the designer. Pure: reads the run.
+export function endingKind(run) {
+  if (run.status === "active") return null;
+  if (run.ending) return run.ending; // coup, martyr, treason (the hidden plot)
+  if (run.status === "won") return "grand";
+  if (run.favor <= 0) return "favour";
+  if (!run.roster.length) return "broke";
+  return "revolt"; // the only other way a career ends: overrun in The Chains Break
+}
+export const ENDING_SCENES = {
+  grand: [
+    { speaker: "emperor", text: "Master of the Games. Stand beside me, Lanista, so the crowd can see who made you." },
+    { speaker: "emperor", text: "Enjoy it. My favourites have short lives and magnificent funerals." },
+  ],
+  coup: [
+    { speaker: "emperor", text: "You. I pulled you out of nothing, and this is how you thank—" },
+    { speaker: "narrator", text: "The crowd does not let him finish. The imperial box stands empty, and the sand is quiet for the first time in a hundred years." },
+  ],
+  martyr: [
+    { speaker: "emperor", text: "A broken chain on every door, and not one of them could open mine. Scrub them off." },
+    { speaker: "narrator", text: "By morning the doors are clean. By evening, someone has chalked the chain back on one of them." },
+  ],
+  treason: [
+    { speaker: "emperor", text: "I told you I know what a person will do to keep breathing. I did not think you would be so bad at it." },
+  ],
+  favour: [
+    { speaker: "emperor", text: "I warned you, Lanista. You had one thing to give me, and you stopped giving it." },
+    { speaker: "emperor", text: "Never mind. You will entertain my guests one last time, from the wrong side of the sand." },
+  ],
+  broke: [
+    { speaker: "emperor", text: "An empty ludus and an empty purse. I need not even sign the order. The city will see to you for free." },
+  ],
+  revolt: [
+    { speaker: "narrator", text: "The chains break, and the first thing they find is you." },
+    { speaker: "emperor", text: "A Lanista killed by their own stock. Write it down; it will amuse the Senate." },
+  ],
+};
+export const endingScene = (run) => ENDING_SCENES[endingKind(run)] ?? null;
+
 // ---------- The rebel's confession (the designer's request, 2026-11-01) ----------
 // The first political prisoner in your house takes you aside and says plainly that there is a rising, and what they have
 // heard of you. What they say depends on your record. Every line is a PLACEHOLDER first draft for the designer.

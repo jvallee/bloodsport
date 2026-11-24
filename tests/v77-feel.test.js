@@ -86,3 +86,76 @@ test('2.4 the odds cache key holds only what a fight reads: a job, Stress, XP or
   assert.notEqual(fightKey({ ...g, power: g.power + 1 }), key);
   assert.notEqual(fightKey({ ...g, injuries: [{ tag: 'fleshWound', weight: 1 }] }), key);
 });
+
+test('2.8 a death: the fight screen gives the eulogy and their story; the log says it once; the end screen names the fallen', async () => {
+  const { fightView } = await import('../src/ui/fightView.js');
+  const { endBanner } = await import('../src/ui/views.js');
+  const { createRun, recruit, advanceToTournament, startMatch, finishMatch, choosePerk } = await import('../src/run.js');
+  const run = createRun(81);
+  const f = recruit(run, run.market[0].id);
+  for (const x of run.roster) while (x.pendingPerks.length) choosePerk(run, x.id, x.pendingPerks[0][0]);
+  advanceToTournament(run);
+  for (const x of run.roster) while (x.pendingPerks.length) choosePerk(run, x.id, x.pendingPerks[0][0]);
+  const m = startMatch(run, f.id, 1);
+  m.over = true;
+  m.round = 2;
+  m.result = { winner: 'B', reason: 'death' };
+  m.a.f.alive = false;
+  const logBefore = run.log.length;
+  m.summary = finishMatch(run, m);
+  const lines = run.log.slice(logBefore).map((l) => l.text ?? l);
+  assert.ok(lines.some((t) => /died in/.test(t)));
+  assert.ok(!lines.some((t) => new RegExp(`${f.name} lost`).test(t)), 'no "lost" straight after "died"');
+  const html = fightView(m, { animateRound: 0, showMath: false }, { name: 'The Dirt Pits', tier: 1 });
+  assert.match(html, /class="eulogy"[^]*Here lies[^]*Fell in/);
+  run.status = 'lost';
+  assert.match(endBanner(run, null), new RegExp(`class="fallen-faces"[^]*<small>${f.name}</small>`));
+});
+
+test('2.10 How to play has a second tab with the intro pages (the Power-gap rule among them)', async () => {
+  const { helpModal } = await import('../src/ui/views.js');
+  const { INTRO } = await import('../src/tutorial.js');
+  const play = helpModal();
+  assert.match(play, /data-action="help-tab" data-tab="rules"/);
+  const rules = helpModal('rules');
+  for (const page of INTRO.slice(1)) assert.ok(rules.includes(page.title), page.title);
+  assert.match(rules, /\+1 is 55% per round, \+3 is 70%/);
+});
+
+test('2.6 phone fight screen: the decision block holds the Death Gate alert, the tactics and Capitulate; no Fight day button in a fight', async () => {
+  const { fightView } = await import('../src/ui/fightView.js');
+  const { topbar } = await import('../src/ui/views.js');
+  const { createRun } = await import('../src/run.js');
+  const a = blank({ name: 'Aulus', injuries: [{ tag: 'poisoned', weight: 2 }] });
+  const m = createMatch({ a, b: blank({ id: 'b', name: 'Brutus' }), rng: createRng(2) });
+  for (const html of [fightView(m, { animateRound: 0 }, { name: 'X', tier: 1 })]) {
+    assert.match(html, /<div class="decide">[^]*MORTAL DANGER[^]*data-action="next-round"/);
+  }
+  m.round = 1; m.rounds = [{ ...m.rounds[0] }].filter(Boolean);
+  const run = createRun(82);
+  run.bouts = { 1: 'open' }; run.boutPending = true;
+  assert.match(topbar(run, 'ludus', 0, true), /jump-bout/);
+  run.inMatch = true;
+  assert.doesNotMatch(topbar(run, 'ludus', 0, true), /jump-bout/);
+});
+
+test('2.9 narration varies: rotating first-strike lines, a strike by style, quiet rounds, several death lines', async () => {
+  const { narrateStory } = await import('../src/narrate.js');
+  const styles = [{ cls: 'fighter', weapon: 'club' }, { cls: 'fighter', weapon: 'flail' }, { cls: 'retiarius' }, { cls: null }];
+  const lines = [];
+  for (let seed = 1; seed <= 400; seed++) {
+    const st = styles[seed % styles.length];
+    const gate = seed % 2 ? [{ tag: 'poisoned', weight: 2 }] : []; // half start at the Death Gate, so deaths happen
+    const m = createMatch({ a: blank({ name: 'Atticus', power: 6, ...st, injuries: [...gate] }), b: blank({ id: 'b', name: 'Thessaly', power: 6, ...st, injuries: [...gate] }), rng: createRng(seed) });
+    autoPlay(m, suggestTactic);
+    for (const r of m.rounds) lines.push(...narrateStory(m, r));
+  }
+  const init = lines.filter((l) => l.type === 'init').map((l) => l.text);
+  assert.ok(init.filter((t) => /strikes first\.$/.test(t)).length / init.length < 0.5, 'not one line for every round');
+  const wounds = lines.filter((l) => l.type === 'injury').map((l) => l.text);
+  assert.ok(wounds.some((t) => /club crashes through/.test(t)) && wounds.some((t) => /flail whips round/.test(t)) && wounds.some((t) => /net drags/.test(t)));
+  assert.ok(wounds.filter((t) => /lands a brutal blow/.test(t)).length / wounds.length < 0.3);
+  assert.ok(lines.some((l) => l.type === 'quiet'), 'a round with no blood still gets a line');
+  const deaths = new Set(lines.filter((l) => l.type === 'death').map((l) => l.text.replace(/Atticus|Thessaly/g, 'X')));
+  assert.ok(deaths.size >= 3, `${deaths.size} death lines`);
+});

@@ -90,7 +90,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   relics                        the house's relics and what each does
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
   next [tactic] | capitulate    during a fight: play the next round with a tactic (steady, press, guard, feint; default: the suggestion), or capitulate ("towel" also works)
-  math                          toggle the round-by-round math in fight narration
+  math                          toggle the round-by-round maths in fight narration
   end-week | to-tournament      run one week of jobs, or keep ending weeks until the next tournament`;
 
 export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) {

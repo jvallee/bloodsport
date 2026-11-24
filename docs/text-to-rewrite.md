@@ -266,9 +266,9 @@ End-screen titles and closing lines:
 
 | Where | Text |
 |---|---|
-| [src/run/tournaments.js:808](../src/run/tournaments.js#L808) | 'You won the Grand Tournament. The Emperor names you Master of the Games.' |
+| [src/run/tournaments.js:809](../src/run/tournaments.js#L809) | 'You won the Grand Tournament. The Emperor names you Master of the Games.' |
 | [src/run/helpers.js:303](../src/run/helpers.js#L303) | `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.` |
-| [src/run/unrest.js:150](../src/run/unrest.js#L150) | 'Killed in a gladiator revolt.' (7.3; was 'Your gladiators revolt and burn the Ludus.') |
+| [src/run/unrest.js:158](../src/run/unrest.js#L158) | 'Killed in a gladiator revolt.' (7.3; was 'Your gladiators revolt and burn the Ludus.') |
 | [src/run/helpers.js:310](../src/run/helpers.js#L310) | 'No fighters left and not enough Gold to buy one. Your house falls.' |
 | Where | Text |
 |---|---|
@@ -427,44 +427,44 @@ These are templates: keep the `${...}` parts. A line with several variants picks
 
 | Where | Text |
 |---|---|
-| [src/narrate.js:64](../src/narrate.js#L64) | `${name(init.first === 'A' ? 'B' : 'A')} is Concussed, so ${name(init.first)} strikes first.` |
-| [src/narrate.js:65](../src/narrate.js#L65) | `${name(init.first)}'s Footwork: faster, strikes first.` |
-| [src/narrate.js:69](../src/narrate.js#L69) | `Initiative: ${name('A')} ${s.A.total}+${init.rolls.A} vs ${name('B')} ${s.B.total}+${init.rolls.B}.${tie} ${name(init.first)} strikes first.` |
-| [src/narrate.js:74](../src/narrate.js#L74) | `${name('A')} wins this round ${fmtPct(r.win.chance)} of the time: ${fmtPct(r.win.base)} from the Delta${bonuses.length ? `. Win-chance bonuses: ${bonuses.join(', ')}` : ''}.` |
-| [src/narrate.js:76](../src/narrate.js#L76) | `Round roll: ${name('A')} needs ${roll100(r.win.chance)} or less, rolled ${roll100(r.roll)}. ${name(r.winner)} takes Round ${r.round}.` |
-| [src/narrate.js:88](../src/narrate.js#L88) | add(c.hit ? 'hit' : 'miss', `${prefix}: needs ${roll100(c.chance)} or less to wound${pierce}, rolled ${roll100(c.roll)}. ${c.hit ? 'Hit!' : 'Miss.'}` |
-| [src/narrate.js:102](../src/narrate.js#L102) | `${att} drinks deep: their own ${c.drained === 'fleshWound' ? 'Flesh Wound' : 'Distraction'} closes (Blood Drinker).` |
-| [src/narrate.js:89](../src/narrate.js#L89) | if (c.parry) add(c.parry.success ? 'parry' : 'hit', c.parry.success ? (c.parry.shield ? `${def} catches it on the shield!` : `${def} parries with the Sword! Riposte: +3 Speed next round.`) : `${def}'s parry fails.` |
-| [src/narrate.js:117](../src/narrate.js#L117) | `You capitulated. ${you} lives to fight another day.` |
-| [src/narrate.js:118](../src/narrate.js#L118) | winner === 'A' ? `${them} died in the arena. ${you} wins.` : `${you} died in the arena.` |
-| [src/narrate.js:128](../src/narrate.js#L128) | concussed: 'Concussed, the world spinning' |
-| [src/narrate.js:129](../src/narrate.js#L129) | poisoned: 'Poisoned (it counts as two injuries!)' |
-| [src/narrate.js:145](../src/narrate.js#L145) | `${second} is still dazed. ${name(init.first)} moves first.` |
-| [src/narrate.js:146](../src/narrate.js#L146) | `${name(init.first)} darts in first on quick feet.` |
-| [src/narrate.js:150](../src/narrate.js#L150) | `Against the odds, ${name(r.winner)} takes Round ${r.round}!` |
-| [src/narrate.js:151](../src/narrate.js#L151) | variant(r, [`${name(r.winner)} dominates Round ${r.round}.`, `${name(r.winner)} overpowers the opposition in Round ${r.round}.`] |
-| [src/narrate.js:152](../src/narrate.js#L152) | variant(r, [`${name(r.winner)} edges out Round ${r.round}.`, `${name(r.winner)} wins a hard-fought Round ${r.round}.`, `${name(r.winner)} takes Round ${r.round}.`] |
-| [src/narrate.js:161](../src/narrate.js#L161) | c.label === 'Off-hand strike' ? `${att}'s off-hand blade finds a gap!` : `${att}'s elven eyes spot an opening: a swift counter!` |
-| [src/narrate.js:162](../src/narrate.js#L162) | `${def} parries ${att}'s blow and ripostes!` |
-| [src/narrate.js:166](../src/narrate.js#L166) | `${att} lands a killing blow. ${def} falls and does not rise.` |
-| [src/narrate.js:168](../src/narrate.js#L168) | let text = `${att} lands a brutal blow: ${def} is ${INJURY_STORY[inj.tag]}.` |
-| [src/narrate.js:170](../src/narrate.js#L170) | if (inj.disabled?.length) text += ` ${def} loses ${inj.disabled.map((s) => slotName((c.defender === 'A' ? m.a : m.b).f, s)).join(' and ')} for this match.` |
-| [src/narrate.js:194](../src/narrate.js#L194) | `${you} fought on with the Death Gate open. When the Death Gate is open, capitulating or healing first keeps fighters alive.` |
-| [src/narrate.js:196](../src/narrate.js#L196) | `${you} entered overtrained (−1 Power, one ability lost). Rest the week before a fight to keep Stress under 50.` |
-| [src/narrate.js:197](../src/narrate.js#L197) | 'You saved your fighter. Heal them in the Medbay before the next bout.'; // capitulated: not "lost anyway" |
-| [src/narrate.js:201](../src/narrate.js#L201) | `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
-| [src/narrate.js:202](../src/narrate.js#L202) | `${you} was favoured in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.` |
-| [src/narrate.js:203](../src/narrate.js#L203) | `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.` |
-| [src/narrate.js:204](../src/narrate.js#L204) | `Their weapon pierced your armour. Against Gun or Flail fighters, armour won't save you; win the rounds instead.` |
-| [src/narrate.js:197](../src/narrate.js#L197) | 'You saved your fighter. Heal them in the Medbay before the next bout.' |
-| [src/narrate.js:201](../src/narrate.js#L201) | `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
-| [src/narrate.js:205](../src/narrate.js#L205) | 'An even fight that went the other way. Small edges add up: training, decor and fighting rested.' |
+| [src/narrate.js:65](../src/narrate.js#L65) | `${name(init.first === 'A' ? 'B' : 'A')} is Concussed, so ${name(init.first)} strikes first.` |
+| [src/narrate.js:66](../src/narrate.js#L66) | `${name(init.first)}'s Footwork: faster, strikes first.` |
+| [src/narrate.js:70](../src/narrate.js#L70) | `Initiative: ${name('A')} ${s.A.total}+${init.rolls.A} vs ${name('B')} ${s.B.total}+${init.rolls.B}.${tie} ${name(init.first)} strikes first.` |
+| [src/narrate.js:75](../src/narrate.js#L75) | `${name('A')} wins this round ${fmtPct(r.win.chance)} of the time: ${fmtPct(r.win.base)} from the Delta${bonuses.length ? `. Win-chance bonuses: ${bonuses.join(', ')}` : ''}.` |
+| [src/narrate.js:77](../src/narrate.js#L77) | `Round roll: ${name('A')} needs ${roll100(r.win.chance)} or less, rolled ${roll100(r.roll)}. ${name(r.winner)} takes Round ${r.round}.` |
+| [src/narrate.js:89](../src/narrate.js#L89) | add(c.hit ? 'hit' : 'miss', `${prefix}: needs ${roll100(c.chance)} or less to wound${pierce}, rolled ${roll100(c.roll)}. ${c.hit ? 'Hit!' : 'Miss.'}` |
+| [src/narrate.js:103](../src/narrate.js#L103) | `${att} drinks deep: their own ${c.drained === 'fleshWound' ? 'Flesh Wound' : 'Distraction'} closes (Blood Drinker).` |
+| [src/narrate.js:90](../src/narrate.js#L90) | if (c.parry) add(c.parry.success ? 'parry' : 'hit', c.parry.success ? (c.parry.shield ? `${def} catches it on the shield!` : `${def} parries with the Sword! Riposte: +3 Speed next round.`) : `${def}'s parry fails.` |
+| [src/narrate.js:118](../src/narrate.js#L118) | `You capitulated. ${you} lives to fight another day.` |
+| [src/narrate.js:119](../src/narrate.js#L119) | winner === 'A' ? `${them} died in the arena. ${you} wins.` : `${you} died in the arena.` |
+| [src/narrate.js:129](../src/narrate.js#L129) | concussed: 'Concussed, the world spinning' |
+| [src/narrate.js:130](../src/narrate.js#L130) | poisoned: 'Poisoned (it counts as two injuries!)' |
+| [src/narrate.js:170](../src/narrate.js#L170) | `${second} is still dazed. ${name(init.first)} moves first.` |
+| [src/narrate.js:171](../src/narrate.js#L171) | `${name(init.first)} darts in first on quick feet.` |
+| [src/narrate.js:175](../src/narrate.js#L175) | `Against the odds, ${name(r.winner)} takes Round ${r.round}!` |
+| [src/narrate.js:176](../src/narrate.js#L176) | variant(r, [`${name(r.winner)} dominates Round ${r.round}.`, `${name(r.winner)} overpowers the opposition in Round ${r.round}.`] |
+| [src/narrate.js:177](../src/narrate.js#L177) | variant(r, [`${name(r.winner)} edges out Round ${r.round}.`, `${name(r.winner)} wins a hard-fought Round ${r.round}.`, `${name(r.winner)} takes Round ${r.round}.`] |
+| [src/narrate.js:186](../src/narrate.js#L186) | c.label === 'Off-hand strike' ? `${att}'s off-hand blade finds a gap!` : `${att}'s elven eyes spot an opening: a swift counter!` |
+| [src/narrate.js:187](../src/narrate.js#L187) | `${def} parries ${att}'s blow and ripostes!` |
+| [src/narrate.js:191](../src/narrate.js#L191) | `${att} lands a killing blow. ${def} falls and does not rise.` |
+| [src/narrate.js:194](../src/narrate.js#L194) | let text = `${att} lands a brutal blow: ${def} is ${INJURY_STORY[inj.tag]}.` |
+| [src/narrate.js:196](../src/narrate.js#L196) | if (inj.disabled?.length) text += ` ${def} loses ${inj.disabled.map((s) => slotName((c.defender === 'A' ? m.a : m.b).f, s)).join(' and ')} for this match.` |
+| [src/narrate.js:224](../src/narrate.js#L224) | `${you} fought on with the Death Gate open. When the Death Gate is open, capitulating or healing first keeps fighters alive.` |
+| [src/narrate.js:226](../src/narrate.js#L226) | `${you} entered overtrained (−1 Power, one ability lost). Rest the week before a fight to keep Stress under 50.` |
+| [src/narrate.js:227](../src/narrate.js#L227) | 'You saved your fighter. Heal them in the Medbay before the next bout.'; // capitulated: not "lost anyway" |
+| [src/narrate.js:231](../src/narrate.js#L231) | `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
+| [src/narrate.js:232](../src/narrate.js#L232) | `${you} was favoured in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.` |
+| [src/narrate.js:233](../src/narrate.js#L233) | `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.` |
+| [src/narrate.js:234](../src/narrate.js#L234) | `Their weapon pierced your armour. Against Gun or Flail fighters, armour won't save you; win the rounds instead.` |
+| [src/narrate.js:227](../src/narrate.js#L227) | 'You saved your fighter. Heal them in the Medbay before the next bout.' |
+| [src/narrate.js:231](../src/narrate.js#L231) | `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
+| [src/narrate.js:235](../src/narrate.js#L235) | 'An even fight that went the other way. Small edges add up: training, decor and fighting rested.' |
 
 ## 8. The crowd's verdict (thumbs up or down) and fight-screen lines
 
 | Where | Text |
 |---|---|
-| [src/ui/views.js:1060](../src/ui/views.js#L1060) | The crowd waits${esc(m.opp)}'s fate${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}. ${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'} |
+| [src/ui/views.js:1070](../src/ui/views.js#L1070) | The crowd waits${esc(m.opp)}'s fate${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}. ${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'} |
 | Where | Text |
 |---|---|
 | [src/ui/fightView.js:41](../src/ui/fightView.js#L41) | const SUSPENSE = 1; // the pause ("Steel meets steel…") before the round's winner is announced |
@@ -474,9 +474,9 @@ These are templates: keep the `${...}` parts. A line with several variants picks
 | [src/ui/fightView.js:203](../src/ui/fightView.js#L203) | // Thumbs up or down: the beaten opponent's fate, with what the crowd wants. |
 | [src/ui/fightView.js:210](../src/ui/fightView.js#L210) | const spare = blood ? `${favor}; ${house} will owe you a life (−1 Power against you)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale (the crowd agrees)` |
 | [src/ui/fightView.js:211](../src/ui/fightView.js#L211) | const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill (the crowd agrees)` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${m.house ? `; ${house} will swear a feud` : ''}` |
-| [src/ui/fightView.js:332](../src/ui/fightView.js#L332) | const pre = mortalDanger(m.a) ? `⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about ${Math.round(deathRisk(m) * 100)}% chance of death. Capitulating is only possible between rounds.` : '' |
-| [src/ui/fightView.js:336](../src/ui/fightView.js#L336) | const alert = danger ? `⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about ${Math.round(deathRisk(m) * 100)}% chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.` : '' |
-| [src/ui/fightView.js:406](../src/ui/fightView.js#L406) | ${last ? `Your round chance ${fmtPct(last.win.chance)}${animate ? `Steel meets steel…` : ''}${roundBanner(m, last, reveal)}` : 'The crowd roars. Three rounds; first to two wins.'} |
+| [src/ui/fightView.js:333](../src/ui/fightView.js#L333) | const pre = mortalDanger(m.a) ? `⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about ${Math.round(deathRisk(m) * 100)}% chance of death. Capitulating is only possible between rounds.` : '' |
+| [src/ui/fightView.js:337](../src/ui/fightView.js#L337) | const alert = danger ? `⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about ${Math.round(deathRisk(m) * 100)}% chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.` : '' |
+| [src/ui/fightView.js:409](../src/ui/fightView.js#L409) | ${last ? `Your round chance ${fmtPct(last.win.chance)}${animate ? `Steel meets steel…` : ''}${roundBanner(m, last, reveal)}` : 'The crowd roars. Three rounds; first to two wins.'} |
 
 ## 9. The house log (read all the time)
 
@@ -490,7 +490,7 @@ Lines the house steward writes each week. The plot's lines are in section 4.
 | [src/run/helpers.js:251](../src/run/helpers.js#L251) | `${f.name} leaves the Medbay fully healed.`, 'good' |
 | [src/run/weekly.js:221](../src/run/weekly.js#L221) | `${f.name} is overtrained (Stress ${f.stress}). Rest them before a fight.`, 'warn' |
 | [src/run/weekly.js:222](../src/run/weekly.js#L222) | `${f.name} is mutinous and refuses to fight.`, 'bad' |
-| [src/run/unrest.js:89](../src/run/unrest.js#L89) | `The barracks seethe: unrest ${run.unrest}/${UNREST.threshold}. Calm your Mutinous fighters, or the chains will break.`, 'bad' (7.3) |
+| [src/run/unrest.js:90](../src/run/unrest.js#L90) | `The barracks seethe: unrest ${run.unrest}/${UNREST.threshold}. Calm your Mutinous fighters, or the chains will break.`, 'bad' (7.3) |
 | [src/run/weekly.js:251](../src/run/weekly.js#L251) | 'The stranger in the Medbay slipped away before dawn.', 'event'); } |
 | [src/run/weekly.js:252](../src/run/weekly.js#L252) | `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn' |
 | [src/run/weekly.js:262](../src/run/weekly.js#L262) | `Tournament week in ${unlockedTiers(run).length > 1 ? `${unlockedTiers(run).length} arenas` : arenaName(run.topTier)}.`, 'event' |
@@ -505,19 +505,19 @@ Lines the house steward writes each week. The plot's lines are in section 4.
 | [src/run/roster.js:661](../src/run/roster.js#L661) | `${f.name} wakes with a ${AUGMENTS[key].name}. The crowd mutters about machines.`, 'event' |
 | [src/run/roster.js:686](../src/run/roster.js#L686) | `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good' |
 | [src/run/tournaments.js:336](../src/run/tournaments.js#L336) | `You skip ${bout.name}: +${ECONOMY.skipGold} Gold, and the roster rests.` |
-| [src/run/tournaments.js:751](../src/run/tournaments.js#L751) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event' |
+| [src/run/tournaments.js:752](../src/run/tournaments.js#L752) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event' |
 | [src/run/tournaments.js:450](../src/run/tournaments.js#L450) | `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn' |
 | [src/run/tournaments.js:453](../src/run/tournaments.js#L453) | `The crowd jeers ${fighter.name} for crushing a much weaker opponent.`, 'warn' |
-| [src/run/tournaments.js:605](../src/run/tournaments.js#L605) | `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good' |
+| [src/run/tournaments.js:606](../src/run/tournaments.js#L606) | `${fighter.name} claims a ${GEAR[summary.loot].name} from the defeated ${opp.name}.`, 'good' |
 | [src/run/tournaments.js:566](../src/run/tournaments.js#L566) | `${fighter.name} is scarred: ${SCARS[id].name} against ${vs} fighters.`, 'warn' |
-| [src/run/tournaments.js:575](../src/run/tournaments.js#L575) | `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad' |
+| [src/run/tournaments.js:576](../src/run/tournaments.js#L576) | `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad' |
 | [src/run/helpers.js:243](../src/run/helpers.js#L243) | `House Prestige level ${run.prestigeLevel}! New buildings and room plots unlocked.`, 'event' |
-| [src/run/tournaments.js:665](../src/run/tournaments.js#L665) | `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good' |
-| [src/run/tournaments.js:710](../src/run/tournaments.js#L710) | `Overnight, every chalk mark on your doors is washed away.`, 'warn' |
-| [src/run/tournaments.js:745](../src/run/tournaments.js#L745) | `Thumbs down: ${fighter.name} finishes ${opp}.`, 'warn' |
-| [src/run/tournaments.js:751](../src/run/tournaments.js#L751) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${out.mark}: ${marks.at(-1).desc}`, 'event' |
-| [src/run/tournaments.js:765](../src/run/tournaments.js#L765) | `The crowd roars its approval for ${fighter.name}.`, 'good' |
-| [src/run/tournaments.js:832](../src/run/tournaments.js#L832) | `${opp.name} will remember this, and will be waiting for you.`, 'warn' |
+| [src/run/tournaments.js:666](../src/run/tournaments.js#L666) | `${fighter.name} wins the ${round} of ${bout.name}. On to the ${next}.`, 'good' |
+| [src/run/tournaments.js:711](../src/run/tournaments.js#L711) | `Overnight, every chalk mark on your doors is washed away.`, 'warn' |
+| [src/run/tournaments.js:746](../src/run/tournaments.js#L746) | `Thumbs down: ${fighter.name} finishes ${opp}.`, 'warn' |
+| [src/run/tournaments.js:752](../src/run/tournaments.js#L752) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${out.mark}: ${marks.at(-1).desc}`, 'event' |
+| [src/run/tournaments.js:766](../src/run/tournaments.js#L766) | `The crowd roars its approval for ${fighter.name}.`, 'good' |
+| [src/run/tournaments.js:833](../src/run/tournaments.js#L833) | `${opp.name} will remember this, and will be waiting for you.`, 'warn' |
 
 ## 10. Tutorial and coach tips
 
@@ -663,7 +663,7 @@ Every line below is a first draft. The rows show the code around the words; chan
 | [src/data.js:643](../src/data.js#L643) | kill: { goal: 'Finish a beaten opponent (thumbs down)', say: 'The crowd grows soft. Give them a death this month.' }, |
 | [src/data.js:644](../src/data.js#L644) | spare: { goal: 'Spare a beaten opponent (thumbs up)', say: 'The Senate calls me cruel. Show them my clemency: spare someone in the arena this month.' }, |
 | [src/data.js:645](../src/data.js#L645) | twoArenas: { goal: 'Win in two different arenas on fight day', say: 'Show me the depth of your house. Win in two of my arenas this month.' }, |
-| [src/main.js:188](../src/main.js#L188) | scene = { id: 'demand', beat: 0, beats: [{ speaker: 'emperor', text: DEMANDS[run.demand.id].say }, { speaker: 'steward', text: `The Emperor's demand: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day. Meet it and he pays in Favour and Gold; miss it and he remembers.` }] }; |
+| [src/main.js:196](../src/main.js#L196) | scene = { id: 'demand', beat: 0, beats: [{ speaker: 'emperor', text: DEMANDS[run.demand.id].say }, { speaker: 'steward', text: `The Emperor's demand: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day. Meet it and he pays in Favour and Gold; miss it and he remembers.` }] }; |
 | [src/run/houses.js:537](../src/run/houses.js#L537) | `The Emperor demands: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.`, 'event' |
 
 **The Patron Lounge** (policy names, and their rules text)
@@ -696,11 +696,11 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:244](../src/dialogue.js#L244) | news.push(`Your house has reached level ${after.level}. ${opened.length ? `New in the Estate: ${opened.join(', ')}.` : 'There are new plots to build on in the Estate.'}` |
-| [src/dialogue.js:247](../src/dialogue.js#L247) | news.push('New gladiators have arrived in the Market.' |
-| [src/dialogue.js:249](../src/dialogue.js#L249) | if (after.liaison && after.liaison !== before.liaison) news.push('The Liaison has a new prisoner on offer.' |
-| [src/dialogue.js:250](../src/dialogue.js#L250) | if (after.armourer && after.armourer !== before.armourer && run.armourerStock.length) news.push('The Armourer has new stock.' |
-| [src/dialogue.js:252](../src/dialogue.js#L252) | for (const f of raisable(run).filter((x) => !(before.bodies ?? '').split(',').includes(x.id))) news.push(`The priests of Vulcan have taken ${f.name}'s body. They can raise them as a Revenant, for a price (the Market tab).` |
+| [src/dialogue.js:284](../src/dialogue.js#L284) | news.push(`Your house has reached level ${after.level}. ${opened.length ? `New in the Estate: ${opened.join(', ')}.` : 'There are new plots to build on in the Estate.'}` |
+| [src/dialogue.js:287](../src/dialogue.js#L287) | news.push('New gladiators have arrived in the Market.' |
+| [src/dialogue.js:289](../src/dialogue.js#L289) | if (after.liaison && after.liaison !== before.liaison) news.push('The Liaison has a new prisoner on offer.' |
+| [src/dialogue.js:290](../src/dialogue.js#L290) | if (after.armourer && after.armourer !== before.armourer && run.armourerStock.length) news.push('The Armourer has new stock.' |
+| [src/dialogue.js:292](../src/dialogue.js#L292) | for (const f of raisable(run).filter((x) => !(before.bodies ?? '').split(',').includes(x.id))) news.push(`The priests of Vulcan have taken ${f.name}'s body. They can raise them as a Revenant, for a price (the Market tab).` |
 
 **The Unnatural Temple of Vulcan and Revenants** (5.3.0; the name is yours to change too)
 
@@ -721,49 +721,49 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:142](../src/dialogue.js#L142) | if (r.sparedForBlood) heard.push(say("You have spared lives on the sand even when the crowd bayed for blood, and the risk of it was yours. People noticed.") |
-| [src/dialogue.js:143](../src/dialogue.js#L143) | else if (r.spared) heard.push(say(`You have shown mercy in the arena${r.spared > 1 ? ` ${r.spared} times` : ""}. The crowd forgets. We don't.`) |
-| [src/dialogue.js:144](../src/dialogue.js#L144) | if (r.released) heard.push(say("You have bought fighters, and then set them free. Hardly any Lanista does that.") |
-| [src/dialogue.js:145](../src/dialogue.js#L145) | if (r.killed >= 3 && !r.spared) heard.push(say(`You have turned your thumb down ${r.killed} times, and never up. They say you enjoy it. I hope they're wrong.`) |
-| [src/dialogue.js:146](../src/dialogue.js#L146) | else if (r.killed) heard.push(say(`You have finished beaten fighters${r.killed > 1 ? ` ${r.killed} times` : ""}. I won't pretend that makes this easier to say.`) |
-| [src/dialogue.js:147](../src/dialogue.js#L147) | if (r.morale !== null && r.morale >= 70) heard.push(say("Your fighters eat well and sleep warm. In this city, that counts for something.") |
-| [src/dialogue.js:148](../src/dialogue.js#L148) | else if (r.morale !== null && r.morale < 40) heard.push(say("Your fighters are miserable, and miserable people talk. Be careful who hears this.") |
-| [src/dialogue.js:149](../src/dialogue.js#L149) | if (!heard.length) heard.push(say("I don't know you yet. I'm telling you anyway, because there is no one else to tell.") |
-| [src/dialogue.js:152](../src/dialogue.js#L152) | { speaker: "narrator", text: `That night, ${f.name} asks to speak with you alone.` }, |
-| [src/dialogue.js:153](../src/dialogue.js#L153) | say("I am not what the guards wrote on my record. There is a rising against Silbannacus, and I am part of it. The broken chain you may see chalked on doors is ours."), |
-| [src/dialogue.js:155](../src/dialogue.js#L155) | say("No one should be owned by another. Not me by you, and not you by the Emperor. We are all his slaves, Lanista. Some of us just hold keys."), |
-| [src/dialogue.js:157](../src/dialogue.js#L157) | ...say(kind ? "I think you might be one of us, whether you know it or not. You'll hear from us. Watch the doors." : "I don't know what you are yet. But you'll hear from us. Watch the doors."), |
-| [src/dialogue.js:159](../src/dialogue.js#L159) | { label: "I'm listening.", then: [say("Good. Say nothing to anyone, and keep your eyes open.")] }, |
-| [src/dialogue.js:160](../src/dialogue.js#L160) | { label: "Why tell me?", then: [say("Because a Lanista with a ludus full of fighters is the most dangerous person in this city, if they choose to be.")] }, |
-| [src/dialogue.js:161](../src/dialogue.js#L161) | { label: "Say nothing.", then: [say("Silence. Fine. Silence keeps people alive here.")] }, |
+| [src/dialogue.js:182](../src/dialogue.js#L182) | if (r.sparedForBlood) heard.push(say("You have spared lives on the sand even when the crowd bayed for blood, and the risk of it was yours. People noticed.") |
+| [src/dialogue.js:183](../src/dialogue.js#L183) | else if (r.spared) heard.push(say(`You have shown mercy in the arena${r.spared > 1 ? ` ${r.spared} times` : ""}. The crowd forgets. We don't.`) |
+| [src/dialogue.js:184](../src/dialogue.js#L184) | if (r.released) heard.push(say("You have bought fighters, and then set them free. Hardly any Lanista does that.") |
+| [src/dialogue.js:185](../src/dialogue.js#L185) | if (r.killed >= 3 && !r.spared) heard.push(say(`You have turned your thumb down ${r.killed} times, and never up. They say you enjoy it. I hope they're wrong.`) |
+| [src/dialogue.js:186](../src/dialogue.js#L186) | else if (r.killed) heard.push(say(`You have finished beaten fighters${r.killed > 1 ? ` ${r.killed} times` : ""}. I won't pretend that makes this easier to say.`) |
+| [src/dialogue.js:187](../src/dialogue.js#L187) | if (r.morale !== null && r.morale >= 70) heard.push(say("Your fighters eat well and sleep warm. In this city, that counts for something.") |
+| [src/dialogue.js:188](../src/dialogue.js#L188) | else if (r.morale !== null && r.morale < 40) heard.push(say("Your fighters are miserable, and miserable people talk. Be careful who hears this.") |
+| [src/dialogue.js:189](../src/dialogue.js#L189) | if (!heard.length) heard.push(say("I don't know you yet. I'm telling you anyway, because there is no one else to tell.") |
+| [src/dialogue.js:192](../src/dialogue.js#L192) | { speaker: "narrator", text: `That night, ${f.name} asks to speak with you alone.` }, |
+| [src/dialogue.js:193](../src/dialogue.js#L193) | say("I am not what the guards wrote on my record. There is a rising against Silbannacus, and I am part of it. The broken chain you may see chalked on doors is ours."), |
+| [src/dialogue.js:195](../src/dialogue.js#L195) | say("No one should be owned by another. Not me by you, and not you by the Emperor. We are all his slaves, Lanista. Some of us just hold keys."), |
+| [src/dialogue.js:197](../src/dialogue.js#L197) | ...say(kind ? "I think you might be one of us, whether you know it or not. You'll hear from us. Watch the doors." : "I don't know what you are yet. But you'll hear from us. Watch the doors."), |
+| [src/dialogue.js:199](../src/dialogue.js#L199) | { label: "I'm listening.", then: [say("Good. Say nothing to anyone, and keep your eyes open.")] }, |
+| [src/dialogue.js:200](../src/dialogue.js#L200) | { label: "Why tell me?", then: [say("Because a Lanista with a ludus full of fighters is the most dangerous person in this city, if they choose to be.")] }, |
+| [src/dialogue.js:201](../src/dialogue.js#L201) | { label: "Say nothing.", then: [say("Silence. Fine. Silence keeps people alive here.")] }, |
 
 **The rebel speaks again** (src/dialogue.js `rebelStageScene`: once at each stage of the rising)
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:200](../src/dialogue.js#L200) | say("You copied the sign. They saw. From now on they'll ask you for small things: a door left open, a stranger fed, a name forgotten."), |
-| [src/dialogue.js:201](../src/dialogue.js#L201) | say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good."), |
-| [src/dialogue.js:205](../src/dialogue.js#L205) | say("They trust you now. More than they trust me, I think."), |
-| [src/dialogue.js:206](../src/dialogue.js#L206) | say("A rising needs a sword in the arena: one of your fighters, standing in the Grand Tournament when the Emperor watches. And it needs the barracks armed."), |
-| [src/dialogue.js:207](../src/dialogue.js#L207) | say("Choose your champion carefully, Lanista. If they fall, the rising falls with them."), |
-| [src/dialogue.js:210](../src/dialogue.js#L210) | say("It's ready. The blades are oiled, the crowd knows the signal, and your champion knows what to do."), |
-| [src/dialogue.js:211](../src/dialogue.js#L211) | say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box. We'll do the rest."), |
-| [src/dialogue.js:214](../src/dialogue.js#L214) | if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. Every favour you do us, they notice.") |
-| [src/dialogue.js:215](../src/dialogue.js#L215) | return [{ speaker: "narrator", text: `${f.name} finds you alone again.` }, ...lines]; |
+| [src/dialogue.js:240](../src/dialogue.js#L240) | say("You copied the sign. They saw. From now on they'll ask you for small things: a door left open, a stranger fed, a name forgotten."), |
+| [src/dialogue.js:241](../src/dialogue.js#L241) | say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good."), |
+| [src/dialogue.js:245](../src/dialogue.js#L245) | say("They trust you now. More than they trust me, I think."), |
+| [src/dialogue.js:246](../src/dialogue.js#L246) | say("A rising needs a sword in the arena: one of your fighters, standing in the Grand Tournament when the Emperor watches. And it needs the barracks armed."), |
+| [src/dialogue.js:247](../src/dialogue.js#L247) | say("Choose your champion carefully, Lanista. If they fall, the rising falls with them."), |
+| [src/dialogue.js:250](../src/dialogue.js#L250) | say("It's ready. The blades are oiled, the crowd knows the signal, and your champion knows what to do."), |
+| [src/dialogue.js:251](../src/dialogue.js#L251) | say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box. We'll do the rest."), |
+| [src/dialogue.js:254](../src/dialogue.js#L254) | if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. Every favour you do us, they notice.") |
+| [src/dialogue.js:255](../src/dialogue.js#L255) | return [{ speaker: "narrator", text: `${f.name} finds you alone again.` }, ...lines]; |
 
 **5.4.0: the rebel's slower reveal** (the confession now waits for trust; this scene comes first, after you copy the chalk sign)
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:202](../src/dialogue.js#L202) | say("Who are they? Not yet. Do this well, and one day I'll tell you."), |
-| [src/dialogue.js:215](../src/dialogue.js#L215) | return [{ speaker: "narrator", text: confessed ? `${f.name} finds you alone again.` : `${f.name} catches your eye across the yard, and waits until the guards have gone.` }, ...lines]; |
+| [src/dialogue.js:242](../src/dialogue.js#L242) | say("Who are they? Not yet. Do this well, and one day I'll tell you."), |
+| [src/dialogue.js:255](../src/dialogue.js#L255) | return [{ speaker: "narrator", text: confessed ? `${f.name} finds you alone again.` : `${f.name} catches your eye across the yard, and waits until the guards have gone.` }, ...lines]; |
 
 **5.4.0: the Emperor's demands, met and missed** (src/dialogue.js `demandMetScene`, `demandMissedScene`)
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:170](../src/dialogue.js#L170) | { speaker: "emperor", text: "Good. That is what I asked for, and you gave it to me. I remember those who please me." }, |
-| [src/dialogue.js:176](../src/dialogue.js#L176) | { speaker: "emperor", text: "I asked you for one thing, Lanista. One. The month is over, and I am still waiting." }, |
+| [src/dialogue.js:210](../src/dialogue.js#L210) | { speaker: "emperor", text: "Good. That is what I asked for, and you gave it to me. I remember those who please me." }, |
+| [src/dialogue.js:216](../src/dialogue.js#L216) | { speaker: "emperor", text: "I asked you for one thing, Lanista. One. The month is over, and I am still waiting." }, |
 
 **5.4.0: the Emperor's spy** (an ordinary event, once a career from Year 2; src/events.js `emperorsSpy`)
 
@@ -845,27 +845,27 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/quests.js:168](../src/quests.js#L168) | ask: 'The games in my Coliseum have grown dull, Lanista. I want new blood on the Imperial sand. Send me one of yours on this month\'s fight day.', |
-| [src/quests.js:169](../src/quests.js#L169) | steward: (favor) => `A summons, not a request. On fight day, send a fighter to the Imperial Coliseum against one of its regulars, told to yield at the Death Gate or to fight to the death. Or refuse him, and lose ${-favor} Favour.`, |
-| [src/quests.js:170](../src/quests.js#L170) | refused: 'You refuse me? I will remember the name of your house, Lanista. I will remember it at every dinner.', |
-| [src/quests.js:171](../src/quests.js#L171) | won: (f) => `${f} beat my champion? On my own sand? Well. Someone bring me that fighter's name, I want to say it again.`, |
-| [src/quests.js:172](../src/quests.js#L172) | survived: (f) => `${f} lost, but still stood at the end. The crowd liked them. So, for a moment, did I.`, |
-| [src/quests.js:174](../src/quests.js#L174) | yielded: (f) => `${f} begged for their life on my sand. I let them keep it. I will not forget the begging.`, |
-| [src/quests.js:175](../src/quests.js#L175) | died: (f) => `${f} died well. That is all I asked of them.`, |
+| [src/quests.js:180](../src/quests.js#L180) | ask: 'The games in my Coliseum have grown dull, Lanista. I want new blood on the Imperial sand. Send me one of yours on this month\'s fight day.', |
+| [src/quests.js:181](../src/quests.js#L181) | steward: (favor) => `A summons, not a request. On fight day, send a fighter to the Imperial Coliseum against one of its regulars, told to yield at the Death Gate or to fight to the death. Or refuse him, and lose ${-favor} Favour.`, |
+| [src/quests.js:182](../src/quests.js#L182) | refused: 'You refuse me? I will remember the name of your house, Lanista. I will remember it at every dinner.', |
+| [src/quests.js:183](../src/quests.js#L183) | won: (f) => `${f} beat my champion? On my own sand? Well. Someone bring me that fighter's name, I want to say it again.`, |
+| [src/quests.js:184](../src/quests.js#L184) | survived: (f) => `${f} lost, but still stood at the end. The crowd liked them. So, for a moment, did I.`, |
+| [src/quests.js:186](../src/quests.js#L186) | yielded: (f) => `${f} begged for their life on my sand. I let them keep it. I will not forget the begging.`, |
+| [src/quests.js:187](../src/quests.js#L187) | died: (f) => `${f} died well. That is all I asked of them.`, |
 
 **5.4.0: the steward and the house log**
 
 | Where | Text |
 |---|---|
 | [src/run/tournaments.js:488](../src/run/tournaments.js#L488) | log(run, `Reaching the Boss earns respect: the ${bout.buyIn} Prestige buy-in is returned.`, 'event'); |
-| [src/run/tournaments.js:832](../src/run/tournaments.js#L832) | log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn'); |
+| [src/run/tournaments.js:833](../src/run/tournaments.js#L833) | log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn'); |
 | [src/ui/views.js](../src/ui/views.js) `overtrainModal` | The steward's overtraining question: "Before you end the week: another week of training and … will be Overtrained (Stress 50+)." |
 
 **The crowd remembers its dead** (a Revenant's first fight back)
 
 | Where | Text |
 |---|---|
-| [src/ui/fightView.js:403](../src/ui/fightView.js#L403) | ${m.a.f.risen && !m.rounds?.length ? `<div class="sub chant">📣 The crowd remembers ${esc(m.a.f.name)}. They chant the name they buried: +${HYPE.risen} hype.</div>` : ''} |
+| [src/ui/fightView.js:406](../src/ui/fightView.js#L406) | ${m.a.f.risen && !m.rounds?.length ? `<div class="sub chant">📣 The crowd remembers ${esc(m.a.f.name)}. They chant the name they buried: +${HYPE.risen} hype.</div>` : ''} |
 | [src/run/tournaments.js:532](../src/run/tournaments.js#L532) | `Fought again, back from the dead. The crowd chanted their name.` |
 | [src/run/tournaments.js:533](../src/run/tournaments.js#L533) | `The crowd chants ${fighter.name}'s name: the dead fighter walks the sand again.`, 'event' |
 
@@ -973,3 +973,12 @@ Version 6's new words. Rules text (numbers) must stay accurate; names and flavou
 | [src/run/espionage.js](../src/run/espionage.js) | Investigation results, the whispers stopping, covert op results. |
 | [src/ui/views.js](../src/ui/views.js) `espionagePanel` | "Knives in the dark", "Whispers in the house", the suspects line. |
 | [src/codex.js](../src/codex.js) | Wound styles, Moles and covert ops, and the Morale entry's unrest sentence. |
+
+## 17. New in 7.8 (first drafts, PLACEHOLDER)
+
+| Where | Text |
+|---|---|
+| [src/narrate.js](../src/narrate.js) `STRIKES` | How a wounding blow lands, one line per weapon or class style ("… club crashes through … guard", and so on), plus three generic lines. |
+| [src/narrate.js](../src/narrate.js) `narrateStory` | The four first-strike lines, the four death lines, and the three "quiet round" lines when nobody draws blood. |
+| [src/dialogue.js](../src/dialogue.js) `ENDING_SCENES` | The last scene of a career, one per ending: the Grand Tournament won, the coup, the martyr, treason, Favour gone, no fighters and no Gold, killed in the revolt. |
+| [src/quests.js](../src/quests.js) `AFTERMATH_LINES` | What the leader says after The Chains Break (coffers, the Palatine, put down), the steward's line when the leader was a palace mole, and the lines after a mole is turned, ransomed or executed (the steward's lines are yours to rewrite in their voice). |

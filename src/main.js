@@ -16,7 +16,7 @@ import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, 
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
-import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene } from './dialogue.js';
+import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene, endingScene } from './dialogue.js';
 import { DEMANDS, DEMAND, CIRCUITS, SUMMONS } from './data.js';
 import { snapshot, monthDigest } from './digest.js';
 import { fightView, diceTime, setFightPace, roundTiming, roundEndTime, sideCardHtml } from './ui/fightView.js';
@@ -63,6 +63,7 @@ let resultNotes = [];
 let eventIsWeighty = false; // a gamble, The Chains Break or an unmasked mole keeps its pop-up
 let scrollAfterRender = null; // a selector to bring into view after the next render
 let monthBefore = null; // before To fight day: { snap, mark } for the month's digest
+let helpTab = 'play'; // How to play's tab (7.8)
 let eventResult = null; // after an event card's choice: { title, lines } shown in a popup
 let logMark = 0; // the house log's length before an event choice
 let legacy = loadLegacy(null);
@@ -162,6 +163,13 @@ function talkBeat(b) {
 // The Emperor drops in at turning points, once each per career, when nothing else is on screen.
 function checkScene() {
   if (scene || eventResult || match || setupChoice || showHelp || !scenesSeen().includes('opening')) return; // the Emperor's visits come after the opening
+  // The career has ended: one last word, once (7.8).
+  const ending = endingScene(run);
+  if (ending && !scenesSeen().includes('ending')) {
+    markSceneSeen('ending');
+    scene = { id: 'ending', beat: 0, beats: ending };
+    return;
+  }
   // The Emperor's demand met, the moment it is; and missed, when its fight day ends (the designer, 5.4.0).
   if (run.demand && demandMet(run) && !scenesSeen().includes(`demand-met-${run.demand.week}`)) {
     markSceneSeen(`demand-met-${run.demand.week}`);
@@ -285,7 +293,7 @@ function render() {
   else body = ludusTab(run, oddsFor);
   checkScene();
   const guide = guideStep();
-  const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
+  const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal(helpTab) : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...resultNotes.map((r, i) => resultNotice(r, i)), ...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
@@ -549,7 +557,8 @@ const actions = {
       saveCodex();
     }
   },
-  help: () => { showHelp = !showHelp; },
+  help: () => { showHelp = !showHelp; helpTab = 'play'; },
+  'help-tab': (d) => { helpTab = d.tab === 'rules' ? 'rules' : 'play'; },
   'tutorial-done': (d) => { prefs.tutorial.push(d.step); savePrefs(); },
   'tutorial-skip': () => { prefs.tutorial = [...GUIDE, ...STEPS, ...FIGHT_STEPS].map((s) => s.id); savePrefs(); },
   'tutorial-replay': () => { prefs.tutorial = []; showHelp = false; savePrefs(); },

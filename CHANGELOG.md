@@ -2,6 +2,15 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.8.0 (2026-11-24): fights with more feeling
+
+- **Last words:** when a career ends, the Emperor (or the narrator) has a final word, different for every way it can end. After The Chains Break, the revolt's leader says what they think of your answer, and an unmasked mole's fate gets a line of its own.
+- **Livelier fight stories:** a wound is now described by the weapon or style that dealt it (a club crashes through a guard, a net drags a fighter down), first strikes and deaths have several ways of being told, and a round where nobody draws blood gets a line of its own.
+- **Fights on a phone:** your choice for the round (the tactics, Capitulate, and any MORTAL DANGER warning) now stays pinned to the bottom of the screen, and the "Fight day" button no longer floats over the fight.
+- **The rules in brief:** How to play has a second tab with how you win, how you lose, and how Power, Speed and luck work (the Power-gap odds among them). These pages were written for the intro but could no longer be reached.
+- **A fighter's death is remembered:** when a fighter dies, the fight screen now gives their epitaph and the last chapters of their story. The house log no longer says "lost" straight after "died", and the end of a career shows the names of the fallen under their faces.
+- **One name per rule:** giving up a match between rounds is always called capitulating now (the Codex called it forfeiting, which is a different thing: giving up a bout before it starts, and the Emperor's summons called it yielding). British spelling throughout: Humours, maths, the Quantum Analyser.
+
 ## 7.7.0 (2026-11-24): quicker and clearer fights
 
 - **Fewer clicks:** the result of an ordinary event or a Fortune card now appears as a notice at the top of the page instead of a pop-up you had to close. Gambles, The Chains Break, an unmasked mole and the month's digest still open their own pop-up.

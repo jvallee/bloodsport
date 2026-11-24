@@ -56,7 +56,7 @@ test('only on fight day, with an order, by a fighter who hasn\'t fought this wee
   const [a] = run.roster;
   assert.match(summonsBlocker(run, a.id, 'yield'), /fight day/);
   toFightDay(run);
-  assert.match(summonsBlocker(run, a.id, 'maybe'), /yield/);
+  assert.match(summonsBlocker(run, a.id, 'maybe'), /capitulate at the Death Gate/); // 7.8: was 'yield' (one name per rule)
   assert.equal(summonsBlocker(run, a.id, 'yield'), null);
 });
 
