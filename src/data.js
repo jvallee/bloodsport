@@ -655,6 +655,8 @@ export const NEMESIS = {
 export const EXHIBITION = { xpWin: 2, xpLoss: 1, renown: 1, goldPerTier: 1, woundChance: 0.15 };
 export const LIAISON = { convictPrice: 2, elitePrice: 3, elitePerTier: 2, elitePower: -1, offers: [2, 3] };
 export const POLITICAL = { chance: 0.25, guaranteeYear: 2, priceCut: 2, falseClue: 0.25 };
+// 7.9: the cousin in the cells (src/run/roster.js cousinWeek): asked at this arena tier; executed after `weeks`.
+export const COUSIN = { fromTier: 2, weeks: 8, savedMorale: 10, missMorale: -10 };
 export const QUESTS = { stewardFromWeek: 4, goldScale: 0.5, prestige: 0, talkPerWeek: 2 };
 export const FIGHTER_WANTS = { chance: 0.35, max: 2, metMorale: 10, metRenown: 2, metXp: 2, missMorale: -10, roomItems: ['bathhouse', 'shrine', 'trophy'], titleReach: 3 };
 export const RIVAL = { championFrom: 2, minWeeks: 12, chance: 0.35, power: 1, maxBonus: 2, beatGold: 4, beatRenown: 3, beatGlory: 5, winGlory: 3, poachChance: 0.15, monthGlory: 2, oppShare: 0.07, earlyAtFinal: true };

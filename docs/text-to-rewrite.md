@@ -268,7 +268,7 @@ End-screen titles and closing lines:
 |---|---|
 | [src/run/tournaments.js:809](../src/run/tournaments.js#L809) | 'You won the Grand Tournament. The Emperor names you Master of the Games.' |
 | [src/run/helpers.js:303](../src/run/helpers.js#L303) | `The Emperor's Favour is gone. You are executed in ${formatDate(run.week)}.` |
-| [src/run/unrest.js:158](../src/run/unrest.js#L158) | 'Killed in a gladiator revolt.' (7.3; was 'Your gladiators revolt and burn the Ludus.') |
+| [src/run/unrest.js:160](../src/run/unrest.js#L160) | 'Killed in a gladiator revolt.' (7.3; was 'Your gladiators revolt and burn the Ludus.') |
 | [src/run/helpers.js:310](../src/run/helpers.js#L310) | 'No fighters left and not enough Gold to buy one. Your house falls.' |
 | Where | Text |
 |---|---|
@@ -485,8 +485,8 @@ Lines the house steward writes each week. The plot's lines are in section 4.
 | Where | Text |
 |---|---|
 | [src/run/weekly.js:101](../src/run/weekly.js#L101) | `You take charge of a bottom-tier Ludus in ${arenaName(1)}.` |
-| [src/run/roster.js:124](../src/run/roster.js#L124) | `${fighter.name} joins the Ludus.` |
-| [src/run/roster.js:143](../src/run/roster.js#L143) | `${f.name} is released from the Ludus. Their gear and decor return to the storeroom.` |
+| [src/run/roster.js:196](../src/run/roster.js#L196) | `${fighter.name} joins the Ludus.` |
+| [src/run/roster.js:215](../src/run/roster.js#L215) | `${f.name} is released from the Ludus. Their gear and decor return to the storeroom.` |
 | [src/run/helpers.js:251](../src/run/helpers.js#L251) | `${f.name} leaves the Medbay fully healed.`, 'good' |
 | [src/run/weekly.js:221](../src/run/weekly.js#L221) | `${f.name} is overtrained (Stress ${f.stress}). Rest them before a fight.`, 'warn' |
 | [src/run/weekly.js:222](../src/run/weekly.js#L222) | `${f.name} is mutinous and refuses to fight.`, 'bad' |
@@ -494,16 +494,16 @@ Lines the house steward writes each week. The plot's lines are in section 4.
 | [src/run/weekly.js:251](../src/run/weekly.js#L251) | 'The stranger in the Medbay slipped away before dawn.', 'event'); } |
 | [src/run/weekly.js:252](../src/run/weekly.js#L252) | `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn' |
 | [src/run/weekly.js:262](../src/run/weekly.js#L262) | `Tournament week in ${unlockedTiers(run).length > 1 ? `${unlockedTiers(run).length} arenas` : arenaName(run.topTier)}.`, 'event' |
-| [src/run/weekly.js:329](../src/run/weekly.js#L329) | `You pay the Emperor's tribute early: ${due} Gold.`, 'event' |
-| [src/run/weekly.js:338](../src/run/weekly.js#L338) | `The year-end purse: your house finished #${rank + 1} of ${run.houses.length + 1} in Glory${purse ? ` and is paid ${purse} Gold` : ', and is paid nothing'}.`, purse ? 'good' : 'warn' |
-| [src/run/weekly.js:346](../src/run/weekly.js#L346) | 'The Emperor\'s collectors find your tribute already paid.', 'event' |
-| [src/run/weekly.js:350](../src/run/weekly.js#L350) | `You pay the Emperor's tribute: ${due} Gold.`, 'event' |
-| [src/run/weekly.js:353](../src/run/weekly.js#L353) | `You can't pay the ${due} Gold tribute. The Emperor takes what you have, and remembers.`, 'bad' |
+| [src/run/weekly.js:330](../src/run/weekly.js#L330) | `You pay the Emperor's tribute early: ${due} Gold.`, 'event' |
+| [src/run/weekly.js:339](../src/run/weekly.js#L339) | `The year-end purse: your house finished #${rank + 1} of ${run.houses.length + 1} in Glory${purse ? ` and is paid ${purse} Gold` : ', and is paid nothing'}.`, purse ? 'good' : 'warn' |
+| [src/run/weekly.js:347](../src/run/weekly.js#L347) | 'The Emperor\'s collectors find your tribute already paid.', 'event' |
+| [src/run/weekly.js:351](../src/run/weekly.js#L351) | `You pay the Emperor's tribute: ${due} Gold.`, 'event' |
+| [src/run/weekly.js:354](../src/run/weekly.js#L354) | `You can't pay the ${due} Gold tribute. The Emperor takes what you have, and remembers.`, 'bad' |
 | [src/run/helpers.js:293](../src/run/helpers.js#L293) | `Imperial Favour ${delta > 0 ? '+' : ''}${delta} (${why}): now ${run.favor}.`, delta > 0 ? 'good' : 'bad' |
 | [src/run/helpers.js:207](../src/run/helpers.js#L207) | `${f.name} reaches level ${f.level}! Choose a perk.`, 'event' |
-| [src/run/roster.js:548](../src/run/roster.js#L548) | `Sold a ${GEAR[key].name} for ${sellPrice(key)} Gold.` |
-| [src/run/roster.js:661](../src/run/roster.js#L661) | `${f.name} wakes with a ${AUGMENTS[key].name}. The crowd mutters about machines.`, 'event' |
-| [src/run/roster.js:686](../src/run/roster.js#L686) | `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good' |
+| [src/run/roster.js:620](../src/run/roster.js#L620) | `Sold a ${GEAR[key].name} for ${sellPrice(key)} Gold.` |
+| [src/run/roster.js:733](../src/run/roster.js#L733) | `${f.name} wakes with a ${AUGMENTS[key].name}. The crowd mutters about machines.`, 'event' |
+| [src/run/roster.js:758](../src/run/roster.js#L758) | `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good' |
 | [src/run/tournaments.js:336](../src/run/tournaments.js#L336) | `You skip ${bout.name}: +${ECONOMY.skipGold} Gold, and the roster rests.` |
 | [src/run/tournaments.js:752](../src/run/tournaments.js#L752) | `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event' |
 | [src/run/tournaments.js:450](../src/run/tournaments.js#L450) | `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn' |
@@ -572,9 +572,9 @@ The "next step" bar (`src/hints.js`):
 | [src/hints.js:34](../src/hints.js#L34) | { text: `Optional: send a free fighter to ${open.map(arenaName).join(' or ')} for extra Gold and XP, or end the week.` } |
 | [src/hints.js:37](../src/hints.js#L37) | { text: `${injured.name} is injured: set their job to Medbay so they heal.`, tone: 'warn' } |
 | [src/hints.js:40](../src/hints.js#L40) | { text: `Save Gold: the ${due} Gold tribute is due in ${weeks} week${weeks === 1 ? '' : 's'} and you have ${run.gold}.`, tone: 'bad' } |
-| [src/hints.js:49](../src/hints.js#L49) | { text: `${restless.name} is Discontented (Morale ${restless.morale}): place decor or upgrade their quarters.`, tone: 'warn' } |
-| [src/hints.js:51](../src/hints.js#L51) | { text: `${idle.name} is resting with Stress ${idle.stress}: they could train this week.` } |
-| [src/hints.js:52](../src/hints.js#L52) | { text: 'Jobs are set. End the week (Space) or skip to the tournament (T).' } |
+| [src/hints.js:57](../src/hints.js#L57) | { text: `${restless.name} is Discontented (Morale ${restless.morale}): place decor or upgrade their quarters.`, tone: 'warn' } |
+| [src/hints.js:59](../src/hints.js#L59) | { text: `${idle.name} is resting with Stress ${idle.stress}: they could train this week.` } |
+| [src/hints.js:60](../src/hints.js#L60) | { text: 'Jobs are set. End the week (Space) or skip to the tournament (T).' } |
 
 ## 11. Codex lore
 
@@ -712,8 +712,8 @@ Every line below is a first draft. The rows show the code around the words; chan
 | [src/data.js:270](../src/data.js#L270) | revenant: { name: 'Revenant', basePower: 5, traits: ['deathless', 'graveChill', 'cinderHeart'], exotic: true }, |
 | [src/data.js:466](../src/data.js#L466) | vulcan: { unique: true, name: 'Unnatural Temple of Vulcan', dept: 'medical', icon: 'forge', cost: [10, 16], req: [2, 3], per: [4, 12], effect: (n) => `Raises a fighter killed in the arena as a Revenant, up to ${n} weeks after their death`, extra: (lv) => (lv >= 2 ? 'Revenants come back with all their strength' : 'Revenants come back with 1 less Power') }, |
 | [src/codex.js:36](../src/codex.js#L36) | 'kind:revenant': 'A gladiator who died on the sand and was carried to the Unnatural Temple of Vulcan. The smith-god\'s priests rebuild them in brass and stitched flesh. They remember every fight, and feel nothing at all.', |
-| [src/run/roster.js:409](../src/run/roster.js#L409) | `Raised from the dead in the Unnatural Temple of Vulcan, ${run.week - body.diedWeek} week${run.week - body.diedWeek === 1 ? '' : 's'} after falling. ${TRAITS[f.kindTrait].name}.` |
-| [src/run/roster.js:410](../src/run/roster.js#L410) | `The priests of Vulcan work through the night. ${f.name} walks out of the forge: a Revenant, brass where the wounds were${lost ? `, and a little weaker (${lost} Power)` : ''}.`, 'event' |
+| [src/run/roster.js:481](../src/run/roster.js#L481) | `Raised from the dead in the Unnatural Temple of Vulcan, ${run.week - body.diedWeek} week${run.week - body.diedWeek === 1 ? '' : 's'} after falling. ${TRAITS[f.kindTrait].name}.` |
+| [src/run/roster.js:482](../src/run/roster.js#L482) | `The priests of Vulcan work through the night. ${f.name} walks out of the forge: a Revenant, brass where the wounds were${lost ? `, and a little weaker (${lost} Power)` : ''}.`, 'event' |
 | [src/ui/views.js:896](../src/ui/views.js#L896) | : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death, for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p> |
 | [src/ui/views.js:897](../src/ui/views.js#L897) | ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary small')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`; |
 
@@ -948,10 +948,10 @@ Version 6's new words. Rules text (numbers) must stay accurate; names and flavou
 | [src/data.js:331](../src/data.js#L331) | Spiky Bed: No comfort at all; shapes a Melancholic temper. A win taken with even one wound makes them Battle-Hardened (usually it takes two). |
 | [src/data.js:332](../src/data.js#L332) | Skull Rack: A little comfort; shapes a Choleric temper. A severe wound scars them Enraged, never Afeared. |
 | [src/data.js:336](../src/data.js#L336) | Wine Amphora: Plenty of comfort; shapes a Sanguine temper. The crowd warms to them: each fight starts with +5 Hype. |
-| [src/run/roster.js:338](../src/run/roster.js#L338) | Story: `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} changed their temper: now ${name}.` |
-| [src/run/roster.js:339](../src/run/roster.js#L339) | `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} have changed ${f.name}: now ${name}.`, 'event' |
-| [src/run/roster.js:347](../src/run/roster.js#L347) | `${f.name} meditates in the Rock Garden.`, 'good' |
-| [src/run/roster.js:349](../src/run/roster.js#L349) | `${f.name} sits with their fear of ${sc.vs} fighters` … `Meditated on their fear of ${sc.vs} fighters, and let it go.` |
+| [src/run/roster.js:410](../src/run/roster.js#L410) | Story: `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} changed their temper: now ${name}.` |
+| [src/run/roster.js:411](../src/run/roster.js#L411) | `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} have changed ${f.name}: now ${name}.`, 'event' |
+| [src/run/roster.js:419](../src/run/roster.js#L419) | `${f.name} meditates in the Rock Garden.`, 'good' |
+| [src/run/roster.js:421](../src/run/roster.js#L421) | `${f.name} sits with their fear of ${sc.vs} fighters` … `Meditated on their fear of ${sc.vs} fighters, and let it go.` |
 | [src/run/tournaments.js:554](../src/run/tournaments.js#L554) | Story: 'Won wounded, slept on spikes, and became Battle-Hardened.' |
 | [src/ui/views.js](../src/ui/views.js) `temperNote`, `temperLine` | "Already Choleric: keeps them so." / "Would make them … after 4 weeks as the room's main Temperament piece (2/4 so far)." / "Temper: …. Turning …: 2/4 weeks." / "Temperament tied: no piece leads, so their temper holds." |
 | [src/ui/components.js](../src/ui/components.js) `fighterCard` | The drift chip "→ 🌙 2/4" and its tooltip "Their room is changing their temper: …". |
@@ -982,3 +982,5 @@ Version 6's new words. Rules text (numbers) must stay accurate; names and flavou
 | [src/narrate.js](../src/narrate.js) `narrateStory` | The four first-strike lines, the four death lines, and the three "quiet round" lines when nobody draws blood. |
 | [src/dialogue.js](../src/dialogue.js) `ENDING_SCENES` | The last scene of a career, one per ending: the Grand Tournament won, the coup, the martyr, treason, Favour gone, no fighters and no Gold, killed in the revolt. |
 | [src/quests.js](../src/quests.js) `AFTERMATH_LINES` | What the leader says after The Chains Break (coffers, the Palatine, put down), the steward's line when the leader was a palace mole, and the lines after a mole is turned, ransomed or executed (the steward's lines are yours to rewrite in their voice). |
+| [src/quests.js](../src/quests.js) `COUSIN_LINES` | 7.9: the cousin in the cells. The fighter's (or steward's) plea, "that is him on the Liaison's list", thanks once he is bought, and the line when he is executed. |
+| [src/hints.js](../src/hints.js) | 7.9: "… is executed in N weeks unless you buy him from the Liaison" and "build a Liaison … to buy him out of the cells". |

@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## Unreleased (7.9.0)
+
+- **A cousin in the cells:** once you reach the Bronze Arena, one of your fighters (or your steward, if the barracks are empty) begs you to buy their cousin out of the city cells before he is executed. The Liaison offers him for 8 weeks; the next-step bar counts down the time. Buy him and your fighter is grateful (+10 Morale); leave him and they grieve (−10).
+
 ## 7.8.0 (2026-11-24): fights with more feeling
 
 - **Last words:** when a career ends, the Emperor (or the narrator) has a final word, different for every way it can end. After The Chains Break, the revolt's leader says what they think of your answer, and an unmasked mole's fate gets a line of its own.

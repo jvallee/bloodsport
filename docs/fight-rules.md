@@ -1197,3 +1197,12 @@ Placeholder numbers (`ESPIONAGE`). Own dice (`run.rng.espionage`).
 | `SHORT.oppPower` (Season Boss bonus per arena) | [2, 4, 9, 12] → [2, 4, 9, 10] | 4.1: the Imperial Boss was won less often per attempt (21%) than the Grand Tournament (31%). |
 | `SHORT.grandPower` | 19 → 21 | 4.1: the Grand is the climax; a new gate keeps it harder per attempt than the Imperial Boss. |
 | `KINDS.orc.basePower` | 6 → 5 | 4.4: Power 6 made up for the Orc having no combat trait; it now has three, about as strong as other kinds' (52.5% at equal Power vs 52–55%), and at its natural Power it won 58.5% against a Power-5 field. Every kind now starts at 5, as the Basa did in v6. |
+
+### The cousin in the cells (the designer, 7.9)
+The first political prisoner was too easy to miss. Now, from the Bronze Arena (`COUSIN.fromTier` 2), before any political
+prisoner has joined the house and unless Purge the Prisons is in force, the first fighter in your roster asks you to buy
+their cousin out of the cells (the steward asks if the roster is empty). The cousin is a political prisoner (as the Liaison's
+usual one: cheap, with a telling prison record), offered by the Liaison at once if it stands, or the moment it is built,
+and kept on offer through monthly refreshes until bought or `COUSIN.weeks` (8) after the ask. Bought: the asker +10
+Morale (`savedMorale`). Not bought in time: he is executed and the asker −10 Morale (`missMorale`). The plea doesn't say
+he is a rebel. Rolled on the plot's dice, so the Market is unchanged. The year-2 guaranteed political prisoner stays as before.

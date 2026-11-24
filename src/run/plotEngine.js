@@ -13,11 +13,11 @@ import {
 } from './helpers.js';
 
 // Some prisoners are secretly political; their record carries clues and they come cheap.
-export function markPolitical(run, f) {
+export function markPolitical(run, f, { force = false } = {}) {
   const r = run.rng.plot;
   const year = dateOf(run.week).year;
   const chance = hasPolicy(run, 'purgePrisons') ? 0 : POLITICAL.chance * (hasPolicy(run, 'amnesty') ? 2 : 1);
-  const political = next(r) < chance || (!hasPolicy(run, 'purgePrisons') && year >= POLITICAL.guaranteeYear && !run.politicalOffered);
+  const political = next(r) < chance || force || (!hasPolicy(run, 'purgePrisons') && year >= POLITICAL.guaranteeYear && !run.politicalOffered);
   const clues = [];
   if (political) {
     run.politicalOffered = true;

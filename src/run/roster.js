@@ -4,9 +4,9 @@ import { createRng, deriveSeed, int, next, pick } from '../rng.js';
 import {
   ECONOMY, STRESS, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CIRCUITS, XP, PERKS, MORALE, GEAR, DECOR,
   CONSUMABLES, AUGMENTS, SURGERY, RETIRE, RENAME, LIAISON, RECRUIT, EXHIBITION, BOND, REANIMATE, FEAR, deltaRow,
-  HUMORS, HUMOUR_DRIFT, MEDITATION,
+  HUMORS, HUMOUR_DRIFT, MEDITATION, COUSIN,
 } from '../data.js';
-import { WANTS, LIAISON_LINES } from '../quests.js';
+import { WANTS, LIAISON_LINES, COUSIN_LINES } from '../quests.js';
 import { meleeOnly } from '../fight.js';
 import { MOOD_WEEKS } from '../events.js';
 import {
@@ -48,28 +48,99 @@ export function refreshMarket(run) {
   remember(run, ...run.market);
 }
 
-export function refreshLiaison(run) {
-  const lv = liaisonLevel(run);
-  run.liaisonOffers = [];
-  if (!lv) return;
+// One Liaison prisoner, rolled on `rng`: a condemned convict, or with Liaison Lv 2 an elite prisoner of war.
+function liaisonPrisoner(run, rng, lv, others) {
   const elite = lv >= 2;
   const natural = (kind) => KINDS[kind].basePower + tierMarketPower(run);
+  const f = createFighter(rng, { id: newId(run, 'f'), takenNames: takenNames(run, others), classes: run.setup?.classes });
+  f.power = elite ? Math.max(natural(f.kind), currentBout(run).oppPower + LIAISON.elitePower) : natural(f.kind);
+  const prior = Math.max(0, f.power - natural(f.kind));
+  Object.assign(f, { trained: Math.ceil(prior / trainGain(run, 'power')), trainedPower: prior });
+  f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
+  f.stress = elite ? 30 : 40;
+  f.morale = elite ? 40 : 30;
+  season(run, rng, f);
+  f.price = (elite ? LIAISON.elitePrice + LIAISON.elitePerTier * Math.min(run.topTier, CIRCUITS.length) : LIAISON.convictPrice) + RECRUIT.perLevel * (f.level - 1);
+  f.origin = elite ? 'Prisoner of war' : 'Condemned convict';
+  return f;
+}
+
+export function refreshLiaison(run) {
+  const lv = liaisonLevel(run);
+  const kept = cousinOffer(run); // the cousin waits in the cells until bought or executed (7.9)
+  run.liaisonOffers = [];
+  if (!lv) return;
   for (let i = 0; i < LIAISON.offers[Math.min(lv, LIAISON.offers.length) - 1]; i++) {
-    const f = createFighter(run.rng.market, { id: newId(run, 'f'), takenNames: takenNames(run, run.liaisonOffers), classes: run.setup?.classes });
-    f.power = elite ? Math.max(natural(f.kind), currentBout(run).oppPower + LIAISON.elitePower) : natural(f.kind);
-    const prior = Math.max(0, f.power - natural(f.kind));
-    Object.assign(f, { trained: Math.ceil(prior / trainGain(run, 'power')), trainedPower: prior });
-    f.injuries = [{ tag: elite ? 'concussed' : 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS[elite ? 'concussed' : 'fleshWound'] }];
-    f.stress = elite ? 30 : 40;
-    f.morale = elite ? 40 : 30;
-    season(run, run.rng.market, f);
-    f.price = (elite ? LIAISON.elitePrice + LIAISON.elitePerTier * Math.min(run.topTier, CIRCUITS.length) : LIAISON.convictPrice) + RECRUIT.perLevel * (f.level - 1);
-    f.origin = elite ? 'Prisoner of war' : 'Condemned convict';
+    const f = liaisonPrisoner(run, run.rng.market, lv, run.liaisonOffers);
     if (i === 0) markPolitical(run, f);
     else f.record = [];
     run.liaisonOffers.push(f);
   }
   remember(run, ...run.liaisonOffers);
+  if (kept) run.liaisonOffers.unshift(kept);
+  else offerCousin(run);
+}
+
+// ---------- The cousin in the cells (7.9, the designer: the rebel prisoner was too easy to miss) ----------
+// Once the house reaches COUSIN.fromTier, and before any political prisoner has joined it, one of your fighters (or the
+// steward, with no one to ask) begs you to buy their cousin out of the cells before he is executed. The cousin is a
+// political prisoner, offered by the Liaison until bought or COUSIN.weeks have passed. Rolled on run.rng.plot.
+const cousinOffer = (run) => (run.cousin && !run.cousin.done ? (run.liaisonOffers ?? []).find((f) => f.id === run.cousin.f) ?? null : null);
+const cousinAsker = (run) => (run.cousin?.asker ? findFighter(run, run.cousin.asker) : null);
+function cousinSay(run, key, text) {
+  const f = cousinAsker(run);
+  talk(run, `cousin-${key}`, [f ? { speaker: 'fighter', fighterId: f.id, text: text.fighter } : { speaker: 'steward', text: text.steward }], { now: true });
+}
+
+function offerCousin(run) {
+  const c = run.cousin;
+  const lv = liaisonLevel(run);
+  if (!c || c.done || c.f || !lv) return;
+  const f = liaisonPrisoner(run, run.rng.plot, lv, run.liaisonOffers ?? []);
+  markPolitical(run, f, { force: true });
+  f.cousinOf = cousinAsker(run)?.name ?? null;
+  c.f = f.id;
+  c.name = f.name;
+  remember(run, f);
+  run.liaisonOffers = [f, ...(run.liaisonOffers ?? [])];
+  cousinSay(run, 'found', { fighter: COUSIN_LINES.found(f.name), steward: COUSIN_LINES.foundSteward(f.name) });
+}
+
+export function cousinWeek(run) {
+  if (run.status !== 'active') return;
+  const c = run.cousin;
+  if (!c) {
+    if (run.plot || run.topTier < COUSIN.fromTier || hasPolicy(run, 'purgePrisons') || run.roster.some((f) => f.political)) return;
+    const asker = run.roster.find((f) => f.alive !== false && !f.political) ?? null;
+    run.cousin = { asker: asker?.id ?? null, week: run.week, until: run.week + COUSIN.weeks, f: null, name: null, done: null };
+    const built = liaisonLevel(run) > 0;
+    cousinSay(run, 'ask', { fighter: COUSIN_LINES.ask(built), steward: COUSIN_LINES.askSteward(built) });
+    offerCousin(run);
+    return;
+  }
+  if (c.done || run.week < c.until) return;
+  c.done = 'executed';
+  run.liaisonOffers = (run.liaisonOffers ?? []).filter((f) => f.id !== c.f);
+  const asker = cousinAsker(run);
+  if (asker) {
+    bumpMorale(asker, COUSIN.missMorale);
+    chronicle(run, asker, `Their cousin${c.name ? `, ${c.name},` : ''} was executed in the city cells.`);
+  }
+  log(run, `${c.name ?? 'The prisoner'} is executed in the city cells${asker ? ` (${asker.name} ${COUSIN.missMorale} Morale)` : ''}.`, 'bad');
+  cousinSay(run, 'executed', { fighter: COUSIN_LINES.executed, steward: COUSIN_LINES.executedSteward });
+}
+
+// Bought: the asker is grateful (recruit).
+function cousinSaved(run, f) {
+  const c = run.cousin;
+  if (!c || c.done || c.f !== f.id) return;
+  c.done = 'saved';
+  const asker = cousinAsker(run);
+  if (asker) {
+    bumpMorale(asker, COUSIN.savedMorale);
+    chronicle(run, asker, `You bought their cousin, ${f.name}, out of the cells.`);
+  }
+  cousinSay(run, 'saved', { fighter: COUSIN_LINES.saved, steward: COUSIN_LINES.savedSteward(f.name) });
 }
 
 export function refreshArmourer(run) {
@@ -114,6 +185,7 @@ export function recruit(run, id) {
   run.gold -= price;
   if (fromLiaison) {
     run.liaisonOffers = run.liaisonOffers.filter((f) => f !== fighter);
+    cousinSaved(run, fighter);
     talk(run, 'liaison-saved', [{ speaker: 'steward', text: LIAISON_LINES.saved(fighter.name) }]);
   } else {
     run.market = run.market.filter((f) => f !== fighter);

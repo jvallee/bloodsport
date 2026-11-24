@@ -189,6 +189,17 @@ export const SUMMONS_LINES = {
 
 // ---------- The Liaison (the designer, 5.4.2) ----------
 // The first prisoner you buy: the steward points out what it means. PLACEHOLDER.
+// 7.9: the cousin in the cells (src/run/roster.js cousinWeek). PLACEHOLDER lines; the steward's are the designer's to rewrite.
+export const COUSIN_LINES = {
+  ask: (built) => `My cousin is in the city cells. They mean to execute him at the next games. The Liaison buys prisoners out of the cells: please, get him out.${built ? '' : ' You would have to build one first, and soon.'}`,
+  askSteward: (built) => `Someone came to the gate today: their cousin is in the city cells, set to be executed at the next games. A Liaison can buy prisoners out.${built ? ' Ours could.' : ' We would need to build one.'}`,
+  found: (name) => `That is him on the Liaison's list: ${name}. Please. There isn't much time.`,
+  foundSteward: (name) => `The cousin is on the Liaison's list: ${name}. If you mean to buy him, don't wait.`,
+  saved: 'You got him out. I will not forget it, Lanista. Neither will he.',
+  savedSteward: (name) => `${name} is out of the cells and in our barracks. Whoever came to the gate will be grateful.`,
+  executed: 'They executed my cousin this morning. You could have stopped it.',
+  executedSteward: 'The cousin from the cells was executed this morning.',
+};
 export const LIAISON_LINES = {
   saved: (f) => `${f} was on the list for the beasts, or the cross. Now they're on ours. I suppose that makes you the only Lanista in Rome who saves lives by buying them. Don't let it get about; it'll ruin your reputation.`,
 };

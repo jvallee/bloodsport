@@ -32,7 +32,7 @@ export {
   sellPrice, sellGearBlocker, sellGear, unequipBlocker, unequip, unequipAllBlocker, unequipAll,
   buyItemBlocker, buyItem, surgeonPrice, surgeonBlocker, surgeon, treatFirstBlocker, treatFirst,
   augmentPrice, augmentBlocker, augment, retireBlocker, retire, renameBlocker, rename,
-  dominantTemperament, driftHumour, meditate, syncDrift,
+  dominantTemperament, driftHumour, meditate, syncDrift, cousinWeek,
 } from './run/roster.js';
 
 export {

@@ -22,7 +22,7 @@ import {
   rivalMonth, rivalPoach, bondOverFightDay, tendBonds, issueDemand, judgeDemand,
 } from './houses.js';
 import {
-  refreshMarket, refreshLiaison, refreshArmourer, trainBlocker, switchToRest, resumeTraining, moraleTarget,
+  refreshMarket, refreshLiaison, refreshArmourer, cousinWeek, trainBlocker, switchToRest, resumeTraining, moraleTarget,
   meditate, driftHumour,
 } from './roster.js';
 import { checkQuests, wantsMonth, rebelQuestsMonth } from './questsEngine.js';
@@ -264,6 +264,7 @@ export function advanceWeek(run) {
   if (tournamentEnds) rivalsCompete(run);
   if (tournamentEnds) bondOverFightDay(run);
   if (tournamentEnds && plotActive(run) && run.plot.coup) postponeCoup(run);
+  cousinWeek(run);
   checkQuests(run);
   checkLoss(run);
   if (monthStart && run.status === 'active') fortuneMonth(run);
