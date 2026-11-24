@@ -224,7 +224,8 @@ test('Contract D combat rules: Axe +5% injure, Viper Venom +15 severity, COMBAT 
   assert.deepEqual(TACTICS.press.win, 1500);
   assert.deepEqual(TACTICS.press.self, 10000);
   // 7.2: Viper Venom became a Poison affinity (tests/v72-wounds.test.js); the severity boost it used stays in the engine.
-  assert.deepEqual(CONSUMABLES.viperVenom.boost, { injure: 10000, affinity: { style: 'poison', chance: 65000, upWeight: 1 } });
+  // 7.9 (4.3): wound items gained a +3% win rider.
+  assert.deepEqual(CONSUMABLES.viperVenom.boost, { win: 3000, injure: 10000, affinity: { style: 'poison', chance: 65000, upWeight: 1 } });
   assert.equal(GEAR.hunterBow.win, 3000);
   assert.equal(GEAR.lightGreaves.guard, 3000);
   assert.equal(GEAR.loricaSegmentata.guard, 15000);

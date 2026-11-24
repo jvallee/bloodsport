@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.9.0)
 
+- **Wound items are worth buying:** Viper Venom, Blood Thinner and Blinding Powder now also give +3% win chance for the round you use them. Before, they wounded the opponent without helping you win the match.
 - **A revolt put down stays down:** after the guards break The Chains Break, the mutineers are cowed (Morale at least 30), so the barracks don't rise again a fortnight later.
 - **The Grand Tournament is the hardest fight in a Season again:** the Imperial Coliseum's Boss is 2 Power weaker and the Grand's champion 2 Power stronger.
 - **Orcs start at Power 5,** like every other kind. Their extra point was meant to make up for having no fighting trait, and they have three now.

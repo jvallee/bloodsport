@@ -1213,3 +1213,9 @@ Putting a revolt down left the ringleader Mutinous, so it broke out again within
 Probe (reckless bot, 60 Season careers each): as built 1.10 crises a career, 0.70 repeats within 6 weeks, longest chain 13;
 `afterPutDown` 0: 1.03 / 0.63 / 10; `cool` 4: no change; cowed at 20: 1.00 / 0.60 / 12; **cowed at 30: 0.63 / 0.13 / 3**
 (chosen); win rates unchanged (3%). The brawler bot never met a crisis.
+
+### Wound items (4.3)
+Viper Venom, Blood Thinner and Blinding Powder wounded the opponent but changed match win rates by about 0 (−0.3, −0.4,
++0.1 points), so no price could bring them to the 0.4–0.65 points-per-Gold target. Each now also gives **+3% win chance**
+that round (`boost.win: 3000`), prices unchanged. Probe (`scripts/probes/item-value.js`, 6,000 even fights): a +2% rider gives
+0.26–0.30 points per Gold; **+3% gives Viper Venom 0.47, Blood Thinner 0.44, Blinding Powder 0.43** (chosen).
