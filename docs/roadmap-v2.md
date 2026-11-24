@@ -278,3 +278,31 @@ lower win rate (floor 35%). Heat 3 sets: Lean + Lions 19%, Lean + Greedy 23%, Le
 
 Review fixes only. First career 24%, reckless 3%, full Legacy 37% (Heat 1 18%, Heat 3 14%), loyalist 39%, a won season
 15.3 fight months, Boss win per attempt 91 · 67 · 38 · 19 · 26%: the same as 7.4.0 within a point.
+
+### v7.6 tooling (review brief Phase 3): the bots use 7.1–7.4 (`npm run check`, 300 careers): 23/23
+
+Bots now build a Liaison, stock and use wound items before Bosses they're favoured in, choose a Temperament piece by need,
+hunt moles; a third 'brawler' bot (fights well, no Morale decor, no mole hunting) runs covert ops. A new gate requires
+every 7.1–7.4 system to be used by some bot career; the report prints usage by group and win rates with 95% intervals.
+No game numbers changed.
+
+| | 7.5.1 bots | taught bots |
+|---|---|---|
+| First career, careful | 24% | 29% ±5 |
+| Full Legacy (Heat 1 / Heat 3) | 37% (18 / 14) | 38% (16 / 8) |
+| Evil road | +16 | +9 |
+| Coup | 8% | 7% |
+| Long Road | 32% | 28% |
+| Boss win per attempt | 91 · 67 · 38 · 19 · 26 | 91 · 66 · 36 · 21 · 31 |
+| Temperament in winning houses | 14% (Rock Garden) | 45% (Skull Rack) |
+| Brawler win rate | — | 25% ±7 |
+
+Usage (share of careers): careful: wound items 20%, Temperament 42%, moles met 27%, investigations 18%; brawler: covert
+ops 59%, wound items 30%; reckless: The Chains Break 31%.
+
+**Findings for Phase 4:**
+- **Covert ops cost a sound player wins** as priced (full Legacy, same seeds): no ops 38%, Steal the Playbook only 35%, Bribe
+  the Armourer only 33%, both 32%. So the careful bot doesn't run them; the brawler does.
+- Wound items, Temperament decor and the Liaison make no measurable difference to win rates (within ±8).
+- Heat 3 sits on its 8% floor; the next balance change should watch it.
+- A first try that gave every star a Wine Amphora put it in 96% of winning houses: the decor gate measures the bot's policy.

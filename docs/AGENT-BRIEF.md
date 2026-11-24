@@ -57,9 +57,8 @@ the Heat order; D4: show the hidden intro pages under How to play). Done in 7.5.
 count toward the 8 (1.5); two tabs, save import, bracket notice keys (1.7); no key or click past a hidden Death Gate warning
 (1.1, `src/ui/keys.js`); `scripts/sweep.js` sweeps Seasons by default and has a `--set` mode on the worker pool (3.3, 3.4).
 
-**Next, in order:** 1.4 (resume a fight after a reload: store the live match with its dice state; replays must still
-match; its own release, with `npm run check`), then Phase 3 (teach the bots the 7.1–7.4 systems, a usage report, intervals
-on gate rates), then Phase 2 (feel: fight pace option, first-strike chance, unrest/mole hints, odds speed, fewer clicks,
+**Done since:** 1.4 (7.5.1: a fight survives a reload) and Phase 3 (bots use the 7.1–7.4 systems, a brawler bot, a usage
+report and gate, intervals; 23 gates; findings in `docs/roadmap-v2.md` "v7.6 tooling"). **Next:** Phase 2 (feel: fight pace option, first-strike chance, unrest/mole hints, odds speed, fewer clicks,
 phone fight screen, one name per rule, death and narration, the hidden intro pages), then Phase 4 (4.1 the Grand
 Tournament harder than the Imperial Boss, with a gate; 4.2 repeated Chains Break; 4.3 wound item prices; 4.4 the Orc).
 
