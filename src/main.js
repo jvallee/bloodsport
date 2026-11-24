@@ -6,10 +6,11 @@ import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
-import { saveFailedBanner, loadFailedModal, summaryKey, otherTabBanner } from './ui/views.js';
+import { EVENT_BY_ID } from './events.js';
+import { saveFailedBanner, loadFailedModal, summaryKey, otherTabBanner, resultNotice } from './ui/views.js';
 import { fightKey } from './ui/keys.js';
 import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom, careerKey } from './careers.js';
-import { estimateOdds, fightKey } from './odds.js';
+import { estimateOdds, oddsKey } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, dailySetup, careerSetup } from './legacy.js';
 import { nextHint } from './hints.js';
@@ -57,6 +58,9 @@ let codex = loadCodex(null);
 let codexShownNew = []; // entries highlighted as new while the Codex tab is open
 let scene = null; // the dialogue scene showing: { id, beat } (src/dialogue.js)
 let stewardNotes = []; // the steward's news this week (new buildings, new stock): notes at the top, cleared each week
+// 7.7: results that decide nothing (an ordinary event's outcome, Fortune's card) wait as notices, not pop-ups.
+let resultNotes = [];
+let eventIsWeighty = false; // a gamble, The Chains Break or an unmasked mole keeps its pop-up
 let scrollAfterRender = null; // a selector to bring into view after the next render
 let monthBefore = null; // before To fight day: { snap, mark } for the month's digest
 let eventResult = null; // after an event card's choice: { title, lines } shown in a popup
@@ -115,7 +119,7 @@ function oddsFor(f, tier = run.topTier, opp = opponentFor(run, tier)) {
   const opts = matchOptions(run, f, tier);
   // 7.4: stolen plans, a double agent and this month's covert op change the real fight, so the odds include them.
   const spy = espionageOdds(run, opp);
-  const key = JSON.stringify([fightKey(f), spy, opts]); // 7.7: only what a fight reads (a job click keeps the odds)
+  const key = JSON.stringify([oddsKey(f), spy, opts]); // 7.7: only what a fight reads (a job click keeps the odds)
   if (!oddsCache.has(key)) {
     if (oddsCache.size > 200) oddsCache.clear();
     oddsCache.set(key, estimateOdds(f, spy.opp, { ...opts, boostsA: spy.boostsA, boostsB: spy.boostsB, vengeanceB: spy.vengeanceB, n: 400 }));
@@ -248,6 +252,7 @@ function resetCareerUiState() {
   summaries = [];
   noticePage = 0;
   stewardNotes = [];
+  resultNotes = [];
   achieved = [];
   scene = null;
   eventResult = null;
@@ -282,7 +287,7 @@ function render() {
   const guide = guideStep();
   const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
-  const notices = [...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
+  const notices = [...resultNotes.map((r, i) => resultNotice(r, i)), ...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
   const SCROLLERS = '.grid > .panel, .log, .feed';
   const scrollKeys = () => {
@@ -503,7 +508,7 @@ const actions = {
     const list = overtrainWarn ?? [];
     overtrainWarn = null;
     if (d.rest) for (const f of list) gameAction('job', { id: f.id, job: 'rest' });
-    summaries = []; achieved = []; stewardNotes = [];
+    summaries = []; achieved = []; stewardNotes = []; resultNotes = [];
     gameAction('advance');
   },
   'careers-open': () => { careersOpen = true; showHelp = false; loadFailed = null; },
@@ -558,6 +563,7 @@ const actions = {
   },
   'scene-skip': () => closeScene(),
   'result-close': () => { eventResult = null; },
+  'dismiss-result': (d) => { resultNotes.splice(Number(d.index), 1); },
   'intro-replay': () => { scene = { id: 'opening', beat: 0 }; showHelp = false; },
   'dismiss-summary': (d) => {
     summaries = summaries.filter((s) => summaryKey(s) !== d.key);
@@ -639,7 +645,12 @@ function gameAction(name, data = {}) {
 
 // Game actions: the page's extras around each one (confirmations, animation, tabs).
 const before = {
-  'event-choice': () => { logMark = run.log.length; return true; },
+  'event-choice': (data) => {
+    logMark = run.log.length;
+    const choice = EVENT_BY_ID[run.event?.id]?.choices[Number(data?.index)];
+    eventIsWeighty = Boolean(choice?.effects?.chance || EVENT_BY_ID[run.event?.id]?.crisis || run.event?.id === 'moleUnmasked');
+    return true;
+  },
   fortune: () => { logMark = run.log.length; return true; },
   release: () => confirm('Release this fighter for good?'),
   rename: (data) => {
@@ -660,10 +671,10 @@ const before = {
   advance: () => {
     const at = overtrainedByWeek(run);
     if (at.length) { overtrainWarn = at.map((f) => ({ id: f.id, name: f.name, stress: f.stress })); return false; }
-    summaries = []; achieved = []; stewardNotes = []; return true;
+    summaries = []; achieved = []; stewardNotes = []; resultNotes = []; return true;
   },
   'advance-tournament': () => {
-    summaries = []; achieved = []; stewardNotes = [];
+    summaries = []; achieved = []; stewardNotes = []; resultNotes = [];
     monthBefore = { snap: snapshot(run), mark: run.log.length };
     return true;
   },
@@ -692,20 +703,22 @@ const after = {
     if (lines.length) {
       const titledIdx = lines.findIndex((l) => l.text.includes(':'));
       const title = titledIdx >= 0 ? lines[titledIdx].text.slice(0, lines[titledIdx].text.indexOf(':')) : 'Event';
-      eventResult = {
+      const result = {
         title,
         lines: lines.map((l, i) => ({
           tone: l.tone,
           text: i === titledIdx ? l.text.slice(l.text.indexOf(':') + 1).trim() : l.text,
         })),
       };
+      if (eventIsWeighty) eventResult = result;
+      else { resultNotes.push(result); noticePage = 0; }
     }
   },
   mercy: () => { sfx.cheer(0); },
   fortune: () => {
     sfx.event();
     const lines = run.log.slice(logMark).map((l) => ({ tone: l.tone, text: l.text.replace(/^Fortune: /, '') }));
-    if (lines.length) eventResult = { title: 'Fortune', lines };
+    if (lines.length) { resultNotes.push({ title: 'Fortune', lines }); noticePage = 0; }
   },
   'fortune-reroll': () => { sfx.event(); },
   withdraw: () => {

@@ -1146,3 +1146,7 @@ export const summaryKey = (s) => `${s.week}-${s.tier}-${s.fighterId}-${s.bracket
 
 // 7.5: this career was saved by another tab; this one stops saving so it can't overwrite that progress.
 export const otherTabBanner = () => `<div class="banner save-failed" role="alert"><b>⚠ This career was played in another tab.</b> This tab no longer saves, so it can't overwrite that progress. Reload the page to carry on from the newest save.</div>`;
+
+// 7.7: an event's or Fortune's result as a dismissible notice (not a pop-up to click through).
+export const resultNotice = ({ title, lines }, index = 0) => `<div class="banner result-note" role="status"><button class="close" data-action="dismiss-result" data-index="${index}" aria-label="Dismiss">×</button>
+  <b>${esc(title)}</b><ul class="result-lines">${lines.map((l) => `<li class="${esc(['good', 'bad', 'warn', 'event'].includes(l.tone) ? l.tone : '')}">${esc(l.text)}</li>`).join('')}</ul></div>`;

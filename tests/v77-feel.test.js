@@ -73,7 +73,7 @@ test('2.3 the Estate tab shows a dot when there are clues or a covert op to run'
 });
 
 test('2.4 the odds cache key holds only what a fight reads: a job, Stress, XP or story change keeps it', async () => {
-  const { fightKey, estimateOdds } = await import('../src/odds.js');
+  const { oddsKey: fightKey, estimateOdds } = await import('../src/odds.js');
   const { createRun, recruit } = await import('../src/run.js');
   const run = createRun(79);
   const f = recruit(run, run.market[0].id);
