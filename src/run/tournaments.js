@@ -9,6 +9,7 @@ import {
 import { hasRelic, relicSum, relicFight } from '../fortune.js';
 import { CELL_IDS } from '../plot.js';
 import { SUMMONS_LINES } from '../quests.js';
+import { lastWordsFor } from '../voices.js';
 import {
   createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, deathGateAt, hypeOf,
   playRound, throwTowel, canThrowTowel, mortalDanger, suggestTactic,
@@ -127,8 +128,8 @@ export function answerSummons(run, id, order) {
       house.since = run.week;
     }
   } else if (reason === 'towel') {
-    changeFavor(run, SUMMONS.yieldFavor, 'yielded on the Imperial sand');
-    chronicle(run, fighter, `Summoned to ${arenaName(SUMMONS.tier)} by the Emperor; yielded to ${opp.name} and lived.`);
+    changeFavor(run, SUMMONS.yieldFavor, 'capitulated on the Imperial sand');
+    chronicle(run, fighter, `Summoned to ${arenaName(SUMMONS.tier)} by the Emperor; capitulated to ${opp.name} and lived.`);
     line = SUMMONS_LINES.yielded(fighter.name);
   } else if (m.round >= 3) {
     changeFavor(run, SUMMONS.surviveFavor, 'survived three rounds on the Imperial sand');
@@ -157,7 +158,7 @@ export function answerSummons(run, id, order) {
   pushResult(run, summary);
   run.summons = null;
   run.summonsDone = true;
-  const outcome = won ? 'won' : !summary.died ? (reason === 'towel' ? 'yielded at the Death Gate' : m.round >= 3 ? 'lost, but survived three rounds' : 'swept in two rounds') : 'killed';
+  const outcome = won ? 'won' : !summary.died ? (reason === 'towel' ? 'capitulated at the Death Gate' : m.round >= 3 ? 'lost, but survived three rounds' : 'swept in two rounds') : 'killed';
   log(run, `The Emperor's summons: ${fighter.name} (Power ${effectivePower(fighter)}) against ${opp.name} (Power ${summary.oppPower}): ${outcome}${fighter.alive && newInjuries.length ? `, with ${newInjuries.join(', ')}` : ''}.${[summary.favor ? ` Favour ${summary.favor > 0 ? '+' : '−'}${Math.abs(summary.favor)}` : '', summary.renown ? ` +${summary.renown} Renown` : ''].filter(Boolean).join(',')}${summary.favor || summary.renown ? '.' : ''}`, won ? 'good' : summary.died ? 'bad' : 'event');
   talk(run, `summons-done-${run.week}`, [{ speaker: 'emperor', text: line }], { now: true });
   checkLoss(run);
@@ -197,13 +198,17 @@ export function fightBlocker(run, id, tier = run.topTier) {
   return null;
 }
 
-// A fight week you could still use (7.9.2): the arenas still open, and the fighters who could fight in one of them.
-// null when there are none. src/main.js asks before ending the week.
+// A fight week you could still use (7.9.2/7.11): open arenas and healthy, non-Champion fighters who could fight there.
+// Injured fighters and lower-arena Champions (who would be booed for negative Favour) never trigger the nag.
+const readyForFreeFight = (run, f, t) => !fightBlocker(run, f.id, t)
+  && !f.injuries.some((i) => i.weight > 0)
+  && !(t < run.topTier && isChampionOf(f, t));
+
 export function freeFightDay(run) {
   if (!run.bouts) return null;
-  const tiers = unlockedTiers(run).filter((t) => run.bouts[t] === 'open' && run.roster.some((f) => !fightBlocker(run, f.id, t)));
+  const tiers = unlockedTiers(run).filter((t) => run.bouts[t] === 'open' && run.roster.some((f) => readyForFreeFight(run, f, t)));
   if (!tiers.length) return null;
-  const fighters = run.roster.filter((f) => tiers.some((t) => !fightBlocker(run, f.id, t)));
+  const fighters = run.roster.filter((f) => tiers.some((t) => readyForFreeFight(run, f, t)));
   return { tiers, fighters };
 }
 
@@ -582,6 +587,9 @@ export function finishMatch(run, match) {
     }
   }
   if (!fighter.alive) {
+    const lastWords = lastWordsFor(run, fighter);
+    summary.lastWords = lastWords;
+    chronicle(run, fighter, `Last words: "${lastWords}"`);
     chronicle(run, fighter, `Fell in ${bout.name}, killed by ${opp.name}.`);
     const fWins = winsOf(run, fighter);
     summary.eulogy = `Here lies ${fighter.name}: ${fWins} win${fWins === 1 ? '' : 's'}${fighter.kills ? `, ${fighter.kills} kill${fighter.kills === 1 ? '' : 's'}` : ''}${fighter.titles.length ? `, ${fighter.titles.join(', ')}` : ''}.`;
@@ -729,7 +737,7 @@ function rebelBeaten(run, opp, verdict) {
 
 export function resolveMercy(run, choice) {
   assertOk(mercyBlocker(run, choice));
-  const { fighterId, opp, house: houseId, crowd, at, rebel = false, rivalChampion = false } = run.mercy;
+  const { fighterId, opp, house: houseId, crowd, tier, at, rebel = false, rivalChampion = false } = run.mercy;
   if (rivalChampion && choice === 'kill') rivalChampionKilled(run, opp);
   const top = run.mercy.top ?? true;
   const favorFor = spareFavor(run);
@@ -740,6 +748,7 @@ export function resolveMercy(run, choice) {
   const house = run.houses?.find((h) => h.id === houseId) ?? null;
   const out = { verdict: choice, crowd, favor: 0, renown: 0, morale: 0, kill: false, mark: null, feud: null, owed: null };
   if (choice === 'spare') {
+    run.spared = [...(run.spared ?? []), { name: opp, house: house?.name ?? null, tier, week: run.week }].slice(-6);
     if (favorFor) {
       const before = run.favor;
       changeFavor(run, favorFor, `spared ${opp}`);

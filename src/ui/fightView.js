@@ -315,6 +315,7 @@ function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {
       <button class="btn ${m.summary?.next ? '' : 'primary '}big" data-action="leave-fight">${m.summary?.next ? 'Back to the Ludus (fight on later this week)' : 'Return to the Ludus'}</button></div>`;
     return `${first}<div class="result ${won ? 'win' : 'loss'}${lateBanner}">${won ? 'Victory' : m.result.reason === 'towel' ? 'Capitulated' : m.result.reason === 'death' ? 'Slain' : 'Defeat'}</div>
       <div class="result-text${lateText}">${esc(resultText(m))}</div>
+      ${m.summary?.lastWords ? `<blockquote class="last-words${lateText}">“${esc(m.summary.lastWords)}”</blockquote>` : ''}
       ${m.summary?.eulogy ? `<div class="eulogy${lateText}">⚰ ${esc(m.summary.eulogy)}${m.summary.story?.length ? `<ul>${m.summary.story.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}</div>` : ''}
       <div class="report-wrap${lateReport}">${report(m.summary)}</div>
       ${advice ? `<div class="advice${lateActions}">💡 ${esc(advice)}</div>` : ''}

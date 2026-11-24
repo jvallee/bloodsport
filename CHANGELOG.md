@@ -2,6 +2,20 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.11.0 (2026-11-25): word in the city, fighters' voices, and fixes
+
+From an independent review of 7.10.0. The review's new look for desktop and phone can be tried at `/v7-beta/`.
+- **Word in the city:** the Ludus shows what the street is saying about your house: a bloodied win, a new Title, a fallen star, an opponent you spared, a feud, a Senate act, unrest in your barracks, and the prefect's growing interest.
+- **Last words:** a gladiator who dies on the sand gets a final line before their epitaph, shaped by who they were (your sworn champion, a political prisoner, a Revenant, someone with a friend in the house, a Title holder, or their kind and Humour). It is kept in their Story.
+- **Where the portal took them from:** up to twice a career, a fighter who reaches level 3 tells you, late at night, about the world they came from, and you choose how to answer.
+- **Mercy remembered:** opponents you spare turn up in the city's talk and, if the rising succeeds, one of them opens a gate for it. The Whispering Gallery shows what the prefect is up to.
+- **Fixes:**
+  - The fight-day reminder no longer asks you to send injured fighters, or Champions back into arenas where they would be booed, and lists three or more arenas properly.
+  - A Mutinous fighter refuses to fight, so the game no longer suggests calming them with a win.
+  - The cousin in the cells: a Revenant or a mole is never the one who asks, and the endings get the cousin right when he died, was your champion, or the steward brought word.
+  - The Codex and tutorial: Blinded counts as two on the Death Gate; Melancholic fighters turn Afeared a quarter of the time; all eleven Apothecary items are listed; Fortune's wheel can be spun up to three times; the Emperor's summons says "capitulated".
+  - Clicking outside a pop-up closes it; the month's summary can no longer appear over a fight.
+
 ## 7.10.0 (2026-11-25): a bolder rebellion, and a better tutorial
 
 - **A better tutorial:** the first month now ends with a word from your steward after your first fight (heal the hurt, end the week, and you're on your own). New tips explain, the first time they matter: random events, Fortune's wheel, the Emperor's tribute, a Mutinous fighter, a mole's clues, and the Liaison's prisoners. The older tips say a little more (signature moves at level 3, the fighter's Story).

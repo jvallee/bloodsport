@@ -4,6 +4,7 @@ import { int, next, pick } from '../rng.js';
 import { CIRCUITS, GEAR, SPY, POLITICAL, PLOT, SHORT, FORTUNE } from '../data.js';
 import { RELICS, hasRelic } from '../fortune.js';
 import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, SUSPICION_LINES, PREFECT_LINES, isArmed } from '../plot.js';
+import { prefectPosture } from '../voices.js';
 import { MOOD_WEEKS } from '../events.js';
 import { dateOf } from '../calendar.js';
 import { medbaySlots, maxLevel, effectAt } from '../ludus.js';
@@ -256,8 +257,13 @@ export function betray(run) {
     log(run, `With the purse comes a gift from the palace: ${RELICS[gift].name}. ${RELICS[gift].desc}`, 'event');
   }
   run.epilogue = [...(run.epilogue ?? []), victims.length ? `Executed on your word: ${victims.join(', ')}.` : 'You gave the Emperor names. He made sure they were the right ones.'];
-  // 7.10: a callback to the cousin in the cells (PLACEHOLDER line).
-  if (run.cousin?.done === 'saved' && victims.includes(run.cousin.name)) run.epilogue.push(`${run.cousin.name} was among them: the cousin you once bought out of the cells. The fighter who begged you for his life watched from the barracks window.`);
+  // 7.10/7.11: a callback to the cousin in the cells (handles living asker, steward ask, or lost asker). PLACEHOLDER.
+  if (run.cousin?.done === 'saved' && victims.includes(run.cousin.name)) {
+    const asker = run.cousin.asker ? findFighter(run, run.cousin.asker) : null;
+    const watcher = asker ? ` ${asker.name}, who begged you for his life, watched from the barracks window.`
+      : !run.cousin.asker ? ' The woman from the gate did not come back.' : '';
+    run.epilogue.push(`${run.cousin.name} was among them: the cousin you once bought out of the cells.${watcher}`);
+  }
   endPlot(run, 'loyalist');
 }
 
@@ -274,8 +280,20 @@ export function resolveCoup(run, fighter, won, final, reason = null) {
     run.endReason = `${fighter.name} wins the Final, turns, and climbs into the imperial box. Silbannacus falls on the sand he filled with blood. The empire is yours to remake.`;
     const freed = p.freed.filter((c) => !c.caught).map((c) => c.name);
     if (freed.length) run.epilogue = [...(run.epilogue ?? []), `In the crowd, the people you freed were the first to cheer: ${freed.join(', ')}.`];
-    // 7.10: a callback to the cousin in the cells (PLACEHOLDER line).
-    if (run.cousin?.done === 'saved' && run.cousin.name) run.epilogue = [...(run.epilogue ?? []), `${run.cousin.name}, the cousin you once bought out of the cells, was the first over the rail of the imperial box.`];
+    // 7.10/7.11: a callback to the cousin in the cells (handles champion, fallen, or living cousin). PLACEHOLDER.
+    if (run.cousin?.done === 'saved' && run.cousin.name) {
+      const cousinDead = (run.fallen ?? []).some((x) => x.id === run.cousin.f || x.name === run.cousin.name);
+      const line = fighter.id === run.cousin.f
+        ? `${run.cousin.name}, the cousin you once bought out of the cells, was the one who climbed into the imperial box.`
+        : cousinDead
+          ? `When the crowd poured into the box, someone raised a cup to ${run.cousin.name}, the cousin you once bought out of the cells, who did not live to see it.`
+          : `${run.cousin.name}, the cousin you once bought out of the cells, was the first over the rail of the imperial box.`;
+      run.epilogue = [...(run.epilogue ?? []), line];
+    }
+    const spared = (run.spared ?? []).at(-1);
+    if (spared) {
+      run.epilogue = [...(run.epilogue ?? []), `Under the stands, ${spared.name}, whom you once spared on the sand, unlocked the tunnel gate and looked the other way.`];
+    }
   } else if (won) {
     endPlot(run, 'cold');
     run.epilogue = [...(run.epilogue ?? []), 'The signal never came: the wrong fighter won the Final, and the moment passed. Somewhere, a chalk mark fades.'];
@@ -307,5 +325,5 @@ export function risingProgress(run) {
   const stage = p.ended ? 'ended' : p.stage;
   const label = { mark: 'watching you', favours: 'testing you with small favours', cause: 'gathering for the cause', ready: "ready: it waits for the Emperor's games (the Grand Tournament)", ended: 'over' }[stage] ?? stage;
   const waiting = !needs.length && (stage === 'favours' || stage === 'cause') ? "everything is in place: the next step comes at the month's turn, or with the cause's next message" : null;
-  return { suspicion: Math.round(p.suspicion), watch: s.watch, informer: s.informer, raid: s.raid, stage, label, needs, waiting };
+  return { suspicion: Math.round(p.suspicion), prefect: prefectPosture(p.suspicion), watch: s.watch, informer: s.informer, raid: s.raid, stage, label, needs, waiting };
 }

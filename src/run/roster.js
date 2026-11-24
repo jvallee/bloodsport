@@ -111,7 +111,7 @@ export function cousinWeek(run) {
   const c = run.cousin;
   if (!c) {
     if (run.plot || run.topTier < COUSIN.fromTier || hasPolicy(run, 'purgePrisons') || run.roster.some((f) => f.political)) return;
-    const asker = run.roster.find((f) => f.alive !== false && !f.political) ?? null;
+    const asker = run.roster.find((f) => f.alive !== false && !f.political && f.kind !== 'revenant' && !f.mole) ?? null;
     run.cousin = { asker: asker?.id ?? null, week: run.week, until: run.week + COUSIN.weeks, f: null, name: null, done: null };
     const built = liaisonLevel(run) > 0;
     cousinSay(run, 'ask', { fighter: COUSIN_LINES.ask(built), steward: COUSIN_LINES.askSteward(built) });
@@ -308,7 +308,7 @@ export function moraleTarget(run, f) {
 
 export function moraleState(f) {
   if (f.morale >= MORALE.inspired) return { id: 'inspired', label: 'Inspired', desc: '+5% win chance in every round.' };
-  if (f.morale < MORALE.mutinous) return { id: 'mutinous', label: 'Mutinous', desc: 'Refuses to fight. Give them decor, a better room, or wins.' };
+  if (f.morale < MORALE.mutinous) return { id: 'mutinous', label: 'Mutinous', desc: 'Refuses to fight. Give them decor, a better room, or an Entertainment Room.' };
   if (f.morale < MORALE.restless) return { id: 'restless', label: 'Discontented', desc: "Won't train. Give them decor or a better room." };
   return { id: 'content', label: 'Content', desc: 'No effect.' };
 }

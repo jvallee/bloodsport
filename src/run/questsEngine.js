@@ -7,14 +7,31 @@ import { MOOD_WEEKS } from '../events.js';
 import { maxLevel } from '../ludus.js';
 import {
   clamp, log, chronicle, talk, effectivePower, championTitle, isChampionOf, hasPolicy,
-  gainXp, addPrestige,
+  gainXp, addPrestige, winsOf,
 } from './helpers.js';
+import { backstoryScene } from '../voices.js';
 import { plotActive, changeSuspicion, advancePlot } from './plotEngine.js';
 import { arenaPower } from './houses.js';
 import { retireBlocker } from './roster.js';
 
 const moodShift = (f, n) => { f.mood = { n: (f.mood?.n ?? 0) + n, weeks: MOOD_WEEKS }; };
 const questState = (run) => (run.quests ??= { steward: null, stewardIndex: 0, rebel: [] });
+const MAX_BACKSTORIES = 2;
+
+// 7.11: once a living fighter reaches level 3, they tell you where the portal took them from (two a career, one per kind).
+export function checkBackstories(run) {
+  const seen = run.backstories ?? [];
+  const kinds = run.backstoryKinds ?? [];
+  if (seen.length >= MAX_BACKSTORIES) return;
+  const f = run.roster.find((x) => x.level >= 3 && x.kind !== 'revenant' && !seen.includes(x.id) && !kinds.includes(x.kind) && (winsOf(run, x) >= 1 || x.trained >= 1));
+  if (!f) return;
+  const scene = backstoryScene(f);
+  if (!scene) return;
+  run.backstories = [...seen, f.id];
+  run.backstoryKinds = [...kinds, f.kind];
+  chronicle(run, f, scene.memory);
+  talk(run, `backstory-${f.id}`, scene.beats);
+}
 
 export function checkQuests(run) {
   if (!run || run.inMatch) return;
@@ -22,6 +39,7 @@ export function checkQuests(run) {
   if (run.status !== 'active') return;
   checkWants(run);
   checkRebelQuests(run);
+  checkBackstories(run);
 }
 
 export function stewardTasks(run) {

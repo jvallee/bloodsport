@@ -390,3 +390,5 @@ export function stewardNews(before, after, run) {
 
 // The tutorial's tips are the steward speaking (src/tutorial.js holds the words).
 export const tipSpeaker = "steward";
+
+export { lastWordsFor, backstoryScene, prefectPosture } from "./voices.js";

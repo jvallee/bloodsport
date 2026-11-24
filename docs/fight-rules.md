@@ -1240,3 +1240,9 @@ Bribe the Armourer 7 → 5 Gold. Chances unchanged.
   them search (40%: suspicion −10; else the steel is lost and +10); grease the sergeant (`PLOT.searchBribe` 6 Gold,
   suspicion −5); stall them (70%: trust +1; else the steel is lost and +15). Losing the steel unarms the barracks (an
   officer contact still counts as armed); "Steel for the cause" can come again.
+
+## 7.11.0: word in the city, fighters' voices, and fixes (from an independent review; no rule or number changes)
+- **Fight-day reminder (`freeFightDay`):** leaves out injured fighters (a wound of weight 1+) and Champions of a lower arena (who would be booed).
+- **The cousin in the cells:** the asker is never a Revenant or a mole; the coup and betrayal epilogues name a living asker, mention the woman at the gate when the steward asked, and handle a cousin who died or was the champion.
+- **Spared opponents (`run.spared`):** sparing records the last 6 for Word in the city and the coup's epilogue.
+- **Voices (`src/voices.js`) and Word in the city (`src/gazette.js`):** last words on an arena death; up to two level-3 backstories a career (no Revenants, one per kind, the fighter must have fought or trained); the prefect's posture in the Whispering Gallery; two or three street headlines in the Ludus and the text port. No dice are rolled: bot careers play exactly as in 7.10.0.

@@ -105,8 +105,8 @@ export const STEPS = [
   {
     id: "aftermath",
     when: (r) => r.history.some((h) => !h.skipped && !h.forfeit),
-    title: "After the fight",
-    body: "Wins pay Gold and Prestige; losses pay a little Gold. Injuries <b>stay until healed</b>: put hurt fighters on the <b>Medbay</b> job. The house log on the left keeps everything that happens, and each fighter's <b>Story</b> keeps what happened to them. I read both. Someone should.",
+    title: "The house remembers",
+    body: "The <b>house log</b> on the left keeps everything that happens, <b>Word in the city</b> tracks what the street is saying about you, and each fighter's <b>Story</b> keeps their own chapters. I read all three. Someone should.",
   },
   {
     id: "injury",
@@ -148,7 +148,7 @@ export const STEPS = [
     id: "fortune",
     when: (r) => Boolean(r.fortune),
     title: "Fortune's wheel",
-    body: "At the start of some months the wheel of Fortune turns for your house. Take <b>one card</b>: a boon for the month, or a <b>relic</b> that stays with the house. You may spin again once, but the next hand might be worse. Fortune is like that.",
+    body: "At the start of some months the wheel of Fortune turns for your house. Take <b>one card</b>: a boon, gear, a fighter, a wager, or a <b>relic</b> that stays with the house. You may spin again up to three times for rising Gold, or pass for a little coin, though the next hand might be worse. Fortune is like that.",
   },
   {
     id: "tribute",
@@ -160,7 +160,7 @@ export const STEPS = [
     id: "mutinous",
     when: (r) => r.roster.some((f) => f.morale < MORALE.mutinous),
     title: "A Mutinous fighter",
-    body: `A fighter below Morale ${MORALE.mutinous} is <b>Mutinous</b>: they won't fight, they stir up <b>unrest</b>, and some nights they brawl, steal or go over the wall. If unrest reaches ${UNREST.threshold}, the chains break: a revolt in your own barracks. Calm them with decor, a better room, or a win.`,
+    body: `A fighter below Morale ${MORALE.mutinous} is <b>Mutinous</b>: they won't fight, they stir up <b>unrest</b>, and some nights they brawl, steal or go over the wall. If unrest reaches ${UNREST.threshold}, the chains break: a revolt in your own barracks. Calm them with decor, a better room, or an Entertainment Room.`,
   },
   {
     id: "mole",

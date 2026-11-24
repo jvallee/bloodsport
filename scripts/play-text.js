@@ -9,7 +9,9 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup, ALL_UNLOCKS, careerXp, levelFor, LEGACY_LEVELS } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort, ESPIONAGE } from '../src/data.js';
+import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort, ESPIONAGE, UNREST } from '../src/data.js';
+import { PREFECT } from '../src/plot.js';
+import { cityHeadlines } from '../src/gazette.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
 import { nextHint } from '../src/hints.js';
 import { EVENT_BY_ID, choiceLabel, stakesText } from '../src/events.js';
@@ -271,7 +273,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
         : `${isWinter(run.week) ? 'Winter Dead Season: no tournaments. ' : ''}Next tournament in ${plural(weeksUntilTournament(run.week), 'week')}.`;
     return [
       `=== ${formatDate(run.week)} ===`,
-      `Gold ${run.gold} · Prestige ${run.prestige} (House level ${run.prestigeLevel}${next ? `, level ${next.level} at ${next.at}` : ''}) · Imperial Favour ${run.favor}/${FAVOR.max}${run.favor <= FAVOR.warning ? ' (DANGER)' : ''}`,
+      `Gold ${run.gold} · Prestige ${run.prestige} (House level ${run.prestigeLevel}${next ? `, level ${next.level} at ${next.at}` : ''}) · Imperial Favour ${run.favor}/${FAVOR.max}${run.favor <= FAVOR.warning ? ' (DANGER)' : ''}${run.unrest > 0 ? ` · Unrest ${run.unrest}/${UNREST.threshold}${run.unrest >= UNREST.warn ? ' (HIGH)' : ''}` : ''}`,
       tribute,
       `Coming up in ${arenaName(run.topTier)}: ${upcomingBouts(run).map((b) => `${b.stage} ${b.weeks ? `in ${plural(b.weeks, 'week')}` : 'THIS WEEK'} (${dateOf(b.week).month}${b.festival ? `, ${b.festival}` : ''})`).join(' → ')}`,
       festival,
@@ -296,6 +298,10 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     lowerShown = 0;
     const out = [header()];
     if (run.summons) out.push(`\n⚜ THE EMPEROR SUMMONS one of your fighters to the Imperial Coliseum (a regular, Power ${getSummonsPower(run)}) on this month's fight day: \`summons <id> <yield|death>\` then, or \`refuse-summons\` (${SUMMONS.refuseFavor} Favour).`);
+    if (run.cousin && !run.cousin.done) {
+      const left = Math.max(0, run.cousin.until - run.week);
+      out.push(`\n⛓ THE CELLS: ${run.cousin.name ?? 'A fighter\'s cousin'} is executed in ${plural(left, 'week')} unless bought from the Liaison.`);
+    }
     if (run.demand) out.push(`\n⚜ THE EMPEROR DEMANDS: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.${demandMet(run) ? ' (done)' : ''}`);
     // The Emperor's word on a demand met, and on one missed (as on the page; playtest LLM-11: only the page had them).
     if (run.demand && demandMet(run) && !scenesSeen.includes(`demand-met-${run.demand.week}`)) {
@@ -326,13 +332,16 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       out.push(sceneText(stage.id, stage.beats));
     }
     // Quests and rivals (5.4.0): what the rules said someone says, once each.
+    const mapBeat = (b) => { // 7.11: replies kept
+      const replies = b.replies ? b.replies.map((r) => ({ label: r.label, then: r.then.map(mapBeat) })) : undefined;
+      const f = b.fighterId && [...run.roster, ...run.fallen, ...(run.retired ?? [])].find((x) => x.id === b.fighterId);
+      const base = f ? { speaker: 'fighter', fighter: f, text: b.text } : { speaker: b.speaker, text: b.text };
+      return replies ? { ...base, replies } : base;
+    };
     for (const t of run.talk ?? []) {
       if (scenesSeen.includes(`talk-${t.key}`)) continue;
       scenesSeen.push(`talk-${t.key}`);
-      out.push(sceneText('talk', t.beats.map((b) => {
-        const f = b.fighterId && [...run.roster, ...run.fallen, ...(run.retired ?? [])].find((x) => x.id === b.fighterId);
-        return f ? { speaker: 'fighter', fighter: f, text: b.text } : { speaker: b.speaker, text: b.text };
-      })));
+      out.push(sceneText('talk', t.beats.map(mapBeat)));
     }
     if (run.mercy) out.push(`\n${mercyText()}`);
     if (run.status !== 'active') {
@@ -369,6 +378,8 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (hint) out.push(`\nNext: ${textHint(hint.text)}`);
     const card = tutorialCard();
     if (card) out.push(`\n${card}`);
+    const headlines = cityHeadlines(run, 3);
+    if (headlines.length) out.push(`\n-- Word in the city --\n${headlines.map((h) => `  ${h.text}`).join('\n')}`);
     out.push(`\n-- House log --\n${run.log.slice(-8).map((l) => `  ${l.text}`).join('\n')}`);
     const blocked = advanceBlocker(run);
     if (blocked && run.status === 'active' && !run.boutPending) out.push(`(Before this week can end: ${blocked})`);
@@ -528,6 +539,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (s.levelUp) bits.push(`House level ${s.levelUp}!`);
     if (s.bloodFaith) bits.push('Blood Faith refunds the buy-in');
     if (s.refund) bits.push('reaching the Boss returned the buy-in');
+    if (s.lastWords) out.push(`Last words (${s.fighter}): "${s.lastWords}"`);
     out.push(`Result: ${bits.join(' · ')}${s.died ? ` · ${s.fighter} is dead.` : ''}`);
     if (run.mercy) out.push(mercyText());
     return out.join('\n');
@@ -788,7 +800,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       for (const f of run.roster.filter((x) => x.want)) lines.push(`  ${f.name} [${f.id}] wants: ${WANTS[f.want.id].goal(f.want)}${f.want.until != null ? ` (${Math.max(0, f.want.until - run.week)} weeks left)` : ''}.`);
       for (const q of run.quests?.rebel ?? []) lines.push(`  The cause asks: ${REBEL_QUESTS[q.id].goal(q)} (${Math.max(0, q.until - run.week)} weeks left).`);
       const rising = risingProgress(run);
-      if (rising) lines.push(`  Whispering Gallery: suspicion ${rising.suspicion}/100 (watched at ${rising.watch}, informers at ${rising.informer}, raid at ${rising.raid}); the rising: ${rising.label}${rising.needs.length ? `, still needs ${rising.needs.join(', ')}` : ''}${rising.waiting ? `; ${rising.waiting}` : ''}.`);
+      if (rising) lines.push(`  Whispering Gallery: suspicion ${rising.suspicion}/100 (watched at ${rising.watch}, informers at ${rising.informer}, raid at ${rising.raid}); ${PREFECT}: ${rising.prefect}; the rising: ${rising.label}${rising.needs.length ? `, still needs ${rising.needs.join(', ')}` : ''}${rising.waiting ? `; ${rising.waiting}` : ''}.`);
       const c = run.rivalChampion;
       const arch = archrival(run);
       if (arch) lines.push(`  Your rival house: ${arch.name} (Glory ${arch.glory})${c ? `, champion ${c.f.name} (${c.wins} wins and ${c.losses} losses against you)` : ''}.`);
