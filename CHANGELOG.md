@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## Unreleased (7.10.0)
+## 7.10.0 (2026-11-25): a bolder rebellion, and a better tutorial
 
 - **A better tutorial:** the first month now ends with a word from your steward after your first fight (heal the hurt, end the week, and you're on your own). New tips explain, the first time they matter: random events, Fortune's wheel, the Emperor's tribute, a Mutinous fighter, a mole's clues, and the Liaison's prisoners. The older tips say a little more (signature moves at level 3, the fighter's Story).
 - **The palace has a face:** Prefect Aulus Crassinus calls on your house as the palace's suspicion grows: a courtesy call, a dinner with your neighbours, a report he is writing slowly. He leads the raid and makes the offer to name names.

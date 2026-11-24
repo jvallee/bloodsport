@@ -327,3 +327,17 @@ cowed (Morale 30), wound items +3% win, covert ops cheaper with −2 Favour when
 Notes: first careers are 6 points below the 7.6 measurement (the designer's comfort range was 1–4); the full Legacy and
 Heat groups gained. The climax gate passes by 3 points (Imperial 24%, Grand 21%). A first try with the Grand at 21 failed
 the full-Legacy (34%) and Heat 1 (14%) gates.
+
+### v7.10.0 (a bolder rebellion; `npm run check`, 300 careers): 24/24
+
+Five new rebel requests that draw suspicion, a barracks search, suspicion that builds (`perPrisoner` 2, `decay` 1). The
+rest of 7.10 (endings, the prefect, replies, the tutorial) is words only.
+
+| | 7.9.0 | 7.10.0 |
+|---|---|---|
+| First career, careful | 23% | 23% |
+| Full Legacy (Heat 1 / Heat 3) | 43% (23 / 13) | 42% (23 / 13) |
+| Rebel careers: coup / martyr / treason | 7% / 3% / 0% | 10% / 1% / 1% |
+| Evil road (loyalist over careful) | +19 | +9 |
+| Loyalist careers ending in treason | — | 3% |
+| Boss win per attempt | 90 · 57 · 37 · 24 · 21 | 90 · 57 · 37 · 25 · 21 |
