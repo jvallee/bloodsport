@@ -166,7 +166,7 @@ export const MOLE_TELLS = ['suspiciously cheap for their Power', 'a brand scar u
 
 export const SUMMONS_LINES = {
   ask: 'The games in my Coliseum have grown dull, Lanista. I want new blood on the Imperial sand. Send me one of yours on this month\'s fight day.',
-  steward: (favor) => `A summons, not a request. He doesn't make requests. On fight day, send a fighter to the Imperial Coliseum against one of its regulars, told to yield at the Death Gate or to fight to the death. Or refuse him, and lose ${-favor} Favour.`,
+  steward: (favor) => `A summons, not a request. He doesn't make requests. On fight day, send a fighter to the Imperial Coliseum against one of its regulars, told to capitulate at the Death Gate or to fight to the death. Or refuse him, and lose ${-favor} Favour.`,
   refused: 'You refuse me? I will remember the name of your house, Lanista. I will remember it at every dinner.',
   won: (f) => `${f} beat my champion? On my own sand? Well. Someone bring me that fighter's name, I want to say it again.`,
   survived: (f) => `${f} lost, but still stood at the end. The crowd liked them. So, for a moment, did I.`,

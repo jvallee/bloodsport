@@ -256,7 +256,7 @@ function whyTable(m, late = '') {
       <td>${hurts}</td>
     </tr>`;
   }).join('');
-  return `<details class="why${late}"><summary>Show the round-by-round math</summary><div class="why-scroll"><table>
+  return `<details class="why${late}"><summary>Show the round-by-round maths</summary><div class="why-scroll"><table>
     <thead><tr><th>Rd</th><th>Your Power</th><th>Their Power</th><th>Delta</th><th>Win chance (base → final)</th><th>Roll</th><th>Round to</th><th>Injuries</th></tr></thead>
     <tbody>${rows}</tbody></table><p class="sub">You win a round when the roll is at or under your win chance.</p></div></details>`;
 }
@@ -405,7 +405,7 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
           ${last ? tacticLine(m, last) : ''}
           ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span>${animate ? `<span class="suspense${isDecider(m, last) ? ' slow' : ''}" style="--from:${reveal - suspenseOf(m, last)}s;--reveal:${reveal}s">${isDecider(m, last) ? 'Everything on one blow…' : 'Steel meets steel…'}</span>` : ''}</div>${roundBanner(m, last, reveal)}` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
           <div class="tags">${pills.map((p, i) => `<span class="tag ${p.side.toLowerCase()}${animate ? '' : ' static'}"${animate ? ` style="animation-delay:${diceTime() + i * 0.2}s"` : ''}>${esc(p.text)}</span>`).join('')}</div>
-          <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><span class="feed-tools"><button class="link" data-action="toggle-pace" title="How fast rounds play out (the deciding round always takes its time)">${pace < 1 ? 'Full pace' : 'Quick pace'}</button> <button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the math'}</button></span></div>
+          <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><span class="feed-tools"><button class="link" data-action="toggle-pace" title="How fast rounds play out (the deciding round always takes its time)">${pace < 1 ? 'Full pace' : 'Quick pace'}</button> <button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the maths'}</button></span></div>
           <div class="feed" id="feed">${feed(m, ui)}</div>
         </div>
         <div class="side${sideCls('B')}"${sideStyle}>${pop('B')}<div class="side-label b">${m.house ? `Opponent · <span style="color:${safeColor(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div><div id="side-card-B">${sideCardHtml(m, 'B', ui, { revealed: !hasSnapshot, freshOpts: fresh('B') })}</div><div class="${hold(reveal)}">${statLine(stats, 'B')}</div></div>

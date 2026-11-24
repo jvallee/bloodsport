@@ -149,7 +149,7 @@ export const FIGHT_STEPS = [
     id: "fight-tactics",
     when: (m) => !m.over,
     title: "Read your opponent",
-    body: "Before each round, pick a <b>tactic</b>. <b>Press</b> beats Feint, <b>Feint</b> beats Guard, <b>Guard</b> beats Press: guess right and you get +10% to win the round. Every fighter has a <b>humor</b> (temperament) that hints at what they'll do: a Choleric opponent loves to Press, so Guard against them. The ★ marks what auto-play would pick.",
+    body: "Before each round, pick a <b>tactic</b>. <b>Press</b> beats Feint, <b>Feint</b> beats Guard, <b>Guard</b> beats Press: guess right and you get +10% to win the round. Every fighter has a <b>humour</b> (temperament) that hints at what they'll do: a Choleric opponent loves to Press, so Guard against them. The ★ marks what auto-play would pick.",
   },
   {
     id: "fight-towel",
@@ -167,7 +167,7 @@ export const FIGHT_STEPS = [
     id: "fight-over",
     when: (m) => m.over,
     title: "Why you won or lost",
-    body: 'Open <b>"Show the round-by-round math"</b> to see every number: Power, the gap, each bonus, and the roll. Nothing is hidden.',
+    body: 'Open <b>"Show the round-by-round maths"</b> to see every number: Power, the gap, each bonus, and the roll. Nothing is hidden.',
   },
 ];
 

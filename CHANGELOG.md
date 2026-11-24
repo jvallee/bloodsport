@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## Unreleased (7.8.0)
+
+- **One name per rule:** giving up a match between rounds is always called capitulating now (the Codex called it forfeiting, which is a different thing: giving up a bout before it starts, and the Emperor's summons called it yielding). British spelling throughout: Humours, maths, the Quantum Analyser.
+
 ## 7.7.0 (2026-11-24): quicker and clearer fights
 
 - **Fewer clicks:** the result of an ordinary event or a Fortune card now appears as a notice at the top of the page instead of a pop-up you had to close. Gambles, The Chains Break, an unmasked mole and the month's digest still open their own pop-up.

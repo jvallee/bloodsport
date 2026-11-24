@@ -51,7 +51,7 @@ export function summonsBlocker(run, id, order) {
   if (blocked) return blocked;
   if (!run.summons) return 'The Emperor has summoned nobody.';
   if (!run.bouts) return 'The summons is for fight day.';
-  if (!SUMMONS_ORDERS.includes(order)) return 'Tell them to yield at the Death Gate, or to fight to the death.';
+  if (!SUMMONS_ORDERS.includes(order)) return 'Tell them to capitulate at the Death Gate, or to fight to the death.';
   const f = findFighter(run, id);
   if (!f) return 'Choose a fighter from your roster.';
   if (foughtThisWeek(run).includes(id)) return `${f.name} already fought this week.`;

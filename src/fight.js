@@ -237,7 +237,7 @@ export function computePower(c, opp, round, raw = false) {
   }
   if (kindActive(c, 'firebug', round) && decorOf(c, 'fireBrazier')) mods.push({ source: 'Firebug', value: decorOf(c, 'fireBrazier') });
   if (weaponActive(c, 'bow', round) && round <= 2 && !hasInjury(f, 'blinded') && meleeOnly(opp)) mods.push({ source: 'Bow', value: 1 });
-  if (kindActive(c, 'quantumAnalyzer', round) && c.analyzed) mods.push({ source: 'Quantum Analyzer', value: c.analyzed });
+  if (kindActive(c, 'quantumAnalyzer', round) && c.analyzed) mods.push({ source: 'Quantum Analyser', value: c.analyzed });
   const blinded = countInjury(f, 'blinded');
   if (blinded) mods.push({ source: 'Blinded', value: -2 * blinded });
   if (c.side === 'B' && c.arena === 'crowdFavorite') mods.push({ source: 'Crowd Favourite', value: 1 });
@@ -602,7 +602,7 @@ export function applyRoundEnd(m, r) {
   }
   if (kindActive(L, 'quantumAnalyzer', round)) {
     L.analyzed += 1;
-    effects.push({ source: 'Quantum Analyzer', side: L.side, text: `analyzing (+${L.analyzed} Power)` });
+    effects.push({ source: 'Quantum Analyser', side: L.side, text: `analysing (+${L.analyzed} Power)` });
   }
   r.endEffects = effects;
 }
