@@ -48,7 +48,7 @@ export function nextHint(run) {
   }
   // 7.7: unrest, moles and covert ops, ahead of the gentler hints.
   const mutinous = run.roster.find((f) => f.morale < MORALE.mutinous);
-  if (mutinous) return { text: `${mutinous.name} is Mutinous (Morale ${mutinous.morale}): they refuse to fight and stir unrest${run.unrest ? ` (${run.unrest}/${UNREST.threshold})` : ''}. Calm them with decor, a better room or a win.`, tone: 'bad' };
+  if (mutinous) return { text: `${mutinous.name} is Mutinous (Morale ${mutinous.morale}): they refuse to fight and stir unrest${run.unrest ? ` (${run.unrest}/${UNREST.threshold})` : ''}. Calm them with decor, a better room or an Entertainment Room.`, tone: 'bad' };
   if (espState(run).clues.length) return { text: `A mole has left clues in your house: investigate a fighter from their card (${ESPIONAGE.investigate} Gold), or see the whispers in the Estate.`, tone: 'warn', action: 'tab', tab: 'estate', label: 'Go to Estate' };
   if (weeksUntilTournament(run.week) === 1 && Object.keys(ESPIONAGE.ops).some((k) => !covertOpBlocker(run, k))) {
     return { text: `Your agents could work on ${opTarget(run)?.name ?? 'your next opponent'} before fight day: a covert op in the Estate.`, action: 'tab', tab: 'estate', label: 'Go to Estate' };

@@ -879,3 +879,13 @@ body[data-house="gold"] { --accent: #d9b45a; --accent-dim: #4a3810; --accent-ink
 .fortune-card .swap { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .fortune-card .swap small { color: var(--muted); }
 .fortune-card .swap .btn { white-space: normal; text-align: left; }
+
+/* 7.11: Word in the city, last words, the prefect */
+.gazette > summary { font-size: 13px; }
+.gazette-list { list-style: none; padding: 0; margin: 6px 0; font-size: 13px; color: var(--muted); }
+.gazette-list li { padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.gazette-list li:last-child { border-bottom: none; }
+.prefect-posture { margin-top: 5px; color: #dc948c; }
+.last-words { margin: 10px auto 4px; max-width: 540px; padding: 8px 14px; border-left: 3px solid var(--gold); background: rgba(217, 180, 90, 0.06); border-radius: 0 8px 8px 0; font-style: italic; text-align: center; font-size: 15px; }
+.speaker-prefect { border-color: #943d3d; box-shadow: 0 0 36px rgba(148, 61, 61, 0.24); }
+.speaker-prefect .dialogue-name { color: #dc948c; }

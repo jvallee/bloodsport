@@ -157,9 +157,11 @@ function markSceneSeen(id) {
 }
 // A talk beat (src/run.js talk) with its fighter's name and face; a fighter no longer in the house still speaks, by name.
 function talkBeat(b) {
-  if (!b.fighterId) return { speaker: b.speaker, text: b.text };
+  const replies = b.replies ? b.replies.map((r) => ({ label: r.label, then: r.then.map(talkBeat) })) : undefined; // 7.11: keep replies
+  if (!b.fighterId) return { speaker: b.speaker, text: b.text, ...(replies ? { replies } : {}) };
   const f = run.roster.find((x) => x.id === b.fighterId) ?? run.fallen.find((x) => x.id === b.fighterId) ?? (run.retired ?? []).find((x) => x.id === b.fighterId);
-  return f?.kind ? { speaker: 'fighter', fighter: { ...f, injuries: f.injuries ?? [] }, text: b.text } : { speaker: 'narrator', text: f ? `${f.name}: "${b.text}"` : b.text };
+  const base = f?.kind ? { speaker: 'fighter', fighter: { ...f, injuries: f.injuries ?? [] }, text: b.text } : { speaker: 'narrator', text: f ? `${f.name}: "${b.text}"` : b.text };
+  return replies ? { ...base, replies } : base;
 }
 // The Emperor drops in at turning points, once each per career, when nothing else is on screen.
 function checkScene() {
@@ -359,6 +361,7 @@ function act(name, data = {}) {
 
 function renderFight() {
   clearTimeout(revealTimer);
+  app.inert = Boolean(match); // 7.11: keyboard focus stays in the fight
   if (!match) {
     fightEl.hidden = true;
     fightEl.innerHTML = '';
@@ -712,6 +715,7 @@ const after = {
   fight: () => {
     clearTimeout(revealTimer);
     stopAllSounds();
+    eventResult = null; // 7.11: the month's digest never floats over the fight
     ui.animateRound = 0;
     ui.auto = false;
   },
@@ -768,6 +772,18 @@ const SKIP_SAVE_ACTIONS = new Set([
 ]);
 
 document.addEventListener('click', (e) => {
+  // 7.11: clicking the dimmed backdrop outside a non-critical box closes it.
+  if (e.target.classList?.contains('modal')) {
+    const topModal = activeModal();
+    if (topModal === 'help') { showHelp = false; render(); return; }
+    if (topModal === 'careers') { careersOpen = false; render(); return; }
+    if (topModal === 'result') { eventResult = null; render(); return; }
+    if (topModal === 'setup') { setupChoice = null; render(); return; }
+    if (topModal === 'overtrain') { overtrainWarn = null; render(); return; }
+    if (topModal === 'freefight') { freeFightWarn = null; render(); return; }
+    if (topModal === 'bug' && !bug?.error) { bug = null; bugStatus = ''; renderBug(); return; }
+    return;
+  }
   const el = e.target.closest('[data-action]');
   if (!el || el.disabled) return;
   const name = el.dataset.action;

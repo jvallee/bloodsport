@@ -23,6 +23,8 @@ import { gearText, slotLabel } from '../codex.js';
 import { esc, safeColor, safeTone, button, buttonWhy, fighterCard, ICON, BUILDING_ICON, mercyChoices, gearSpd } from './components.js';
 import { portrait, npcPortrait } from './portrait.js';
 import { SPEAKERS, tipSpeaker } from '../dialogue.js';
+import { cityHeadlines } from '../gazette.js';
+import { PREFECT } from '../plot.js';
 import { EVENT_BY_ID, MOOD_WEEKS, choiceLabel, stakesText } from '../events.js';
 import { RELICS, TAGS, KIND_LABELS, perkTags, fortuneTitle, fortuneText } from '../fortune.js';
 
@@ -381,11 +383,11 @@ export function overtrainModal(list) {
 }
 
 // Ending a fight week with fighters who could still fight (7.9.2, the designer).
+const joinList = (items) => (items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items.at(-1)}` : items[0] ?? '');
 export function freeFightModal(free) {
-  const names = free.fighters.map((f) => `<b>${esc(f.name)}</b>`);
-  const who = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
-  const arenas = free.tiers.map((t) => esc(arenaName(t))).join(' and ');
-  const html = `<p>It's still fight day. ${who} could fight in ${arenas}, and ${free.fighters.length > 1 ? "they haven't" : "hasn't"} yet.</p>
+  const who = joinList(free.fighters.map((f) => `<b>${esc(f.name)}</b>`));
+  const arenas = joinList(free.tiers.map((t) => esc(arenaName(t))));
+  const html = `<p>It's still fight day. ${who} could fight in ${arenas}, and ${free.fighters.length > 1 ? "they haven't" : "hasn't"} fought yet.</p>
     <p>Every match pays Gold and XP, even a loss (the buy-in is Prestige). End the week now and today's fights are gone.</p>`;
   const actions = `<button class="btn small" data-action="freefight-back" autofocus>Back to the fights</button><span class="ask-choices"><button class="btn" data-action="freefight-go">End the week anyway</button></span>`;
   return dialogueBox({ speaker: 'steward', title: 'Fighters still free', html }, actions, 'ask');
@@ -438,13 +440,21 @@ function questsPanel(run) {
   const rising = risingProgress(run);
   const gallery = rising ? `<div class="gallery-readout" title="${esc(GALLERY_INTRO)}">👁 <b>Whispering Gallery</b> · the palace's suspicion <b>${rising.suspicion}</b>/100 <small>(watched at ${rising.watch}, informers at ${rising.informer}, a raid at ${rising.raid})</small>
     <span class="susbar"><span style="width:${Math.min(100, rising.suspicion)}%"></span></span>
-    <div>The rising: <b>${esc(rising.label)}</b>${rising.needs.length ? ` · still needs ${esc(rising.needs.join(', '))}` : ''}${rising.waiting ? ` · ${esc(rising.waiting)}` : ''}</div></div>` : '';
+    <div>The rising: <b>${esc(rising.label)}</b>${rising.needs.length ? ` · still needs ${esc(rising.needs.join(', '))}` : ''}${rising.waiting ? ` · ${esc(rising.waiting)}` : ''}</div>
+    ${rising.prefect ? `<div class="prefect-posture">${esc(PREFECT)}: <b>${esc(rising.prefect)}</b></div>` : ''}</div>` : '';
   const items = [
     task ? `<li>🏛 <b>The steward</b> asks: ${esc(task.goal)}${stewardRewardText(task) ? ` <small>· ${stewardRewardText(task)}</small>` : ''}</li>` : '',
     ...wants, ...cause,
   ].filter(Boolean);
   if (!items.length && !gallery) return '';
   return `<details class="more quests" data-key="quests" open><summary>📜 Quests</summary><ul class="quest-list">${items.join('')}</ul>${gallery}</details>`;
+}
+
+// Word in the city (7.11): reactive street headlines around the Ludus.
+function gazettePanel(run) {
+  const headlines = cityHeadlines(run, 3);
+  if (!headlines.length) return '';
+  return `<details class="more gazette" data-key="gazette" open><summary>📰 Word in the city</summary><ul class="gazette-list">${headlines.map((h) => `<li>${h.icon} ${esc(h.text)}</li>`).join('')}</ul></details>`;
 }
 
 // Version 6: the house's relics, one chip each (hover or focus for what it does).
@@ -489,6 +499,7 @@ function weekPanel(run) {
       ${questsPanel(run)}
       ${standingsTable(run)}
       ${friendsOutside(run)}
+      ${gazettePanel(run)}
       <h3 class="mini">House log</h3>
       <ul class="log">${recent}</ul>
       ${run.log.length > 9 ? `<details class="more" data-key="full-log"><summary>Full house log (${run.log.length} entries)</summary>

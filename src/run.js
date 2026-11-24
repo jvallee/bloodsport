@@ -36,7 +36,7 @@ export {
 } from './run/roster.js';
 
 export {
-  checkQuests, stewardGold, stewardPrestige, stewardRewardText, stewardTask, wantFor,
+  checkQuests, checkBackstories, stewardGold, stewardPrestige, stewardRewardText, stewardTask, wantFor,
 } from './run/questsEngine.js';
 
 export {
