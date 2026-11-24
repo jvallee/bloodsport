@@ -119,6 +119,17 @@ const NPC = {
     <circle cx="25" cy="32" r="1.4" fill="#2a1d16"/><circle cx="39" cy="32" r="1.4" fill="#2a1d16"/>
     <path d="M20 25 L29 25 M35 25 L44 25" stroke="#7a7a72" stroke-width="2" stroke-linecap="round"/>
     <path d="M27 45 L37 45" stroke="#5a2a22" stroke-width="2" stroke-linecap="round"/>`,
+  prefect: `<rect width="64" height="64" rx="10" fill="#2a1a1a"/>
+    <path d="M8 64 Q12 50 32 52 Q52 50 56 64Z" fill="#7a2a22"/><path d="M14 58 L50 58" stroke="#b8b8b0" stroke-width="3"/>
+    <path d="M24 46 L24 54 Q32 58 40 54 L40 46Z" fill="#c99a74"/>
+    <path d="M17 30 Q17 14 32 14 Q47 14 47 30 Q47 48 32 51 Q17 48 17 30Z" fill="#c99a74"/>
+    <path d="M14 30 Q14 10 32 9 Q50 10 50 30 L46 30 Q46 16 32 15 Q18 16 18 30Z" fill="#9a9a92"/>
+    <path d="M14 30 L14 42 L19 40 L18 30Z M50 30 L50 42 L45 40 L46 30Z" fill="#9a9a92"/>
+    <path d="M22 9 Q32 -2 42 9 Q32 4 22 9Z" fill="#c0362c"/>
+    <path d="M21 27 L29 28 M43 27 L35 28" stroke="#2a1d16" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="25" cy="32" r="1.6" fill="#2a1d16"/><circle cx="39" cy="32" r="1.6" fill="#2a1d16"/>
+    <path d="M32 34 L30 41 L33 41" stroke="rgba(0,0,0,0.3)" stroke-width="1.3" fill="none"/>
+    <path d="M27 45 Q32 47 37 45" stroke="#5a2a22" stroke-width="2" fill="none" stroke-linecap="round"/>`,
   narrator: `<rect width="64" height="64" rx="10" fill="#141a2e"/>
     <circle cx="32" cy="32" r="20" fill="none" stroke="#6fd3ff" stroke-width="2" opacity="0.8"/>
     <circle cx="32" cy="32" r="13" fill="none" stroke="#a98bff" stroke-width="2" opacity="0.8"/>
@@ -128,6 +139,7 @@ const NPC = {
 const NPC_LABEL = {
   emperor: 'Portrait of Emperor Silbannacus',
   steward: 'Portrait of your steward',
+  prefect: 'Portrait of the Praetorian prefect',
   narrator: 'Portrait of the narrator',
 };
 

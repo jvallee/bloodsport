@@ -7,7 +7,7 @@ import { changeSuspicion } from '../src/run/plotEngine.js';
 import { createRng } from '../src/rng.js';
 import { endingScene, endingKind, returnScene, rebelStageScene, SCENES } from '../src/dialogue.js';
 import { stewardGrandDone } from '../src/quests.js';
-import { SUSPICION_LINES } from '../src/plot.js';
+import { SUSPICION_LINES, PREFECT_LINES } from '../src/plot.js';
 
 function rebelHouse() {
   const run = createRun(1);
@@ -62,13 +62,27 @@ test('each rebel stage scene ends with three replies', () => {
   }
 });
 
-test('crossing the informer and cold lines: a warning each, once', () => {
+test('crossing the watch, informer and cold lines: the prefect calls, and a warning each, once', () => {
   const { run } = rebelHouse();
   changeSuspicion(run, PLOT.suspicion.informer);
   changeSuspicion(run, -10);
   changeSuspicion(run, 10);
-  const said = (run.talk ?? []).map((t) => t.beats[0].text);
-  assert.equal(said.filter((t) => t === SUSPICION_LINES.informer).length, 1);
+  const said = () => [...(run.talk ?? []), ...(run.talkLater ?? [])].flatMap((t) => t.beats.map((b) => b.text)); // two scenes a week; more wait
+  assert.equal(said().filter((t) => t === SUSPICION_LINES.informer).length, 1);
+  assert.ok(said().includes(PREFECT_LINES.watch) && said().includes(PREFECT_LINES.informer), 'the prefect calls at 20 and 40');
   changeSuspicion(run, PLOT.suspicion.cold);
-  assert.ok((run.talk ?? []).some((t) => t.beats[0].text === SUSPICION_LINES.cold));
+  assert.ok(said().includes(SUSPICION_LINES.cold) && said().includes(PREFECT_LINES.cold));
+});
+
+test('callbacks: the cousin you saved is in the coup\'s epilogue, and among the executed if you name the names', async () => {
+  const { betray, resolveCoup } = await import('../src/run/plotEngine.js');
+  const { run, f } = rebelHouse();
+  run.cousin = { done: 'saved', name: f.name, f: f.id };
+  betray(run);
+  assert.match(run.epilogue.join(' '), new RegExp(`${f.name} was among them`));
+  const coup = rebelHouse();
+  coup.run.cousin = { done: 'saved', name: 'Varia', f: 'x' };
+  resolveCoup(coup.run, coup.a, true, true);
+  assert.equal(coup.run.ending, 'coup');
+  assert.match(coup.run.epilogue.join(' '), /Varia, the cousin you once bought/);
 });

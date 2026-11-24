@@ -8,6 +8,7 @@ import { INTRO } from "./tutorial.js";
 import { FAVOR, BUILDINGS, PLOT } from "./data.js";
 import { GRAND_TIER, raisable } from "./run.js";
 import { WEEKS_PER_YEAR } from "./calendar.js";
+import { PREFECT } from "./plot.js";
 
 export const SPEAKERS = {
   narrator: { name: "", portrait: "narrator" },
@@ -16,6 +17,7 @@ export const SPEAKERS = {
   rebel: { name: "A prisoner", portrait: "narrator" }, // a political prisoner: their beats carry the fighter (name and face)
   fighter: { name: "", portrait: "narrator" }, // one of your fighters (5.4.0 quests): the beat carries the fighter
   rival: { name: "A rival Lanista", portrait: "emperor" }, // the archrival house (5.4.0)
+  prefect: { name: PREFECT, portrait: "prefect" }, // the face of the palace's suspicion (7.10)
 };
 
 export const SCENES = {

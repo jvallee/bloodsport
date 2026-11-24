@@ -45,62 +45,62 @@ Each card has a title, its text, and choice labels. A choice's visible stakes ("
 
 | Where | Text |
 |---|---|
-| [src/plot.js:84](../src/plot.js#L84) | Title: Chalk on the door |
-| [src/plot.js:86](../src/plot.js#L86) | Overnight, someone chalked a sign on {f}'s door: a broken chain. {f} says nothing, and watches to see what you'll do. |
-| [src/plot.js:88](../src/plot.js#L88) | Choice: Scrub it off |
-| [src/plot.js:89](../src/plot.js#L89) | Choice: Copy the sign onto another door |
+| [src/plot.js:91](../src/plot.js#L91) | Title: Chalk on the door |
+| [src/plot.js:93](../src/plot.js#L93) | Overnight, someone chalked a sign on {f}'s door: a broken chain. {f} says nothing, and watches to see what you'll do. |
+| [src/plot.js:95](../src/plot.js#L95) | Choice: Scrub it off |
+| [src/plot.js:96](../src/plot.js#L96) | Choice: Copy the sign onto another door |
 
 **A cousin at the gate** (`cousinVisit`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:94](../src/plot.js#L94) | Title: A cousin at the gate |
-| [src/plot.js:96](../src/plot.js#L96) | A man who says he is {f}'s cousin asks to visit the barracks. He has no letter, and he isn't looking at {f}. |
-| [src/plot.js:98](../src/plot.js#L98) | Choice: Turn him away |
-| [src/plot.js:99](../src/plot.js#L99) | Choice: Let him in |
+| [src/plot.js:101](../src/plot.js#L101) | Title: A cousin at the gate |
+| [src/plot.js:103](../src/plot.js#L103) | A man who says he is {f}'s cousin asks to visit the barracks. He has no letter, and he isn't looking at {f}. |
+| [src/plot.js:105](../src/plot.js#L105) | Choice: Turn him away |
+| [src/plot.js:106](../src/plot.js#L106) | Choice: Let him in |
 
 **Blood at the gate** (`hideWounded`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:103](../src/plot.js#L103) | Title: Blood at the gate |
-| [src/plot.js:105](../src/plot.js#L105) | A man bleeding from a Praetorian blade collapses at your gate after curfew. The watch will pass within the hour. |
-| [src/plot.js:107](../src/plot.js#L107) | Choice: Call the watch |
-| [src/plot.js:108](../src/plot.js#L108) | Choice: Hide him in the Medbay |
+| [src/plot.js:110](../src/plot.js#L110) | Title: Blood at the gate |
+| [src/plot.js:112](../src/plot.js#L112) | A man bleeding from a Praetorian blade collapses at your gate after curfew. The watch will pass within the hour. |
+| [src/plot.js:114](../src/plot.js#L114) | Choice: Call the watch |
+| [src/plot.js:115](../src/plot.js#L115) | Choice: Hide him in the Medbay |
 
 **Pamphlets in the storeroom** (`pamphlets`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:112](../src/plot.js#L112) | Title: Pamphlets in the storeroom |
-| [src/plot.js:114](../src/plot.js#L114) | Your steward found a bundle of pamphlets behind the grain jars: the Emperor drawn as a jackal on a stolen throne. |
-| [src/plot.js:116](../src/plot.js#L116) | Choice: Burn them |
-| [src/plot.js:117](../src/plot.js#L117) | Choice: Leave them where they are |
+| [src/plot.js:119](../src/plot.js#L119) | Title: Pamphlets in the storeroom |
+| [src/plot.js:121](../src/plot.js#L121) | Your steward found a bundle of pamphlets behind the grain jars: the Emperor drawn as a jackal on a stolen throne. |
+| [src/plot.js:123](../src/plot.js#L123) | Choice: Burn them |
+| [src/plot.js:124](../src/plot.js#L124) | Choice: Leave them where they are |
 
 **A bout for the street** (`yardBout`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:121](../src/plot.js#L121) | Title: A bout for the street |
-| [src/plot.js:123](../src/plot.js#L123) | The rebels want the city to see one of their own beat a gladiator of your house in the practice yard. They ask for {f}, and for {f} to lose. |
+| [src/plot.js:128](../src/plot.js#L128) | Title: A bout for the street |
+| [src/plot.js:130](../src/plot.js#L130) | The rebels want the city to see one of their own beat a gladiator of your house in the practice yard. They ask for {f}, and for {f} to lose. |
 | [src/plot.js:32](../src/plot.js#L32) | Choice: Refuse |
-| [src/plot.js:126](../src/plot.js#L126) | Choice: Let {f} take the fall |
+| [src/plot.js:133](../src/plot.js#L133) | Choice: Let {f} take the fall |
 
 **A friend in the cells** (`freeFromCells`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:131](../src/plot.js#L131) | Title: A friend in the cells |
-| [src/plot.js:138](../src/plot.js#L138) | {f} comes to you at night. "{name} is in the Liaison's cells, and I owe them my life. Buy them, then let them go. They're worth more outside these walls than any purse." |
+| [src/plot.js:138](../src/plot.js#L138) | Title: A friend in the cells |
+| [src/plot.js:145](../src/plot.js#L145) | {f} comes to you at night. "{name} is in the Liaison's cells, and I owe them my life. Buy them, then let them go. They're worth more outside these walls than any purse." |
 | [src/plot.js:32](../src/plot.js#L32) | Choice: Refuse |
-| [src/plot.js:141](../src/plot.js#L141) | Choice: Buy {name} and let them go (8 Gold) |
+| [src/plot.js:148](../src/plot.js#L148) | Choice: Buy {name} and let them go (8 Gold) |
 
 **Free me** (`freeMe`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:145](../src/plot.js#L145) | Title: Free me |
-| [src/plot.js:149](../src/plot.js#L149) | {f} asks to speak to you alone. "Free me. I can do more for the cause outside these walls than inside your arena." |
+| [src/plot.js:152](../src/plot.js#L152) | Title: Free me |
+| [src/plot.js:156](../src/plot.js#L156) | {f} asks to speak to you alone. "Free me. I can do more for the cause outside these walls than inside your arena." |
 | [src/plot.js:32](../src/plot.js#L32) | Choice: Refuse |
 | [src/plot.js:14](../src/plot.js#L14) | Choice: Free {f} |
 
@@ -108,86 +108,86 @@ Each card has a title, its text, and choice labels. A choice's visible stakes ("
 
 | Where | Text |
 |---|---|
-| [src/plot.js:156](../src/plot.js#L156) | Title: Thrown to the beasts |
-| [src/plot.js:159](../src/plot.js#L159) | {f} has gone pale. "They're throwing {name} to the beasts at the games today, for sedition. You have the Emperor's ear, and a key to every gate in the arena." |
-| [src/plot.js:161](../src/plot.js#L161) | Choice: Do nothing |
-| [src/plot.js:162](../src/plot.js#L162) | Choice: Plead for clemency (−8 Favour) |
-| [src/plot.js:163](../src/plot.js#L163) | Choice: Arrange an escape |
+| [src/plot.js:163](../src/plot.js#L163) | Title: Thrown to the beasts |
+| [src/plot.js:166](../src/plot.js#L166) | {f} has gone pale. "They're throwing {name} to the beasts at the games today, for sedition. You have the Emperor's ear, and a key to every gate in the arena." |
+| [src/plot.js:168](../src/plot.js#L168) | Choice: Do nothing |
+| [src/plot.js:169](../src/plot.js#L169) | Choice: Plead for clemency (−8 Favour) |
+| [src/plot.js:170](../src/plot.js#L170) | Choice: Arrange an escape |
 
 **One of ours across the sand** (`acrossSand`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:167](../src/plot.js#L167) | Title: One of ours across the sand |
-| [src/plot.js:170](../src/plot.js#L170) | {f} lowers their voice. "{opp}, who fights for {house}, is one of us. If you meet in the arena, beat them if you must, but let them live." |
-| [src/plot.js:172](../src/plot.js#L172) | Choice: Promise nothing |
-| [src/plot.js:173](../src/plot.js#L173) | Choice: Promise to spare them |
+| [src/plot.js:174](../src/plot.js#L174) | Title: One of ours across the sand |
+| [src/plot.js:177](../src/plot.js#L177) | {f} lowers their voice. "{opp}, who fights for {house}, is one of us. If you meet in the arena, beat them if you must, but let them live." |
+| [src/plot.js:179](../src/plot.js#L179) | Choice: Promise nothing |
+| [src/plot.js:180](../src/plot.js#L180) | Choice: Promise to spare them |
 
 **The forged pass** (`forgedPass`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:234](../src/plot.js#L234) | Title: The forged pass |
-| [src/plot.js:237](../src/plot.js#L237) | A clerk from the palace archives offers a pass bearing the Emperor's own seal. Shown at the right moment, it will send the Praetorians away once. |
-| [src/plot.js:239](../src/plot.js#L239) | Choice: Decline |
-| [src/plot.js:240](../src/plot.js#L240) | Choice: Buy it (8 Gold) |
+| [src/plot.js:241](../src/plot.js#L241) | Title: The forged pass |
+| [src/plot.js:244](../src/plot.js#L244) | A clerk from the palace archives offers a pass bearing the Emperor's own seal. Shown at the right moment, it will send the Praetorians away once. |
+| [src/plot.js:246](../src/plot.js#L246) | Choice: Decline |
+| [src/plot.js:247](../src/plot.js#L247) | Choice: Buy it (8 Gold) |
 
 **Steel for the cause** (`armBarracks`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:244](../src/plot.js#L244) | Title: Steel for the cause |
-| [src/plot.js:248](../src/plot.js#L248) | An old centurion asks for weapons from your storeroom. "When the day comes, the barracks must be armed. Two pieces of steel will do." |
+| [src/plot.js:251](../src/plot.js#L251) | Title: Steel for the cause |
+| [src/plot.js:255](../src/plot.js#L255) | An old centurion asks for weapons from your storeroom. "When the day comes, the barracks must be armed. Two pieces of steel will do." |
 | [src/plot.js:32](../src/plot.js#L32) | Choice: Refuse |
-| [src/plot.js:251](../src/plot.js#L251) | Choice: Hand over two pieces of gear |
+| [src/plot.js:258](../src/plot.js#L258) | Choice: Hand over two pieces of gear |
 
 **The champion** (`recruitChampion`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:255](../src/plot.js#L255) | Title: The champion |
-| [src/plot.js:263](../src/plot.js#L263) | The rebels want a champion from your house. "When the Emperor comes to the games, the crowd must see one of their own strike the blow." They name {f}, or {g}. |
-| [src/plot.js:265](../src/plot.js#L265) | Choice: Keep your fighters out of it |
-| [src/plot.js:266](../src/plot.js#L266) | Choice: Sound {f} out ({fOdds}% they say yes) |
-| [src/plot.js:266](../src/plot.js#L266) | Choice: Sound {g} out ({gOdds}% they say yes) |
+| [src/plot.js:262](../src/plot.js#L262) | Title: The champion |
+| [src/plot.js:270](../src/plot.js#L270) | The rebels want a champion from your house. "When the Emperor comes to the games, the crowd must see one of their own strike the blow." They name {f}, or {g}. |
+| [src/plot.js:272](../src/plot.js#L272) | Choice: Keep your fighters out of it |
+| [src/plot.js:273](../src/plot.js#L273) | Choice: Sound {f} out ({fOdds}% they say yes) |
+| [src/plot.js:273](../src/plot.js#L273) | Choice: Sound {g} out ({gOdds}% they say yes) |
 
 **A curious guest** (`informer`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:272](../src/plot.js#L272) | Title: A curious guest |
-| [src/plot.js:275](../src/plot.js#L275) | A guest at your table asks a great many questions about where your fighters go at night. |
-| [src/plot.js:277](../src/plot.js#L277) | Choice: Say nothing |
-| [src/plot.js:278](../src/plot.js#L278) | Choice: Feed him a story |
+| [src/plot.js:279](../src/plot.js#L279) | Title: A curious guest |
+| [src/plot.js:282](../src/plot.js#L282) | A guest at your table asks a great many questions about where your fighters go at night. |
+| [src/plot.js:284](../src/plot.js#L284) | Choice: Say nothing |
+| [src/plot.js:285](../src/plot.js#L285) | Choice: Feed him a story |
 
 **The prefect's offer** (`theOffer`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:293](../src/plot.js#L293) | Title: The prefect's offer |
-| [src/plot.js:296](../src/plot.js#L296) | A Praetorian prefect calls on you, alone. "The Emperor knows there are traitors in the gladiator houses. Give him their names, and he will remember your house kindly." |
-| [src/plot.js:298](../src/plot.js#L298) | Choice: Know nothing |
-| [src/plot.js:299](../src/plot.js#L299) | Choice: Name the names |
+| [src/plot.js:300](../src/plot.js#L300) | Title: The prefect's offer |
+| [src/plot.js:303](../src/plot.js#L303) | A Praetorian prefect calls on you, alone. "The Emperor knows there are traitors in the gladiator houses. Give him their names, and he will remember your house kindly." |
+| [src/plot.js:305](../src/plot.js#L305) | Choice: Know nothing |
+| [src/plot.js:306](../src/plot.js#L306) | Choice: Name the names |
 
 **The Praetorians at dawn** (`raid`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:303](../src/plot.js#L303) | Title: The Praetorians at dawn |
-| [src/plot.js:309](../src/plot.js#L309) | The Praetorians come at dawn and fill the yard. Their prefect wants a traitor, or a reason to leave without one. |
-| [src/plot.js:311](../src/plot.js#L311) | Choice: Pay them off (15 Gold) |
-| [src/plot.js:251](../src/plot.js#L251) | Choice: Hand over {f} |
-| [src/plot.js:313](../src/plot.js#L313) | Choice: Show the forged pass |
-| [src/plot.js:314](../src/plot.js#L314) | Choice: Bar the gates |
+| [src/plot.js:310](../src/plot.js#L310) | Title: The Praetorians at dawn |
+| [src/plot.js:316](../src/plot.js#L316) | The Praetorians come at dawn and fill the yard. Their prefect wants a traitor, or a reason to leave without one. |
+| [src/plot.js:318](../src/plot.js#L318) | Choice: Pay them off (15 Gold) |
+| [src/plot.js:258](../src/plot.js#L258) | Choice: Hand over {f} |
+| [src/plot.js:320](../src/plot.js#L320) | Choice: Show the forged pass |
+| [src/plot.js:321](../src/plot.js#L321) | Choice: Bar the gates |
 
 **Tonight the Emperor attends** (`coupEve`)
 
 | Where | Text |
 |---|---|
-| [src/plot.js:319](../src/plot.js#L319) | Title: Tonight the Emperor attends |
-| [src/plot.js:322](../src/plot.js#L322) | Silbannacus himself will watch the Grand Final from the imperial box. The barracks are armed. {f} is ready. Every door in the city has a broken chain on it. |
-| [src/plot.js:324](../src/plot.js#L324) | Choice: Not tonight |
-| [src/plot.js:319](../src/plot.js#L319) | Choice: Tonight |
+| [src/plot.js:326](../src/plot.js#L326) | Title: Tonight the Emperor attends |
+| [src/plot.js:329](../src/plot.js#L329) | Silbannacus himself will watch the Grand Final from the imperial box. The barracks are armed. {f} is ready. Every door in the city has a broken chain on it. |
+| [src/plot.js:331](../src/plot.js#L331) | Choice: Not tonight |
+| [src/plot.js:326](../src/plot.js#L326) | Choice: Tonight |
 
 ## 3. The hidden plot (v6): clues, signs and roles
 
@@ -235,24 +235,24 @@ Each card has a title, its text, and choice labels. A choice's visible stakes ("
 
 | Where | Text |
 |---|---|
-| [src/run/plotEngine.js:65](../src/run/plotEngine.js#L65) | `${name} slips out of the city.`, 'event' |
-| [src/run/plotEngine.js:109](../src/run/plotEngine.js#L109) | 'A sealed letter arrives with no name on it. Inside: a pass bearing the Emperor\'s seal.', 'event' |
-| [src/run/plotEngine.js:114](../src/run/plotEngine.js#L114) | `A blessing from ${priest.name} reaches the barracks in secret. Spirits lift.`, 'good' |
-| [src/run/plotEngine.js:117](../src/run/plotEngine.js#L117) | `${courier.name} sends word: the Praetorians are watching another house this month.`, 'good' |
-| [src/run/plotEngine.js:124](../src/run/plotEngine.js#L124) | pick(run.rng.plot, SUSPICION_SIGNS.ready), 'event' |
-| [src/run/plotEngine.js:202](../src/run/plotEngine.js#L202) | `${f.name} tried to escape over the wall, and was caught by the watch and executed.`, 'bad'); } |
-| [src/run/plotEngine.js:207](../src/run/plotEngine.js#L207) | `${f.name} is taken by the Praetorians and executed in the arena at noon.`, 'bad' |
-| [src/run/plotEngine.js:210](../src/run/plotEngine.js#L210) | 'Not tonight. The rebels will wait for the next Grand Tournament.', 'event' |
-| [src/run/plotEngine.js:221](../src/run/plotEngine.js#L221) | 'The Praetorians break down the gates. Your house is tried for treason, and the sentence is read at the games.' |
-| [src/run/plotEngine.js:232](../src/run/plotEngine.js#L232) | `On your word, the Praetorians drag ${f.name} from the barracks. They are executed at noon.`, 'bad' |
-| [src/run/plotEngine.js:234](../src/run/plotEngine.js#L234) | `${c.name} is found hiding in the city, and executed.`, 'bad' |
-| [src/run/plotEngine.js:241](../src/run/plotEngine.js#L241) | `A purse of ${purse} Gold arrives from the palace, with the Emperor's thanks.`, 'event' |
-| [src/run/plotEngine.js:256](../src/run/plotEngine.js#L256) | run.epilogue = [...(run.epilogue ?? []), victims.length ? `Executed on your word: ${victims.join(', ')}.` : 'You gave the Emperor names. He made sure they were the right ones.'] |
-| [src/run/plotEngine.js:264](../src/run/plotEngine.js#L264) | 'The signal is never given. The rebels melt back into the crowd, to wait for another day of games.', 'warn' |
-| [src/run/plotEngine.js:270](../src/run/plotEngine.js#L270) | `${fighter.name} wins the Final, turns, and climbs into the imperial box. Silbannacus falls on the sand he filled with blood. The empire is yours to remake.` |
-| [src/run/plotEngine.js:272](../src/run/plotEngine.js#L272) | if (freed.length) run.epilogue = [...(run.epilogue ?? []), `In the crowd, the people you freed were the first to cheer: ${freed.join(', ')}.`] |
-| [src/run/plotEngine.js:275](../src/run/plotEngine.js#L275) | run.epilogue = [...(run.epilogue ?? []), 'The signal never came: the wrong fighter won the Final, and the moment passed. Somewhere, a chalk mark fades.'] |
-| [src/run/plotEngine.js:280](../src/run/plotEngine.js#L280) | `${fighter.name} falls in the Final, and the rising dies with them. The broken chain is scrubbed from every door, but the city remembers.` |
+| [src/run/plotEngine.js:67](../src/run/plotEngine.js#L67) | `${name} slips out of the city.`, 'event' |
+| [src/run/plotEngine.js:111](../src/run/plotEngine.js#L111) | 'A sealed letter arrives with no name on it. Inside: a pass bearing the Emperor\'s seal.', 'event' |
+| [src/run/plotEngine.js:116](../src/run/plotEngine.js#L116) | `A blessing from ${priest.name} reaches the barracks in secret. Spirits lift.`, 'good' |
+| [src/run/plotEngine.js:119](../src/run/plotEngine.js#L119) | `${courier.name} sends word: the Praetorians are watching another house this month.`, 'good' |
+| [src/run/plotEngine.js:126](../src/run/plotEngine.js#L126) | pick(run.rng.plot, SUSPICION_SIGNS.ready), 'event' |
+| [src/run/plotEngine.js:204](../src/run/plotEngine.js#L204) | `${f.name} tried to escape over the wall, and was caught by the watch and executed.`, 'bad'); } |
+| [src/run/plotEngine.js:209](../src/run/plotEngine.js#L209) | `${f.name} is taken by the Praetorians and executed in the arena at noon.`, 'bad' |
+| [src/run/plotEngine.js:212](../src/run/plotEngine.js#L212) | 'Not tonight. The rebels will wait for the next Grand Tournament.', 'event' |
+| [src/run/plotEngine.js:223](../src/run/plotEngine.js#L223) | 'The Praetorians break down the gates. Your house is tried for treason, and the sentence is read at the games.' |
+| [src/run/plotEngine.js:234](../src/run/plotEngine.js#L234) | `On your word, the Praetorians drag ${f.name} from the barracks. They are executed at noon.`, 'bad' |
+| [src/run/plotEngine.js:236](../src/run/plotEngine.js#L236) | `${c.name} is found hiding in the city, and executed.`, 'bad' |
+| [src/run/plotEngine.js:243](../src/run/plotEngine.js#L243) | `A purse of ${purse} Gold arrives from the palace, with the Emperor's thanks.`, 'event' |
+| [src/run/plotEngine.js:258](../src/run/plotEngine.js#L258) | run.epilogue = [...(run.epilogue ?? []), victims.length ? `Executed on your word: ${victims.join(', ')}.` : 'You gave the Emperor names. He made sure they were the right ones.'] |
+| [src/run/plotEngine.js:268](../src/run/plotEngine.js#L268) | 'The signal is never given. The rebels melt back into the crowd, to wait for another day of games.', 'warn' |
+| [src/run/plotEngine.js:274](../src/run/plotEngine.js#L274) | `${fighter.name} wins the Final, turns, and climbs into the imperial box. Silbannacus falls on the sand he filled with blood. The empire is yours to remake.` |
+| [src/run/plotEngine.js:276](../src/run/plotEngine.js#L276) | if (freed.length) run.epilogue = [...(run.epilogue ?? []), `In the crowd, the people you freed were the first to cheer: ${freed.join(', ')}.`] |
+| [src/run/plotEngine.js:281](../src/run/plotEngine.js#L281) | run.epilogue = [...(run.epilogue ?? []), 'The signal never came: the wrong fighter won the Final, and the moment passed. Somewhere, a chalk mark fades.'] |
+| [src/run/plotEngine.js:286](../src/run/plotEngine.js#L286) | `${fighter.name} falls in the Final, and the rising dies with them. The broken chain is scrubbed from every door, but the city remembers.` |
 
 End-screen titles and closing lines:
 
@@ -696,11 +696,11 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:377](../src/dialogue.js#L377) | news.push(`Your house has reached level ${after.level}. ${opened.length ? `New in the Estate: ${opened.join(', ')}.` : 'There are new plots to build on in the Estate.'}` |
-| [src/dialogue.js:380](../src/dialogue.js#L380) | news.push('New gladiators have arrived in the Market.' |
-| [src/dialogue.js:382](../src/dialogue.js#L382) | if (after.liaison && after.liaison !== before.liaison) news.push('The Liaison has a new prisoner on offer.' |
-| [src/dialogue.js:383](../src/dialogue.js#L383) | if (after.armourer && after.armourer !== before.armourer && run.armourerStock.length) news.push('The Armourer has new stock.' |
-| [src/dialogue.js:385](../src/dialogue.js#L385) | for (const f of raisable(run).filter((x) => !(before.bodies ?? '').split(',').includes(x.id))) news.push(`The priests of Vulcan have taken ${f.name}'s body. They can raise them as a Revenant, for a price (the Market tab).` |
+| [src/dialogue.js:379](../src/dialogue.js#L379) | news.push(`Your house has reached level ${after.level}. ${opened.length ? `New in the Estate: ${opened.join(', ')}.` : 'There are new plots to build on in the Estate.'}` |
+| [src/dialogue.js:382](../src/dialogue.js#L382) | news.push('New gladiators have arrived in the Market.' |
+| [src/dialogue.js:384](../src/dialogue.js#L384) | if (after.liaison && after.liaison !== before.liaison) news.push('The Liaison has a new prisoner on offer.' |
+| [src/dialogue.js:385](../src/dialogue.js#L385) | if (after.armourer && after.armourer !== before.armourer && run.armourerStock.length) news.push('The Armourer has new stock.' |
+| [src/dialogue.js:387](../src/dialogue.js#L387) | for (const f of raisable(run).filter((x) => !(before.bodies ?? '').split(',').includes(x.id))) news.push(`The priests of Vulcan have taken ${f.name}'s body. They can raise them as a Revenant, for a price (the Market tab).` |
 
 **The Unnatural Temple of Vulcan and Revenants** (5.3.0; the name is yours to change too)
 
@@ -721,49 +721,49 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:253](../src/dialogue.js#L253) | if (r.sparedForBlood) heard.push(say("You have spared lives on the sand even when the crowd bayed for blood, and the risk of it was yours. People noticed.") |
-| [src/dialogue.js:254](../src/dialogue.js#L254) | else if (r.spared) heard.push(say(`You have shown mercy in the arena${r.spared > 1 ? ` ${r.spared} times` : ""}. The crowd forgets. We don't.`) |
-| [src/dialogue.js:255](../src/dialogue.js#L255) | if (r.released) heard.push(say("You have bought fighters, and then set them free. Hardly any Lanista does that.") |
-| [src/dialogue.js:256](../src/dialogue.js#L256) | if (r.killed >= 3 && !r.spared) heard.push(say(`You have turned your thumb down ${r.killed} times, and never up. They say you enjoy it. I hope they're wrong.`) |
-| [src/dialogue.js:257](../src/dialogue.js#L257) | else if (r.killed) heard.push(say(`You have finished beaten fighters${r.killed > 1 ? ` ${r.killed} times` : ""}. I won't pretend that makes this easier to say.`) |
-| [src/dialogue.js:258](../src/dialogue.js#L258) | if (r.morale !== null && r.morale >= 70) heard.push(say("Your fighters eat well and sleep warm. In this city, that counts for something.") |
-| [src/dialogue.js:259](../src/dialogue.js#L259) | else if (r.morale !== null && r.morale < 40) heard.push(say("Your fighters are miserable, and miserable people talk. Be careful who hears this.") |
-| [src/dialogue.js:260](../src/dialogue.js#L260) | if (!heard.length) heard.push(say("I don't know you yet. I'm telling you anyway, because there is no one else to tell.") |
-| [src/dialogue.js:263](../src/dialogue.js#L263) | { speaker: "narrator", text: `That night, ${f.name} asks to speak with you alone.` }, |
-| [src/dialogue.js:264](../src/dialogue.js#L264) | say("I am not what the guards wrote on my record. There is a rising against Silbannacus, and I am part of it. The broken chain you may see chalked on doors is ours."), |
-| [src/dialogue.js:266](../src/dialogue.js#L266) | say("No one should be owned by another. Not me by you, and not you by the Emperor. We are all his slaves, Lanista. Some of us just hold keys."), |
-| [src/dialogue.js:268](../src/dialogue.js#L268) | ...say(kind ? "I think you might be one of us, whether you know it or not. You'll hear from us. Watch the doors." : "I don't know what you are yet. But you'll hear from us. Watch the doors."), |
-| [src/dialogue.js:270](../src/dialogue.js#L270) | { label: "I'm listening.", then: [say("Good. Say nothing to anyone, and keep your eyes open.")] }, |
-| [src/dialogue.js:271](../src/dialogue.js#L271) | { label: "Why tell me?", then: [say("Because a Lanista with a ludus full of fighters is the most dangerous person in this city, if they choose to be.")] }, |
-| [src/dialogue.js:272](../src/dialogue.js#L272) | { label: "Say nothing.", then: [say("Silence. Fine. Silence keeps people alive here.")] }, |
+| [src/dialogue.js:255](../src/dialogue.js#L255) | if (r.sparedForBlood) heard.push(say("You have spared lives on the sand even when the crowd bayed for blood, and the risk of it was yours. People noticed.") |
+| [src/dialogue.js:256](../src/dialogue.js#L256) | else if (r.spared) heard.push(say(`You have shown mercy in the arena${r.spared > 1 ? ` ${r.spared} times` : ""}. The crowd forgets. We don't.`) |
+| [src/dialogue.js:257](../src/dialogue.js#L257) | if (r.released) heard.push(say("You have bought fighters, and then set them free. Hardly any Lanista does that.") |
+| [src/dialogue.js:258](../src/dialogue.js#L258) | if (r.killed >= 3 && !r.spared) heard.push(say(`You have turned your thumb down ${r.killed} times, and never up. They say you enjoy it. I hope they're wrong.`) |
+| [src/dialogue.js:259](../src/dialogue.js#L259) | else if (r.killed) heard.push(say(`You have finished beaten fighters${r.killed > 1 ? ` ${r.killed} times` : ""}. I won't pretend that makes this easier to say.`) |
+| [src/dialogue.js:260](../src/dialogue.js#L260) | if (r.morale !== null && r.morale >= 70) heard.push(say("Your fighters eat well and sleep warm. In this city, that counts for something.") |
+| [src/dialogue.js:261](../src/dialogue.js#L261) | else if (r.morale !== null && r.morale < 40) heard.push(say("Your fighters are miserable, and miserable people talk. Be careful who hears this.") |
+| [src/dialogue.js:262](../src/dialogue.js#L262) | if (!heard.length) heard.push(say("I don't know you yet. I'm telling you anyway, because there is no one else to tell.") |
+| [src/dialogue.js:265](../src/dialogue.js#L265) | { speaker: "narrator", text: `That night, ${f.name} asks to speak with you alone.` }, |
+| [src/dialogue.js:266](../src/dialogue.js#L266) | say("I am not what the guards wrote on my record. There is a rising against Silbannacus, and I am part of it. The broken chain you may see chalked on doors is ours."), |
+| [src/dialogue.js:268](../src/dialogue.js#L268) | say("No one should be owned by another. Not me by you, and not you by the Emperor. We are all his slaves, Lanista. Some of us just hold keys."), |
+| [src/dialogue.js:270](../src/dialogue.js#L270) | ...say(kind ? "I think you might be one of us, whether you know it or not. You'll hear from us. Watch the doors." : "I don't know what you are yet. But you'll hear from us. Watch the doors."), |
+| [src/dialogue.js:272](../src/dialogue.js#L272) | { label: "I'm listening.", then: [say("Good. Say nothing to anyone, and keep your eyes open.")] }, |
+| [src/dialogue.js:273](../src/dialogue.js#L273) | { label: "Why tell me?", then: [say("Because a Lanista with a ludus full of fighters is the most dangerous person in this city, if they choose to be.")] }, |
+| [src/dialogue.js:274](../src/dialogue.js#L274) | { label: "Say nothing.", then: [say("Silence. Fine. Silence keeps people alive here.")] }, |
 
 **The rebel speaks again** (src/dialogue.js `rebelStageScene`: once at each stage of the rising)
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:312](../src/dialogue.js#L312) | say("You copied the sign. They saw. From now on they'll ask you for small things: a door left open, a stranger fed, a name forgotten."), |
-| [src/dialogue.js:313](../src/dialogue.js#L313) | say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good."), |
-| [src/dialogue.js:317](../src/dialogue.js#L317) | say("They trust you now. More than they trust me, I think."), |
-| [src/dialogue.js:319](../src/dialogue.js#L319) | say("A rising needs a sword in the arena: one of your fighters, standing in the Grand Tournament when the Emperor watches. And it needs the barracks armed."), |
-| [src/dialogue.js:320](../src/dialogue.js#L320) | say("Choose your champion carefully, Lanista. If they fall, the rising falls with them."), |
-| [src/dialogue.js:323](../src/dialogue.js#L323) | say("It's ready. The blades are oiled, the crowd knows the signal, and your champion knows what to do."), |
-| [src/dialogue.js:324](../src/dialogue.js#L324) | say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box. We'll do the rest."), |
-| [src/dialogue.js:328](../src/dialogue.js#L328) | if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. Every favour you do us, they notice.") |
-| [src/dialogue.js:348](../src/dialogue.js#L348) | return [{ speaker: "narrator", text: `${f.name} finds you alone again.` }, ...lines]; |
+| [src/dialogue.js:314](../src/dialogue.js#L314) | say("You copied the sign. They saw. From now on they'll ask you for small things: a door left open, a stranger fed, a name forgotten."), |
+| [src/dialogue.js:315](../src/dialogue.js#L315) | say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good."), |
+| [src/dialogue.js:319](../src/dialogue.js#L319) | say("They trust you now. More than they trust me, I think."), |
+| [src/dialogue.js:321](../src/dialogue.js#L321) | say("A rising needs a sword in the arena: one of your fighters, standing in the Grand Tournament when the Emperor watches. And it needs the barracks armed."), |
+| [src/dialogue.js:322](../src/dialogue.js#L322) | say("Choose your champion carefully, Lanista. If they fall, the rising falls with them."), |
+| [src/dialogue.js:325](../src/dialogue.js#L325) | say("It's ready. The blades are oiled, the crowd knows the signal, and your champion knows what to do."), |
+| [src/dialogue.js:326](../src/dialogue.js#L326) | say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box. We'll do the rest."), |
+| [src/dialogue.js:330](../src/dialogue.js#L330) | if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. Every favour you do us, they notice.") |
+| [src/dialogue.js:350](../src/dialogue.js#L350) | return [{ speaker: "narrator", text: `${f.name} finds you alone again.` }, ...lines]; |
 
 **5.4.0: the rebel's slower reveal** (the confession now waits for trust; this scene comes first, after you copy the chalk sign)
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:314](../src/dialogue.js#L314) | say("Who are they? Not yet. Do this well, and one day I'll tell you."), |
-| [src/dialogue.js:348](../src/dialogue.js#L348) | return [{ speaker: "narrator", text: confessed ? `${f.name} finds you alone again.` : `${f.name} catches your eye across the yard, and waits until the guards have gone.` }, ...lines]; |
+| [src/dialogue.js:316](../src/dialogue.js#L316) | say("Who are they? Not yet. Do this well, and one day I'll tell you."), |
+| [src/dialogue.js:350](../src/dialogue.js#L350) | return [{ speaker: "narrator", text: confessed ? `${f.name} finds you alone again.` : `${f.name} catches your eye across the yard, and waits until the guards have gone.` }, ...lines]; |
 
 **5.4.0: the Emperor's demands, met and missed** (src/dialogue.js `demandMetScene`, `demandMissedScene`)
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:281](../src/dialogue.js#L281) | { speaker: "emperor", text: "Good. That is what I asked for, and you gave it to me. I remember those who please me." }, |
-| [src/dialogue.js:287](../src/dialogue.js#L287) | { speaker: "emperor", text: "I asked you for one thing, Lanista. One. The month is over, and I am still waiting." }, |
+| [src/dialogue.js:283](../src/dialogue.js#L283) | { speaker: "emperor", text: "Good. That is what I asked for, and you gave it to me. I remember those who please me." }, |
+| [src/dialogue.js:289](../src/dialogue.js#L289) | { speaker: "emperor", text: "I asked you for one thing, Lanista. One. The month is over, and I am still waiting." }, |
 
 **5.4.0: the Emperor's spy** (an ordinary event, once a career from Year 2; src/events.js `emperorsSpy`)
 
@@ -1018,3 +1018,5 @@ picked by the dice kept their length, so careers play the same.
 | [src/dialogue.js](../src/dialogue.js) `returnScene` | The rebel's whisper before the Grand Tournament; the Emperor on your "late hours". |
 | [src/dialogue.js](../src/dialogue.js) `rebelStageScene` | Three replies (and answers) at each stage of the rising. |
 | [src/quests.js](../src/quests.js) `stewardGrandDone` | The steward's last word: coup, loyalist, an ordinary win. |
+| [src/plot.js](../src/plot.js) `PREFECT`, `PREFECT_LINES`; `raid`, `theOffer` | The Praetorian prefect's name and his three calls (suspicion 20, 40, 60); he now leads the raid and makes the offer. |
+| [src/run/plotEngine.js](../src/run/plotEngine.js) `resolveCoup`, `betray` | The cousin's callback lines in the coup and betrayal epilogues. |

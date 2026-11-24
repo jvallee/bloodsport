@@ -53,6 +53,13 @@ export const SUSPICION_SIGNS = {
 };
 
 // Said the first time suspicion crosses the informer and cold lines (7.10). PLACEHOLDER lines.
+// The face of the palace's suspicion (7.10): a Praetorian prefect who calls as it grows. PLACEHOLDER name and lines.
+export const PREFECT = 'Prefect Aulus Crassinus';
+export const PREFECT_LINES = {
+  watch: 'A courtesy call, Lanista, nothing more. The Emperor likes to know his gladiator houses are content. Yours seems very content. So many visitors.',
+  informer: 'I dined with your neighbours last night. They speak well of you. They say you keep your lamps lit very late. I told them you must be reading. You are a great reader, I think.',
+  cold: 'I will be honest with you, because I like you. I have been asked to write a report on your house. I write slowly. But I always finish.',
+};
 export const SUSPICION_LINES = {
   informer: 'We have been careless, Lanista. There is a new face at the water-seller\'s, and he buys nothing. For a while, do only what matters.',
   informerSteward: 'A man at the water-seller\'s has been watching our gate for a week. He buys nothing. I\'ve started buying nothing too, so we look the same.',
@@ -293,7 +300,7 @@ export const PLOT_EVENTS = [
     id: 'theOffer', plot: true, stages: ['cause', 'ready'], title: 'The prefect\'s offer',
     when: (run) => run.week >= (run.plot?.causeWeek ?? 0) + PLOT.offerAfter,
     target: asker(anyFighter),
-    text: () => 'A Praetorian prefect calls on you, alone. "The Emperor knows there are traitors in the gladiator houses. Give him their names, and he will remember your house kindly."',
+    text: () => `${PREFECT} calls on you, alone, and accepts a cup of wine he does not drink. "The Emperor knows there are traitors in the gladiator houses. Give him their names, and he will remember your house kindly. I will remember it too."`,
     choices: [
       { label: 'Know nothing', effects: { trust: 1 } },
       { label: 'Name the names', betray: true, effects: { betray: true } },
@@ -306,7 +313,7 @@ export const PLOT_EVENTS = [
       const p = political(run);
       return p.length ? { f: pick(rng, p).id } : run.roster.length ? { f: pick(rng, run.roster).id } : null;
     },
-    text: () => 'The Praetorians come at dawn and fill the yard. Their prefect wants a traitor, or a reason to leave without one.',
+    text: () => `The Praetorians come at dawn and fill the yard. ${PREFECT} stands in the middle of it, finishing an apple. He wants a traitor, or a reason to leave without one.`,
     choices: [
       { label: `Pay them off (${PLOT.bribe} Gold)`, cost: PLOT.bribe, effects: { gold: -PLOT.bribe, suspicion: -30 } },
       { label: `Hand over \${f}`, needs: (run, ev) => (run.roster.find((x) => x.id === ev.f)?.political ? null : 'No political prisoner to hand over.'), effects: { execute: 'f', suspicion: -40, trust: -3, morale: { to: 'all', n: -10 } } },

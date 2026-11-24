@@ -4,6 +4,8 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.10.0)
 
+- **The palace has a face:** Prefect Aulus Crassinus calls on your house as the palace's suspicion grows: a courtesy call, a dinner with your neighbours, a report he is writing slowly. He leads the raid and makes the offer to name names.
+- **The cousin comes back:** if you bought him out of the cells, he is there at the end: first over the rail at the coup, or among the executed if you named the names.
 - **Endings set the scene:** every ending now opens with a moment before anyone speaks (on the coup, your champion turning towards the imperial box), and the Emperor's visits begin with a lead-in instead of starting cold. Winning on the loyalist side has its own ending, and your steward's last word fits how the career ended (no more "don't let it go to your head" after the Emperor is dead).
 - **The rising talks back:** each of the rebel's scenes ends with three replies of your own, each with its own answer. Before the Grand Tournament the rebel whispers to you if the rising is ready, and a suspicious Emperor mentions your house's late nights. The first time the palace grows watchful, the rebel warns you; when it turns cold, your steward does.
 - **The rebellion asks for more, and the palace notices:** five new requests from the rebels: hosting a meeting in your cellar, a letter sewn into a fighter's gear, a printing press behind the grain, a broken-chain salute to the stands on fight day, and copying the arena guards' rota. Each helps the cause and draws the palace's eye. Political prisoners draw more suspicion, and it fades more slowly.
