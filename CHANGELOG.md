@@ -2,6 +2,11 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## Unreleased (7.10.0)
+
+- **The rebellion asks for more, and the palace notices:** five new requests from the rebels: hosting a meeting in your cellar, a letter sewn into a fighter's gear, a printing press behind the grain, a broken-chain salute to the stands on fight day, and copying the arena guards' rota. Each helps the cause and draws the palace's eye. Political prisoners draw more suspicion, and it fades more slowly.
+- **A search of the barracks:** once the palace is suspicious and your barracks hide the rebels' steel, the Praetorians may come with a writ. Let them search, grease the sergeant, or stall them while the steel goes over the wall.
+
 ## 7.9.2 (2026-11-24): no fights left behind
 
 - **Ending the week on fight day asks first** if a fighter could still fight in an open arena: your steward names who and where. Go back to the fights, or end the week anyway.

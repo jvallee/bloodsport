@@ -159,6 +159,7 @@ export function applyPlotEffects(run, eff, ev, out) {
   if (eff.pass) { p.pass = true; out.push('the pass is hidden in your strongbox'); }
   if (eff.usePass) p.pass = false;
   if (eff.armed) p.armed = true;
+  if (eff.disarm) { p.armed = false; out.push('the hidden steel is found and carried off'); }
   if (eff.giveGear) {
     run.inventory.gear.sort((a, b) => (GEAR[a]?.price ?? 0) - (GEAR[b]?.price ?? 0));
     let left = eff.giveGear - run.inventory.gear.splice(0, eff.giveGear).length;

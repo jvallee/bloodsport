@@ -166,6 +166,62 @@ export const PLOT_EVENTS = [
       { label: 'Promise to spare them', help: true, effects: { mark: true, trust: 1 } },
     ],
   },
+  // ---- 7.10 (the designer): bolder requests. Each helps the cause and draws the palace's eye (suspicion is hidden). ----
+  {
+    id: 'cellarMeeting', plot: true, stages: ['favours', 'cause', 'ready'], title: 'A meeting in the cellar',
+    target: (run, rng) => (run.roster.length ? { f: pick(rng, run.roster).id, name: freshName(run, rng) } : null),
+    text: ({ f }) => `${f} brings word: twenty people need a room for one night, and your wine cellar has a door onto the back lane. "They'll be gone before the watch changes. Probably." Twenty strangers in one house is the kind of thing neighbours remember.`,
+    choices: [
+      { label: 'Keep the cellar locked', refuse: true, effects: {} },
+      { label: 'Leave the back door unbarred', help: true, effects: { trust: 2, suspicion: 10, chance: { p: 0.5, win: { contact: 'new' }, lose: {} } } },
+    ],
+  },
+  {
+    id: 'letterInArmour', plot: true, stages: ['favours', 'cause'], title: 'A letter in the lining',
+    when: (run) => run.roster.some((f) => f.gear.armor || f.gear.weapon),
+    target: (run, rng) => {
+      const list = run.roster.filter((f) => f.gear.armor || f.gear.weapon);
+      return list.length ? { f: pick(rng, list).id } : null;
+    },
+    text: ({ f }) => `The rebels want a letter sewn into the lining of ${f}'s gear. A friend in the arena tunnels will cut it out on fight day. "The guards search wagons and baskets. They never search a gladiator." Not yet, anyway.`,
+    choices: [
+      { label: 'Refuse', refuse: true, effects: {} },
+      { label: 'Sew it in', help: true, effects: { trust: 1, suspicion: 8, gold: 4 } },
+    ],
+  },
+  {
+    id: 'printingPress', plot: true, stages: ['favours', 'cause', 'ready'], title: 'A press behind the grain',
+    when: (run) => run.plot?.seen.includes('pamphlets'),
+    target: asker(anyFighter),
+    text: () => 'The pamphlets you left alone have friends now. The rebels ask to hide a small printing press behind your grain jars and run it at night. It is not quiet, and ink does not wash off.',
+    choices: [
+      { label: 'No press in this house', refuse: true, effects: {} },
+      { label: 'Make room behind the grain', help: true, effects: { trust: 2, suspicion: 12, crowd: 8 } },
+    ],
+  },
+  {
+    id: 'chainSalute', plot: true, stages: ['cause', 'ready'], title: 'The broken-chain salute',
+    when: (run) => Boolean(run.bouts),
+    target: (run) => {
+      const [f] = run.roster.filter((x) => !x.spy).sort((a, b) => b.renown - a.renown || b.power - a.power);
+      return f ? { f: f.id } : null;
+    },
+    text: ({ f }) => `Fight day. The rebels ask that ${f}, after their bout, raise a fist to the stands with a broken chain painted on the knuckles. Half the city will cheer. The other half will write it down.`,
+    choices: [
+      { label: 'No politics on the sand', refuse: true, effects: {} },
+      { label: '${f} raises the fist', help: true, effects: { trust: 2, suspicion: 15, renown: { to: 'f', n: 3 }, crowd: 4 } },
+    ],
+  },
+  {
+    id: 'guardRota', plot: true, stages: ['cause', 'ready'], title: 'The guard rota',
+    when: (run) => Boolean(run.bouts),
+    target: asker(anyFighter),
+    text: ({ f }) => `${f} has seen the arena guards' rota pinned up in the tunnels: who stands where when the Emperor comes. "I could copy it between bouts. If they catch me, I was looking for the latrine."`,
+    choices: [
+      { label: 'Too dangerous', refuse: true, effects: {} },
+      { label: 'Copy it', help: true, effects: { chance: { p: 0.6, win: { trust: 2, suspicion: 5 }, lose: { suspicion: 20, morale: { to: 'f', n: -10 } } } } },
+    ],
+  },
   // ---- Act 3: the Cause ----
   {
     id: 'forgedPass', plot: true, stages: ['cause', 'ready'], title: 'The forged pass',
@@ -213,6 +269,17 @@ export const PLOT_EVENTS = [
     choices: [
       { label: 'Say nothing', effects: {} },
       { label: 'Feed him a story', effects: { chance: { p: 0.5, win: { suspicion: -20 }, lose: { suspicion: 20 } } } },
+    ],
+  },
+  {
+    id: 'barracksSearch', plot: true, stages: ['cause', 'ready'], title: 'A search of the barracks',
+    when: (run) => Boolean(run.plot?.armed) && run.plot.suspicion >= PLOT.suspicion.informer,
+    target: asker(anyFighter),
+    text: () => 'Praetorians at the gate, with a writ to search the barracks "for stolen army property". The steel you gave the cause is under the floor of the mess hall.',
+    choices: [
+      { label: 'Let them search', effects: { chance: { p: 0.4, win: { suspicion: -10 }, lose: { disarm: true, suspicion: 10 } } } },
+      { label: `Grease the sergeant (${PLOT.searchBribe} Gold)`, cost: PLOT.searchBribe, effects: { gold: -PLOT.searchBribe, suspicion: -5 } },
+      { label: 'Stall them while the steel goes over the wall', help: true, effects: { chance: { p: 0.7, win: { trust: 1 }, lose: { disarm: true, suspicion: 15 } } } },
     ],
   },
   {

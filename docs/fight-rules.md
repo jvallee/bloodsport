@@ -1226,3 +1226,17 @@ seeds from 1000): no ops 18%; as built 14%; caught −2 Favour 15%; −2 Favour 
 Gold 17%; **−2 Favour with costs 2 / 4 / 5 Gold 19%** (chosen: ops now break even for a sound player, and pay for a
 player who picks their moments). `ESPIONAGE.caughtFavor` −5 → −2; Steal the Playbook 3 → 2, Doctor the Wine 6 → 4,
 Bribe the Armourer 7 → 5 Gold. Chances unchanged.
+
+## 7.10.0: a bolder rebellion (the designer)
+- Suspicion: `PLOT.suspicion.perPrisoner` 1 → 2 and `decay` 2 → 1 a month (a single political prisoner now raises it by 1 a
+  month instead of lowering it by 1).
+- New plot cards (help raises trust and suspicion; refusing counts toward the plot going cold, as for every request):
+  A meeting in the cellar (trust +2, suspicion +10, 50% a new contact); A letter in the lining (needs a fighter with gear;
+  trust +1, suspicion +8, +4 Gold); A press behind the grain (after the pamphlets; trust +2, suspicion +12, the crowd's
+  favour for 8 weeks); The broken-chain salute (fight weeks, the most famous fighter; trust +2, suspicion +15, their
+  Renown +3, the crowd for 4 weeks); The guard rota (fight weeks; 60%: trust +2, suspicion +5; else suspicion +20 and the
+  fighter −10 Morale).
+- A search of the barracks (danger card, Cause or Ready, with the barracks armed by your steel and suspicion 40+): let
+  them search (40%: suspicion −10; else the steel is lost and +10); grease the sergeant (`PLOT.searchBribe` 6 Gold,
+  suspicion −5); stall them (70%: trust +1; else the steel is lost and +15). Losing the steel unarms the barracks (an
+  officer contact still counts as armed); "Steel for the cause" can come again.

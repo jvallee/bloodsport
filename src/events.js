@@ -249,6 +249,7 @@ export function stakesText(eff, sep = '; ', names = {}) {
   if (eff.spy === 'keep') { add('f', 'stays, and keeps writing'); house.push('the palace hears whatever your house hides, every month they stay'); }
   if (eff.hide) house.push(`one Medbay bed taken for ${eff.hide} weeks`);
   if (eff.giveGear) house.push(`${eff.giveGear} pieces of gear handed over`);
+  if (eff.disarm) house.push('the hidden steel is found and taken');
   if (eff.contact === 'new') house.push('a prisoner goes free');
   if (eff.coup) house.push('there is no turning back');
   if (eff.champion) add(eff.champion, 'joins the cause');
