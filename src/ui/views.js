@@ -91,8 +91,9 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
   const tiers = CIRCUITS.map((c) => {
     const cls = c.tier < run.topTier ? 'won' : c.tier === run.topTier ? 'now' : '';
     return `<span class="step ${cls}" title="${esc(c.name)}">${c.tier}</span>`;
-  }).join('') + `<span class="step ${run.topTier === GRAND_TIER ? 'now' : ''}" title="The Grand Tournament">👑</span>`;
-  const tabBtn = (id, label, badge = '') => `<button class="tab${tab === id ? ' on' : ''}" data-action="tab" data-tab="${id}">${label}${badge}</button>`;
+  }).join('') + `<span class="step crown ${run.topTier === GRAND_TIER ? 'now' : ''}" title="The Grand Tournament">${ICON.crown}</span>`;
+  const tabIcon = (id) => (ICON[id] ? `<span class="tab-ico" aria-hidden="true">${ICON[id]}</span>` : '');
+  const tabBtn = (id, label, badge = '') => `<button class="tab${tab === id ? ' on' : ''}" data-action="tab" data-tab="${id}">${label}${badge}${tabIcon(id)}</button>`;
   const marketBadge = run.liaisonOffers?.length || run.armourerStock.length ? '<span class="dot" title="New stock"></span>' : '';
   const codexBadge = codexNew ? `<span class="count" title="New Codex entries">${codexNew}</span>` : '';
   const levelUps = run.roster.filter((f) => f.pendingPerks.length).length;
@@ -103,31 +104,36 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
   return `
     <div class="sticky-head">
       <header class="topbar">
-        <h1>BLOOD AND CIRCUS</h1>
-        <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
-        <div class="stat prestige" title="${esc(prestigeTip(run))}">${ICON.prestige}<b>${run.prestige}</b>
-          <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small>${Math.max(0, next.at - run.prestige)} to Lv ${next.level}</small>` : ''}</span></div>
-        <div class="favor${low ? ' low' : ''}" title="Imperial Favour: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
-          <span>Favour</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
-        ${run.unrest > 0 ? `<div class="stat unrest${run.unrest >= UNREST.warn ? ' high' : ''}" title="Unrest in the barracks: every Mutinous fighter adds to it each week, and it cools while nobody is Mutinous. At ${UNREST.warn} you are warned; at ${UNREST.threshold} the chains break and the house revolts.">⛓ <span>Unrest</span> <b>${run.unrest}/${UNREST.threshold}</b></div>` : ''}
-        ${tributeStat(run)}
-        <div class="track" title="Arena tiers">${tiers}</div>
-        <div class="spacer"></div>
-        <button class="btn small sound" data-action="toggle-sound" title="${sound ? 'Sound on: click to mute' : 'Sound off: click to turn on'}" aria-label="${sound ? 'Mute sound' : 'Turn sound on'}">${sound ? '🔊' : '🔇'}</button>
-        <span class="top-actions">
-          <button class="btn small" data-action="help">How to play</button>
-          <button class="btn small" data-action="bug-open" title="Something wrong or confusing? Send the developer a report they can replay.">Report a bug</button>
-          <button class="btn small" data-action="careers-open" title="Your saved careers: switch between them, or delete one">Careers</button>
-          <button class="btn small" data-action="new-run" title="Start another career (this one stays in Careers)">New career</button>
-        </span>
-        <details class="top-menu"><summary class="btn small" aria-label="Menu">☰</summary><div class="top-menu-list">
-          <button class="btn small" data-action="help">How to play</button>
-          <button class="btn small" data-action="careers-open">Careers</button>
-          <button class="btn small" data-action="new-run">New career</button>
-          <button class="btn small" data-action="bug-open">Report a bug</button>
-        </div></details>
+        <div class="brand-row">
+          <h1>BLOOD AND CIRCUS</h1>
+          <div class="brand-tools">
+            <button class="btn small icon-btn sound" data-action="toggle-sound" title="${sound ? 'Sound on: click to mute' : 'Sound off: click to turn on'}" aria-label="${sound ? 'Mute sound' : 'Turn sound on'}">${sound ? ICON.soundOn : ICON.soundOff}</button>
+            <span class="top-actions">
+              <button class="btn small" data-action="help">How to play</button>
+              <button class="btn small" data-action="careers-open" title="Your saved careers: switch between them, or delete one">Careers</button>
+              <button class="btn small" data-action="new-run" title="Start another career (this one stays in Careers)">New career</button>
+              <button class="btn small ghost-util" data-action="bug-open" title="Something wrong or confusing? Send the developer a report they can replay.">Bug</button>
+            </span>
+            <details class="top-menu"><summary class="btn small icon-btn" aria-label="Menu">${ICON.menu}</summary><div class="top-menu-list">
+              <button class="btn small" data-action="help">How to play</button>
+              <button class="btn small" data-action="careers-open">Careers</button>
+              <button class="btn small" data-action="new-run">New career</button>
+              <button class="btn small" data-action="bug-open">Report a bug</button>
+            </div></details>
+          </div>
+        </div>
+        <div class="stats-strip">
+          <div class="stat gold" title="Gold: pays for fighters, training, buildings, gear and tribute.">${ICON.gold}<b>${run.gold}</b></div>
+          <div class="stat prestige" title="${esc(prestigeTip(run))}">${ICON.prestige}<b>${run.prestige}</b>
+            <span class="lvl">Lv ${run.prestigeLevel}${next ? `<span class="lvlbar"><span style="width:${progress}%"></span></span><small class="lvl-to">${Math.max(0, next.at - run.prestige)} to Lv ${next.level}</small>` : ''}</span></div>
+          <div class="favor${low ? ' low' : ''}" title="Imperial Favour: the Emperor's opinion of you. At 0 you are executed. Lost by Boss losses and forfeits in your top arena, capitulating there, crushing weak opponents, and unpaid tribute.">
+            <span class="favor-lbl">Favour</span><span class="favorbar"><span style="width:${run.favor}%"></span></span><b>${run.favor}</b></div>
+          ${run.unrest > 0 ? `<div class="stat unrest${run.unrest >= UNREST.warn ? ' high' : ''}" title="Unrest in the barracks: every Mutinous fighter adds to it each week, and it cools while nobody is Mutinous. At ${UNREST.warn} you are warned; at ${UNREST.threshold} the chains break and the house revolts.">⛓ <span>Unrest</span> <b>${run.unrest}/${UNREST.threshold}</b></div>` : ''}
+          ${tributeStat(run)}
+          <div class="track" title="Arena tiers">${tiers}</div>
+        </div>
       </header>
-      <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate', estateBadge)}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>
+      <nav class="tabs" aria-label="Main navigation">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate', estateBadge)}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>
     </div>
     ${run.bouts && run.boutPending && tab === 'ludus' && !run.inMatch ? '<button class="jump-bout" data-action="jump-bout">⚔ Fight day ↓</button>' : ''}`;
 }
@@ -152,7 +158,7 @@ function festivalNote(run) {
 function tributeStat(run) {
   const due = tributeDue(run);
   const weeks = weeksUntilWinter(run.week);
-  if (tributePaid(run)) return `<div class="stat due paid" title="This year's tribute is already paid. The next one is due next winter.">⚖ <b>Tribute paid</b></div>`;
+  if (tributePaid(run)) return '<div class="stat due paid" title="This year\'s tribute is already paid. The next one is due next winter.">⚖ <b>Tribute paid</b></div>';
   const short = run.gold < due && weeks <= 4;
   return `<div class="stat due${short ? ' short' : ''}" title="The Emperor's tribute: ${due} Gold, collected at the start of winter. You can pay early from the week panel. If you can't pay, he takes all your Gold and ${-FAVOR.unpaidTribute} Favour (it only ends the career if Favour hits 0).">⚖ <b>${due}</b> <small>in ${weeks} wk${weeks === 1 ? '' : 's'}</small></div>`;
 }
@@ -382,7 +388,7 @@ export function overtrainModal(list) {
   return dialogueBox({ speaker: 'steward', title: 'Overtraining', html }, actions, 'ask');
 }
 
-// Ending a fight week with fighters who could still fight (7.9.2, the designer).
+// Ending a fight week with fighters who could still fight (7.9.2/7.11, the designer).
 const joinList = (items) => (items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items.at(-1)}` : items[0] ?? '');
 export function freeFightModal(free) {
   const who = joinList(free.fighters.map((f) => `<b>${esc(f.name)}</b>`));
@@ -815,8 +821,16 @@ function exhibitionBlock(run) {
   return `<div class="arena-block"><h3>⚔ Exhibition Ring</h3><p class="sub">Two fighters who aren't competing this week can put on a bout for the crowd: XP for both, Renown and Gold for the winner. Nobody dies in the ring, though the loser may take a Flesh Wound.</p>${rows || '<p class="sub">No two fighters are free and fit to spar.</p>'}</div>`;
 }
 
-export function ludusTab(run, oddsFor) {
-  return `<div class="grid ludus">${weekPanel(run)}${rosterPanel(run)}${boutPanel(run, oddsFor)}</div>`;
+export function ludusTab(run, oddsFor, mobilePane = 'roster') {
+  const pane = ['roster', 'bout', 'week'].includes(mobilePane) ? mobilePane : 'roster';
+  const fightLabel = run.bouts ? 'Fight day' : 'Bouts';
+  const fightDot = run.boutPending ? '<span class="pane-dot" aria-hidden="true"></span>' : '';
+  const nav = `<div class="mobile-ludus-nav" role="tablist" aria-label="Ludus sections">
+    <button class="seg${pane === 'roster' ? ' on' : ''}" role="tab" aria-selected="${pane === 'roster'}" data-action="mobile-pane" data-pane="roster">Gladiators <small>(${run.roster.length})</small></button>
+    <button class="seg${pane === 'bout' ? ' on' : ''}${run.boutPending ? ' live' : ''}" role="tab" aria-selected="${pane === 'bout'}" data-action="mobile-pane" data-pane="bout">${fightLabel}${fightDot}</button>
+    <button class="seg${pane === 'week' ? ' on' : ''}" role="tab" aria-selected="${pane === 'week'}" data-action="mobile-pane" data-pane="week">House &amp; log</button>
+  </div>`;
+  return `${nav}<div class="grid ludus" data-pane="${pane}">${weekPanel(run)}${rosterPanel(run)}${boutPanel(run, oddsFor)}</div>`;
 }
 
 // ---------- Estate tab ----------
@@ -828,8 +842,8 @@ function buildingCard(run, b) {
   const extra = def.extra ? `<div class="sub">${esc(def.extra(b.level))}</div>` : '';
   const upWhy = nextLevel ? upgradeBlocker(run, b.id) : null;
   const up = nextLevel
-    ? `<div class="next">Next: ${esc(def.effect(def.per[b.level]))}${def.extra ? `; ${esc(def.extra(nextLevel))}` : ''}</div>${button(`Upgrade · ${def.cost[b.level]} Gold`, 'upgrade', { id: b.id }, upWhy, 'btn small primary')}${upWhy ? `<div class="why-not">${esc(upWhy)}</div>` : ''}`
-    : '<div class="next">Fully upgraded</div>';
+    ? `<div class="next">Next: ${esc(def.effect(def.per[b.level]))}${def.extra ? `; ${esc(def.extra(nextLevel))}` : ''}</div><div class="room-foot">${button(`Upgrade · ${def.cost[b.level]} Gold`, 'upgrade', { id: b.id }, upWhy, 'btn small primary btn-block')}${upWhy ? `<div class="why-not">${esc(upWhy)}</div>` : ''}</div>`
+    : '<div class="next room-foot">Fully upgraded</div>';
   return `<div class="room built dept-${def.dept}">
     <div class="room-head"><span class="room-icon">${BUILDING_ICON[def.icon]}</span><b>${esc(def.name)}</b><span class="pips">${pips}</span></div>
     <div>${esc(def.effect(def.per[b.level - 1]))}</div>${extra}${up}</div>`;
@@ -907,7 +921,7 @@ export function marketTab(run) {
   const recruitCard = (f, tag) => fighterCard(f, {
     stress: false, tag,
     notes: f.mole?.tell ? `<div class="record"><div class="label">Something is off</div><div>${esc(f.mole.tell)}.</div></div>` : '',
-    actions: `<div class="actions">${button(`Recruit · ${recruitPrice(run, f)} Gold`, 'recruit', { id: f.id }, recruitBlocker(run, f.id), 'btn primary small')}</div>`,
+    actions: `<div class="actions"><button class="btn primary btn-block" data-action="recruit" data-id="${esc(f.id)}" ${recruitBlocker(run, f.id) ? `disabled title="${esc(recruitBlocker(run, f.id))}"` : ''}>Recruit · ${recruitPrice(run, f)} Gold</button></div>`,
   });
   const cards = run.market.map((f) => recruitCard(f)).join('');
   // The Unnatural Temple of Vulcan (5.3.0): raise a fighter killed in the arena as a Revenant.
@@ -916,10 +930,10 @@ export function marketTab(run) {
   const vulcan = !vulcanLv
     ? `<p class="sub">Build the Unnatural Temple of Vulcan${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} to raise fighters killed in the arena as Revenants.</p>`
     : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death, for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p>
-      ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary small')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`;
+      ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary btn-block')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`;
   const offers = run.liaisonOffers ?? [];
   const liaison = offers.length
-    ? `<div class="cards two">${offers.map((offer) => fighterCard(offer, { tag: offer.id === run.cousin?.f && !run.cousin.done ? `${offer.cousinOf ? `${esc(offer.cousinOf)}'s cousin` : 'The cousin from the gate'} · executed in ${run.cousin.until - run.week} week${run.cousin.until - run.week === 1 ? '' : 's'}` : `Liaison · ${esc(offer.origin)}`, notes: offer.record?.length ? `<div class="record"><div class="label">Prison record</div>${offer.record.map((c) => `<div>“${esc(c)}”</div>`).join('')}</div>` : '', actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary small')}</div>` })).join('')}</div>`
+    ? `<div class="cards two">${offers.map((offer) => fighterCard(offer, { tag: offer.id === run.cousin?.f && !run.cousin.done ? `${offer.cousinOf ? `${esc(offer.cousinOf)}'s cousin` : 'The cousin from the gate'} · executed in ${run.cousin.until - run.week} week${run.cousin.until - run.week === 1 ? '' : 's'}` : `Liaison · ${esc(offer.origin)}`, notes: offer.record?.length ? `<div class="record"><div class="label">Prison record</div>${offer.record.map((c) => `<div>“${esc(c)}”</div>`).join('')}</div>` : '', actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary btn-block')}</div>` })).join('')}</div>`
     : maxLevel(run, 'liaison') ? '<p class="sub">No prisoners on offer this month.</p>' : `<p class="sub">Build a Liaison${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} for cheap monthly prisoners.</p>`;
   const decorShop = decorByGroup((k, d) => `<div class="shop-row"><div><b>${esc(d.name)}</b> · ${d.price} Gold <small>(${run.inventory.decor[k]} in storeroom)</small> ${decorComfort(d) ? `<span class="chip small good" title="This item adds ${decorComfort(d)} comfort to the room it's in: that fighter's Morale drifts ${decorComfort(d)} points higher.">+${decorComfort(d)} comfort</span>` : '<span class="chip small bad" title="This item adds no comfort: it does nothing for Morale.">no comfort</span>'}${d.calm ? ` <span class="chip small" title="Lowers Stress each week. A room's decor lowers Stress by at most ${STRESS.decorCalm} a week in all.">−${d.calm} Stress/wk</span>` : ''}<br><small>${esc(d.effect)}</small></div>
     ${button('Buy', 'buy-decor', { item: k }, buyDecorBlocker(run, k), 'btn small primary')}</div>`);
@@ -1052,10 +1066,22 @@ export function guideBar(step, onTab, run = null) {
     <div class="guide-actions">${onTab ? '' : `<button class="btn small primary" data-action="tab" data-tab="${step.tab}">Go to the ${TAB_NAMES[step.tab]}</button>`}<button class="link small" data-action="tutorial-skip">Skip tutorial</button></div></div>`;
 }
 
-export function nextBar(hint) {
+// 7.12 (the designer: End week should be easy to find): the week's main action, always on screen (bottom-right on a
+// computer, a bar above the tabs on a phone). On fight day with the top arena still open, it jumps to the bouts instead.
+export function weekDock(run, inMatch = false) {
+  if (!run || run.status !== 'active' || inMatch) return '';
+  if (run.bouts && run.boutPending) {
+    return '<div class="week-dock"><button class="btn primary big" data-action="jump-bout">⚔ Fight day: send a fighter</button></div>';
+  }
+  const blocked = advanceBlocker(run);
+  const fightDay = run.bouts ? '' : button(`⚔ To fight day <small>(${weeksUntilTournament(run.week)} wk${weeksUntilTournament(run.week) === 1 ? '' : 's'})</small>`, 'advance-tournament', {}, blocked, 'btn big');
+  return `<div class="week-dock">${fightDay}${button('End week <small>(Space)</small>', 'advance', {}, blocked, 'btn primary big')}</div>`;
+}
+
+export function nextBar(hint, currentTab = null) {
   if (!hint) return '';
-  const go = hint.action === 'tab' ? `<button class="btn small primary" data-action="tab" data-tab="${hint.tab}">${esc(hint.label)}</button>` : '';
-  return `<div class="nextbar ${hint.tone ?? ''}" role="status"><span>➜ <b>Next:</b> ${esc(hint.text)}</span>${go}<span class="keys" title="Keyboard shortcuts">Space · T · 1–4 · ?</span></div>`;
+  const go = hint.action === 'tab' && hint.tab !== currentTab ? `<button class="btn small primary" data-action="tab" data-tab="${hint.tab}">${esc(hint.label)}</button>` : '';
+  return `<div class="nextbar ${hint.tone ?? ''}" role="status"><span class="nextbar-msg">${ICON.arrow} <b>Next:</b> ${esc(hint.text)}</span>${go}<span class="keys" title="Keyboard shortcuts">Space · T · 1–4 · ?</span></div>`;
 }
 
 // The bug report box: shown when the game hits an error, or when the player asks for it.

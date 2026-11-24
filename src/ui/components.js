@@ -23,6 +23,21 @@ export const ICON = {
   prestige: svg('<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" fill="currentColor"/>', 'i-prestige'),
   stress: svg('<path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor"/>', 'i-stress'),
   injury: svg('<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z" fill="currentColor"/>', 'i-injury'),
+  soundOn: svg('<path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>', 'i-ui'),
+  soundOff: svg('<path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="m16 9 6 6m0-6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>', 'i-ui'),
+  menu: svg('<path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>', 'i-ui'),
+  tribute: svg('<path d="M12 4v15M5 8h14M7 8l-3 6h6l-3-6zm10 0-3 6h6l-3-6zM8 19h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>', 'i-gold'),
+  crown: svg('<path d="M3 18h18l-1.5-10-4.5 4-3-6-3 6-4.5-4L3 18z" fill="currentColor"/>', 'i-gold'),
+  ludus: svg('<path d="M5 19 19 5M15 5h4v4M5 5l6 6m2 2 6 6M5 9V5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>', 'i-nav'),
+  estate: svg('<path d="M3 10 12 4l9 6M5 10v9m4-9v9m6-9v9m4-9v9M3 19h18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>', 'i-nav'),
+  market: svg('<path d="M4 9h16l-1.5 10h-13L4 9zm3-4h10l1 4H6l1-4z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>', 'i-nav'),
+  codex: svg('<path d="M5 4h11a3 3 0 0 1 3 3v13H7a2 2 0 0 0-2 2V4zm0 16a2 2 0 0 1 2-2h12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>', 'i-nav'),
+  arrow: svg('<path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>', 'i-gold'),
+  steady: svg('<circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/>', 'i-tactic'),
+  press: svg('<path d="M19 5 7 17m-2 2 2-2m4-1-4-4m8-4 4-3-3 4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>', 'i-tactic'),
+  guard: svg('<path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>', 'i-tactic'),
+  feint: svg('<path d="M5 16c4 0 4-8 8-8h6m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>', 'i-tactic'),
+  allIn: svg('<path d="M12 3c2 3 5 5.5 5 9.5a5 5 0 1 1-10 0c0-2 1-4 2.5-5.5 0 2 1 3 2 3.5C11 8 11 5 12 3z" fill="currentColor"/>', 'i-tactic'),
 };
 
 export const BUILDING_ICON = {

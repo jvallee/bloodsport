@@ -3,7 +3,7 @@
 import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE, MERCY, BET, HYPE, ROUND_TACTICS } from '../data.js';
 import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf, signatureBlocker, hypeOf, opponentTell, tellForecast, opponentUnleashesNext, firstStrikeChance } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
-import { esc, safeColor, fighterCard, mercyChoices } from './components.js';
+import { esc, safeColor, fighterCard, mercyChoices, ICON } from './components.js';
 import { roundStats } from '../explain.js';
 import { purseGold } from '../run.js';
 
@@ -272,8 +272,10 @@ const TELLS = {
 function allInButton(m) {
   const t = TACTICS.allIn;
   const risk = Math.round(deathRisk(m, 'allIn') * 100);
-  return `<button class="btn big tactic all-in" data-action="next-round" data-stance="allIn" title="${esc(t.desc)}">${t.icon} ${t.name} <small>about ${risk}% death</small></button>`;
+  return `<button class="btn big tactic all-in" data-action="next-round" data-stance="allIn" title="${esc(t.desc)}"><span class="tactic-main">${ICON.allIn} ${t.name}</span><small>about ${risk}% death</small></button>`;
 }
+
+const tacticIcon = (k) => ICON[k] ?? TACTICS[k]?.icon ?? '';
 
 // Choose this round's tactic: each button plays the round. The suggestion (what auto-play would do) is marked.
 function tacticPicker(m) {
@@ -281,7 +283,7 @@ function tacticPicker(m) {
   const suggested = suggestTactic(m);
   const h = m.b.f.humor ? HUMORS[m.b.f.humor] : null;
   const buttons = ROUND_TACTICS.map((k) => [k, TACTICS[k]]).map(([k, t]) => `<button class="btn big tactic${k === suggested ? ' primary' : ''}" data-action="next-round" data-stance="${k}" title="${esc(t.desc)}">
-      ${t.icon} ${t.name}${k === suggested ? ' <small>★ suggested</small>' : ''}</button>`).join('')
+      <span class="tactic-main">${tacticIcon(k)} ${t.name}</span>${k === suggested ? '<small class="tactic-sug">★ suggested</small>' : ''}</button>`).join('')
     + (mortalDanger(m.a) ? allInButton(m) : '');
   const last = m.rounds.at(-1);
   const read = h ? `${esc(m.b.f.name)} is <b>${h.name}</b>: ${esc(h.tell)}.${last ? ` Last round they chose <b>${TACTICS[last.stances.B].name}</b>.` : ''}` : `${esc(m.b.f.name)} has no clear habits.`;
@@ -293,8 +295,8 @@ function tacticPicker(m) {
   const firstLine = `<div class="first-strike" title="Speed plus a die each; Concussed always strikes second; Footwork strikes first when faster. Your tactic this round can still change it.">⚡ Strikes first: ${esc(m.a.f.name)} about <b>${first}%</b> · ${esc(m.b.f.name)} about <b>${100 - first}%</b></div>`;
   return `<div class="tactics"><div class="label">Round ${round}: choose your tactic</div>
     ${sig}${tellLine}${firstLine}
-    <div class="row tactic-row">${buttons}</div>
-    <div class="sub">${read} <span class="counters">🗡 Press beats ↯ Feint · ↯ Feint beats 🛡 Guard · 🛡 Guard beats 🗡 Press (+10% win chance)</span></div></div>`;
+    <div class="tactic-grid">${buttons}</div>
+    <div class="sub">${read} <span class="counters">${ICON.press} Press beats ${ICON.feint} Feint · ${ICON.feint} Feint beats ${ICON.guard} Guard · ${ICON.guard} Guard beats ${ICON.press} Press (+10% win chance)</span></div></div>`;
 }
 
 function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {

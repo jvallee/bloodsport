@@ -20,7 +20,7 @@ as-is by GitHub Pages from `main`.
 | `main` | **7.10.0, live** (24/24 gates). Tags `v7.0` … `v7.10.0` come from the Action. |
 | `v7.0.0` … `v7.10.0` | Release branches, all merged into `main`. The designer agreed to delete them; cloud sessions can't. |
 
-Released since 7.4.1: 7.10.0 (a bolder rebellion: new requests that draw suspicion, a barracks search, the prefect, endings with lead-ins, replies at each rebel stage; a better tutorial), 7.9.1–7.9.2 (a writing pass; a fight-day pop-up), 7.9.0 (Phase 4 balance: Imperial Boss −2, Orc Power 5, cowed revolts, wound items +3% win, cheaper
+Released since 7.4.1: 7.12.0 (the review's new look adopted after a /v7-beta/ preview; an always-visible End week dock), 7.11.0 (from an independent review: Word in the city, last words, level-3 backstories, mercy remembered, fixes), 7.10.0 (a bolder rebellion: new requests that draw suspicion, a barracks search, the prefect, endings with lead-ins, replies at each rebel stage; a better tutorial), 7.9.1–7.9.2 (a writing pass; a fight-day pop-up), 7.9.0 (Phase 4 balance: Imperial Boss −2, Orc Power 5, cowed revolts, wound items +3% win, cheaper
 covert ops; the cousin in the cells), 7.5.0 and 7.5.1 (Phase 1: saves and a fight that survives a reload), Phase 3 tooling (bots, usage
 gate, 23 gates), 7.7.0 and 7.8.0 (Phase 2: fight pace, first-strike chance, hints, phone fight screen, one name per rule,
 deaths and narration, endings), 7.8.1 (fixes from a code review: two tabs, live bet odds, Blood Drinker wording, a stray

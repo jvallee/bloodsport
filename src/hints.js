@@ -26,7 +26,7 @@ export function nextHint(run) {
         tone: 'bad',
       };
     }
-    return { text: `Tournament week: send a fighter to ${arenaName(run.topTier)} (${bout.boss ? 'fight or forfeit' : 'or skip it'}). Odds are on the right.`, tone: 'event' };
+    return { text: `Tournament week: send a fighter to ${arenaName(run.topTier)} (${bout.boss ? 'fight or forfeit' : 'or skip it'}). Odds are with each fighter under Fight day.`, tone: 'event' };
   }
   if (run.bouts && run.summons) return { text: 'The Emperor\'s summons waits: send a fighter to the Imperial Coliseum, or refuse him.', tone: 'event' };
   if (run.bouts) {

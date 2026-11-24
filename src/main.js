@@ -11,7 +11,7 @@ import { saveFailedBanner, loadFailedModal, summaryKey, otherTabBanner, resultNo
 import { fightKey } from './ui/keys.js';
 import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom, careerKey } from './careers.js';
 import { estimateOdds, oddsKey } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, freeFightModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, freeFightModal, weekDock, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, dailySetup, careerSetup } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
@@ -39,6 +39,7 @@ let match = null;
 let summaries = []; // this week's match results, newest last
 let noticePage = 0;
 let tab = 'ludus';
+let mobilePane = 'roster'; // mobile Ludus pane: 'roster' | 'bout' | 'week'
 let showHelp = false;
 let autoTimer = null;
 let revealTimer = null;
@@ -157,7 +158,7 @@ function markSceneSeen(id) {
 }
 // A talk beat (src/run.js talk) with its fighter's name and face; a fighter no longer in the house still speaks, by name.
 function talkBeat(b) {
-  const replies = b.replies ? b.replies.map((r) => ({ label: r.label, then: r.then.map(talkBeat) })) : undefined; // 7.11: keep replies
+  const replies = b.replies ? b.replies.map((r) => ({ label: r.label, then: r.then.map(talkBeat) })) : undefined;
   if (!b.fighterId) return { speaker: b.speaker, text: b.text, ...(replies ? { replies } : {}) };
   const f = run.roster.find((x) => x.id === b.fighterId) ?? run.fallen.find((x) => x.id === b.fighterId) ?? (run.retired ?? []).find((x) => x.id === b.fighterId);
   const base = f?.kind ? { speaker: 'fighter', fighter: { ...f, injuries: f.injuries ?? [] }, text: b.text } : { speaker: 'narrator', text: f ? `${f.name}: "${b.text}"` : b.text };
@@ -296,7 +297,7 @@ function render() {
   if (tab === 'estate') body = estateTab(run);
   else if (tab === 'market') body = marketTab(run);
   else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore) + legacyPanel(legacy);
-  else body = ludusTab(run, oddsFor);
+  else body = ludusTab(run, oddsFor, mobilePane);
   checkScene();
   const guide = guideStep();
   const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : freeFightWarn ? freeFightModal(freeFightWarn) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal(helpTab) : tutorialCard(tutorialStep());
@@ -317,7 +318,7 @@ function render() {
   const fortune = fortunePanel(run, { animate: fortuneDealKey(run) !== dealtHand });
   if (fortune) dealtHand = fortuneDealKey(run);
   document.body.dataset.house = run.setup?.colour ?? '';
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${otherTab ? otherTabBanner() : saveFailed ? saveFailedBanner() : ''}${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run))}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${otherTab ? otherTabBanner() : saveFailed ? saveFailedBanner() : ''}${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run), tab)}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${weekDock(run, Boolean(match))}${modal}`;
   const stickyHead = app.querySelector('.sticky-head');
   if (stickyHead) document.documentElement.style.setProperty('--head-h', `${stickyHead.offsetHeight + 8}px`);
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
@@ -361,7 +362,7 @@ function act(name, data = {}) {
 
 function renderFight() {
   clearTimeout(revealTimer);
-  app.inert = Boolean(match); // 7.11: keyboard focus stays in the fight
+  app.inert = Boolean(match);
   if (!match) {
     fightEl.hidden = true;
     fightEl.innerHTML = '';
@@ -517,7 +518,7 @@ const actions = {
   },
   'setup-cancel': () => { setupChoice = null; },
   'replay-seed': () => { if (roomForCareer()) newRun(run.seed, run.setup); },
-  'freefight-back': () => { freeFightWarn = null; scrollAfterRender = '.panel.bout'; },
+  'freefight-back': () => { freeFightWarn = null; mobilePane = 'bout'; scrollAfterRender = '.panel.bout'; },
   'freefight-go': () => { // End the week as asked; the overtraining check still comes next
     freeFightWarn = null;
     if (endWeekChecks({ fights: false })) { summaries = []; achieved = []; stewardNotes = []; resultNotes = []; gameAction('advance'); }
@@ -541,7 +542,8 @@ const actions = {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   },
-  'jump-bout': () => { scrollAfterRender = '.panel.bout'; }, // a phone, fight day: scrolled to once the page is redrawn
+  'jump-bout': () => { tab = 'ludus'; mobilePane = 'bout'; scrollAfterRender = '.panel.bout'; }, // a phone, fight day: switches pane & scrolls to bouts
+  'mobile-pane': (d) => { if (['roster', 'bout', 'week'].includes(d.pane)) mobilePane = d.pane; },
   'careers-close': () => { careersOpen = false; },
   'career-load': (d) => {
     careersOpen = false;
@@ -706,7 +708,9 @@ function endWeekChecks({ fights = true } = {}) {
   return true;
 }
 const after = {
+  advance: () => { if (run.boutPending) mobilePane = 'bout'; },
   'advance-tournament': () => {
+    if (run.boutPending) mobilePane = 'bout';
     if (!monthBefore) return;
     const lines = monthDigest(monthBefore.snap, run, run.log.slice(monthBefore.mark));
     monthBefore = null;
@@ -715,7 +719,7 @@ const after = {
   fight: () => {
     clearTimeout(revealTimer);
     stopAllSounds();
-    eventResult = null; // 7.11: the month's digest never floats over the fight
+    eventResult = null;
     ui.animateRound = 0;
     ui.auto = false;
   },
@@ -768,11 +772,11 @@ const after = {
 
 const SKIP_SAVE_ACTIONS = new Set([
   'new-run', 'replay-seed', 'start-career', 'daily-challenge', 'bug-reload', 'career-load',
-  'bug-copy', 'bug-download', 'export-save', 'import-save',
+  'bug-copy', 'bug-download', 'export-save', 'import-save', 'mobile-pane',
 ]);
 
 document.addEventListener('click', (e) => {
-  // 7.11: clicking the dimmed backdrop outside a non-critical box closes it.
+  // Clicking the dimmed backdrop outside a non-critical modal dismisses it cleanly.
   if (e.target.classList?.contains('modal')) {
     const topModal = activeModal();
     if (topModal === 'help') { showHelp = false; render(); return; }
@@ -805,7 +809,10 @@ document.addEventListener('click', (e) => {
       alert(err.message);
     }
   });
-  if (SKIP_SAVE_ACTIONS.has(name)) return;
+  if (SKIP_SAVE_ACTIONS.has(name)) {
+    if (name === 'mobile-pane') guard('render', () => render());
+    return;
+  }
   if (cancelled) {
     if (overtrainWarn || freeFightWarn) guard('render', () => render());
     return;
