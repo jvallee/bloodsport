@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.8.1)
 
+- **Phones:** the fight report no longer ends in half a screen of empty space once the fight is over.
 - **Two tabs:** after another tab took over a career, starting or switching to a different career in this tab didn't save it (and kept saying it was played in another tab) until you reloaded the page. It saves again now.
 - Opening a damaged save from Careers shows the recovery box only, without an extra browser alert on top.
 - **Bets after an item:** using an item (War Paint, a Berserker Mushroom and the like) before Round 1 now updates the bet buttons at once. They used to keep showing the old, bigger payout, and the bet then paid less or was refused. Feed the Ash used before Round 1 is priced in too.
