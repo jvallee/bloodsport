@@ -21,7 +21,7 @@ Turn-based gladiator-house management roguelike, built as a static site and host
 - `npm run simulate`: build win rates at equal Power, and trained fighters vs each Boss.
 - `npm run career [n]`: whole-career balance report (careful and reckless bots; pass `--quick` for a faster local check).
 - `npm run check`: **balance gates** (22 Season/Long Road/Heat/decor/unrest gates; pass/fail, exits non-zero). Every balance or rules change must pass it before shipping.
-- `npm run sweep -- [--evasion | --favor | --fine] [n]`: sweep balance levers and print a table to choose values from.
+- `npm run sweep -- [--evasion | --favor | --fine] [n]`: sweep balance levers and print a table to choose values from. Seasons by default (`--long` for the Long Road). `--set PATH=v1,v2 [--groups careful,legacy,heat1,...] [n]` sweeps any table value on every core with the gates' own groups and seeds, printing each rate with its 95% interval.
 - `npm run replay -- report.json [--stop N] [--steps]`: replay a playtester's bug report (see `docs/bug-reports.md`).
 - `npm run text-index -- [--check]`: refresh or verify `docs/text-to-rewrite.md` source links.
 

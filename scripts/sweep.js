@@ -4,7 +4,42 @@
 
 import { CIRCUITS, GRAND, FAVOR, EVASION, TRIBUTE, ECONOMY } from '../src/data.js';
 import { playCareer } from './bots.js';
-import { speedSplit } from './checks.js';
+import { speedSplit, gateJobs } from './checks.js';
+
+// Seasons are the default career (most gates measure them); --long sweeps the Long Road instead.
+const SETUP = process.argv.includes('--long') ? { short: false } : { short: true };
+console.log(`Sweeping ${SETUP.short ? 'Seasons' : 'the Long Road'} (--long for the other).`);
+
+// --set PATH=v1,v2,... [--set PATH2=...] [--groups careful,loyalist,legacy,heat1,heat3] [careers]
+// Plays the gates' own career groups and seeds on every core (scripts/pool.js) for each combination of values and prints
+// each group's win rate, so a failing gate can be swept at full bot strength. PATH is a table path in src/data.js or
+// src/fortune.js, as `npm run check`'s tunables take it (e.g. SHORT.purse=1.6,1.7 or HEAT.decrees=["a","b"]).
+if (process.argv.includes('--set')) {
+  const { runJobs } = await import('./pool.js');
+  const sets = process.argv.flatMap((a, i) => (a === '--set' ? [process.argv[i + 1]] : [])).map((x) => {
+    const [path, values] = [x.slice(0, x.indexOf('=')), x.slice(x.indexOf('=') + 1)];
+    const list = values.startsWith('[') ? [JSON.parse(values)] : values.split(',').map((v) => JSON.parse(v));
+    return { path, list };
+  });
+  const gi = process.argv.indexOf('--groups');
+  const groups = gi >= 0 ? process.argv[gi + 1].split(',') : ['careful'];
+  const careers = Number(process.argv.find((a) => /^\d+$/.test(a))) || 300;
+  const combos = sets.reduce((acc, { path, list }) => acc.flatMap((c) => list.map((v) => ({ ...c, [path]: v }))), [{}]);
+  const jobs0 = gateJobs({ careers }).filter((j) => groups.includes(j.group) && j.type === 'career');
+  const rate = (rs) => rs.filter((r) => r.won).length / Math.max(1, rs.length);
+  for (const tunables of combos) {
+    const jobs = jobs0.map((j) => (SETUP.short ? j : { ...j, opts: { ...j.opts, setup: { ...j.opts.setup, short: false } } }));
+    const res = await runJobs(jobs, { tunables });
+    const by = groups.map((g) => {
+      const rs = res.filter((_, i) => jobs[i].group === g);
+      const p = rate(rs);
+      const half = 1.96 * Math.sqrt((p * (1 - p)) / Math.max(1, rs.length));
+      return `${g} ${Math.round(100 * p)}% ±${Math.round(100 * half)}`;
+    });
+    console.log(`${JSON.stringify(tunables)} | ${by.join(' · ')}`);
+  }
+  process.exit(0);
+}
 
 if (process.argv.includes('--curve')) {
   // Difficulty curve: first-Boss Power × Challenger Renown step. Same seeds as the gates.
@@ -16,8 +51,8 @@ if (process.argv.includes('--curve')) {
     for (const step of [15, 20, 30, 999]) {
       CIRCUITS[0].oppPower[2] = p;
       ECONOMY.challengerRenown = step;
-      const c = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'careful'));
-      const r = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'reckless'));
+      const c = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'careful', { setup: SETUP }));
+      const r = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'reckless', { setup: SETUP }));
       const curve = bossCurve(c);
       const pc = (x) => `${Math.round(100 * (x ?? 0))}%`;
       console.log(`${String(p).padStart(13)} | ${String(step).padStart(14)} | ${pc(c.filter((x) => x.won).length / n).padStart(11)} | ${pc(curve[1]).padStart(7)} | ${pc(curve[4]).padStart(7)} | ${pc(curve[5]).padStart(5)} | ${(r.reduce((s, x) => s + x.deaths, 0) / n).toFixed(2).padStart(15)}`);
@@ -36,8 +71,8 @@ if (process.argv.includes('--scout')) {
     for (const per of [15, 20]) {
       ECONOMY.scoutedMax = max;
       TRIBUTE.perYear = per;
-      const c = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'careful'));
-      const r = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'reckless'));
+      const c = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'careful', { setup: SETUP }));
+      const r = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'reckless', { setup: SETUP }));
       const w = (rs) => `${Math.round((100 * rs.filter((x) => x.won).length) / n)}%`;
       const d = (rs) => (rs.reduce((s, x) => s + x.deaths, 0) / rs.length).toFixed(2);
       console.log(`${String(max).padStart(11)} | ${String(per).padStart(10)} | ${w(c).padStart(11)} | ${d(c).padStart(14)} | ${w(r).padStart(12)} | ${d(r).padStart(15)}`);
@@ -56,8 +91,8 @@ if (process.argv.includes('--favor')) {
     for (const per of [15, 20, 25]) {
       FAVOR.start = start;
       TRIBUTE.perYear = per;
-      const c = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'careful'));
-      const r = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'reckless'));
+      const c = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'careful', { setup: SETUP }));
+      const r = Array.from({ length: n }, (_, i) => playCareer(1000 + i, 'reckless', { setup: SETUP }));
       const avgD = (rs) => (rs.reduce((s, x) => s + x.deaths, 0) / rs.length).toFixed(2);
       console.log(`${String(start).padStart(11)} | ${String(per).padStart(10)} | ${`${Math.round((100 * c.filter((x) => x.won).length) / n)}%`.padStart(11)} | ${avgD(c).padStart(14)} | ${avgD(r).padStart(15)}`);
     }
@@ -98,8 +133,8 @@ for (const perTier of tiers) {
     CIRCUITS.forEach((c, i) => { c.oppPower = base[i].map((p) => p + perTier[i]); });
     GRAND.oppPower = baseGrand + perTier[3];
     FAVOR.bossLoss = loss;
-    const careful = Array.from({ length: N }, (_, i) => playCareer(2000 + i, 'careful'));
-    const reckless = Array.from({ length: N }, (_, i) => playCareer(2000 + i, 'reckless'));
+    const careful = Array.from({ length: N }, (_, i) => playCareer(2000 + i, 'careful', { setup: SETUP }));
+    const reckless = Array.from({ length: N }, (_, i) => playCareer(2000 + i, 'reckless', { setup: SETUP }));
     const r = (rs) => rs.filter((x) => x.won).length / rs.length;
     console.log(`${JSON.stringify(perTier).padEnd(16)} | ${loss.join('/').padStart(14)} | ${pct(r(careful)).padStart(11)} | ${avg(careful.map((x) => x.deaths)).toFixed(2).padStart(14)} | ${pct(r(reckless)).padStart(12)} | ${avg(reckless.map((x) => x.deaths)).toFixed(2).padStart(15)}`);
   }
