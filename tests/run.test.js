@@ -1280,3 +1280,18 @@ test('you can choose which injury the Medbay treats first', () => {
   advanceWeek(run);
   assert.deepEqual(f.injuries.map((i) => i.tag), ['maimed'], 'the Flesh Wound healed first');
 });
+
+// 7.9.2 (the designer): ending a fight week with a free fighter and an open arena asks first.
+test('freeFightDay: the open arenas and the fighters who could still fight in them, else null', async () => {
+  const { freeFightDay } = await import('../src/run.js');
+  const { run, a, b } = twoArenas();
+  assert.equal(freeFightDay(createRun(1)), null, 'not a fight week');
+  playBout(run, a.id, { tier: 2 });
+  if (run.mercy) resolveMercy(run, 'spare');
+  const free = freeFightDay(run);
+  assert.deepEqual(free.tiers, [1]);
+  assert.deepEqual(free.fighters.map((f) => f.id), [b.id]);
+  playBout(run, b.id, { tier: 1 });
+  if (run.mercy) resolveMercy(run, 'spare');
+  assert.equal(freeFightDay(run), null, 'everyone has fought');
+});

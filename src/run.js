@@ -49,7 +49,7 @@ export { eventNames, eventChoiceBlocker, chooseEvent } from './run/eventsEngine.
 export {
   SUMMONS_ORDERS, summonsBlocker, answerSummons, refuseSummonsBlocker, refuseSummons,
   fightBlocker, startMatch, recordMatchProgress, useItemBlocker, useItem,
-  betOdds, betCap, betPayout, betQuote, betBlocker, placeBet, purseGold,
+  betOdds, betCap, betPayout, betQuote, freeFightDay, betBlocker, placeBet, purseGold,
   skipBlocker, skipBout, forfeitBlocker, forfeitBout, keepsBuyIn, finishMatch,
   spareFavor, spareFavorWhy, owedLeft, mercyBlocker, resolveMercy,
   withdrawBlocker, withdraw,

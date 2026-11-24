@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.9.2 (2026-11-24): no fights left behind
+
+- **Ending the week on fight day asks first** if a fighter could still fight in an open arena: your steward names who and where. Go back to the fights, or end the week anyway.
+
 ## 7.9.1 (2026-11-24): richer words
 
 - **Richer words (a first pass):** the Emperor's visits and the ending scenes say more, and with more bite; the cousin in the cells, the aftermath of a revolt or an unmasked mole, and the clues a mole leaves, The Chains Break and the trouble before it are fuller scenes. The rebel prisoner says more at each stage of the rising, and the steward's first words are warmer. Fight stories have two ways to tell each weapon's blow, and more ways to tell a round won, a quiet round and a death.

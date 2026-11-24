@@ -20,7 +20,7 @@ import {
   findFighter, chronicle, bumpMorale, talk, assertOk, effectivePower, arenaName, isChampionOf,
   crownChampion, isShort, hasDecree, hasPolicy, bossLossFavor, winsOf, foughtThisWeek, xpFor,
   gainXp, activeModalOrPendingBlocker, nextStage, addPrestige, clearHealedMedbay,
-  removeFighter, changeFavor, checkLoss,
+  removeFighter, changeFavor, checkLoss, unlockedTiers,
 } from './helpers.js';
 import { plotActive, changeSuspicion, addContact, resolveCoup } from './plotEngine.js';
 import {
@@ -195,6 +195,16 @@ export function fightBlocker(run, id, tier = run.topTier) {
   if (f.morale < MORALE.mutinous) return `${f.name} is mutinous and refuses to fight.`;
   if (!midBracket && run.prestige < boutFor(run, tier).buyIn) return `Needs ${boutFor(run, tier).buyIn} Prestige for the buy-in (you have ${run.prestige}).`;
   return null;
+}
+
+// A fight week you could still use (7.9.2): the arenas still open, and the fighters who could fight in one of them.
+// null when there are none. src/main.js asks before ending the week.
+export function freeFightDay(run) {
+  if (!run.bouts) return null;
+  const tiers = unlockedTiers(run).filter((t) => run.bouts[t] === 'open' && run.roster.some((f) => !fightBlocker(run, f.id, t)));
+  if (!tiers.length) return null;
+  const fighters = run.roster.filter((f) => tiers.some((t) => !fightBlocker(run, f.id, t)));
+  return { tiers, fighters };
 }
 
 export function startMatch(run, id, tier = run.topTier) {
