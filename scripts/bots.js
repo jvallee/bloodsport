@@ -14,7 +14,7 @@ import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
-  espState, canNarrow, investigate, investigateBlocker,
+  espState, canNarrow, investigate, investigateBlocker, opTarget, covertOp, covertOpBlocker, moleOf,
   equip, buyDecor, buyDecorBlocker, assignDecor, assignDecorBlocker, moraleTarget, opponentFor, matchOptions, buildRoom, recruitPrice,
   buyItem, buyItemBlocker, useItem, useItemBlocker, chooseEvent, eventChoiceBlocker, withdraw, withdrawBlocker, resolveMercy,
   betOdds, betCap, betBlocker, placeBet, hostBlocker, host, enactBlocker, enact, raisable, reanimateBlocker, reanimate,
@@ -101,6 +101,8 @@ function spend(run, reserve, opts = {}) {
   tryUp('medbay');
   // v7: Oracle provides live combat tells (70%/85% accuracy), worth building once core rooms & reserve are healthy.
   if (opts.oracle !== false && plotsFree(run) > 1 && run.gold - BUILDINGS.oracle.cost[0] >= reserve + 6) tryBuild('oracle');
+  // 7.6: a Liaison (cheap prisoners, and covert ops) once the core rooms are up and a plot is to spare.
+  if (opts.spy !== false && run.topTier >= 2 && plotsFree(run) > 1) tryBuild('liaison');
   tryUp('entertainment');
   tryUp('armourer');
   if (opts.oracle !== false && run.topTier >= 3 && run.gold - BUILDINGS.oracle.cost[1] >= reserve + 8) tryUp('oracle');
@@ -158,6 +160,35 @@ function equipAll(run, reserve) {
 
 // 7.4: with clues of a mole, investigate one fighter a week (named suspects first, then the unhappiest); the careful
 // event order executes an unmasked mole.
+// 7.6: what each career used of the 7.1–7.4 systems (scripts/checks.js reports it). Kept out of the save.
+const usageOf = new WeakMap();
+export const usage = (run) => {
+  if (!usageOf.has(run)) usageOf.set(run, { covertOps: 0, woundItems: 0, temperament: 0, investigations: 0, molesUnmasked: 0, molesMet: 0 });
+  return usageOf.get(run);
+};
+const WOUND_ITEMS = ['viperVenom', 'bloodThinner', 'blindingPowder'];
+
+// 7.6: one covert op a month against the next top-arena opponent: bribe the armourer when they wear armour, else steal
+// their playbook.
+function covertOps(run, reserve) {
+  const type = opTarget(run)?.gear?.armor && run.gold - ESPIONAGE.ops.armourer.cost >= reserve ? 'armourer' : 'playbook';
+  if (covertOpBlocker(run, type) || run.gold - ESPIONAGE.ops[type].cost < reserve) return;
+  covertOp(run, type);
+  usage(run).covertOps += 1;
+}
+
+// 7.6: a deliberate Temperament choice: the strongest fighter gets a Wine Amphora (comfort, and the crowd's Hype).
+function temperStar(run, reserve) {
+  const star = [...run.roster].filter((f) => f.kind !== 'revenant').sort((a, b) => effectivePower(b) - effectivePower(a))[0];
+  if (!star || star.decor.wineAmphora) return;
+  if (!run.inventory.decor.wineAmphora && (buyDecorBlocker(run, 'wineAmphora') || run.gold - DECOR.wineAmphora.price < reserve)) return;
+  if (!run.inventory.decor.wineAmphora) buyDecor(run, 'wineAmphora');
+  if (!assignDecorBlocker(run, star.id, 'wineAmphora')) {
+    assignDecor(run, star.id, 'wineAmphora');
+    usage(run).temperament += 1;
+  }
+}
+
 // The bot's own notes (who it has searched) stay out of the save.
 const searchedBy = new WeakMap();
 function hunt(run, reserve = 6) {
@@ -171,7 +202,11 @@ function hunt(run, reserve = 6) {
   const f = order.find((x) => !searched.includes(x.id) && !investigateBlocker(run, x.id));
   if (!f) return;
   searched.push(f.id);
-  if (investigate(run, f.id)) chooseEvent(run, 0); // unmasked: execute them now, so the week isn't played twice
+  usage(run).investigations += 1;
+  if (investigate(run, f.id)) { // unmasked: execute them now, so the week isn't played twice
+    usage(run).molesUnmasked += 1;
+    chooseEvent(run, 0);
+  }
 }
 
 function keepHappy(run, reserve = 6) {
@@ -204,6 +239,8 @@ function carefulWeek(run, opts) {
   else for (const b of run.buildings) if (b.type === 'trainer' && !upgradeBlocker(run, b.id)) upgrade(run, b.id);
   if (opts.gear !== false) equipAll(run, Math.max(4, saveForTribute));
   if (opts.morale !== false) keepHappy(run, Math.max(6, saveForTribute));
+  if (opts.morale !== false) temperStar(run, Math.max(8, saveForTribute));
+  covertOps(run, Math.max(8, saveForTribute));
   useLounge(run, opts);
   raiseTheDead(run, opts);
 
@@ -237,7 +274,7 @@ function carefulWeek(run, opts) {
       if (!jobBlocker(run, f.id, want)) setJob(run, f.id, want);
     }
   }
-  hunt(run, Math.max(6, saveForTribute));
+  if (opts.hunt !== false) hunt(run, Math.max(6, saveForTribute));
 }
 
 // `tactic`: 'smart' reads the opponent's humor (as auto-play does); anything else is used every round.
@@ -264,6 +301,7 @@ function pickBossItem(run, m) {
   if (speedGap < 4 && inv.adrenaline && m.a.f.stress + (CONSUMABLES.adrenaline.stressAfter ?? 0) < STRESS.overtrained) return 'adrenaline';
   if (speedGap < 4 && inv.throwingNet) return 'throwingNet';
   if (safe && powerGap <= 0 && inv.berserkerMushroom) return 'berserkerMushroom';
+  if (safe && powerGap > 0) for (const id of WOUND_ITEMS) if (inv[id]) return id; // stronger: make the wounds count (7.6)
   for (const id of ['warPaint', 'ironTonic', 'adrenaline', 'throwingNet']) if (inv[id]) return id;
   if (safe && inv.berserkerMushroom) return 'berserkerMushroom';
   return null;
@@ -276,7 +314,10 @@ function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart', bet 
   if (!signatureBlocker(m)) useSignature(m); // both bots open with their signature move
   if (items && bout.top && bout.boss && !m.over) {
     const open = pickBossItem(run, m);
-    if (open && !useItemBlocker(run, m, open)) useItem(run, m, open);
+    if (open && !useItemBlocker(run, m, open)) {
+      useItem(run, m, open);
+      if (WOUND_ITEMS.includes(open)) usage(run).woundItems += 1;
+    }
   }
   while (!m.over) {
     playRound(m, { stance: tactic === 'smart' ? suggestTactic(m) : tactic });
@@ -284,7 +325,10 @@ function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart', bet 
       // In danger and not ahead: a Blessed Bandage. In a top-arena Boss fight: remaining offensive/tempo item.
       const danger = mortalDanger(m.a) && m.a.roundsWon <= m.b.roundsWon;
       const pick = danger && run.inventory.items.blessedBandage ? 'blessedBandage' : bout.top && bout.boss ? pickBossItem(run, m) : null;
-      if (pick && !useItemBlocker(run, m, pick)) useItem(run, m, pick);
+      if (pick && !useItemBlocker(run, m, pick)) {
+        useItem(run, m, pick);
+        if (WOUND_ITEMS.includes(pick)) usage(run).woundItems += 1;
+      }
     }
     if (towel && !m.over && canThrowTowel(m) && mortalDanger(m.a) && m.a.roundsWon <= m.b.roundsWon && !bout.boss) throwTowel(m);
   }
@@ -308,7 +352,7 @@ function stockItems(run) {
   };
   const hurtStar = run.roster.some((f) => f.injuries.length);
   if (hurtStar) buy('blessedBandage');
-  const bossItems = ['adrenaline', 'throwingNet', 'berserkerMushroom', 'ironTonic', 'warPaint'];
+  const bossItems = ['adrenaline', 'throwingNet', 'berserkerMushroom', 'ironTonic', 'warPaint', ...WOUND_ITEMS];
   if (bossItems.some((id) => run.inventory.items[id])) return;
   const star = [...run.roster].filter((f) => !fightBlocker(run, f.id, run.topTier)).sort((a, b) => effectivePower(b) - effectivePower(a))[0];
   const opp = opponentFor(run, run.topTier);
@@ -320,6 +364,8 @@ function stockItems(run) {
     if (buy('throwingNet')) return;
   }
   if (!star.injuries.length && powerGap <= 0 && buy('berserkerMushroom')) return;
+  // Stronger than the Boss: a wound item, a different one each time (7.6).
+  if (powerGap > 0 && buy(WOUND_ITEMS[run.week % WOUND_ITEMS.length])) return;
   if (buy('ironTonic')) return;
   buy('warPaint');
 }
@@ -422,7 +468,13 @@ function answerSummonsBot(run, strategy) {
 
 // `onWeek(run)`: optional, called at every step (for economy and other probes).
 // `opts.setup`: the career's setup (e.g. { short: true } for a short career).
+// 'brawler' (7.6): fights as well as the careful bot but neglects the house (no decor for Morale, no mole hunting), so
+// unrest and moles are met by a house that can still win.
 export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxWeeks = 400, onWeek = null, ...opts } = {}) {
+  if (strategy === 'brawler') {
+    strategy = 'careful';
+    opts = { ...opts, morale: false, hunt: false };
+  }
   const run = createRun(seed, opts.setup ?? {});
   let bouts = 0;
   // Version 6 (phase 5): dead months, the enemy of "one more turn". A fight month is dead when it ends with nothing new:
@@ -471,6 +523,7 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
     if (strategy === 'careful') carefulWeek(run, opts);
     else recklessWeek(run);
     advanceWeek(run);
+    if (moleOf(run)) usage(run).molesMet += 1; // weeks with a mole in the house (7.6)
   }
   const fought = run.history.filter((h) => !h.skipped && !h.forfeit);
   return {
@@ -485,6 +538,7 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
     deadMonths,
     fightMonths: Array.from({ length: run.week }, (_, w) => !isWinter(w)).filter(Boolean).length / 4, // the career's length in fight months
     relics: [...(run.relics ?? [])],
+    usage: { ...usage(run), crises: run.unrestStats?.crises ?? 0, incidents: run.unrestStats?.incidents ?? 0 },
     favor: run.favor,
     tier: run.topTier,
     endReason: run.endReason,

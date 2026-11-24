@@ -103,6 +103,8 @@ export function gateJobs({ careers = 200, quick = false } = {}) {
     ...group('legacy', plotN, 'careful', { setup: FULL_LEGACY }),
     ...group('heat1', plotN, 'careful', { setup: { ...FULL_LEGACY, heat: 1 } }),
     ...group('heat3', plotN, 'careful', { setup: { ...FULL_LEGACY, heat: 3 } }),
+    // 7.6: fights well, neglects the house (no Morale decor, no mole hunting).
+    ...group('brawler', plotN, 'brawler', { setup: SEASON }),
   ];
 }
 
@@ -116,12 +118,12 @@ export async function runGates({ careers = 200, quick = false, tunables = {} } =
   const of = (g) => results.filter((_, i) => jobs[i].group === g);
   return gatesFrom({
     careful: of('careful'), reckless: of('reckless'), rebel: of('rebel'), loyalist: of('loyalist'),
-    long: of('long'), legacy: of('legacy'), heat1: of('heat1'), heat3: of('heat3'),
+    long: of('long'), legacy: of('legacy'), heat1: of('heat1'), heat3: of('heat3'), brawler: of('brawler'),
     split: mergeSplits(of('split')), tactics: of('tactics')[0],
   });
 }
 
-export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, heat1 = [], heat3 = [], split, tactics }) {
+export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, heat1 = [], heat3 = [], brawler = [], split, tactics }) {
   const rate = (rs) => rs.filter((r) => r.won).length / rs.length;
   const deaths = (rs) => avg(rs.map((r) => r.deaths));
   const curve = bossCurve(careful);
@@ -143,6 +145,12 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, he
   // 7.3: neglecting Morale bites: reckless houses have at least 3× the unrest incidents and crises of careful ones.
   const unrestOf = (rs) => avg(rs.map((r) => (r.run.unrestStats?.incidents ?? 0) + (r.run.unrestStats?.crises ?? 0)));
   const unrestRatio = unrestOf(reckless) / Math.max(0.01, unrestOf(careful));
+  // 7.6: which careers used each system of 7.1–7.4 at all (share by group), and a gate that each one is used somewhere.
+  const SYSTEMS = { covertOps: 'Covert ops', woundItems: 'Wound items', temperament: 'Temperament decor', molesMet: 'Moles met', investigations: 'Investigations', crises: 'The Chains Break' };
+  const usageGroups = { careful, brawler, reckless, rebel, loyalist, legacy };
+  const usageTable = Object.fromEntries(Object.entries(usageGroups).filter(([, rs]) => rs.length).map(([g, rs]) => [g, Object.fromEntries(Object.keys(SYSTEMS).map((k) => [k, rs.filter((r) => (r.usage?.[k] ?? 0) > 0).length / rs.length]))]));
+  const allRuns = Object.values(usageGroups).flat();
+  const unused = Object.keys(SYSTEMS).filter((k) => !allRuns.some((r) => (r.usage?.[k] ?? 0) > 0));
   // 7.1: no Temperament piece is in more than 55% of winning careful houses (none becomes mandatory).
   const wonCareful = careful.filter((r) => r.won);
   const holds = (r, k) => r.run.roster.some((f) => f.decor?.[k] > 0);
@@ -167,11 +175,12 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, he
     { name: 'Season length: a won season takes 12–20 fight months', value: wonMonths, pass: wonMonths >= 12 && wonMonths <= 20, fmt: 'num' },
     { name: 'Dead turns: under 15% of fight months end with nothing new', value: dead, pass: dead < 0.15, fmt: 'pct' },
     { name: `Unrest separation: reckless houses have 3×+ the unrest incidents and crises of careful ones (${unrestOf(reckless).toFixed(2)} vs ${unrestOf(careful).toFixed(2)} a career)`, value: unrestRatio, pass: unrestOf(reckless) > 0 && unrestRatio >= 3, fmt: 'ratio' },
+    { name: `Every 7.1–7.4 system is used by some bot career${unused.length ? ` (unused: ${unused.map((k) => SYSTEMS[k]).join(', ')})` : ''}`, value: Object.keys(SYSTEMS).length - unused.length, pass: !unused.length, fmt: 'num' },
     { name: `No dominant Temperament decor: none is in more than 55% of winning careful houses (most: ${DECOR[topDecor].name})`, value: decorShare, pass: decorShare <= 0.55, fmt: 'pct' },
     { name: `No dominant relic: none is held in 20+ points more of won careers than of lost ones (top: ${liftRelic}; most held: ${topRelic}, ${Math.round(100 * topShare)}% of wins)`, value: topLift, pass: topLift < 0.2, fmt: 'pctDiff' },
     { name: 'Treason stays rare: under 10% of rebel careers', value: ending(rebel, 'treason'), pass: ending(rebel, 'treason') < 0.1, fmt: 'pct' },
     ...(heat1.length ? [{ name: 'Heat 1 bites: Full Legacy at Heat 1 wins 5+ points less often than at Heat 0 (same seeds)', value: rate(legacy) - rate(heat1), pass: rate(legacy) - rate(heat1) >= 0.05 && rate(heat1) >= 0.15, fmt: 'pctDiff' }] : []),
     ...(heat3.length ? [{ name: 'Heat 3 climbs further yet stays winnable: tougher than Heat 1 and at least 8% win rate', value: rate(heat3), pass: rate(heat3) < rate(heat1) && rate(heat3) >= 0.08, fmt: 'pct' }] : []),
   ];
-  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, long, legacy, heat1, heat3, meanXp, wonMonths, dead };
+  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, long, legacy, heat1, heat3, brawler, usageTable, SYSTEMS, meanXp, wonMonths, dead };
 }
