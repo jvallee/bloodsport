@@ -56,11 +56,15 @@ export const SCENES = {
     // PLACEHOLDER: the steward, plain and neutral, takes over as your guide.
     {
       speaker: "steward",
-      text: "It's okay, you can relax, he's gone. I am the steward of this house. I'll tell you what you need to know to not die on your first day.",
+      text: "You can breathe now. He's gone. He does that: arrives like a storm, leaves like one, and the rest of us count the broken roof tiles.",
     },
     {
       speaker: "steward",
-      text: "First, gladiators. The Market has a few for sale. Let's see what your purse can buy. I know buying people might not be the most ethical choice, but you can do that or die.",
+      text: "I'm the steward of this house. I keep its books, its keys and, lately, its secrets, which are mostly debts. I'll tell you what you need to know to not die on your first day. The second day is up to you.",
+    },
+    {
+      speaker: "steward",
+      text: "First, gladiators. The Market has a few for sale, and your purse can stretch to one or two. Yes, you'll be buying people. I won't pretend that's a kind thing. But on Battleworld the choice is to own fighters or to be one, and you don't look like a fighter.",
     },
   ],
   // The Emperor returns at a few turning points (PLACEHOLDER lines).

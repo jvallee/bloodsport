@@ -439,26 +439,26 @@ These are templates: keep the `${...}` parts. A line with several variants picks
 | [src/narrate.js:122](../src/narrate.js#L122) | winner === 'A' ? `${them} died in the arena. ${you} wins.` : `${you} died in the arena.` |
 | [src/narrate.js:132](../src/narrate.js#L132) | concussed: 'Concussed, the world spinning' |
 | [src/narrate.js:133](../src/narrate.js#L133) | poisoned: 'Poisoned (it counts as two injuries!)' |
-| [src/narrate.js:173](../src/narrate.js#L173) | `${second} is still dazed. ${name(init.first)} moves first.` |
-| [src/narrate.js:174](../src/narrate.js#L174) | `${name(init.first)} darts in first on quick feet.` |
-| [src/narrate.js:178](../src/narrate.js#L178) | `Against the odds, ${name(r.winner)} takes Round ${r.round}!` |
-| [src/narrate.js:179](../src/narrate.js#L179) | variant(r, [`${name(r.winner)} dominates Round ${r.round}.`, `${name(r.winner)} overpowers the opposition in Round ${r.round}.`] |
-| [src/narrate.js:180](../src/narrate.js#L180) | variant(r, [`${name(r.winner)} edges out Round ${r.round}.`, `${name(r.winner)} wins a hard-fought Round ${r.round}.`, `${name(r.winner)} takes Round ${r.round}.`] |
-| [src/narrate.js:189](../src/narrate.js#L189) | c.label === 'Off-hand strike' ? `${att}'s off-hand blade finds a gap!` : `${att}'s elven eyes spot an opening: a swift counter!` |
-| [src/narrate.js:190](../src/narrate.js#L190) | `${def} parries ${att}'s blow and ripostes!` |
-| [src/narrate.js:194](../src/narrate.js#L194) | `${att} lands a killing blow. ${def} falls and does not rise.` |
-| [src/narrate.js:197](../src/narrate.js#L197) | let text = `${att} lands a brutal blow: ${def} is ${INJURY_STORY[inj.tag]}.` |
-| [src/narrate.js:199](../src/narrate.js#L199) | if (inj.disabled?.length) text += ` ${def} loses ${inj.disabled.map((s) => slotName((c.defender === 'A' ? m.a : m.b).f, s)).join(' and ')} for this match.` |
-| [src/narrate.js:227](../src/narrate.js#L227) | `${you} fought on with the Death Gate open. When the Death Gate is open, capitulating or healing first keeps fighters alive.` |
-| [src/narrate.js:229](../src/narrate.js#L229) | `${you} entered overtrained (−1 Power, one ability lost). Rest the week before a fight to keep Stress under 50.` |
-| [src/narrate.js:230](../src/narrate.js#L230) | 'You saved your fighter. Heal them in the Medbay before the next bout.'; // capitulated: not "lost anyway" |
-| [src/narrate.js:234](../src/narrate.js#L234) | `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
-| [src/narrate.js:235](../src/narrate.js#L235) | `${you} was favoured in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.` |
-| [src/narrate.js:236](../src/narrate.js#L236) | `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.` |
-| [src/narrate.js:237](../src/narrate.js#L237) | `Their weapon pierced your armour. Against Gun or Flail fighters, armour won't save you; win the rounds instead.` |
-| [src/narrate.js:230](../src/narrate.js#L230) | 'You saved your fighter. Heal them in the Medbay before the next bout.' |
-| [src/narrate.js:234](../src/narrate.js#L234) | `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
-| [src/narrate.js:238](../src/narrate.js#L238) | 'An even fight that went the other way. Small edges add up: training, decor and fighting rested.' |
+| [src/narrate.js:177](../src/narrate.js#L177) | `${second} is still dazed. ${name(init.first)} moves first.` |
+| [src/narrate.js:178](../src/narrate.js#L178) | `${name(init.first)} darts in first on quick feet.` |
+| [src/narrate.js:182](../src/narrate.js#L182) | `Against the odds, ${name(r.winner)} takes Round ${r.round}!` |
+| [src/narrate.js:183](../src/narrate.js#L183) | variant(r, [`${name(r.winner)} dominates Round ${r.round}.`, `${name(r.winner)} overpowers the opposition in Round ${r.round}.`] |
+| [src/narrate.js:184](../src/narrate.js#L184) | variant(r, [`${name(r.winner)} edges out Round ${r.round}.`, `${name(r.winner)} wins a hard-fought Round ${r.round}.`, `${name(r.winner)} takes Round ${r.round}.`] |
+| [src/narrate.js:193](../src/narrate.js#L193) | c.label === 'Off-hand strike' ? `${att}'s off-hand blade finds a gap!` : `${att}'s elven eyes spot an opening: a swift counter!` |
+| [src/narrate.js:194](../src/narrate.js#L194) | `${def} parries ${att}'s blow and ripostes!` |
+| [src/narrate.js:198](../src/narrate.js#L198) | `${att} lands a killing blow. ${def} falls and does not rise.` |
+| [src/narrate.js:202](../src/narrate.js#L202) | let text = `${att} lands a brutal blow: ${def} is ${INJURY_STORY[inj.tag]}.` |
+| [src/narrate.js:204](../src/narrate.js#L204) | if (inj.disabled?.length) text += ` ${def} loses ${inj.disabled.map((s) => slotName((c.defender === 'A' ? m.a : m.b).f, s)).join(' and ')} for this match.` |
+| [src/narrate.js:232](../src/narrate.js#L232) | `${you} fought on with the Death Gate open. When the Death Gate is open, capitulating or healing first keeps fighters alive.` |
+| [src/narrate.js:234](../src/narrate.js#L234) | `${you} entered overtrained (−1 Power, one ability lost). Rest the week before a fight to keep Stress under 50.` |
+| [src/narrate.js:235](../src/narrate.js#L235) | 'You saved your fighter. Heal them in the Medbay before the next bout.'; // capitulated: not "lost anyway" |
+| [src/narrate.js:239](../src/narrate.js#L239) | `${you} was the stronger fighter (Delta +${Math.round(avgDelta)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
+| [src/narrate.js:240](../src/narrate.js#L240) | `${you} was favoured in the rounds (about ${Math.round(chance / 1000)}% each) and lost anyway: the dice turned. Keep sending them.` |
+| [src/narrate.js:241](../src/narrate.js#L241) | `${you} was out-powered (Delta ${worst}). Train Power, add Titles, or send a stronger fighter.` |
+| [src/narrate.js:242](../src/narrate.js#L242) | `Their weapon pierced your armour. Against Gun or Flail fighters, armour won't save you; win the rounds instead.` |
+| [src/narrate.js:235](../src/narrate.js#L235) | 'You saved your fighter. Heal them in the Medbay before the next bout.' |
+| [src/narrate.js:239](../src/narrate.js#L239) | `${you} was the stronger fighter (Delta +${Math.round(avg)}) and lost anyway: favourites still lose now and then. Keep sending them, and read the tactics to tip the odds further.` |
+| [src/narrate.js:243](../src/narrate.js#L243) | 'An even fight that went the other way. Small edges add up: training, decor and fighting rested.' |
 
 ## 8. The crowd's verdict (thumbs up or down) and fight-screen lines
 
@@ -696,11 +696,11 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:284](../src/dialogue.js#L284) | news.push(`Your house has reached level ${after.level}. ${opened.length ? `New in the Estate: ${opened.join(', ')}.` : 'There are new plots to build on in the Estate.'}` |
-| [src/dialogue.js:287](../src/dialogue.js#L287) | news.push('New gladiators have arrived in the Market.' |
-| [src/dialogue.js:289](../src/dialogue.js#L289) | if (after.liaison && after.liaison !== before.liaison) news.push('The Liaison has a new prisoner on offer.' |
-| [src/dialogue.js:290](../src/dialogue.js#L290) | if (after.armourer && after.armourer !== before.armourer && run.armourerStock.length) news.push('The Armourer has new stock.' |
-| [src/dialogue.js:292](../src/dialogue.js#L292) | for (const f of raisable(run).filter((x) => !(before.bodies ?? '').split(',').includes(x.id))) news.push(`The priests of Vulcan have taken ${f.name}'s body. They can raise them as a Revenant, for a price (the Market tab).` |
+| [src/dialogue.js:309](../src/dialogue.js#L309) | news.push(`Your house has reached level ${after.level}. ${opened.length ? `New in the Estate: ${opened.join(', ')}.` : 'There are new plots to build on in the Estate.'}` |
+| [src/dialogue.js:312](../src/dialogue.js#L312) | news.push('New gladiators have arrived in the Market.' |
+| [src/dialogue.js:314](../src/dialogue.js#L314) | if (after.liaison && after.liaison !== before.liaison) news.push('The Liaison has a new prisoner on offer.' |
+| [src/dialogue.js:315](../src/dialogue.js#L315) | if (after.armourer && after.armourer !== before.armourer && run.armourerStock.length) news.push('The Armourer has new stock.' |
+| [src/dialogue.js:317](../src/dialogue.js#L317) | for (const f of raisable(run).filter((x) => !(before.bodies ?? '').split(',').includes(x.id))) news.push(`The priests of Vulcan have taken ${f.name}'s body. They can raise them as a Revenant, for a price (the Market tab).` |
 
 **The Unnatural Temple of Vulcan and Revenants** (5.3.0; the name is yours to change too)
 
@@ -721,49 +721,49 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:182](../src/dialogue.js#L182) | if (r.sparedForBlood) heard.push(say("You have spared lives on the sand even when the crowd bayed for blood, and the risk of it was yours. People noticed.") |
-| [src/dialogue.js:183](../src/dialogue.js#L183) | else if (r.spared) heard.push(say(`You have shown mercy in the arena${r.spared > 1 ? ` ${r.spared} times` : ""}. The crowd forgets. We don't.`) |
-| [src/dialogue.js:184](../src/dialogue.js#L184) | if (r.released) heard.push(say("You have bought fighters, and then set them free. Hardly any Lanista does that.") |
-| [src/dialogue.js:185](../src/dialogue.js#L185) | if (r.killed >= 3 && !r.spared) heard.push(say(`You have turned your thumb down ${r.killed} times, and never up. They say you enjoy it. I hope they're wrong.`) |
-| [src/dialogue.js:186](../src/dialogue.js#L186) | else if (r.killed) heard.push(say(`You have finished beaten fighters${r.killed > 1 ? ` ${r.killed} times` : ""}. I won't pretend that makes this easier to say.`) |
-| [src/dialogue.js:187](../src/dialogue.js#L187) | if (r.morale !== null && r.morale >= 70) heard.push(say("Your fighters eat well and sleep warm. In this city, that counts for something.") |
-| [src/dialogue.js:188](../src/dialogue.js#L188) | else if (r.morale !== null && r.morale < 40) heard.push(say("Your fighters are miserable, and miserable people talk. Be careful who hears this.") |
-| [src/dialogue.js:189](../src/dialogue.js#L189) | if (!heard.length) heard.push(say("I don't know you yet. I'm telling you anyway, because there is no one else to tell.") |
-| [src/dialogue.js:192](../src/dialogue.js#L192) | { speaker: "narrator", text: `That night, ${f.name} asks to speak with you alone.` }, |
-| [src/dialogue.js:193](../src/dialogue.js#L193) | say("I am not what the guards wrote on my record. There is a rising against Silbannacus, and I am part of it. The broken chain you may see chalked on doors is ours."), |
-| [src/dialogue.js:195](../src/dialogue.js#L195) | say("No one should be owned by another. Not me by you, and not you by the Emperor. We are all his slaves, Lanista. Some of us just hold keys."), |
-| [src/dialogue.js:197](../src/dialogue.js#L197) | ...say(kind ? "I think you might be one of us, whether you know it or not. You'll hear from us. Watch the doors." : "I don't know what you are yet. But you'll hear from us. Watch the doors."), |
-| [src/dialogue.js:199](../src/dialogue.js#L199) | { label: "I'm listening.", then: [say("Good. Say nothing to anyone, and keep your eyes open.")] }, |
-| [src/dialogue.js:200](../src/dialogue.js#L200) | { label: "Why tell me?", then: [say("Because a Lanista with a ludus full of fighters is the most dangerous person in this city, if they choose to be.")] }, |
-| [src/dialogue.js:201](../src/dialogue.js#L201) | { label: "Say nothing.", then: [say("Silence. Fine. Silence keeps people alive here.")] }, |
+| [src/dialogue.js:204](../src/dialogue.js#L204) | if (r.sparedForBlood) heard.push(say("You have spared lives on the sand even when the crowd bayed for blood, and the risk of it was yours. People noticed.") |
+| [src/dialogue.js:205](../src/dialogue.js#L205) | else if (r.spared) heard.push(say(`You have shown mercy in the arena${r.spared > 1 ? ` ${r.spared} times` : ""}. The crowd forgets. We don't.`) |
+| [src/dialogue.js:206](../src/dialogue.js#L206) | if (r.released) heard.push(say("You have bought fighters, and then set them free. Hardly any Lanista does that.") |
+| [src/dialogue.js:207](../src/dialogue.js#L207) | if (r.killed >= 3 && !r.spared) heard.push(say(`You have turned your thumb down ${r.killed} times, and never up. They say you enjoy it. I hope they're wrong.`) |
+| [src/dialogue.js:208](../src/dialogue.js#L208) | else if (r.killed) heard.push(say(`You have finished beaten fighters${r.killed > 1 ? ` ${r.killed} times` : ""}. I won't pretend that makes this easier to say.`) |
+| [src/dialogue.js:209](../src/dialogue.js#L209) | if (r.morale !== null && r.morale >= 70) heard.push(say("Your fighters eat well and sleep warm. In this city, that counts for something.") |
+| [src/dialogue.js:210](../src/dialogue.js#L210) | else if (r.morale !== null && r.morale < 40) heard.push(say("Your fighters are miserable, and miserable people talk. Be careful who hears this.") |
+| [src/dialogue.js:211](../src/dialogue.js#L211) | if (!heard.length) heard.push(say("I don't know you yet. I'm telling you anyway, because there is no one else to tell.") |
+| [src/dialogue.js:214](../src/dialogue.js#L214) | { speaker: "narrator", text: `That night, ${f.name} asks to speak with you alone.` }, |
+| [src/dialogue.js:215](../src/dialogue.js#L215) | say("I am not what the guards wrote on my record. There is a rising against Silbannacus, and I am part of it. The broken chain you may see chalked on doors is ours."), |
+| [src/dialogue.js:217](../src/dialogue.js#L217) | say("No one should be owned by another. Not me by you, and not you by the Emperor. We are all his slaves, Lanista. Some of us just hold keys."), |
+| [src/dialogue.js:219](../src/dialogue.js#L219) | ...say(kind ? "I think you might be one of us, whether you know it or not. You'll hear from us. Watch the doors." : "I don't know what you are yet. But you'll hear from us. Watch the doors."), |
+| [src/dialogue.js:221](../src/dialogue.js#L221) | { label: "I'm listening.", then: [say("Good. Say nothing to anyone, and keep your eyes open.")] }, |
+| [src/dialogue.js:222](../src/dialogue.js#L222) | { label: "Why tell me?", then: [say("Because a Lanista with a ludus full of fighters is the most dangerous person in this city, if they choose to be.")] }, |
+| [src/dialogue.js:223](../src/dialogue.js#L223) | { label: "Say nothing.", then: [say("Silence. Fine. Silence keeps people alive here.")] }, |
 
 **The rebel speaks again** (src/dialogue.js `rebelStageScene`: once at each stage of the rising)
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:240](../src/dialogue.js#L240) | say("You copied the sign. They saw. From now on they'll ask you for small things: a door left open, a stranger fed, a name forgotten."), |
-| [src/dialogue.js:241](../src/dialogue.js#L241) | say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good."), |
-| [src/dialogue.js:245](../src/dialogue.js#L245) | say("They trust you now. More than they trust me, I think."), |
-| [src/dialogue.js:246](../src/dialogue.js#L246) | say("A rising needs a sword in the arena: one of your fighters, standing in the Grand Tournament when the Emperor watches. And it needs the barracks armed."), |
-| [src/dialogue.js:247](../src/dialogue.js#L247) | say("Choose your champion carefully, Lanista. If they fall, the rising falls with them."), |
-| [src/dialogue.js:250](../src/dialogue.js#L250) | say("It's ready. The blades are oiled, the crowd knows the signal, and your champion knows what to do."), |
-| [src/dialogue.js:251](../src/dialogue.js#L251) | say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box. We'll do the rest."), |
-| [src/dialogue.js:254](../src/dialogue.js#L254) | if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. Every favour you do us, they notice.") |
-| [src/dialogue.js:255](../src/dialogue.js#L255) | return [{ speaker: "narrator", text: `${f.name} finds you alone again.` }, ...lines]; |
+| [src/dialogue.js:263](../src/dialogue.js#L263) | say("You copied the sign. They saw. From now on they'll ask you for small things: a door left open, a stranger fed, a name forgotten."), |
+| [src/dialogue.js:264](../src/dialogue.js#L264) | say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good."), |
+| [src/dialogue.js:268](../src/dialogue.js#L268) | say("They trust you now. More than they trust me, I think."), |
+| [src/dialogue.js:270](../src/dialogue.js#L270) | say("A rising needs a sword in the arena: one of your fighters, standing in the Grand Tournament when the Emperor watches. And it needs the barracks armed."), |
+| [src/dialogue.js:271](../src/dialogue.js#L271) | say("Choose your champion carefully, Lanista. If they fall, the rising falls with them."), |
+| [src/dialogue.js:274](../src/dialogue.js#L274) | say("It's ready. The blades are oiled, the crowd knows the signal, and your champion knows what to do."), |
+| [src/dialogue.js:275](../src/dialogue.js#L275) | say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box. We'll do the rest."), |
+| [src/dialogue.js:279](../src/dialogue.js#L279) | if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. Every favour you do us, they notice.") |
+| [src/dialogue.js:280](../src/dialogue.js#L280) | return [{ speaker: "narrator", text: `${f.name} finds you alone again.` }, ...lines]; |
 
 **5.4.0: the rebel's slower reveal** (the confession now waits for trust; this scene comes first, after you copy the chalk sign)
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:242](../src/dialogue.js#L242) | say("Who are they? Not yet. Do this well, and one day I'll tell you."), |
-| [src/dialogue.js:255](../src/dialogue.js#L255) | return [{ speaker: "narrator", text: confessed ? `${f.name} finds you alone again.` : `${f.name} catches your eye across the yard, and waits until the guards have gone.` }, ...lines]; |
+| [src/dialogue.js:265](../src/dialogue.js#L265) | say("Who are they? Not yet. Do this well, and one day I'll tell you."), |
+| [src/dialogue.js:280](../src/dialogue.js#L280) | return [{ speaker: "narrator", text: confessed ? `${f.name} finds you alone again.` : `${f.name} catches your eye across the yard, and waits until the guards have gone.` }, ...lines]; |
 
 **5.4.0: the Emperor's demands, met and missed** (src/dialogue.js `demandMetScene`, `demandMissedScene`)
 
 | Where | Text |
 |---|---|
-| [src/dialogue.js:210](../src/dialogue.js#L210) | { speaker: "emperor", text: "Good. That is what I asked for, and you gave it to me. I remember those who please me." }, |
-| [src/dialogue.js:216](../src/dialogue.js#L216) | { speaker: "emperor", text: "I asked you for one thing, Lanista. One. The month is over, and I am still waiting." }, |
+| [src/dialogue.js:232](../src/dialogue.js#L232) | { speaker: "emperor", text: "Good. That is what I asked for, and you gave it to me. I remember those who please me." }, |
+| [src/dialogue.js:238](../src/dialogue.js#L238) | { speaker: "emperor", text: "I asked you for one thing, Lanista. One. The month is over, and I am still waiting." }, |
 
 **5.4.0: the Emperor's spy** (an ordinary event, once a career from Year 2; src/events.js `emperorsSpy`)
 
@@ -950,9 +950,9 @@ Version 6's new words. Rules text (numbers) must stay accurate; names and flavou
 | [src/data.js:336](../src/data.js#L336) | Wine Amphora: Plenty of comfort; shapes a Sanguine temper. The crowd warms to them: each fight starts with +5 Hype. |
 | [src/run/roster.js:410](../src/run/roster.js#L410) | Story: `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} changed their temper: now ${name}.` |
 | [src/run/roster.js:411](../src/run/roster.js#L411) | `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} have changed ${f.name}: now ${name}.`, 'event' |
-| [src/run/roster.js:419](../src/run/roster.js#L419) | `${f.name} meditates in the Rock Garden.`, 'good' |
+| [src/run/roster.js:419](../src/run/roster.js#L419) | `${f.name} spends the rest day raking the Rock Garden, and comes back quieter.`, 'good' |
 | [src/run/roster.js:421](../src/run/roster.js#L421) | `${f.name} sits with their fear of ${sc.vs} fighters` … `Meditated on their fear of ${sc.vs} fighters, and let it go.` |
-| [src/run/tournaments.js:559](../src/run/tournaments.js#L559) | Story: 'Won wounded, slept on spikes, and became Battle-Hardened.' |
+| [src/run/tournaments.js:559](../src/run/tournaments.js#L559) | Story: 'Won wounded, then slept the night on spikes, and woke Battle-Hardened.' |
 | [src/ui/views.js](../src/ui/views.js) `temperNote`, `temperLine` | "Already Choleric: keeps them so." / "Would make them … after 4 weeks as the room's main Temperament piece (2/4 so far)." / "Temper: …. Turning …: 2/4 weeks." / "Temperament tied: no piece leads, so their temper holds." |
 | [src/ui/components.js](../src/ui/components.js) `fighterCard` | The drift chip "→ 🌙 2/4" and its tooltip "Their room is changing their temper: …". |
 | [src/codex.js](../src/codex.js) `decor` | The Room decor entry's new opening (three groups, the Humour drift, the Spiky Bed). |
@@ -984,3 +984,25 @@ Version 6's new words. Rules text (numbers) must stay accurate; names and flavou
 | [src/quests.js](../src/quests.js) `AFTERMATH_LINES` | What the leader says after The Chains Break (coffers, the Palatine, put down), the steward's line when the leader was a palace mole, and the lines after a mole is turned, ransomed or executed (the steward's lines are yours to rewrite in their voice). |
 | [src/quests.js](../src/quests.js) `COUSIN_LINES` | 7.9: the cousin in the cells. The fighter's (or steward's) plea, "that is him on the Liaison's list", thanks once he is bought, and the line when he is executed. |
 | [src/hints.js](../src/hints.js) | 7.9: "… is executed in N weeks unless you buy him from the Liaison" and "build a Liaison … to buy him out of the cells". |
+
+## 18. Claude's first writing pass (7.9.1): still yours to rewrite
+
+At the designer's request (2026-11-24), Claude rewrote the thinnest PLACEHOLDER lines for more colour and detail. They are
+still first drafts in Claude's voice, not the designer's: the steward is meant to be dry and plain, the Emperor cruel and
+amused, the rebel earnest and guarded. Rewrite freely. Rules text (goals, numbers, choice labels) was left alone, and lists
+picked by the dice kept their length, so careers play the same.
+
+| Where | What was rewritten |
+|---|---|
+| [src/dialogue.js](../src/dialogue.js) `SCENES.opening` | The steward's first lines (now three beats: he's gone; who I am; buying people). |
+| [src/dialogue.js](../src/dialogue.js) `SCENES.firstBoss`, `tribute`, `lowFavor`, `grand` | The Emperor's return visits, a beat or two longer each. |
+| [src/dialogue.js](../src/dialogue.js) `ENDING_SCENES` | Every ending: the Grand won, coup, martyr, treason, Favour gone, broke, killed in the revolt. |
+| [src/dialogue.js](../src/dialogue.js) `rebelStageScene` | The rebel's favours, cause and ready scenes, and the Praetorian warning. |
+| [src/quests.js](../src/quests.js) `COUSIN_LINES` | The cousin in the cells: the plea, the Liaison list, saved, executed (fighter and steward versions). |
+| [src/quests.js](../src/quests.js) `AFTERMATH_LINES` | After The Chains Break and an unmasked mole. |
+| [src/quests.js](../src/quests.js) `MOLE_CLUES`, `MOLE_TELLS`, `LIAISON_LINES` | The four clues, the three market tells; "Rome" became "the empire" (the setting is Battleworld). |
+| [src/events.js](../src/events.js) `moleUnmasked`, `chainsBreak` | The two event cards' text (choice labels unchanged). |
+| [src/run/unrest.js](../src/run/unrest.js) | The brawl, the strongbox, the escape, the mess-hall muttering, the warning and the revolt log lines. |
+| [src/run/espionage.js](../src/run/espionage.js) | The whispers stopping, an innocent fighter searched, a covert op that works. |
+| [src/narrate.js](../src/narrate.js) `STRIKES`, `narrateStory` | Two strike lines for every weapon and class, more ways to tell a round won, a quiet round and a death. |
+| [src/run/roster.js](../src/run/roster.js), [src/run/tournaments.js](../src/run/tournaments.js) | A temper changed by decor, meditating in the Rock Garden, Battle-Hardened on the Spiky Bed. |

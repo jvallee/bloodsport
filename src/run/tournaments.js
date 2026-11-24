@@ -556,7 +556,7 @@ export function finishMatch(run, match) {
   if (fighter.alive && hardening && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
     fighter.scars = [...(fighter.scars ?? []), { id: 'hardened' }];
     summary.scar = 'Battle-Hardened';
-    chronicle(run, fighter, bloodied ? 'Won bloodied and became Battle-Hardened.' : 'Won wounded, slept on spikes, and became Battle-Hardened.');
+    chronicle(run, fighter, bloodied ? 'Won bloodied and became Battle-Hardened.' : 'Won wounded, then slept the night on spikes, and woke Battle-Hardened.');
   }
   const severe = fighter.alive && newInjuries.length && match.a.f.injuries.some((i) => i.weeksLeft === undefined && SEVERE.includes(i.tag));
   if (severe && next(run.rng.growth) < SCAR_CHANCE) {
@@ -638,7 +638,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   } else if (spikyHardens(match, fighter) && !(fighter.scars ?? []).some((sc) => sc.id === 'hardened')) {
     fighter.scars = [...(fighter.scars ?? []), { id: 'hardened' }];
     summary.scar = 'Battle-Hardened';
-    chronicle(run, fighter, 'Won wounded, slept on spikes, and became Battle-Hardened.');
+    chronicle(run, fighter, 'Won wounded, then slept the night on spikes, and woke Battle-Hardened.');
   }
   if (opp.rivalChampion) {
     rivalChampionResult(run, opp, fighter, tier, true, summary);

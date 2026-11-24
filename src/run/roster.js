@@ -408,7 +408,7 @@ export function driftHumour(run, f) {
   f.humor = dom.humor;
   delete f.humourDrift;
   chronicle(run, f, `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} changed their temper: now ${name}.`);
-  log(run, `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} have changed ${f.name}: now ${name}.`, 'event');
+  log(run, `${HUMOUR_DRIFT.weeks} weeks with the ${DECOR[dom.item].name} have changed ${f.name}. The others notice it first: ${f.name} is ${name} now.`, 'event');
 }
 
 // A Rest week with a Rock Garden: extra Stress relief, a little XP, and half a step toward conquering each fear.
@@ -416,7 +416,7 @@ export function meditate(run, f) {
   if (f.job !== 'rest' || !(f.decor?.rockGarden > 0) || f.kind === 'revenant') return;
   f.stress = clamp(f.stress - MEDITATION.stress, 0, STRESS.max);
   gainXp(run, f, MEDITATION.xp);
-  log(run, `${f.name} meditates in the Rock Garden.`, 'good');
+  log(run, `${f.name} spends the rest day raking the Rock Garden, and comes back quieter.`, 'good');
   for (const sc of (f.scars ?? []).filter((x) => x.id === 'afeared')) {
     fearStep(run, f, sc, MEDITATION.fear, `${f.name} sits with their fear of ${sc.vs} fighters`, `Meditated on their fear of ${sc.vs} fighters, and let it go.`);
   }
