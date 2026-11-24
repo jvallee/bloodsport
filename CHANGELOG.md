@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## Unreleased (7.8.1)
+
+- A vampire's Blood Drinker closing a Bleeding wound now says so (it used to say a Distraction closed).
+
 ## 7.8.0 (2026-11-24): fights with more feeling
 
 - **Last words:** when a career ends, the Emperor (or the narrator) has a final word, different for every way it can end. After The Chains Break, the revolt's leader says what they think of your answer, and an unmasked mole's fate gets a line of its own.
