@@ -63,6 +63,7 @@ let resultNotes = [];
 let eventIsWeighty = false; // a gamble, The Chains Break or an unmasked mole keeps its pop-up
 let scrollAfterRender = null; // a selector to bring into view after the next render
 let monthBefore = null; // before To fight day: { snap, mark } for the month's digest
+let helpTab = 'play'; // How to play's tab (7.8)
 let eventResult = null; // after an event card's choice: { title, lines } shown in a popup
 let logMark = 0; // the house log's length before an event choice
 let legacy = loadLegacy(null);
@@ -285,7 +286,7 @@ function render() {
   else body = ludusTab(run, oddsFor);
   checkScene();
   const guide = guideStep();
-  const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
+  const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal(helpTab) : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...resultNotes.map((r, i) => resultNotice(r, i)), ...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
@@ -549,7 +550,8 @@ const actions = {
       saveCodex();
     }
   },
-  help: () => { showHelp = !showHelp; },
+  help: () => { showHelp = !showHelp; helpTab = 'play'; },
+  'help-tab': (d) => { helpTab = d.tab === 'rules' ? 'rules' : 'play'; },
   'tutorial-done': (d) => { prefs.tutorial.push(d.step); savePrefs(); },
   'tutorial-skip': () => { prefs.tutorial = [...GUIDE, ...STEPS, ...FIGHT_STEPS].map((s) => s.id); savePrefs(); },
   'tutorial-replay': () => { prefs.tutorial = []; showHelp = false; savePrefs(); },

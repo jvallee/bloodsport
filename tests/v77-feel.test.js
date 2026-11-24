@@ -111,3 +111,13 @@ test('2.8 a death: the fight screen gives the eulogy and their story; the log sa
   run.status = 'lost';
   assert.match(endBanner(run, null), new RegExp(`class="fallen-faces"[^]*<small>${f.name}</small>`));
 });
+
+test('2.10 How to play has a second tab with the intro pages (the Power-gap rule among them)', async () => {
+  const { helpModal } = await import('../src/ui/views.js');
+  const { INTRO } = await import('../src/tutorial.js');
+  const play = helpModal();
+  assert.match(play, /data-action="help-tab" data-tab="rules"/);
+  const rules = helpModal('rules');
+  for (const page of INTRO.slice(1)) assert.ok(rules.includes(page.title), page.title);
+  assert.match(rules, /\+1 is 55% per round, \+3 is 70%/);
+});

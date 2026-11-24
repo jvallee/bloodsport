@@ -13,7 +13,7 @@ import {
   buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
   trainGain, renameBlocker, dominantTemperament, espState, canNarrow, investigateBlocker, opTarget, opChance, covertOpBlocker,
 } from '../run.js';
-import { stepText } from '../tutorial.js';
+import { stepText, INTRO } from '../tutorial.js';
 import {
   plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, buildingKnown, upgradeBlocker, levelInfo, maxLevel, effectAt,
 } from '../ludus.js';
@@ -937,9 +937,19 @@ export function marketTab(run) {
 
 // ---------- Help ----------
 
-export function helpModal() {
+// How to play: the short list ('play'), or the intro's pages on winning, losing, and Power and Speed ('rules', 7.8).
+export function helpModal(tab = 'play') {
+  const tabs = [['play', 'How to play'], ['rules', 'The rules in brief']].map(([k, label]) => `<button class="seg${tab === k ? ' on' : ''}" role="tab" aria-selected="${tab === k}" data-action="help-tab" data-tab="${k}">${label}</button>`).join('');
+  if (tab === 'rules') {
+    return `<div class="modal" role="dialog" aria-modal="true" aria-label="How to play"><div class="modal-body">
+    <button class="close" data-action="help" aria-label="Close">×</button>
+    <div class="segs help-tabs" role="tablist">${tabs}</div>
+    ${INTRO.slice(1).map((p) => `<h3>${esc(p.title)}</h3>${p.body}`).join('')}
+  </div></div>`;
+  }
   return `<div class="modal" role="dialog" aria-modal="true" aria-label="How to play"><div class="modal-body">
     <button class="close" data-action="help" aria-label="Close">×</button>
+    <div class="segs help-tabs" role="tablist">${tabs}</div>
     <h2>How to play</h2>
     <ol>
       <li><b>Recruit</b> gladiators in the Market.</li>
