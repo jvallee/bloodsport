@@ -2,7 +2,7 @@
 
 import { createRng, deriveSeed, next, pick } from '../rng.js';
 import { CIRCUITS, DECOR, PLOT, LOUNGE, QUESTS, FIGHTER_WANTS, REBEL_QUEST } from '../data.js';
-import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, stewardAlready, WANTS, REBEL_QUESTS } from '../quests.js';
+import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, stewardGrandDone, stewardAlready, WANTS, REBEL_QUESTS } from '../quests.js';
 import { MOOD_WEEKS } from '../events.js';
 import { maxLevel } from '../ludus.js';
 import {
@@ -35,7 +35,7 @@ export function stewardTasks(run) {
     q.steward = null;
     q.stewardIndex += 1;
     log(run, `The steward's assignment is done: ${task.goal}.${paid ? ` +${paid}.` : ''}`, 'good');
-    talk(run, `steward-done-${task.id}`, [{ speaker: 'steward', text: `${stewardDone(task)}${paid ? ` The house gains ${paid}.` : ''}` }]);
+    talk(run, `steward-done-${task.id}`, [{ speaker: 'steward', text: task.id === 'grand' ? stewardGrandDone(run) : `${stewardDone(task)}${paid ? ` The house gains ${paid}.` : ''}` }]);
   }
   if (run.status !== 'active') return;
   const already = [];
