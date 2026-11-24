@@ -127,7 +127,7 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
       </header>
       <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate', estateBadge)}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>
     </div>
-    ${run.bouts && run.boutPending && tab === 'ludus' ? '<button class="jump-bout" data-action="jump-bout">⚔ Fight day ↓</button>' : ''}`;
+    ${run.bouts && run.boutPending && tab === 'ludus' && !run.inMatch ? '<button class="jump-bout" data-action="jump-bout">⚔ Fight day ↓</button>' : ''}`;
 }
 
 // The coming bouts in your top arena, up to its Boss.

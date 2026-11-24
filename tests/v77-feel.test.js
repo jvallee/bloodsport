@@ -121,3 +121,20 @@ test('2.10 How to play has a second tab with the intro pages (the Power-gap rule
   for (const page of INTRO.slice(1)) assert.ok(rules.includes(page.title), page.title);
   assert.match(rules, /\+1 is 55% per round, \+3 is 70%/);
 });
+
+test('2.6 phone fight screen: the decision block holds the Death Gate alert, the tactics and Capitulate; no Fight day button in a fight', async () => {
+  const { fightView } = await import('../src/ui/fightView.js');
+  const { topbar } = await import('../src/ui/views.js');
+  const { createRun } = await import('../src/run.js');
+  const a = blank({ name: 'Aulus', injuries: [{ tag: 'poisoned', weight: 2 }] });
+  const m = createMatch({ a, b: blank({ id: 'b', name: 'Brutus' }), rng: createRng(2) });
+  for (const html of [fightView(m, { animateRound: 0 }, { name: 'X', tier: 1 })]) {
+    assert.match(html, /<div class="decide">[^]*MORTAL DANGER[^]*data-action="next-round"/);
+  }
+  m.round = 1; m.rounds = [{ ...m.rounds[0] }].filter(Boolean);
+  const run = createRun(82);
+  run.bouts = { 1: 'open' }; run.boutPending = true;
+  assert.match(topbar(run, 'ludus', 0, true), /jump-bout/);
+  run.inMatch = true;
+  assert.doesNotMatch(topbar(run, 'ludus', 0, true), /jump-bout/);
+});
