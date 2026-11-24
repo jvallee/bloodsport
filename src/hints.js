@@ -1,8 +1,8 @@
 // "What should I do next?": the single most useful prompt for the current state. Pure.
 
-import { STRESS, MORALE } from './data.js';
-import { arenaName, unlockedTiers, fightBlocker, jobBlocker, tributeDue, tributePaid, marketPrice, boutFor } from './run.js';
-import { weeksUntilWinter } from './calendar.js';
+import { STRESS, MORALE, UNREST, ESPIONAGE } from './data.js';
+import { arenaName, unlockedTiers, fightBlocker, jobBlocker, tributeDue, tributePaid, marketPrice, boutFor, espState, covertOpBlocker, opTarget } from './run.js';
+import { weeksUntilWinter, weeksUntilTournament } from './calendar.js';
 
 export function nextHint(run) {
   if (run.status !== 'active') return null;
@@ -38,6 +38,13 @@ export function nextHint(run) {
   const due = tributeDue(run);
   const weeks = weeksUntilWinter(run.week);
   if (weeks > 0 && weeks <= 4 && run.gold < due && !tributePaid(run)) return { text: `Save Gold: the ${due} Gold tribute is due in ${weeks} week${weeks === 1 ? '' : 's'} and you have ${run.gold}.`, tone: 'bad' };
+  // 7.7: unrest, moles and covert ops, ahead of the gentler hints.
+  const mutinous = run.roster.find((f) => f.morale < MORALE.mutinous);
+  if (mutinous) return { text: `${mutinous.name} is Mutinous (Morale ${mutinous.morale}): they refuse to fight and stir unrest${run.unrest ? ` (${run.unrest}/${UNREST.threshold})` : ''}. Calm them with decor, a better room or a win.`, tone: 'bad' };
+  if (espState(run).clues.length) return { text: `A mole has left clues in your house: investigate a fighter from their card (${ESPIONAGE.investigate} Gold), or see the whispers in the Estate.`, tone: 'warn', action: 'tab', tab: 'estate', label: 'Go to Estate' };
+  if (weeksUntilTournament(run.week) === 1 && Object.keys(ESPIONAGE.ops).some((k) => !covertOpBlocker(run, k))) {
+    return { text: `Your agents could work on ${opTarget(run)?.name ?? 'your next opponent'} before fight day: a covert op in the Estate.`, action: 'tab', tab: 'estate', label: 'Go to Estate' };
+  }
   const restless = run.roster.find((f) => f.morale < MORALE.restless);
   if (restless) return { text: `${restless.name} is Discontented (Morale ${restless.morale}): place decor or upgrade their quarters.`, tone: 'warn' };
   const idle = run.roster.find((f) => f.job === 'rest' && f.stress + STRESS.train < STRESS.overtrained && !jobBlocker(run, f.id, 'trainPower'));

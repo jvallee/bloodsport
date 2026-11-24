@@ -59,3 +59,10 @@ export function describeOdds(odds, oracle = 0) {
     deathPct: fmt(odds.death),
   };
 }
+
+// 7.7: the fighter fields a fight reads (src/fight.js, src/fortune.js). The odds cache keys on these, so a job click, a
+// week's Stress (which counts only through matchOptions' overtrained flag) or a story line doesn't redo the simulations.
+// A field the engine starts reading must be added here (oddsKey) (tests/v77-feel.test.js checks the ones left out).
+export const FIGHT_FIELDS = ['id', 'cls', 'alive', 'injuries', 'power', 'level', 'weapon', 'speed', 'kindTrait', 'gear', 'augments', 'titles',
+  'perks', 'legend', 'kills', 'humor', 'decor', 'scars', 'risen', 'renown', 'name', 'morale', 'kind', 'revenantOf', 'house', 'rivalChampion'];
+export const oddsKey = (f) => JSON.stringify(FIGHT_FIELDS.map((k) => f[k]));

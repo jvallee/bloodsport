@@ -258,9 +258,9 @@ End-screen titles and closing lines:
 
 | Where | Text |
 |---|---|
-| [src/ui/views.js:160](../src/ui/views.js#L160) | const ENDING_TITLES = { coup: '⛓ The Tyrant Falls', martyr: '⛓ The Rising Fails', treason: '⚖ Tried for Treason' } |
-| [src/ui/views.js:162](../src/ui/views.js#L162) | 'Some say a different house could have changed the empire.' |
-| [src/ui/views.js:163](../src/ui/views.js#L163) | 'The Emperor remembers your loyalty. So does everyone else.' |
+| [src/ui/views.js:162](../src/ui/views.js#L162) | const ENDING_TITLES = { coup: '⛓ The Tyrant Falls', martyr: '⛓ The Rising Fails', treason: '⚖ Tried for Treason' } |
+| [src/ui/views.js:164](../src/ui/views.js#L164) | 'Some say a different house could have changed the empire.' |
+| [src/ui/views.js:165](../src/ui/views.js#L165) | 'The Emperor remembers your loyalty. So does everyone else.' |
 
 ## 5. Career endings (all careers)
 
@@ -464,19 +464,19 @@ These are templates: keep the `${...}` parts. A line with several variants picks
 
 | Where | Text |
 |---|---|
-| [src/ui/views.js:1057](../src/ui/views.js#L1057) | The crowd waits${esc(m.opp)}'s fate${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}. ${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'} |
+| [src/ui/views.js:1060](../src/ui/views.js#L1060) | The crowd waits${esc(m.opp)}'s fate${esc(f?.name ?? 'Your fighter')} beat ${esc(m.opp)}. ${blood ? '👎 The crowd roars for blood!' : '👍 The crowd chants for mercy.'} |
 | Where | Text |
 |---|---|
 | [src/ui/fightView.js:41](../src/ui/fightView.js#L41) | const SUSPENSE = 1; // the pause ("Steel meets steel…") before the round's winner is announced |
-| [src/ui/fightView.js:176](../src/ui/fightView.js#L176) | s.champion ? row('The crowd', 'boos a champion back in the pits', 'bad') : s.crushing ? row('The crowd', 'jeers the mismatch', 'bad') : '' |
-| [src/ui/fightView.js:182](../src/ui/fightView.js#L182) | s.bribed ? row('Crowd Bribe', 'the crowd forgave the capitulation', 'good') : '' |
-| [src/ui/fightView.js:187](../src/ui/fightView.js#L187) | s.verdict && s.verdict === s.mercy ? row('The crowd', 'roars its approval', 'good') : '' |
-| [src/ui/fightView.js:197](../src/ui/fightView.js#L197) | // Thumbs up or down: the beaten opponent's fate, with what the crowd wants. |
-| [src/ui/fightView.js:204](../src/ui/fightView.js#L204) | const spare = blood ? `${favor}; ${house} will owe you a life (−1 Power against you)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale (the crowd agrees)` |
-| [src/ui/fightView.js:205](../src/ui/fightView.js#L205) | const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill (the crowd agrees)` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${m.house ? `; ${house} will swear a feud` : ''}` |
-| [src/ui/fightView.js:323](../src/ui/fightView.js#L323) | const pre = mortalDanger(m.a) ? `⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about ${Math.round(deathRisk(m) * 100)}% chance of death. Capitulating is only possible between rounds.` : '' |
-| [src/ui/fightView.js:327](../src/ui/fightView.js#L327) | const alert = danger ? `⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about ${Math.round(deathRisk(m) * 100)}% chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.` : '' |
-| [src/ui/fightView.js:397](../src/ui/fightView.js#L397) | ${last ? `Your round chance ${fmtPct(last.win.chance)}${animate ? `Steel meets steel…` : ''}${roundBanner(m, last, reveal)}` : 'The crowd roars. Three rounds; first to two wins.'} |
+| [src/ui/fightView.js:182](../src/ui/fightView.js#L182) | s.champion ? row('The crowd', 'boos a champion back in the pits', 'bad') : s.crushing ? row('The crowd', 'jeers the mismatch', 'bad') : '' |
+| [src/ui/fightView.js:188](../src/ui/fightView.js#L188) | s.bribed ? row('Crowd Bribe', 'the crowd forgave the capitulation', 'good') : '' |
+| [src/ui/fightView.js:193](../src/ui/fightView.js#L193) | s.verdict && s.verdict === s.mercy ? row('The crowd', 'roars its approval', 'good') : '' |
+| [src/ui/fightView.js:203](../src/ui/fightView.js#L203) | // Thumbs up or down: the beaten opponent's fate, with what the crowd wants. |
+| [src/ui/fightView.js:210](../src/ui/fightView.js#L210) | const spare = blood ? `${favor}; ${house} will owe you a life (−1 Power against you)` : `${favor}, +${MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale (the crowd agrees)` |
+| [src/ui/fightView.js:211](../src/ui/fightView.js#L211) | const kill = blood ? `+${MERCY.killRenown + MERCY.crowdRenown} Renown, +${MERCY.crowdMorale} Morale, a kill (the crowd agrees)` : `+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy), a kill${m.house ? `; ${house} will swear a feud` : ''}` |
+| [src/ui/fightView.js:332](../src/ui/fightView.js#L332) | const pre = mortalDanger(m.a) ? `⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about ${Math.round(deathRisk(m) * 100)}% chance of death. Capitulating is only possible between rounds.` : '' |
+| [src/ui/fightView.js:336](../src/ui/fightView.js#L336) | const alert = danger ? `⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about ${Math.round(deathRisk(m) * 100)}% chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}.` : '' |
+| [src/ui/fightView.js:406](../src/ui/fightView.js#L406) | ${last ? `Your round chance ${fmtPct(last.win.chance)}${animate ? `Steel meets steel…` : ''}${roundBanner(m, last, reveal)}` : 'The crowd roars. Three rounds; first to two wins.'} |
 
 ## 9. The house log (read all the time)
 
@@ -572,9 +572,9 @@ The "next step" bar (`src/hints.js`):
 | [src/hints.js:34](../src/hints.js#L34) | { text: `Optional: send a free fighter to ${open.map(arenaName).join(' or ')} for extra Gold and XP, or end the week.` } |
 | [src/hints.js:37](../src/hints.js#L37) | { text: `${injured.name} is injured: set their job to Medbay so they heal.`, tone: 'warn' } |
 | [src/hints.js:40](../src/hints.js#L40) | { text: `Save Gold: the ${due} Gold tribute is due in ${weeks} week${weeks === 1 ? '' : 's'} and you have ${run.gold}.`, tone: 'bad' } |
-| [src/hints.js:42](../src/hints.js#L42) | { text: `${restless.name} is Discontented (Morale ${restless.morale}): place decor or upgrade their quarters.`, tone: 'warn' } |
-| [src/hints.js:44](../src/hints.js#L44) | { text: `${idle.name} is resting with Stress ${idle.stress}: they could train this week.` } |
-| [src/hints.js:45](../src/hints.js#L45) | { text: 'Jobs are set. End the week (Space) or skip to the tournament (T).' } |
+| [src/hints.js:49](../src/hints.js#L49) | { text: `${restless.name} is Discontented (Morale ${restless.morale}): place decor or upgrade their quarters.`, tone: 'warn' } |
+| [src/hints.js:51](../src/hints.js#L51) | { text: `${idle.name} is resting with Stress ${idle.stress}: they could train this week.` } |
+| [src/hints.js:52](../src/hints.js#L52) | { text: 'Jobs are set. End the week (Space) or skip to the tournament (T).' } |
 
 ## 11. Codex lore
 
@@ -663,7 +663,7 @@ Every line below is a first draft. The rows show the code around the words; chan
 | [src/data.js:643](../src/data.js#L643) | kill: { goal: 'Finish a beaten opponent (thumbs down)', say: 'The crowd grows soft. Give them a death this month.' }, |
 | [src/data.js:644](../src/data.js#L644) | spare: { goal: 'Spare a beaten opponent (thumbs up)', say: 'The Senate calls me cruel. Show them my clemency: spare someone in the arena this month.' }, |
 | [src/data.js:645](../src/data.js#L645) | twoArenas: { goal: 'Win in two different arenas on fight day', say: 'Show me the depth of your house. Win in two of my arenas this month.' }, |
-| [src/main.js:183](../src/main.js#L183) | scene = { id: 'demand', beat: 0, beats: [{ speaker: 'emperor', text: DEMANDS[run.demand.id].say }, { speaker: 'steward', text: `The Emperor's demand: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day. Meet it and he pays in Favour and Gold; miss it and he remembers.` }] }; |
+| [src/main.js:188](../src/main.js#L188) | scene = { id: 'demand', beat: 0, beats: [{ speaker: 'emperor', text: DEMANDS[run.demand.id].say }, { speaker: 'steward', text: `The Emperor's demand: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day. Meet it and he pays in Favour and Gold; miss it and he remembers.` }] }; |
 | [src/run/houses.js:537](../src/run/houses.js#L537) | `The Emperor demands: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.`, 'event' |
 
 **The Patron Lounge** (policy names, and their rules text)
@@ -714,8 +714,8 @@ Every line below is a first draft. The rows show the code around the words; chan
 | [src/codex.js:36](../src/codex.js#L36) | 'kind:revenant': 'A gladiator who died on the sand and was carried to the Unnatural Temple of Vulcan. The smith-god\'s priests rebuild them in brass and stitched flesh. They remember every fight, and feel nothing at all.', |
 | [src/run/roster.js:409](../src/run/roster.js#L409) | `Raised from the dead in the Unnatural Temple of Vulcan, ${run.week - body.diedWeek} week${run.week - body.diedWeek === 1 ? '' : 's'} after falling. ${TRAITS[f.kindTrait].name}.` |
 | [src/run/roster.js:410](../src/run/roster.js#L410) | `The priests of Vulcan work through the night. ${f.name} walks out of the forge: a Revenant, brass where the wounds were${lost ? `, and a little weaker (${lost} Power)` : ''}.`, 'event' |
-| [src/ui/views.js:894](../src/ui/views.js#L894) | : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death, for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p> |
-| [src/ui/views.js:895](../src/ui/views.js#L895) | ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary small')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`; |
+| [src/ui/views.js:896](../src/ui/views.js#L896) | : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death, for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p> |
+| [src/ui/views.js:897](../src/ui/views.js#L897) | ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary small')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`; |
 
 **The rebel's confession** (5.3.0, src/dialogue.js `rebelScene`: the first political prisoner tells you about the rising; what they've heard depends on your record)
 
@@ -865,7 +865,7 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/ui/fightView.js:394](../src/ui/fightView.js#L394) | ${m.a.f.risen && !m.rounds?.length ? `<div class="sub chant">📣 The crowd remembers ${esc(m.a.f.name)}. They chant the name they buried: +${HYPE.risen} hype.</div>` : ''} |
+| [src/ui/fightView.js:403](../src/ui/fightView.js#L403) | ${m.a.f.risen && !m.rounds?.length ? `<div class="sub chant">📣 The crowd remembers ${esc(m.a.f.name)}. They chant the name they buried: +${HYPE.risen} hype.</div>` : ''} |
 | [src/run/tournaments.js:532](../src/run/tournaments.js#L532) | `Fought again, back from the dead. The crowd chanted their name.` |
 | [src/run/tournaments.js:533](../src/run/tournaments.js#L533) | `The crowd chants ${fighter.name}'s name: the dead fighter walks the sand again.`, 'event' |
 
@@ -873,7 +873,7 @@ Every line below is a first draft. The rows show the code around the words; chan
 
 | Where | Text |
 |---|---|
-| [src/ui/views.js:754](../src/ui/views.js#L754) | If nobody from your house fights here this week, the tournament goes ahead without you and the arena moves on. |
+| [src/ui/views.js:756](../src/ui/views.js#L756) | If nobody from your house fights here this week, the tournament goes ahead without you and the arena moves on. |
 
 ## 14. New in version 6 (first drafts, PLACEHOLDER)
 
