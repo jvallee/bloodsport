@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## Unreleased (7.8.1)
+## 7.8.1 (2026-11-24): fixes
 
 - **Phones:** the fight report no longer ends in half a screen of empty space once the fight is over.
 - **Two tabs:** after another tab took over a career, starting or switching to a different career in this tab didn't save it (and kept saying it was played in another tab) until you reloaded the page. It saves again now.
