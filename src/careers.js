@@ -44,19 +44,32 @@ export function careerLabel(run) {
 }
 
 // Save a career into its slot and refresh its entry (newest first).
+// `ok: false` when the browser refused the write (storage full): the entry keeps its last good "saved" time.
 export function saveCareer(storage, index, id, run, now = 0) {
-  storage.set(careerKey(id), serialize(run));
+  if (storage.set(careerKey(id), serialize(run)) === false) {
+    return { ...(index.list.find((e) => e.id === id) ?? { id }), ok: false };
+  }
   const entry = { id, seed: run.seed, label: careerLabel(run), status: run.status, savedAt: now };
   index.list = [entry, ...index.list.filter((e) => e.id !== id)];
   index.active = id;
   saveIndex(storage, index);
-  return entry;
+  return { ...entry, ok: true };
 }
 
 export const loadCareerText = (storage, id) => storage.get(careerKey(id));
 
-// Why a new career can't be started (or null): the list is full.
-export const newCareerBlocker = (index) => (index.list.length >= MAX_CAREERS ? `You keep ${MAX_CAREERS} careers at most: delete one first.` : null);
+// Why a new career can't be started (or null): only careers still in play count (ended ones make room, see makeRoom).
+export const newCareerBlocker = (index) => (index.list.filter((e) => e.status === 'active').length >= MAX_CAREERS
+  ? `You can have ${MAX_CAREERS} careers in play at most: finish or delete one first.` : null);
+
+// Before a new career: if the list is full, drop the oldest ended career (its result is kept in the Legacy record).
+export function makeRoom(storage, index) {
+  while (index.list.length >= MAX_CAREERS) {
+    const ended = index.list.filter((e) => e.status !== 'active' && e.id !== index.active).sort((a, b) => (a.savedAt ?? 0) - (b.savedAt ?? 0));
+    if (!ended.length) return;
+    removeCareer(storage, index, ended[0].id);
+  }
+}
 
 // Delete a career's save for good (never the one being played).
 export function removeCareer(storage, index, id) {

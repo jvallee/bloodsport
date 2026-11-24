@@ -1122,3 +1122,6 @@ export function fortunePanel(run, { animate = true } = {}) {
       ${button(`Let it pass (+${FORTUNE.pass} Gold)`, 'fortune-pass', {}, getIdleBlocker(run), 'btn small')}</div>
   </section>`;
 }
+
+// 7.5: the browser refused to save (storage full or blocked). Stays until a save works again.
+export const saveFailedBanner = () => `<div class="banner save-failed" role="alert"><b>⚠ This career is not being saved.</b> Your browser refused to store it (its storage may be full). Export your save now from <b>Careers</b>, or delete an old career to make room; progress since the last save will be lost if you close this page.</div>`;

@@ -2,6 +2,11 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## Unreleased (7.5.0)
+
+- **A save that fails is no longer silent:** if your browser refuses to store the career (its storage full, for example), a warning stays at the top of the page telling you to export your save, and the career list doesn't claim a fresh save.
+- **Finished careers no longer fill your career list:** only careers still in play count toward the limit of 8, and starting a new one makes room by dropping the oldest finished career (its result stays in your Legacy record).
+
 ## 7.4.1 (2026-11-23): fixes
 
 - **The Chains Break:** if the ringleader is secretly the palace's mole, turning the revolt on the Palatine now backfires: they run to the palace, are unmasked, and the palace grows more suspicious (they used to join the rebels' cause).

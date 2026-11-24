@@ -6,7 +6,8 @@ import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
-import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey } from './careers.js';
+import { saveFailedBanner } from './ui/views.js';
+import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom } from './careers.js';
 import { estimateOdds } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, dailySetup, careerSetup } from './legacy.js';
@@ -65,8 +66,9 @@ const storage = {
   get(key) {
     try { return localStorage.getItem(key); } catch { return null; }
   },
+  // false when the browser refuses the write (storage full or blocked), so a failed save is never silent.
   set(key, value) {
-    try { localStorage.setItem(key, value); } catch { /* storage unavailable */ }
+    try { localStorage.setItem(key, value); return true; } catch { return false; }
   },
   remove(key) {
     try { localStorage.removeItem(key); } catch { /* storage unavailable */ }
@@ -84,7 +86,12 @@ function loadPrefs() {
 const saveLegacy = () => storage.set(LEGACY_KEY, JSON.stringify(legacy));
 const saveCodex = () => storage.set(CODEX_KEY, JSON.stringify(codex));
 const savePrefs = () => storage.set(PREFS_KEY, JSON.stringify(prefs));
-const save = () => run && careerId && saveCareer(storage, careers, careerId, run, Date.now());
+// A failed save shows a lasting warning (render) until a later save works.
+let saveFailed = false;
+const save = () => {
+  if (!run || !careerId) return;
+  saveFailed = !saveCareer(storage, careers, careerId, run, Date.now()).ok;
+};
 
 // ---------- Odds cache (simulating is cheap but not free) ----------
 
@@ -275,7 +282,7 @@ function render() {
   const fortune = fortunePanel(run, { animate: fortuneDealKey(run) !== dealtHand });
   if (fortune) dealtHand = fortuneDealKey(run);
   document.body.dataset.house = run.setup?.colour ?? '';
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run))}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${saveFailed ? saveFailedBanner() : ''}${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run))}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   const stickyHead = app.querySelector('.sticky-head');
   if (stickyHead) document.documentElement.style.setProperty('--head-h', `${stickyHead.offsetHeight + 8}px`);
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
@@ -437,6 +444,7 @@ function openCareer(id) {
 function roomForCareer() {
   const why = newCareerBlocker(careers);
   if (why) { alert(why); careersOpen = true; render(); }
+  else makeRoom(storage, careers);
   return !why;
 }
 
