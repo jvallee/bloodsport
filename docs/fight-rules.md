@@ -1195,7 +1195,7 @@ Placeholder numbers (`ESPIONAGE`). Own dice (`run.rng.espionage`).
 | Number | Before → after | Why |
 |---|---|---|
 | `SHORT.oppPower` (Season Boss bonus per arena) | [2, 4, 9, 12] → [2, 4, 9, 10] | 4.1: the Imperial Boss was won less often per attempt (21%) than the Grand Tournament (31%). |
-| `SHORT.grandPower` | 19 → 21 | 4.1: the Grand is the climax; a new gate keeps it harder per attempt than the Imperial Boss. |
+| `SHORT.grandPower` | 19 (unchanged) | 4.1: swept with the Imperial Boss at 10 (careful / full Legacy / Heat 1 / Heat 3, 300 careers): 19 → 23 / 43 / 23 / 13%; 20 → 19 / 40 / 19 / 11%; 21 → 17 / 37 / 20 / 8%. 21 alone (first try) failed the full-Legacy and Heat 1 gates. A new gate keeps the Grand harder per attempt than the Imperial Boss. |
 | `KINDS.orc.basePower` | 6 → 5 | 4.4: Power 6 made up for the Orc having no combat trait; it now has three, about as strong as other kinds' (52.5% at equal Power vs 52–55%), and at its natural Power it won 58.5% against a Power-5 field. Every kind now starts at 5, as the Basa did in v6. |
 
 ### The cousin in the cells (the designer, 7.9)
@@ -1219,3 +1219,10 @@ Viper Venom, Blood Thinner and Blinding Powder wounded the opponent but changed 
 +0.1 points), so no price could bring them to the 0.4–0.65 points-per-Gold target. Each now also gives **+3% win chance**
 that round (`boost.win: 3000`), prices unchanged. Probe (`scripts/probes/item-value.js`, 6,000 even fights): a +2% rider gives
 0.26–0.30 points per Gold; **+3% gives Viper Venom 0.47, Blood Thinner 0.44, Blinding Powder 0.43** (chosen).
+
+### Covert ops (review finding)
+Covert ops cost a careful player wins. Probe (`scripts/probes/bot-options.js`, careful bot with ops on, 300 Season careers,
+seeds from 1000): no ops 18%; as built 14%; caught −2 Favour 15%; −2 Favour with Doctor the Wine 4 and Bribe the Armourer 5
+Gold 17%; **−2 Favour with costs 2 / 4 / 5 Gold 19%** (chosen: ops now break even for a sound player, and pay for a
+player who picks their moments). `ESPIONAGE.caughtFavor` −5 → −2; Steal the Playbook 3 → 2, Doctor the Wine 6 → 4,
+Bribe the Armourer 7 → 5 Gold. Chances unchanged.

@@ -648,7 +648,7 @@ export const DEMANDS = {
 export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] };
 
 // Season mode (short career): Tournament -> Boss per tier, scaled purses, training, market, and opponent Power.
-export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 10], grandPower: 21, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
+export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 10], grandPower: 19, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],
@@ -679,11 +679,11 @@ export const SUMMONS = { fromWeek: 5, chance: 0.1, refuseFavor: -40, surviveFavo
 export const ESPIONAGE = {
   flip: 0.25, palaceSuspicion: 40, plant: 0.15, plantDiscount: 0.5, clue: 0.5, act: 0.3, investigate: 2, offended: -5,
   leakPower: 1, palaceLeak: 3, executeSuspicion: -15, executeGlory: -3, executeMorale: -5, turnCost: 4, falsePlaybook: 10000, ransom: 8,
-  caughtFavor: -5, feudMonths: 3,
+  caughtFavor: -2, feudMonths: 3, // 7.9: -5 -> -2 and ops cheaper (3/6/7 -> 2/4/5): ops had cost a careful player wins
   ops: {
-    playbook: { name: 'Steal the Playbook', cost: 3, chance: 0.75, galleryBonus: 0.1, desc: "Read the opponent's Round-1 tactic exactly. Caught: they fight with Vengeance (+5% win)." },
-    wine: { name: 'Doctor the Wine', cost: 6, chance: 0.6, agentBonus: 0.15, desc: 'The opponent arrives Bleeding, or sluggish (−1 Power). Caught: −5 Favour and a 3-month feud with their house.' },
-    armourer: { name: 'Bribe the Armourer', cost: 7, chance: 0.6, desc: "The opponent's armour gear does nothing in the bout. Caught: −5 Favour, and the Gold is gone." },
+    playbook: { name: 'Steal the Playbook', cost: 2, chance: 0.75, galleryBonus: 0.1, desc: "Read the opponent's Round-1 tactic exactly. Caught: they fight with Vengeance (+5% win)." },
+    wine: { name: 'Doctor the Wine', cost: 4, chance: 0.6, agentBonus: 0.15, desc: 'The opponent arrives Bleeding, or sluggish (−1 Power). Caught: −2 Favour and a 3-month feud with their house.' },
+    armourer: { name: 'Bribe the Armourer', cost: 5, chance: 0.6, desc: "The opponent's armour gear does nothing in the bout. Caught: −2 Favour, and the Gold is gone." },
   },
 };
 
