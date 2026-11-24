@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## Unreleased (7.9.0)
+## 7.9.0 (2026-11-24): balance, and a cousin in the cells
 
 - **Wound items are worth buying:** Viper Venom, Blood Thinner and Blinding Powder now also give +3% win chance for the round you use them. Before, they wounded the opponent without helping you win the match.
 - **A revolt put down stays down:** after the guards break The Chains Break, the mutineers are cowed (Morale at least 30), so the barracks don't rise again a fortnight later.
