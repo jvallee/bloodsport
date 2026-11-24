@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## Unreleased (7.7.0)
+## 7.7.0 (2026-11-24): quicker and clearer fights
 
 - **Fewer clicks:** the result of an ordinary event or a Fortune card now appears as a notice at the top of the page instead of a pop-up you had to close. Gambles, The Chains Break, an unmasked mole and the month's digest still open their own pop-up.
 - **Unrest, moles and covert ops are easier to notice:** the hint bar now warns when a fighter is Mutinous (with the house's unrest), when a mole has left clues, and when your agents could still work on your next opponent before fight day. The Estate tab shows a dot when something waits there, and How to play explains all three.
