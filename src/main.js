@@ -6,7 +6,9 @@ import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
-import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey } from './careers.js';
+import { saveFailedBanner, loadFailedModal, summaryKey, otherTabBanner } from './ui/views.js';
+import { fightKey } from './ui/keys.js';
+import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom, careerKey } from './careers.js';
 import { estimateOdds } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, dailySetup, careerSetup } from './legacy.js';
@@ -38,6 +40,15 @@ let tab = 'ludus';
 let showHelp = false;
 let autoTimer = null;
 let revealTimer = null;
+// Until when (performance.now()) a round is still being revealed: its controls and any MORTAL DANGER warning aren't
+// visible yet, so a key or click only finishes the reveal (7.5, see src/ui/keys.js).
+let revealingUntil = 0;
+function finishReveal() {
+  revealingUntil = 0;
+  ui.animateRound = 0;
+  clearTimeout(revealTimer);
+  render();
+}
 let roundStartedAt = 0; // when the latest round began playing (auto-play waits for its story to finish, not for a fresh wait)
 const reducedMotion = () => Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 const ui = { animateRound: 0, showMath: false, auto: false, open: {} }; // open: fold-outs the player opened or closed, by data-key
@@ -65,8 +76,9 @@ const storage = {
   get(key) {
     try { return localStorage.getItem(key); } catch { return null; }
   },
+  // false when the browser refuses the write (storage full or blocked), so a failed save is never silent.
   set(key, value) {
-    try { localStorage.setItem(key, value); } catch { /* storage unavailable */ }
+    try { localStorage.setItem(key, value); return true; } catch { return false; }
   },
   remove(key) {
     try { localStorage.removeItem(key); } catch { /* storage unavailable */ }
@@ -84,7 +96,16 @@ function loadPrefs() {
 const saveLegacy = () => storage.set(LEGACY_KEY, JSON.stringify(legacy));
 const saveCodex = () => storage.set(CODEX_KEY, JSON.stringify(codex));
 const savePrefs = () => storage.set(PREFS_KEY, JSON.stringify(prefs));
-const save = () => run && careerId && saveCareer(storage, careers, careerId, run, Date.now());
+// A failed save shows a lasting warning (render) until a later save works.
+let saveFailed = false;
+// A saved career that wouldn't load: { id, message }, shown as a dialog with ways out.
+let loadFailed = null;
+// Another tab saved this career (7.5): this tab stops saving so it can't overwrite that progress.
+let otherTab = false;
+const save = () => {
+  if (!run || !careerId || otherTab) return;
+  saveFailed = !saveCareer(storage, careers, careerId, run, Date.now()).ok;
+};
 
 // ---------- Odds cache (simulating is cheap but not free) ----------
 
@@ -207,6 +228,7 @@ for (const type of ['click', 'change']) {
 }
 function activeModal() {
   if (bug) return 'bug';
+  if (loadFailed) return 'loadFailed';
   if (careersOpen) return 'careers';
   if (overtrainWarn) return 'overtrain';
   if (setupChoice) return 'setup';
@@ -257,7 +279,7 @@ function render() {
   else body = ludusTab(run, oddsFor);
   checkScene();
   const guide = guideStep();
-  const modal = careersOpen ? careersModal(careers, careerId) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
+  const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
@@ -275,7 +297,7 @@ function render() {
   const fortune = fortunePanel(run, { animate: fortuneDealKey(run) !== dealtHand });
   if (fortune) dealtHand = fortuneDealKey(run);
   document.body.dataset.house = run.setup?.colour ?? '';
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run))}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${otherTab ? otherTabBanner() : saveFailed ? saveFailedBanner() : ''}${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run))}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   const stickyHead = app.querySelector('.sticky-head');
   if (stickyHead) document.documentElement.style.setProperty('--head-h', `${stickyHead.offsetHeight + 8}px`);
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
@@ -334,8 +356,10 @@ function renderFight() {
   if (feed) feed.scrollTop = feed.scrollHeight;
   // Swap side cards from pre-round snapshot to post-round state at blow impact so death/wounds never spoil t=0s.
   const last = match.rounds.at(-1);
+  revealingUntil = 0;
   if (last && last.round === ui.animateRound && last.before && !reducedMotion()) {
     const timing = roundTiming(match, last, ui.showMath);
+    revealingUntil = performance.now() + (timing.end + 0.4) * 1000; // the controls fade in 0.3 s after the last line
     const snapMatch = match;
     const snapRound = last.round;
     revealTimer = setTimeout(() => {
@@ -402,15 +426,21 @@ function boot() {
   loadPrefs();
   careers = loadIndex(storage, () => freshId({ list: [] }, Date.now()));
   const urlSeed = Number(new URLSearchParams(location.search).get('seed'));
-  if (careers.active && openCareer(careers.active)) return;
+  const broken = careers.active;
+  const opened = broken ? openCareer(broken) : null;
+  if (opened === true) return;
   newRun(Number.isInteger(urlSeed) && urlSeed > 0 ? urlSeed : null);
+  // The saved career wouldn't load: say why and offer the way out, instead of silently starting afresh (its save is kept).
+  if (typeof opened === 'string') { loadFailed = { id: broken, message: opened }; render(); }
 }
 
-// Switch to a saved career (false if its save can't be read).
+// Switch to a saved career: true, or why it couldn't (the career being played stays as it was).
+// It is loaded and drawn before it becomes the active career.
 function openCareer(id) {
   const saved = loadCareerText(storage, id);
-  if (saved) {
-    try {
+  if (!saved) return 'Its save is missing from this browser.';
+  const before = { run, careerId, tab };
+  try {
       const loaded = deserialize(saved);
       resetCareerUiState();
       run = loaded;
@@ -424,19 +454,21 @@ function openCareer(id) {
         if (run.week > 0 || run.roster.length) markSceneSeen('opening');
         else scene = { id: 'opening', beat: 0 };
       }
-      save();
       render();
+      save();
       return true;
-    } catch (err) {
-      console.warn('Could not load the saved career:', err.message);
-    }
+  } catch (err) {
+    console.warn('Could not load the saved career:', err.message);
+    ({ run, careerId, tab } = before);
+    if (run) render();
+    return err.message;
   }
-  return false;
 }
 // A new career needs a free place in the list.
 function roomForCareer() {
   const why = newCareerBlocker(careers);
   if (why) { alert(why); careersOpen = true; render(); }
+  else makeRoom(storage, careers);
   return !why;
 }
 
@@ -471,12 +503,27 @@ const actions = {
     summaries = []; achieved = []; stewardNotes = [];
     gameAction('advance');
   },
-  'careers-open': () => { careersOpen = true; showHelp = false; },
+  'careers-open': () => { careersOpen = true; showHelp = false; loadFailed = null; },
+  'load-failed-close': () => { loadFailed = null; },
+  'load-failed-download': () => {
+    const text = loadCareerText(storage, loadFailed?.id);
+    if (!text) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    a.download = `blood-and-circus-save-${loadFailed.id}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  },
   'jump-bout': () => { scrollAfterRender = '.panel.bout'; }, // a phone, fight day: scrolled to once the page is redrawn
   'careers-close': () => { careersOpen = false; },
   'career-load': (d) => {
     careersOpen = false;
-    if (d.id !== careerId && openCareer(d.id)) return;
+    if (d.id !== careerId) {
+      const opened = openCareer(d.id);
+      if (opened === true) return;
+      loadFailed = { id: d.id, message: opened };
+      careersOpen = false;
+    }
     if (d.id !== careerId) alert('That save could not be loaded.');
     render();
   },
@@ -510,7 +557,7 @@ const actions = {
   'result-close': () => { eventResult = null; },
   'intro-replay': () => { scene = { id: 'opening', beat: 0 }; showHelp = false; },
   'dismiss-summary': (d) => {
-    summaries = summaries.filter((s) => `${s.week}-${s.tier}-${s.fighterId}` !== d.key);
+    summaries = summaries.filter((s) => summaryKey(s) !== d.key);
   },
   'notice-page': (d) => { noticePage = Number(d.page); },
   'auto-play': () => { ui.auto = !ui.auto; },
@@ -539,9 +586,12 @@ const actions = {
       if (!file) return;
       try {
         const data = importSave(await file.text());
-        if (!roomForCareer() || !confirm('Load this save as a new career? Your Codex and Legacy are replaced by the file\'s; your other careers are kept.')) return;
-        storage.set(CODEX_KEY, JSON.stringify(data.codex));
-        storage.set(LEGACY_KEY, JSON.stringify(data.legacy));
+        if (!roomForCareer() || !confirm('Load this save as a new career? Your other careers, Codex and Legacy are kept.')) return;
+        // Replacing your own Codex and Legacy is opt-in (7.5): Cancel keeps them.
+        if (confirm('Also replace your Codex and Legacy with the ones in the file? Cancel keeps yours.')) {
+          storage.set(CODEX_KEY, JSON.stringify(data.codex));
+          storage.set(LEGACY_KEY, JSON.stringify(data.legacy));
+        }
         const id = freshId(careers, Date.now());
         saveCareer(storage, careers, id, deserialize(data.career), Date.now());
         location.reload();
@@ -795,12 +845,33 @@ const pressButton = (selector) => {
   return Boolean(b && !b.disabled);
 };
 
+// A click on the fight screen while a round is still being revealed only finishes the reveal (no hidden control fires).
+fightEl.addEventListener('click', (e) => {
+  if (performance.now() < revealingUntil && e.target.closest?.('[data-action]')) {
+    e.preventDefault();
+    e.stopPropagation();
+    finishReveal();
+  }
+}, true);
+
+// Two tabs on one career would overwrite each other's saves; the tab that didn't save last steps back.
+window.addEventListener('storage', (e) => {
+  if (careerId && e.key === careerKey(careerId) && e.newValue !== null) {
+    otherTab = true;
+    render();
+  }
+});
+
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select')) return;
   const topModal = activeModal();
   if (topModal) {
     if (topModal === 'bug') {
       if (e.key === 'Escape' && !bug?.error) { bug = null; bugStatus = ''; renderBug(); }
+      return;
+    }
+    if (topModal === 'loadFailed') {
+      if (e.key === 'Escape') { loadFailed = null; render(); }
       return;
     }
     if (topModal === 'careers') {
@@ -835,6 +906,11 @@ document.addEventListener('keydown', (e) => {
       }
       return;
     }
+  }
+  if (match) {
+    const k = fightKey({ key: e.key, revealing: performance.now() < revealingUntil, danger: !match.over && mortalDanger(match.a), over: match.over });
+    if (k === 'finish-reveal') { e.preventDefault(); finishReveal(); return; }
+    if (k === 'ignore') { e.preventDefault(); return; }
   }
   if (e.key === ' ' || e.key === 'Enter') {
     if (e.target.closest?.('button, summary')) return; // let focused buttons and fold-outs work as usual

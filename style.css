@@ -317,6 +317,7 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .chip.drift { border-style: dashed; }
 .chip.bad { color: var(--bad); border-color: var(--bad); }
 .stat.unrest { color: var(--muted); font-size: 13px; }
+.banner.save-failed { border: 1px solid var(--bad); color: var(--text); background: color-mix(in srgb, var(--bad) 18%, transparent); padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; }
 .stat.unrest.high { color: var(--bad); }
 .chip.decor.off { opacity: 0.5; }
 .codex-group { margin-top: 16px; }

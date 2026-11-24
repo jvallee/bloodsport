@@ -2,6 +2,16 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.5.0 (2026-11-24): safer saves and fights
+
+- **No accidental rounds at the Death Gate:** while a round is still playing out, Space, Enter or a click only finishes showing it, so you always see the next round's choices (and any MORTAL DANGER warning) before acting. While MORTAL DANGER shows, Space and Enter do nothing: fighting on or capitulating takes a deliberate click.
+- **Two tabs on one career:** if you play a career in another tab, the older tab says so and stops saving, so it can't overwrite your newer progress.
+- **Importing a save keeps your own Codex and Legacy** unless you choose to replace them.
+- **Boss bracket notices:** each of a bracket's results can now be dismissed on its own (dismissing one closed them all).
+- **A career that won't load is no longer quietly replaced:** the game tells you why and lets you download that save, report a bug, open your careers, or play a new career. The broken save stays in your browser.
+- **A save that fails is no longer silent:** if your browser refuses to store the career (its storage full, for example), a warning stays at the top of the page telling you to export your save, and the career list doesn't claim a fresh save.
+- **Finished careers no longer fill your career list:** only careers still in play count toward the limit of 8, and starting a new one makes room by dropping the oldest finished career (its result stays in your Legacy record).
+
 ## 7.4.1 (2026-11-23): fixes
 
 - **The Chains Break:** if the ringleader is secretly the palace's mole, turning the revolt on the Palatine now backfires: they run to the palace, are unmasked, and the palace grows more suspicious (they used to join the rebels' cause).
