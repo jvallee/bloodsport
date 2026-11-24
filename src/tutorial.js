@@ -1,7 +1,8 @@
 // Intro story and guided tutorial steps. Pure: picks the step to show from the game state.
 
-import { STRESS } from "./data.js";
-import { currentBout, trainGain } from "./run.js";
+import { STRESS, MORALE, UNREST, ESPIONAGE } from "./data.js";
+import { currentBout, trainGain, tributePaid, espState } from "./run.js";
+import { weeksUntilWinter } from "./calendar.js";
 import { trainCap as trainCapFor } from "./ludus.js";
 import { mortalDanger } from "./fight.js";
 
@@ -42,7 +43,7 @@ export const GUIDE = [
     goal: (r) => r.roster.length >= 1,
     tab: "market",
     focus: '[data-action="recruit"]',
-    text: "Let's start with one gladiator. In the Market, look at each one's <b>Power</b> (the sword: wins rounds) and <b>Speed</b> (the arrow: strikes first), then press <b>Recruit</b> on at least one of them.",
+    text: "Let's start with one gladiator. In the Market, look at each one's <b>Power</b> (the sword: wins rounds) and <b>Speed</b> (the arrow: strikes first). Higher is better, and dearer. Press <b>Recruit</b> on one you can afford; one is enough to start.",
   },
   {
     id: "jobs",
@@ -75,7 +76,15 @@ export const GUIDE = [
     goal: (r) => r.history.length > 0,
     tab: "ludus",
     focus: '[data-action="fight"]',
-    text: "Fight day. Each fighter's line shows their odds, injury risk and the Power both sides will fight with. Sending one costs a little <b>Prestige</b>; winning pays it back with more. Pick your best and press <b>Send</b>.",
+    text: "Fight day. Each fighter's line shows their odds (Favoured, Even fight, Underdog), the risk of injury and death, and the Power both sides bring. Sending one costs a little <b>Prestige</b>; winning pays it back with more. Pick your best and press <b>Send</b>. You'll watch from the box and choose a tactic each round.",
+  },
+  {
+    id: "firstweekend",
+    when: (r) => r.history.some((h) => !h.skipped && !h.forfeit) && Boolean(r.bouts) && r.history.length <= 2,
+    goal: (r) => !r.bouts,
+    tab: "ludus",
+    focus: '[data-action="advance"]',
+    text: "Your first fight is done. Win or lose, it paid Gold and XP. If anyone came back hurt, set their job to <b>Medbay</b>: wounds stay until they heal. Then <b>End week</b>: a new month brings new gladiators to the Market and a new tournament. From here on, you're the Lanista; I'll only speak up when there's something new.",
   },
 ];
 
@@ -85,7 +94,7 @@ export const STEPS = [
     id: "trainerCap",
     when: (r) => r.roster.some((f) => f.trained >= trainCapFor(r)),
     title: "The Trainer cap",
-    body: "A fighter has learned everything this Trainer Room can teach. Upgrade the <b>Trainer Room</b> in the Estate to raise the cap (3 → 5 → 8 → 13 → 21 training weeks per fighter). Each level also raises the weekly fee by 1 Gold per trainee, so plan your Gold.",
+    body: "A fighter has learned everything this Trainer Room can teach. Upgrade the <b>Trainer Room</b> in the Estate to raise the cap (3 → 5 → 8 → 13 → 21 training weeks per fighter). Each level also raises the weekly fee by 1 Gold per trainee, so plan your Gold. Until then, a capped fighter is better off resting, fighting, or teaching by example.",
   },
   {
     id: "stress",
@@ -97,7 +106,7 @@ export const STEPS = [
     id: "aftermath",
     when: (r) => r.history.some((h) => !h.skipped && !h.forfeit),
     title: "After the fight",
-    body: "Wins pay Gold and Prestige; losses pay a little Gold. Injuries <b>stay until healed</b>: put hurt fighters on the <b>Medbay</b> job. Check the house log on the left to see what happened each week.",
+    body: "Wins pay Gold and Prestige; losses pay a little Gold. Injuries <b>stay until healed</b>: put hurt fighters on the <b>Medbay</b> job. The house log on the left keeps everything that happens, and each fighter's <b>Story</b> keeps what happened to them. I read both. Someone should.",
   },
   {
     id: "injury",
@@ -115,7 +124,7 @@ export const STEPS = [
     id: "levelup",
     when: (r) => r.roster.some((f) => f.pendingPerks.length),
     title: "Level up!",
-    body: "Every match earns XP. When a fighter levels up, pick <b>one of three perks</b> on their card. Some perks need both Power and Speed, which is a reason to build balanced fighters.",
+    body: "Every match earns XP, a win more than a loss. When a fighter levels up, pick <b>one of three perks</b> on their card; the week can't end until you do. Some perks need both Power and Speed, which is a reason to build balanced fighters. At level 3 a fighter learns a <b>signature move</b>: once a fight, at a moment you choose.",
   },
   {
     id: "arenas",
@@ -128,6 +137,42 @@ export const STEPS = [
     when: (r) => r.roster.some((f) => f.renown >= 4 || f.morale < 45),
     title: "Keep your stars happy",
     body: "Winning makes fighters famous (<b>Renown</b>), and famous fighters expect better rooms. Their <b>Morale</b> drifts toward comfort minus expectations: place decor, upgrade Quarters, build an Entertainment Room. Inspired fighters fight better; Discontented ones won't train.",
+  },
+  {
+    id: "event",
+    when: (r) => !r.event && (r.recentEvents ?? []).length > 0,
+    title: "The house has a life of its own",
+    body: "That won't be the last surprise. Most months something happens in a house like this: a visitor, a quarrel, an offer. Each card says what every choice costs and gives, in plain numbers. Where it says <b>a gamble</b>, it means it. And some cards aren't what they seem; I'd read the prison records, if I were you.",
+  },
+  {
+    id: "fortune",
+    when: (r) => Boolean(r.fortune),
+    title: "Fortune's wheel",
+    body: "At the start of some months the wheel of Fortune turns for your house. Take <b>one card</b>: a boon for the month, or a <b>relic</b> that stays with the house. You may spin again once, but the next hand might be worse. Fortune is like that.",
+  },
+  {
+    id: "tribute",
+    when: (r) => weeksUntilWinter(r.week) > 0 && weeksUntilWinter(r.week) <= 8 && !tributePaid(r),
+    title: "The Emperor's tribute",
+    body: "Winter is coming, and with it the Emperor's yearly <b>tribute</b>; the Ludus shows how much and when. Pay it early if you like. If the strongbox is short when it falls due, it costs <b>Imperial Favour</b>, and at 0 Favour he executes you. I keep a little aside. You should too.",
+  },
+  {
+    id: "mutinous",
+    when: (r) => r.roster.some((f) => f.morale < MORALE.mutinous),
+    title: "A Mutinous fighter",
+    body: `A fighter below Morale ${MORALE.mutinous} is <b>Mutinous</b>: they won't fight, they stir up <b>unrest</b>, and some nights they brawl, steal or go over the wall. If unrest reaches ${UNREST.threshold}, the chains break: a revolt in your own barracks. Calm them with decor, a better room, or a win.`,
+  },
+  {
+    id: "mole",
+    when: (r) => espState(r).clues.length > 0,
+    title: "Someone is talking",
+    body: `A clue: someone in your house sends word to a rival, or the palace. Every week a mole stays, they sell what they learn. Investigate a fighter from their card for <b>${ESPIONAGE.investigate} Gold</b>; the wrong one will resent it. The Estate keeps the clues together.`,
+  },
+  {
+    id: "liaison",
+    when: (r) => (r.liaisonOffers ?? []).length > 0,
+    title: "Prisoners for sale",
+    body: "The Liaison buys prisoners out of the city cells: cheap fighters, often hurt, always grateful, or so they say. Read their <b>prison records</b> before you buy. Not every prisoner is what the guards wrote down.",
   },
   {
     id: "estate",

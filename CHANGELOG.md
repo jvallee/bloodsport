@@ -2,6 +2,16 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.10.0 (2026-11-25): a bolder rebellion, and a better tutorial
+
+- **A better tutorial:** the first month now ends with a word from your steward after your first fight (heal the hurt, end the week, and you're on your own). New tips explain, the first time they matter: random events, Fortune's wheel, the Emperor's tribute, a Mutinous fighter, a mole's clues, and the Liaison's prisoners. The older tips say a little more (signature moves at level 3, the fighter's Story).
+- **The palace has a face:** Prefect Aulus Crassinus calls on your house as the palace's suspicion grows: a courtesy call, a dinner with your neighbours, a report he is writing slowly. He leads the raid and makes the offer to name names.
+- **The cousin comes back:** if you bought him out of the cells, he is there at the end: first over the rail at the coup, or among the executed if you named the names.
+- **Endings set the scene:** every ending now opens with a moment before anyone speaks (on the coup, your champion turning towards the imperial box), and the Emperor's visits begin with a lead-in instead of starting cold. Winning on the loyalist side has its own ending, and your steward's last word fits how the career ended (no more "don't let it go to your head" after the Emperor is dead).
+- **The rising talks back:** each of the rebel's scenes ends with three replies of your own, each with its own answer. Before the Grand Tournament the rebel whispers to you if the rising is ready, and a suspicious Emperor mentions your house's late nights. The first time the palace grows watchful, the rebel warns you; when it turns cold, your steward does.
+- **The rebellion asks for more, and the palace notices:** five new requests from the rebels: hosting a meeting in your cellar, a letter sewn into a fighter's gear, a printing press behind the grain, a broken-chain salute to the stands on fight day, and copying the arena guards' rota. Each helps the cause and draws the palace's eye. Political prisoners draw more suspicion, and it fades more slowly.
+- **A search of the barracks:** once the palace is suspicious and your barracks hide the rebels' steel, the Praetorians may come with a writ. Let them search, grease the sergeant, or stall them while the steel goes over the wall.
+
 ## 7.9.2 (2026-11-24): no fights left behind
 
 - **Ending the week on fight day asks first** if a fighter could still fight in an open arena: your steward names who and where. Go back to the fights, or end the week anyway.

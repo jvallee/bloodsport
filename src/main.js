@@ -16,7 +16,7 @@ import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, 
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
-import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene, endingScene } from './dialogue.js';
+import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene, endingScene, returnScene } from './dialogue.js';
 import { DEMANDS, DEMAND, CIRCUITS, SUMMONS } from './data.js';
 import { snapshot, monthDigest } from './digest.js';
 import { fightView, diceTime, setFightPace, roundTiming, roundEndTime, sideCardHtml } from './ui/fightView.js';
@@ -214,7 +214,7 @@ function checkScene() {
   const id = dueScene(run, scenesSeen());
   if (id) {
     markSceneSeen(id);
-    scene = { id, beat: 0 };
+    scene = { id, beat: 0, beats: returnScene(id, run) };
   }
 }
 // A scene's beats, with any reply you chose spliced in.

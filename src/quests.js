@@ -55,6 +55,12 @@ export const STEWARD_TASKS = [
 ];
 export const STEWARD_INTRO = 'This house was great once, before your predecessor drank it away. Everyone else left. I stayed; I\'m still not sure why. I kept a list of what we lost. We might as well win it back, one thing at a time.';
 export const stewardAlready = (goals) => `I was going to ask for this next: ${goals.join('; ')}. You'd already done it. I'll cross it off and let people think it was my idea.`;
+// The last task (7.10, the designer: "Try not to let it go to your head" read oddly after a coup). PLACEHOLDER lines.
+export function stewardGrandDone(run) {
+  if (run.ending === 'coup') return 'There is no Emperor to pay tribute to. I have been staring at the ledger for an hour, Lanista, and I don\'t know what we owe anyone now. I find I don\'t mind. I\'ll start a new book.';
+  if (run.plot?.ended === 'loyalist') return 'Master of the Games. The palace sent wine; I had it tasted twice. Some of the names you gave them used to eat at our table. I\'ve stopped setting their places.';
+  return 'Master of the Games. I went through the house from cellar to roof, counting, and there is nothing left on my list of things we lost. I may hum after all. Quietly. Don\'t tell anyone.';
+}
 export const stewardDone = (task) => `Done: ${task.goal.charAt(0).toLowerCase()}${task.goal.slice(1)}. The house is a little more itself again. Try not to let it go to your head.`;
 
 // ---------- What fighters want ----------

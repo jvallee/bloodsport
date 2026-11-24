@@ -696,7 +696,8 @@ export const PLOT = {
   cause: { trust: 4, favours: 3, weeks: 12, houseLevel: 3 }, ready: { trust: 6 }, offerAfter: 15, maxTrust: 10, priestMorale: 5,
   // confessTrust (5.4.0, the designer: the rebel told everything the week they arrived): the confession waits for this much trust.
   confessTrust: 3,
-  suspicion: { perPrisoner: 1, perContact: 1, decay: 2, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
+  // 7.10 (the designer: the rebellion should draw more suspicion): perPrisoner 1 -> 2, decay 2 -> 1 a month.
+  suspicion: { perPrisoner: 2, perContact: 1, decay: 1, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
   // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
-  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, clemencyFavor: 8, betrayFavor: 30, betrayGold: 22, betrayRelic: 'eagle', // betrayGold: the Emperor's purse for the names, × tier
+  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, searchBribe: 6, clemencyFavor: 8, betrayFavor: 30, betrayGold: 22, betrayRelic: 'eagle', // betrayGold: the Emperor's purse for the names, × tier
 };

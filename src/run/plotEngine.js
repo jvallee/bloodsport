@@ -3,13 +3,13 @@
 import { int, next, pick } from '../rng.js';
 import { CIRCUITS, GEAR, SPY, POLITICAL, PLOT, SHORT, FORTUNE } from '../data.js';
 import { RELICS, hasRelic } from '../fortune.js';
-import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed } from '../plot.js';
+import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, SUSPICION_LINES, PREFECT_LINES, isArmed } from '../plot.js';
 import { MOOD_WEEKS } from '../events.js';
 import { dateOf } from '../calendar.js';
 import { medbaySlots, maxLevel, effectAt } from '../ludus.js';
 import {
   GRAND_TIER, clamp, log, findFighter, chronicle, bumpMorale, isShort, hasPolicy,
-  removeFighter, changeFavor,
+  removeFighter, changeFavor, talk,
 } from './helpers.js';
 
 // Some prisoners are secretly political; their record carries clues and they come cheap.
@@ -42,7 +42,25 @@ export function joinPlot(run, f) {
   if (!run.plot.cells.includes(f.political.cell)) run.plot.cells.push(f.political.cell);
 }
 
-export const changeSuspicion = (run, n) => { run.plot.suspicion = clamp(run.plot.suspicion + n, 0, 100); };
+export const changeSuspicion = (run, n) => {
+  const before = run.plot.suspicion;
+  run.plot.suspicion = clamp(run.plot.suspicion + n, 0, 100);
+  suspicionWarnings(run, before);
+};
+// The first time suspicion crosses the informer and cold lines, someone says so (7.10; cosmetic: talk only). PLACEHOLDER.
+function suspicionWarnings(run, before) {
+  const p = run.plot;
+  const s = PLOT.suspicion;
+  const rebel = run.roster.find((f) => f.political);
+  const prefect = (key) => ({ speaker: 'prefect', text: PREFECT_LINES[key] });
+  if (before < s.watch && p.suspicion >= s.watch) talk(run, 'suspicion-watch', [prefect('watch')]);
+  if (before < s.informer && p.suspicion >= s.informer) {
+    talk(run, 'suspicion-informer', [prefect('informer'), rebel
+      ? { speaker: 'rebel', fighterId: rebel.id, text: SUSPICION_LINES.informer }
+      : { speaker: 'steward', text: SUSPICION_LINES.informerSteward }]);
+  }
+  if (before < s.cold && p.suspicion >= s.cold) talk(run, 'suspicion-cold', [prefect('cold'), { speaker: 'steward', text: SUSPICION_LINES.cold }]);
+}
 
 export function addContact(run, name, cell, how) {
   run.plot.freed.push({ name, cell, how, week: run.week, caught: false });
@@ -159,6 +177,7 @@ export function applyPlotEffects(run, eff, ev, out) {
   if (eff.pass) { p.pass = true; out.push('the pass is hidden in your strongbox'); }
   if (eff.usePass) p.pass = false;
   if (eff.armed) p.armed = true;
+  if (eff.disarm) { p.armed = false; out.push('the hidden steel is found and carried off'); }
   if (eff.giveGear) {
     run.inventory.gear.sort((a, b) => (GEAR[a]?.price ?? 0) - (GEAR[b]?.price ?? 0));
     let left = eff.giveGear - run.inventory.gear.splice(0, eff.giveGear).length;
@@ -237,6 +256,8 @@ export function betray(run) {
     log(run, `With the purse comes a gift from the palace: ${RELICS[gift].name}. ${RELICS[gift].desc}`, 'event');
   }
   run.epilogue = [...(run.epilogue ?? []), victims.length ? `Executed on your word: ${victims.join(', ')}.` : 'You gave the Emperor names. He made sure they were the right ones.'];
+  // 7.10: a callback to the cousin in the cells (PLACEHOLDER line).
+  if (run.cousin?.done === 'saved' && victims.includes(run.cousin.name)) run.epilogue.push(`${run.cousin.name} was among them: the cousin you once bought out of the cells. The fighter who begged you for his life watched from the barracks window.`);
   endPlot(run, 'loyalist');
 }
 
@@ -253,6 +274,8 @@ export function resolveCoup(run, fighter, won, final, reason = null) {
     run.endReason = `${fighter.name} wins the Final, turns, and climbs into the imperial box. Silbannacus falls on the sand he filled with blood. The empire is yours to remake.`;
     const freed = p.freed.filter((c) => !c.caught).map((c) => c.name);
     if (freed.length) run.epilogue = [...(run.epilogue ?? []), `In the crowd, the people you freed were the first to cheer: ${freed.join(', ')}.`];
+    // 7.10: a callback to the cousin in the cells (PLACEHOLDER line).
+    if (run.cousin?.done === 'saved' && run.cousin.name) run.epilogue = [...(run.epilogue ?? []), `${run.cousin.name}, the cousin you once bought out of the cells, was the first over the rail of the imperial box.`];
   } else if (won) {
     endPlot(run, 'cold');
     run.epilogue = [...(run.epilogue ?? []), 'The signal never came: the wrong fighter won the Final, and the moment passed. Somewhere, a chalk mark fades.'];

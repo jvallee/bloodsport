@@ -8,6 +8,7 @@ import { INTRO } from "./tutorial.js";
 import { FAVOR, BUILDINGS, PLOT } from "./data.js";
 import { GRAND_TIER, raisable } from "./run.js";
 import { WEEKS_PER_YEAR } from "./calendar.js";
+import { PREFECT } from "./plot.js";
 
 export const SPEAKERS = {
   narrator: { name: "", portrait: "narrator" },
@@ -16,6 +17,7 @@ export const SPEAKERS = {
   rebel: { name: "A prisoner", portrait: "narrator" }, // a political prisoner: their beats carry the fighter (name and face)
   fighter: { name: "", portrait: "narrator" }, // one of your fighters (5.4.0 quests): the beat carries the fighter
   rival: { name: "A rival Lanista", portrait: "emperor" }, // the archrival house (5.4.0)
+  prefect: { name: PREFECT, portrait: "prefect" }, // the face of the palace's suspicion (7.10)
 };
 
 export const SCENES = {
@@ -69,6 +71,7 @@ export const SCENES = {
   ],
   // The Emperor returns at a few turning points (PLACEHOLDER lines).
   firstBoss: [
+    { speaker: "narrator", text: "When your fighters come home from the arena, a rider in imperial purple is waiting at the gate. He does not dismount. He does not need to." },
     {
       speaker: "emperor",
       text: "One of yours has beaten a Boss. The crowd enjoyed it. So did I, for nearly a minute.",
@@ -83,6 +86,7 @@ export const SCENES = {
     },
   ],
   tribute: [
+    { speaker: "narrator", text: "The Emperor's collectors count the tribute out on your table, coin by coin. They do not sit down. One of them carries a letter in the Emperor's own hand, and reads it aloud." },
     {
       speaker: "emperor",
       text: "Winter, and my collectors have knocked on your door. They tell me you paid. They sounded almost disappointed.",
@@ -93,6 +97,7 @@ export const SCENES = {
     },
   ],
   lowFavor: [
+    { speaker: "narrator", text: "A summons to the palace, at an hour when nobody is ever summoned for good news." },
     {
       speaker: "emperor",
       text: "Your name came up at dinner, Lanista. Somewhere between the lampreys and the dormice. Nobody enjoyed it.",
@@ -103,6 +108,7 @@ export const SCENES = {
     },
   ],
   grand: [
+    { speaker: "narrator", text: "Before the Grand Tournament, every Lanista who has earned a place is brought before the Emperor. Yours is the last name called." },
     {
       speaker: "emperor",
       text: "So. You have reached my Grand Tournament. The whole city has bought a seat, and I have bought the city.",
@@ -129,6 +135,23 @@ const RETURNS = [
   { id: "lowFavor", when: (run) => run.favor <= FAVOR.warning },
 ];
 
+// A return visit's beats, with the rising's asides (7.10): the rebel whispers before the Grand Tournament once the rising is
+// ready, and the Emperor knows about your late nights when the palace is suspicious. PLACEHOLDER lines.
+export function returnScene(id, run) {
+  const beats = [...(SCENES[id] ?? [])];
+  const p = run.plot;
+  const rebel = run.roster.find((f) => f.political);
+  if (id === "grand" && p && !p.ended && p.stage === "ready") {
+    const say = (text) => (rebel ? { speaker: "rebel", fighter: rebel, text } : { speaker: "narrator", text: `A voice behind you, low: "${text}"` });
+    beats.push({ speaker: "narrator", text: "On the way out, someone falls into step beside you in the corridor." });
+    beats.push(say("He'll be up there in the box, just as he said. Let him look. Win the Final, Lanista, and then look up."));
+  }
+  if (id === "lowFavor" && p && !p.ended && p.suspicion >= PLOT.suspicion.informer) {
+    beats.push({ speaker: "emperor", text: "And Lanista: my Praetorians tell me your house keeps very late hours. I do so hope you are only drinking." });
+  }
+  return beats;
+}
+
 // The scene due now, if any: `seen` is the list of scene ids already played this career.
 export function dueScene(run, seen = []) {
   if (run.status !== "active") return null;
@@ -140,12 +163,17 @@ export function dueScene(run, seen = []) {
 export function endingKind(run) {
   if (run.status === "active") return null;
   if (run.ending) return run.ending; // coup, martyr, treason (the hidden plot)
-  if (run.status === "won") return "grand";
+  if (run.status === "won") return run.plot?.ended === "loyalist" ? "loyalist" : "grand";
   if (run.favor <= 0) return "favour";
   if (!run.roster.length) return "broke";
   return "revolt"; // the only other way a career ends: overrun in The Chains Break
 }
 export const ENDING_SCENES = {
+  loyalist: [
+    { speaker: "emperor", text: "Master of the Games, and a loyal one. Do you know how rare that is? I had a list of names. You gave me the end of it." },
+    { speaker: "emperor", text: "The chalk is gone from the doors. The cells are quiet. The crowd cheers for you, and none of them wonder why." },
+    { speaker: "emperor", text: "Sleep well, Lanista. You have earned it. Some of your old friends will not sleep at all." },
+  ],
   grand: [
     { speaker: "narrator", text: "The noise does not stop. It rolls around the Coliseum like the sea in a bowl, and somewhere in it is your name." },
     { speaker: "emperor", text: "Master of the Games. Stand beside me, Lanista, so the crowd can see who made you." },
@@ -179,7 +207,30 @@ export const ENDING_SCENES = {
     { speaker: "emperor", text: "A Lanista killed by their own stock. Write it down; it will amuse the Senate. Then have the barracks burned. I don't want the idea spreading." },
   ],
 };
-export const endingScene = (run) => ENDING_SCENES[endingKind(run)] ?? null;
+// The narrator sets the scene before anyone speaks (7.10, the designer: the Emperor began without a lead-in).
+const finalist = (run) => {
+  const h = [...run.history].reverse().find((x) => x.tier === GRAND_TIER && !x.skipped);
+  return h?.fighter ?? null;
+};
+export function endingLeadIn(run, kind) {
+  const champ = run.roster.find((f) => f.id === run.plot?.champion)?.name ?? run.fallen.find((f) => f.id === run.plot?.champion)?.name ?? finalist(run) ?? "Your champion";
+  const who = finalist(run) ?? "Your fighter";
+  const lines = {
+    grand: `The last blow of the Grand Final lands. ${who} is still standing, and for a moment there is no sound at all in the Coliseum.`,
+    loyalist: `${who} wins the Grand Final. The Emperor comes down from his box, which he never does, and sets the laurel on your head himself. His hand is cold.`,
+    coup: `${champ} stands over the beaten champion of the Grand Final, chest heaving. Then, instead of saluting the imperial box, they turn towards it. All over the stands, people are getting to their feet.`,
+    martyr: `${champ} goes down in the Grand Final and does not get up. In the stands, a thousand hands that were reaching under the seats go still.`,
+    treason: "The Praetorians do not knock. By noon you are on your knees in the imperial box, with the whole arena looking up at you.",
+    favour: "They come for you at dawn, politely, with a litter and an escort. The Emperor wants a word before the games.",
+    broke: null,
+    revolt: null,
+  };
+  return lines[kind] ? [{ speaker: "narrator", text: lines[kind] }] : [];
+}
+export function endingScene(run) {
+  const kind = endingKind(run);
+  return ENDING_SCENES[kind] ? [...endingLeadIn(run, kind), ...ENDING_SCENES[kind]] : null;
+}
 
 // ---------- The rebel's confession (the designer's request, 2026-11-01) ----------
 // The first political prisoner in your house takes you aside and says plainly that there is a rising, and what they have
@@ -277,6 +328,25 @@ export function rebelStageScene(run, f, stage, { confessed = true } = {}) {
     ],
   }[stage] ?? [];
   if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. They drink in the tavern across the road and never pay; someone is paying them to watch your gate. Every favour you do us, they notice."));
+  // Your answer (7.10: a reply at every stage). PLACEHOLDER lines; flavour only, nothing in the career changes.
+  const replies = {
+    favours: [
+      { label: "What kind of favours?", then: [say("Small ones, at first. The kind a decent person might do anyway. That's the trick of it: by the time they're not small, you're already one of us.")] },
+      { label: "And if I'm caught?", then: [say("Then you were a fool who did a kindness to strangers. That's what we'll all say. It might even save you.")] },
+      { label: "I'll think about it.", then: [say("Think quickly. The next knock at your door won't wait for an answer.")] },
+    ],
+    cause: [
+      { label: "What happens after?", then: [say("After, we open the cells. All of them. And the ludi, Lanista, yours too. You'll still have your house. You just won't own anyone in it.")] },
+      { label: "Why my house?", then: [say("Because your fighters are the only people in this city the Emperor lets near him with a sword. He thinks that's a show. We think it's a door.")] },
+      { label: "And if I say no?", then: [say("Then say it now, and forget my face. We'll go on without you. But the cause doesn't forget a face either.")] },
+    ],
+    ready: [
+      { label: "I'm ready.", then: [say("Nobody is. But you're here, and that will do.")] },
+      { label: "Will it be bloody?", then: [say("It's the arena, Lanista. It's always bloody. The only question is whose blood, for once.")] },
+      { label: "What do I tell my steward?", then: [say("Nothing. He sees too much already. If it goes wrong, he should be able to swear he knew nothing, and mean it.")] },
+    ],
+  }[stage];
+  if (replies && lines.length) lines[lines.length - 1] = { ...lines[lines.length - 1], replies };
   return [{ speaker: "narrator", text: confessed ? `${f.name} finds you alone again.` : `${f.name} catches your eye across the yard, and waits until the guards have gone.` }, ...lines];
 }
 // The stage scene due now, if any: { id, fighter, beats }, while the plot runs and its prisoner (or another political

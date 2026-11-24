@@ -52,6 +52,20 @@ export const SUSPICION_SIGNS = {
   ready: ['The chalk marks are everywhere now, and nobody scrubs them off.', 'In the barracks, blades are oiled at night that nobody will admit to owning.', 'The city is waiting for the Emperor\'s games.'],
 };
 
+// Said the first time suspicion crosses the informer and cold lines (7.10). PLACEHOLDER lines.
+// The face of the palace's suspicion (7.10): a Praetorian prefect who calls as it grows. PLACEHOLDER name and lines.
+export const PREFECT = 'Prefect Aulus Crassinus';
+export const PREFECT_LINES = {
+  watch: 'A courtesy call, Lanista, nothing more. The Emperor likes to know his gladiator houses are content. Yours seems very content. So many visitors.',
+  informer: 'I dined with your neighbours last night. They speak well of you. They say you keep your lamps lit very late. I told them you must be reading. You are a great reader, I think.',
+  cold: 'I will be honest with you, because I like you. I have been asked to write a report on your house. I write slowly. But I always finish.',
+};
+export const SUSPICION_LINES = {
+  informer: 'We have been careless, Lanista. There is a new face at the water-seller\'s, and he buys nothing. For a while, do only what matters.',
+  informerSteward: 'A man at the water-seller\'s has been watching our gate for a week. He buys nothing. I\'ve started buying nothing too, so we look the same.',
+  cold: 'An invitation to the palace was withdrawn this morning, with no reason given. In this city, no reason is the worst kind. Whatever you are doing at night, Lanista, do less of it.',
+};
+
 const political = (run) => run.roster.filter((f) => f.political);
 const anyFighter = (run) => run.roster;
 const asker = (list) => (run, rng) => (list(run).length ? { f: pick(rng, list(run)).id } : null);
@@ -166,6 +180,62 @@ export const PLOT_EVENTS = [
       { label: 'Promise to spare them', help: true, effects: { mark: true, trust: 1 } },
     ],
   },
+  // ---- 7.10 (the designer): bolder requests. Each helps the cause and draws the palace's eye (suspicion is hidden). ----
+  {
+    id: 'cellarMeeting', plot: true, stages: ['favours', 'cause', 'ready'], title: 'A meeting in the cellar',
+    target: (run, rng) => (run.roster.length ? { f: pick(rng, run.roster).id, name: freshName(run, rng) } : null),
+    text: ({ f }) => `${f} brings word: twenty people need a room for one night, and your wine cellar has a door onto the back lane. "They'll be gone before the watch changes. Probably." Twenty strangers in one house is the kind of thing neighbours remember.`,
+    choices: [
+      { label: 'Keep the cellar locked', refuse: true, effects: {} },
+      { label: 'Leave the back door unbarred', help: true, effects: { trust: 2, suspicion: 10, chance: { p: 0.5, win: { contact: 'new' }, lose: {} } } },
+    ],
+  },
+  {
+    id: 'letterInArmour', plot: true, stages: ['favours', 'cause'], title: 'A letter in the lining',
+    when: (run) => run.roster.some((f) => f.gear.armor || f.gear.weapon),
+    target: (run, rng) => {
+      const list = run.roster.filter((f) => f.gear.armor || f.gear.weapon);
+      return list.length ? { f: pick(rng, list).id } : null;
+    },
+    text: ({ f }) => `The rebels want a letter sewn into the lining of ${f}'s gear. A friend in the arena tunnels will cut it out on fight day. "The guards search wagons and baskets. They never search a gladiator." Not yet, anyway.`,
+    choices: [
+      { label: 'Refuse', refuse: true, effects: {} },
+      { label: 'Sew it in', help: true, effects: { trust: 1, suspicion: 8, gold: 4 } },
+    ],
+  },
+  {
+    id: 'printingPress', plot: true, stages: ['favours', 'cause', 'ready'], title: 'A press behind the grain',
+    when: (run) => run.plot?.seen.includes('pamphlets'),
+    target: asker(anyFighter),
+    text: () => 'The pamphlets you left alone have friends now. The rebels ask to hide a small printing press behind your grain jars and run it at night. It is not quiet, and ink does not wash off.',
+    choices: [
+      { label: 'No press in this house', refuse: true, effects: {} },
+      { label: 'Make room behind the grain', help: true, effects: { trust: 2, suspicion: 12, crowd: 8 } },
+    ],
+  },
+  {
+    id: 'chainSalute', plot: true, stages: ['cause', 'ready'], title: 'The broken-chain salute',
+    when: (run) => Boolean(run.bouts),
+    target: (run) => {
+      const [f] = run.roster.filter((x) => !x.spy).sort((a, b) => b.renown - a.renown || b.power - a.power);
+      return f ? { f: f.id } : null;
+    },
+    text: ({ f }) => `Fight day. The rebels ask that ${f}, after their bout, raise a fist to the stands with a broken chain painted on the knuckles. Half the city will cheer. The other half will write it down.`,
+    choices: [
+      { label: 'No politics on the sand', refuse: true, effects: {} },
+      { label: '${f} raises the fist', help: true, effects: { trust: 2, suspicion: 15, renown: { to: 'f', n: 3 }, crowd: 4 } },
+    ],
+  },
+  {
+    id: 'guardRota', plot: true, stages: ['cause', 'ready'], title: 'The guard rota',
+    when: (run) => Boolean(run.bouts),
+    target: asker(anyFighter),
+    text: ({ f }) => `${f} has seen the arena guards' rota pinned up in the tunnels: who stands where when the Emperor comes. "I could copy it between bouts. If they catch me, I was looking for the latrine."`,
+    choices: [
+      { label: 'Too dangerous', refuse: true, effects: {} },
+      { label: 'Copy it', help: true, effects: { chance: { p: 0.6, win: { trust: 2, suspicion: 5 }, lose: { suspicion: 20, morale: { to: 'f', n: -10 } } } } },
+    ],
+  },
   // ---- Act 3: the Cause ----
   {
     id: 'forgedPass', plot: true, stages: ['cause', 'ready'], title: 'The forged pass',
@@ -216,10 +286,21 @@ export const PLOT_EVENTS = [
     ],
   },
   {
+    id: 'barracksSearch', plot: true, stages: ['cause', 'ready'], title: 'A search of the barracks',
+    when: (run) => Boolean(run.plot?.armed) && run.plot.suspicion >= PLOT.suspicion.informer,
+    target: asker(anyFighter),
+    text: () => 'Praetorians at the gate, with a writ to search the barracks "for stolen army property". The steel you gave the cause is under the floor of the mess hall.',
+    choices: [
+      { label: 'Let them search', effects: { chance: { p: 0.4, win: { suspicion: -10 }, lose: { disarm: true, suspicion: 10 } } } },
+      { label: `Grease the sergeant (${PLOT.searchBribe} Gold)`, cost: PLOT.searchBribe, effects: { gold: -PLOT.searchBribe, suspicion: -5 } },
+      { label: 'Stall them while the steel goes over the wall', help: true, effects: { chance: { p: 0.7, win: { trust: 1 }, lose: { disarm: true, suspicion: 15 } } } },
+    ],
+  },
+  {
     id: 'theOffer', plot: true, stages: ['cause', 'ready'], title: 'The prefect\'s offer',
     when: (run) => run.week >= (run.plot?.causeWeek ?? 0) + PLOT.offerAfter,
     target: asker(anyFighter),
-    text: () => 'A Praetorian prefect calls on you, alone. "The Emperor knows there are traitors in the gladiator houses. Give him their names, and he will remember your house kindly."',
+    text: () => `${PREFECT} calls on you, alone, and accepts a cup of wine he does not drink. "The Emperor knows there are traitors in the gladiator houses. Give him their names, and he will remember your house kindly. I will remember it too."`,
     choices: [
       { label: 'Know nothing', effects: { trust: 1 } },
       { label: 'Name the names', betray: true, effects: { betray: true } },
@@ -232,7 +313,7 @@ export const PLOT_EVENTS = [
       const p = political(run);
       return p.length ? { f: pick(rng, p).id } : run.roster.length ? { f: pick(rng, run.roster).id } : null;
     },
-    text: () => 'The Praetorians come at dawn and fill the yard. Their prefect wants a traitor, or a reason to leave without one.',
+    text: () => `The Praetorians come at dawn and fill the yard. ${PREFECT} stands in the middle of it, finishing an apple. He wants a traitor, or a reason to leave without one.`,
     choices: [
       { label: `Pay them off (${PLOT.bribe} Gold)`, cost: PLOT.bribe, effects: { gold: -PLOT.bribe, suspicion: -30 } },
       { label: `Hand over \${f}`, needs: (run, ev) => (run.roster.find((x) => x.id === ev.f)?.political ? null : 'No political prisoner to hand over.'), effects: { execute: 'f', suspicion: -40, trust: -3, morale: { to: 'all', n: -10 } } },

@@ -658,3 +658,68 @@ test('playtest: the Liaison\'s convict is Market-strength; its prisoner of war c
   assert.equal(f.power, KINDS[f.kind].basePower + CIRCUITS[0].marketPower);
   assert.ok([LIAISON.convictPrice, 1].includes(f.price));
 });
+
+// 7.10 (the designer): bolder rebel requests that draw suspicion, and a search when the steel is hidden.
+test('bolder requests: each helps the cause and raises suspicion; refusing counts as a refusal', () => {
+  const cases = [
+    ['cellarMeeting', 1, 10, 2],
+    ['letterInArmour', 1, 8, 1],
+    ['printingPress', 1, 12, 2],
+    ['chainSalute', 1, 15, 2],
+  ];
+  for (const [id, help, susp, trust] of cases) {
+    const { run, f } = withPrisoner();
+    card(run, 'chalkMark', 1);
+    Object.assign(run.plot, { stage: 'cause', suspicion: 0, trust: 3, seen: [...run.plot.seen, 'pamphlets'] });
+    f.gear.armor = 'leather';
+    run.bouts = { 1: 'open' };
+    const e = PLOT_EVENT_BY_ID[id];
+    assert.ok(!e.when || e.when(run), `${id} can come up`);
+    card(run, id, help);
+    assert.equal(run.plot.suspicion, susp, `${id} suspicion`);
+    assert.equal(run.plot.trust, 3 + trust, `${id} trust`);
+    const again = withPrisoner().run;
+    card(again, 'chalkMark', 1);
+    again.plot.stage = 'cause';
+    again.plot.seen.push('pamphlets');
+    again.bouts = { 1: 'open' };
+    for (const x of again.roster) x.gear.armor = 'leather';
+    card(again, id, 0);
+    assert.equal(again.plot.refusals, 1, `${id} refused`);
+  }
+});
+
+test('the salute is the house\'s most famous fighter, and wins them Renown; the guard rota is a gamble', () => {
+  const { run, f } = withPrisoner();
+  card(run, 'chalkMark', 1);
+  run.plot.stage = 'cause';
+  run.bouts = { 1: 'open' };
+  f.renown = 50;
+  card(run, 'chainSalute', 1);
+  assert.equal(f.renown, 53);
+  assert.match(stakesText(PLOT_EVENT_BY_ID.guardRota.choices[1].effects), /60%/);
+});
+
+test('a search of the barracks: only with the steel hidden and the palace watching; failing it loses the steel', () => {
+  const { run } = withPrisoner();
+  card(run, 'chalkMark', 1);
+  Object.assign(run.plot, { stage: 'cause', armed: true, suspicion: PLOT.suspicion.informer - 1 });
+  const e = PLOT_EVENT_BY_ID.barracksSearch;
+  assert.equal(e.when(run), false, 'not before the informer line');
+  run.plot.suspicion = PLOT.suspicion.informer;
+  assert.equal(e.when(run), true);
+  // Force the stall to fail: the steel is carried off.
+  const saved = e.choices[2].effects.chance.p;
+  e.choices[2].effects.chance.p = 0;
+  try { card(run, 'barracksSearch', 2); } finally { e.choices[2].effects.chance.p = saved; }
+  assert.equal(run.plot.armed, false);
+  assert.equal(run.plot.suspicion, PLOT.suspicion.informer + 15);
+  assert.match(stakesText(e.choices[0].effects), /hidden steel/);
+  const bribe = withPrisoner().run;
+  card(bribe, 'chalkMark', 1);
+  Object.assign(bribe.plot, { stage: 'cause', armed: true, suspicion: 50 });
+  const gold = bribe.gold;
+  card(bribe, 'barracksSearch', 1);
+  assert.equal(bribe.gold, gold - PLOT.searchBribe);
+  assert.equal(bribe.plot.armed, true);
+});
