@@ -1,7 +1,7 @@
 // The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
 
 import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE, MERCY, BET, HYPE, ROUND_TACTICS } from '../data.js';
-import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf, signatureBlocker, hypeOf, opponentTell, tellForecast, opponentUnleashesNext } from '../fight.js';
+import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf, signatureBlocker, hypeOf, opponentTell, tellForecast, opponentUnleashesNext, firstStrikeChance } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, safeColor, fighterCard, mercyChoices } from './components.js';
 import { roundStats } from '../explain.js';
@@ -288,8 +288,11 @@ function tacticPicker(m) {
   const tell = opponentTell(m);
   const tellLine = tell ? `<div class="tell">👁 ${esc(TELLS[tell](m.b.f.name))} <small>Weighing the tell against their temper: about ${tellForecast(m)}% they ${esc(TACTICS[tell].name)}.</small></div>` : '';
   const sig = opponentUnleashesNext(m) ? `<div class="tell warn">⚠ ${esc(m.b.f.name)} is gathering for ${esc(SIGNATURES[m.b.f.cls].name)}: it comes this round.</div>` : '';
+  // 7.7: who is likely to strike first decides close rounds; show it (the tactic chosen can still change Speed).
+  const first = Math.round(100 * firstStrikeChance(m, round));
+  const firstLine = `<div class="first-strike" title="Speed plus a die each; Concussed always strikes second; Footwork strikes first when faster. Your tactic this round can still change it.">⚡ Strikes first: ${esc(m.a.f.name)} about <b>${first}%</b> · ${esc(m.b.f.name)} about <b>${100 - first}%</b></div>`;
   return `<div class="tactics"><div class="label">Round ${round}: choose your tactic</div>
-    ${sig}${tellLine}
+    ${sig}${tellLine}${firstLine}
     <div class="row tactic-row">${buttons}</div>
     <div class="sub">${read} <span class="counters">🗡 Press beats ↯ Feint · ↯ Feint beats 🛡 Guard · 🛡 Guard beats 🗡 Press (+10% win chance)</span></div></div>`;
 }

@@ -189,6 +189,25 @@ export function computeSpeed(c, round) {
   return { base: c.f.speed, mods, total: c.f.speed + sum(mods) };
 }
 
+// 7.7: the exact chance A strikes first in `round`, for display (rolls no dice): Concussed, then Footwork, then
+// Speed + d6 each, ties split evenly (the tiebreak is a coin). The player's tactic for the round isn't known yet.
+export function firstStrikeChance(m, round = m.round + 1) {
+  const A = m.a;
+  const B = m.b;
+  const sA = computeSpeed(A, round).total;
+  const sB = computeSpeed(B, round).total;
+  const concA = hasInjury(A.f, 'concussed') && !classActive(A, 'samnite', round);
+  const concB = hasInjury(B.f, 'concussed') && !classActive(B, 'samnite', round);
+  if (concA !== concB) return concA ? 0 : 1;
+  if (!concA) {
+    if (kindActive(A, 'footwork', round) && sA > sB) return 1;
+    if (kindActive(B, 'footwork', round) && sB > sA) return 0;
+  }
+  let halves = 0; // counted in half-outcomes, so the result is exact
+  for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) halves += sA + a > sB + b ? 2 : sA + a === sB + b ? 1 : 0;
+  return halves / 72;
+}
+
 export function initiative(A, B, round, rng) {
   const speed = { A: computeSpeed(A, round), B: computeSpeed(B, round) };
   // Samnite shield discipline: Concussed doesn't cost them the first strike.
