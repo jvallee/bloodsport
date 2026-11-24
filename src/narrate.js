@@ -142,25 +142,29 @@ const variant = (r, list, salt = 0) => list[(r.roll + r.round + salt) % list.len
 // PLACEHOLDER words for the designer (docs/text-to-rewrite.md).
 const own = (n) => `${n}'${/s$/.test(n) ? '' : 's'}`;
 const STRIKES = {
-  club: (a, d) => `${own(a)} club crashes through ${own(d)} guard`,
-  fists: (a, d) => `${a} gets inside and hammers ${d}`,
-  bow: (a, d) => `${own(a)} arrow finds ${d}`,
-  spear: (a, d) => `${own(a)} spear darts past ${own(d)} reach`,
-  sword: (a, d) => `${own(a)} blade opens ${own(d)} guard`,
-  flail: (a, d) => `${own(a)} flail whips round ${own(d)} guard`,
-  gun: (a, d) => `${own(a)} volley tears into ${d}`,
-  axe: (a, d) => `${own(a)} axe bites deep into ${d}`,
-  dagger: (a, d) => `${a} slips the dagger in under ${own(d)} arm`,
-  cestus: (a, d) => `${own(a)} iron fists rock ${d}`,
-  sagittarius: (a, d) => `${own(a)} shaft takes ${d} mid-stride`,
-  ornitharius: (a, d) => `${own(a)} birds dive at ${d}`,
-  retiarius: (a, d) => `${own(a)} net drags ${d} down, and the trident follows`,
-  ashHungry: (a, d) => `${a} comes through the ash at ${d}`,
-  bloodBearer: (a, d) => `${own(a)} blade drinks from ${d}`,
-  thornBlade: (a, d) => `${own(a)} thorned edge rakes ${d}`,
-  samnite: (a, d) => `${a} drives the shield's rim into ${d}`,
+  club: (a, d) => [`${own(a)} club crashes through ${own(d)} guard`, `${a} swings the club two-handed and something in ${d} gives`],
+  fists: (a, d) => [`${a} gets inside and hammers ${d}`, `${a} ducks a swing and buries a fist in ${own(d)} ribs`],
+  bow: (a, d) => [`${own(a)} arrow finds ${d}`, `${a} looses before ${d} can close, and the shaft goes home`],
+  spear: (a, d) => [`${own(a)} spear darts past ${own(d)} reach`, `${a} keeps ${d} at the end of the spear, then lunges`],
+  sword: (a, d) => [`${own(a)} blade opens ${own(d)} guard`, `${a} feints high, cuts low, and ${d} is too slow`],
+  flail: (a, d) => [`${own(a)} flail whips round ${own(d)} guard`, `the chain of ${own(a)} flail wraps ${own(d)} shield, and the head comes round after it`],
+  gun: (a, d) => [`${own(a)} volley tears into ${d}`, `smoke, a crack like thunder, and ${d} staggers`],
+  axe: (a, d) => [`${own(a)} axe bites deep into ${d}`, `${a} brings the axe down like a woodsman, and ${d} takes it`],
+  dagger: (a, d) => [`${a} slips the dagger in under ${own(d)} arm`, `${a} is inside ${own(d)} guard before anyone sees the blade`],
+  cestus: (a, d) => [`${own(a)} iron fists rock ${d}`, `${own(a)} studded glove snaps ${own(d)} head back`],
+  sagittarius: (a, d) => [`${own(a)} shaft takes ${d} mid-stride`, `${a} draws, waits a heartbeat too long for comfort, and doesn't miss`],
+  ornitharius: (a, d) => [`${own(a)} birds dive at ${d}`, `a storm of feathers and talons drives ${d} back, and ${a} follows it in`],
+  retiarius: (a, d) => [`${own(a)} net drags ${d} down, and the trident follows`, `${a} casts, ${d} tangles, and the trident finds the gap`],
+  ashHungry: (a, d) => [`${a} comes through the ash at ${d}`, `${a} breathes out cinders and hits ${d} like a falling wall`],
+  bloodBearer: (a, d) => [`${own(a)} blade drinks from ${d}`, `${own(a)} red blade opens ${d}, and seems to sigh`],
+  thornBlade: (a, d) => [`${own(a)} thorned edge rakes ${d}`, `${a} drags the thorned blade across ${d}, and it catches`],
+  samnite: (a, d) => [`${a} drives the shield's rim into ${d}`, `${a} walks the big shield forward, then the short sword comes out from behind it`],
 };
-const strikeClause = (r, styleId, a, d) => (STRIKES[styleId]?.(a, d) ?? variant(r, [`${a} lands a brutal blow`, `${a} breaks through`, `${a} catches ${d} cleanly`], 2));
+const strikeClause = (r, styleId, a, d) => {
+  const lines = STRIKES[styleId]?.(a, d) ?? [`${a} lands a brutal blow`, `${a} breaks through`, `${a} catches ${d} cleanly`, `${a} finds a gap and makes ${d} pay for it`];
+  const text = variant(r, lines, 2);
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
 
 export function narrateStory(m, r) {
   const name = (side) => (side === 'A' ? m.a : m.b).f.name;
@@ -176,8 +180,8 @@ export function narrateStory(m, r) {
 
   const winnerChance = r.winner === 'A' ? r.win.chance : 100000 - r.win.chance;
   if (winnerChance < 40000) add('roll', `Against the odds, ${name(r.winner)} takes Round ${r.round}!`);
-  else if (winnerChance >= 75000) add('roll', variant(r, [`${name(r.winner)} dominates Round ${r.round}.`, `${name(r.winner)} overpowers the opposition in Round ${r.round}.`]));
-  else add('roll', variant(r, [`${name(r.winner)} edges out Round ${r.round}.`, `${name(r.winner)} wins a hard-fought Round ${r.round}.`, `${name(r.winner)} takes Round ${r.round}.`]));
+  else if (winnerChance >= 75000) add('roll', variant(r, [`${name(r.winner)} dominates Round ${r.round}.`, `${name(r.winner)} overpowers the opposition in Round ${r.round}.`, `Round ${r.round} is ${own(name(r.winner))} from the first exchange.`, `${name(r.winner)} makes Round ${r.round} look easy. The crowd notices.`]));
+  else add('roll', variant(r, [`${name(r.winner)} edges out Round ${r.round}.`, `${name(r.winner)} wins a hard-fought Round ${r.round}.`, `${name(r.winner)} takes Round ${r.round}.`, `Round ${r.round} goes to ${name(r.winner)}, just.`, `${name(r.winner)} grinds out Round ${r.round}, breathing hard.`]));
 
   for (const c of r.checks) {
     const att = name(c.attacker);
@@ -192,7 +196,8 @@ export function narrateStory(m, r) {
     if (inj) {
       if (inj.tag === 'death') {
         add('death', variant(r, [`${att} lands a killing blow. ${def} falls and does not rise.`, `${att} finds the opening. ${def} goes down and does not get up.`,
-          `The crowd is on its feet: ${def} is dead before they hit the sand.`, `${att} ends it. ${def} lies still, and the arena goes quiet.`], 3));
+          `The crowd is on its feet: ${def} is dead before they hit the sand.`, `${att} ends it. ${def} lies still, and the arena goes quiet.`,
+          `${def} takes one more step, then the sand has them. ${att} does not look back.`, `It is over in a breath. ${att} stands; ${def} never will again.`], 3));
       } else {
         let text = inj.deflected ? `${att} lands a crippling blow, but ${def}'s ${inj.deflected} takes it: only a Flesh Wound.` : `${strikeClause(r, styleId((c.attacker === 'A' ? m.a : m.b).f), att, def)}${inj.steered ? ` (${inj.steered.source})` : ''}: ${def} is ${INJURY_STORY[inj.tag]}.`;
         if (inj.doubled) text += ' First blood counts double!';
@@ -204,7 +209,7 @@ export function narrateStory(m, r) {
   }
   // A round where nobody draws blood still gets a line (7.8).
   if (!r.checks.some((c) => c.injury || c.parry?.success || (c.counter && c.hit) || c.allIn)) {
-    add('quiet', variant(r, ['Neither draws blood. They walk back to their marks.', 'Steel rings on steel, and no one bleeds.', 'They part, both still standing, both still whole.'], 4));
+    add('quiet', variant(r, ['Neither draws blood. They walk back to their marks.', 'Steel rings on steel, and no one bleeds.', 'They part, both still standing, both still whole.', 'The crowd wants blood and gets sweat. Both fighters are still whole.', 'A long, careful exchange, and nothing to show for it but sand in the air.'], 4));
   }
   for (const e of r.endEffects) add('effect', `${name(e.side)} is ${e.text}.`);
   return lines;

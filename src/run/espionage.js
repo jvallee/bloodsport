@@ -30,7 +30,7 @@ export function espionageWeek(run) {
   const mole = moleOf(run);
   if (!mole) {
     // The mole is gone (died, released, retired): the whispers stop, and an old suspect list would mislead.
-    if (st.clues.length || st.suspects) log(run, 'The whispers in the house have stopped.', 'event');
+    if (st.clues.length || st.suspects) log(run, 'The whispers in the house have stopped. Whoever was listening has stopped too, or learned to listen more quietly.', 'event');
     st.clues = [];
     st.suspects = null;
     return;
@@ -109,7 +109,7 @@ export function investigate(run, id) {
     return true;
   }
   bumpMorale(f, ESPIONAGE.offended);
-  log(run, `${f.name} is searched and questioned, and found clean. They don't forget it (${ESPIONAGE.offended} Morale).`, 'warn');
+  log(run, `${f.name} is searched, questioned half the night, and found clean. They don't forget it (${ESPIONAGE.offended} Morale).`, 'warn');
   return false;
 }
 
@@ -185,7 +185,7 @@ export function covertOp(run, type) {
   const success = next(r) < opChance(run, type);
   if (success) {
     st.op = { type, oppId: target.id, result: 'success', variant: type === 'wine' ? pick(r, ['bleeding', 'sluggish']) : null };
-    log(run, `${op.name}: it worked. ${target.name} will not know what hit them.`, 'good');
+    log(run, `${op.name}: it worked, and nobody saw a thing. ${target.name} will not know what hit them.`, 'good');
     return st.op;
   }
   st.op = { type, oppId: target.id, result: 'caught' };

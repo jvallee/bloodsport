@@ -52,15 +52,15 @@ function incident(run, f) {
   if (kind === 'brawl') {
     const victim = pick(r, run.roster.filter((x) => x !== f)) ?? f;
     victim.injuries.push({ tag: 'fleshWound', weight: 1, weeksLeft: HEAL_WEEKS.fleshWound });
-    log(run, `${f.name} starts a brawl in the barracks; ${victim.name} takes a Flesh Wound.`, 'bad');
+    log(run, `${f.name} starts a brawl in the mess hall over nothing at all; ${victim.name} takes a Flesh Wound before the guards wade in.`, 'bad');
   } else if (kind === 'theft') {
     const gold = Math.min(run.gold, UNREST.theftPerTier * Math.min(run.topTier, CIRCUITS.length));
     run.gold -= gold;
-    log(run, `${f.name} breaks into the strongbox${gold ? `: ${gold} Gold gone` : ', but it is empty'}.`, 'bad');
+    log(run, `${f.name} breaks into the strongbox in the night${gold ? `: ${gold} Gold gone, and nobody saw a thing` : ', and finds it empty. They laugh about it for days'}.`, 'bad');
   } else {
     f.stress = Math.min(STRESS.max, f.stress + UNREST.escapeStress);
-    chronicle(run, f, 'Tried to escape over the wall, and was dragged back.');
-    log(run, `${f.name} tries to escape over the wall and is dragged back (+${UNREST.escapeStress} Stress).`, 'bad');
+    chronicle(run, f, 'Went over the wall one night, and was dragged back at dawn.');
+    log(run, `${f.name} goes over the wall at night and is dragged back at dawn, muddy and furious (+${UNREST.escapeStress} Stress).`, 'bad');
   }
 }
 
@@ -72,7 +72,7 @@ export function unrestWeek(run) {
     const partner = bondmate(run, f);
     if (partner) {
       bumpMorale(partner, UNREST.bondDrag);
-      log(run, `${f.name} mutters in the mess hall; ${partner.name} listens (${UNREST.bondDrag} Morale).`, 'warn');
+      log(run, `${f.name} mutters in the mess hall about chains and keys; ${partner.name} listens, and starts to nod (${UNREST.bondDrag} Morale).`, 'warn');
     }
   }
   const mutineers = run.roster.filter(isMutinous);
@@ -87,7 +87,7 @@ export function unrestWeek(run) {
   }
   if (run.unrestWarned == null) {
     run.unrestWarned = run.week;
-    log(run, `The barracks seethe: unrest ${run.unrest}/${UNREST.threshold}. Calm your Mutinous fighters, or the chains will break.`, 'bad');
+    log(run, `The barracks seethe: unrest ${run.unrest}/${UNREST.threshold}. Bowls bang on the bars after dark. Calm your Mutinous fighters, or the chains will break.`, 'bad');
     return;
   }
   // The chains break only while someone is still Mutinous (calming them all in time averts it, as the warning says).
@@ -100,7 +100,7 @@ export function openCrisis(run) {
   const { loyal, mutineers } = revoltSides(run, leader);
   run.event = { id: 'chainsBreak', f: leader.id, price: UNREST.coffersPerFighter * run.roster.length, loyal, mutineers, palatine: palatineBlocker(run, leader) };
   run.unrestStats.crises += 1;
-  log(run, `The chains break: ${leader.name} leads a revolt in the barracks.`, 'bad');
+  log(run, `The chains break: ${leader.name} has the keys, and leads a revolt in the barracks.`, 'bad');
 }
 
 function calm(run, out) {

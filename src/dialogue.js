@@ -56,48 +56,64 @@ export const SCENES = {
     // PLACEHOLDER: the steward, plain and neutral, takes over as your guide.
     {
       speaker: "steward",
-      text: "It's okay, you can relax, he's gone. I am the steward of this house. I'll tell you what you need to know to not die on your first day.",
+      text: "You can breathe now. He's gone. He does that: arrives like a storm, leaves like one, and the rest of us count the broken roof tiles.",
     },
     {
       speaker: "steward",
-      text: "First, gladiators. The Market has a few for sale. Let's see what your purse can buy. I know buying people might not be the most ethical choice, but you can do that or die.",
+      text: "I'm the steward of this house. I keep its books, its keys and, lately, its secrets, which are mostly debts. I'll tell you what you need to know to not die on your first day. The second day is up to you.",
+    },
+    {
+      speaker: "steward",
+      text: "First, gladiators. The Market has a few for sale, and your purse can stretch to one or two. Yes, you'll be buying people. I won't pretend that's a kind thing. But on Battleworld the choice is to own fighters or to be one, and you don't look like a fighter.",
     },
   ],
   // The Emperor returns at a few turning points (PLACEHOLDER lines).
   firstBoss: [
     {
       speaker: "emperor",
-      text: "One of yours has beaten a Boss. The crowd enjoyed it. So did I, briefly.",
+      text: "One of yours has beaten a Boss. The crowd enjoyed it. So did I, for nearly a minute.",
     },
     {
       speaker: "emperor",
-      text: "Do not let it go to your head, Lanista. Heads come off easily in my empire.",
+      text: "I have had the Boss's name struck from the arena walls. Bosses are like roof tiles: there is always another, and nobody remembers the old one.",
+    },
+    {
+      speaker: "emperor",
+      text: "Do not let it go to your head, Lanista. Heads come off easily in my empire. I have a man for it.",
     },
   ],
   tribute: [
     {
       speaker: "emperor",
-      text: "Winter, and my collectors have knocked on your door. A Lanista who pays is a Lanista who lives. Remember the arithmetic.",
+      text: "Winter, and my collectors have knocked on your door. They tell me you paid. They sounded almost disappointed.",
+    },
+    {
+      speaker: "emperor",
+      text: "A Lanista who pays is a Lanista who lives. It is the only arithmetic in this empire, and I have made it very simple.",
     },
   ],
   lowFavor: [
     {
       speaker: "emperor",
-      text: "Your name came up at dinner, Lanista. Nobody enjoyed it.",
+      text: "Your name came up at dinner, Lanista. Somewhere between the lampreys and the dormice. Nobody enjoyed it.",
     },
     {
       speaker: "emperor",
-      text: "Give me a reason to say it differently. Soon.",
+      text: "I have a short list of houses that bore me. It used to be longer. Give me a reason to take you off it. Soon.",
     },
   ],
   grand: [
     {
       speaker: "emperor",
-      text: "So. You have reached my Grand Tournament. I will be watching from my box.",
+      text: "So. You have reached my Grand Tournament. The whole city has bought a seat, and I have bought the city.",
     },
     {
       speaker: "emperor",
-      text: "Win, and you stand beside me. Lose, and you will have climbed a very long way to fall.",
+      text: "Every house that ever mattered has stood where you are standing. Most of them are buried under it.",
+    },
+    {
+      speaker: "emperor",
+      text: "Win, and you stand beside me in the box. Lose, and you will have climbed a very long way to fall. I will be watching either way. I always am.",
     },
   ],
 };
@@ -131,30 +147,36 @@ export function endingKind(run) {
 }
 export const ENDING_SCENES = {
   grand: [
+    { speaker: "narrator", text: "The noise does not stop. It rolls around the Coliseum like the sea in a bowl, and somewhere in it is your name." },
     { speaker: "emperor", text: "Master of the Games. Stand beside me, Lanista, so the crowd can see who made you." },
+    { speaker: "emperor", text: "Wave. No, smaller. You are a gift I gave them, not a god." },
     { speaker: "emperor", text: "Enjoy it. My favourites have short lives and magnificent funerals." },
   ],
   coup: [
-    { speaker: "emperor", text: "You. I pulled you out of nothing, and this is how you thank—" },
-    { speaker: "narrator", text: "The crowd does not let him finish. The imperial box stands empty, and the sand is quiet for the first time in a hundred years." },
+    { speaker: "emperor", text: "You. I pulled you out of nothing. I gave you a house, a name, a crowd. And this is how you thank—" },
+    { speaker: "narrator", text: "The crowd does not let him finish." },
+    { speaker: "narrator", text: "When the dust settles the imperial box stands empty, and the sand is quiet for the first time in a hundred years. Somebody, somewhere high in the stands, begins to laugh. Then everybody does." },
   ],
   martyr: [
-    { speaker: "emperor", text: "A broken chain on every door, and not one of them could open mine. Scrub them off." },
-    { speaker: "narrator", text: "By morning the doors are clean. By evening, someone has chalked the chain back on one of them." },
+    { speaker: "emperor", text: "A broken chain on every door in the city, and not one of them could open mine. Scrub them off. All of them." },
+    { speaker: "narrator", text: "They scrub all night. By morning the doors are clean." },
+    { speaker: "narrator", text: "By evening, someone has chalked the chain back on one of them. Small, low down, where a child could reach." },
   ],
   treason: [
+    { speaker: "emperor", text: "Treason. Such an old word. It still fits so many people." },
     { speaker: "emperor", text: "I told you I know what a person will do to keep breathing. I did not think you would be so bad at it." },
   ],
   favour: [
-    { speaker: "emperor", text: "I warned you, Lanista. You had one thing to give me, and you stopped giving it." },
-    { speaker: "emperor", text: "Never mind. You will entertain my guests one last time, from the wrong side of the sand." },
+    { speaker: "emperor", text: "I warned you, Lanista. You had one thing to give me: a reason to keep you. You stopped giving it." },
+    { speaker: "emperor", text: "Never mind. You will entertain my guests one last time, from the wrong side of the sand. I am told the lions have been saving themselves." },
   ],
   broke: [
+    { speaker: "steward", text: "The last fighter is gone, and the strongbox is empty. I've counted it four times. It doesn't help." },
     { speaker: "emperor", text: "An empty ludus and an empty purse. I need not even sign the order. The city will see to you for free." },
   ],
   revolt: [
-    { speaker: "narrator", text: "The chains break, and the first thing they find is you." },
-    { speaker: "emperor", text: "A Lanista killed by their own stock. Write it down; it will amuse the Senate." },
+    { speaker: "narrator", text: "The guards drop their spears and run. The chains break, and the first thing the freed men find is you." },
+    { speaker: "emperor", text: "A Lanista killed by their own stock. Write it down; it will amuse the Senate. Then have the barracks burned. I don't want the idea spreading." },
   ],
 };
 export const endingScene = (run) => ENDING_SCENES[endingKind(run)] ?? null;
@@ -237,21 +259,24 @@ export function rebelStageScene(run, f, stage, { confessed = true } = {}) {
   const watched = (run.plot?.suspicion ?? 0) >= 40;
   const lines = {
     favours: [
-      say("You copied the sign. They saw. From now on they'll ask you for small things: a door left open, a stranger fed, a name forgotten."),
-      say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good."),
-      say("Who are they? Not yet. Do this well, and one day I'll tell you."),
+      say("You copied the sign. Don't look round; they saw. They see most things."),
+      say("From now on they'll ask you for small things. A door left open after curfew. A stranger fed and not asked his name. A name forgotten when the Praetorians ask for it."),
+      say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good. You won't hear from them, and neither will I."),
+      say("Who are they? Not yet. Do this well, and one day I'll tell you everything. Today I'll only tell you this: they are more than you think."),
     ],
     cause: [
-      say("They trust you now. More than they trust me, I think."),
-      say("A rising needs a sword in the arena: one of your fighters, standing in the Grand Tournament when the Emperor watches. And it needs the barracks armed."),
-      say("Choose your champion carefully, Lanista. If they fall, the rising falls with them."),
+      say("They trust you now. More than they trust me, I think. I'm not jealous. I'm relieved."),
+      say("Here is the plan, as much as I'm allowed to know. The Emperor never misses the Grand Tournament. He sits in his box, a spear's throw from the sand."),
+      say("A rising needs a sword in that arena: one of your fighters, still standing when he watches. And it needs the barracks armed, for after."),
+      say("Choose your champion carefully, Lanista. If they fall, the rising falls with them, and nobody will remember that it was ever going to happen."),
     ],
     ready: [
-      say("It's ready. The blades are oiled, the crowd knows the signal, and your champion knows what to do."),
-      say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box. We'll do the rest."),
+      say("It's ready. The blades are oiled and hidden under the seats. Half the crowd knows the signal. Your champion knows what to do."),
+      say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box."),
+      say("We'll do the rest. And Lanista, whatever happens after: thank you. Not many people would have listened to a prisoner."),
     ],
   }[stage] ?? [];
-  if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. Every favour you do us, they notice."));
+  if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. They drink in the tavern across the road and never pay; someone is paying them to watch your gate. Every favour you do us, they notice."));
   return [{ speaker: "narrator", text: confessed ? `${f.name} finds you alone again.` : `${f.name} catches your eye across the yard, and waits until the guards have gone.` }, ...lines];
 }
 // The stage scene due now, if any: { id, fighter, beats }, while the plot runs and its prisoner (or another political

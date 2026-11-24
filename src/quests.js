@@ -157,23 +157,23 @@ export const RIVAL_LINES = {
 // PLACEHOLDER lines. The rules (and the steward's line) must stay accurate.
 // 7.4 Mole clues and market tells (PLACEHOLDER words).
 export const MOLE_CLUES = [
-  'Two Gold are missing from the lockbox, and the lock is not broken.',
-  'An opponent seemed to know your fighters\' opening stance before the horn.',
-  'Someone was seen at the gate at night, speaking to a cloaked rider.',
-  'A letter half-burned in the brazier, the seal scraped away.',
+  'Two Gold are missing from the lockbox, and the lock is not broken. Whoever took them had a key, or was given one.',
+  'Your last opponent knew your fighters\' opening stance before the horn. They smiled when they saw it.',
+  'The night watchman saw someone at the gate after curfew, talking to a rider in a hooded cloak. He didn\'t see a face. He says.',
+  'A letter half-burned in the mess-hall brazier. The seal has been scraped away, but not quite all of it.',
 ];
-export const MOLE_TELLS = ['suspiciously cheap for their Power', 'a brand scar under the tunic, the mark of another house', 'asks a great many questions about your other fighters'];
+export const MOLE_TELLS = ['suspiciously cheap for their Power, and the trader won\'t say why', 'an old brand scar under the tunic: the mark of another house, half burned away', 'asks a great many questions about your other fighters, and listens to the answers'];
 
 // 7.8 (review brief 2.11): what is said after The Chains Break and an unmasked mole. PLACEHOLDER lines for the designer;
 // the steward's voice is the designer's to write.
 export const AFTERMATH_LINES = {
-  coffers: 'Gold. Fine. It fills bellies. It does not fill the place where the chain was.',
-  palatine: 'So you are one of us after all. Then we stop shouting, and start planning.',
-  palatineMole: (name) => `${name} went straight from the barracks to the palace. Expect questions, and soon.`,
-  putDown: 'You have put the chains back on. They are never as tight the second time.',
-  turned: 'They will hear what you want them to hear. I hope you pay better than they did.',
-  ransomed: (name, house) => `${name} is bundled into a cart for ${house}, and does not look back.`,
-  executed: 'It is done. The yard is quiet, and the whole house watches you differently now.',
+  coffers: 'Gold, and wine, and meat. Fine. It fills bellies, Lanista. It does not fill the place where the chain was. Remember that we could have taken it, and didn\'t.',
+  palatine: 'So you are one of us after all. Good. Then we stop shouting in the barracks and start whispering in the right places. The Palatine will never hear us coming.',
+  palatineMole: (name) => `${name} was out of the gate before the torches were cold, and halfway to the palace by dawn. They were never ours, Lanista. Expect questions, and expect them soon.`,
+  putDown: 'You have put the chains back on. Fine. Just know this: they are never as tight the second time, and we have all night to think about it.',
+  turned: 'They will hear exactly what you want them to hear. I hope you pay better than they did. I hope you keep paying.',
+  ransomed: (name, house) => `${name} is bundled into a cart for ${house} with a sack over their head. They do not look back. Nobody in the yard waves.`,
+  executed: 'It is done. The yard has been swept, and the house is very quiet. They will train hard this week, Lanista. Fear is a good teacher. It is just not a kind one.',
 };
 
 export const SUMMONS_LINES = {
@@ -191,15 +191,15 @@ export const SUMMONS_LINES = {
 // The first prisoner you buy: the steward points out what it means. PLACEHOLDER.
 // 7.9: the cousin in the cells (src/run/roster.js cousinWeek). PLACEHOLDER lines; the steward's are the designer's to rewrite.
 export const COUSIN_LINES = {
-  ask: (built) => `My cousin is in the city cells. They mean to execute him at the next games. The Liaison buys prisoners out of the cells: please, get him out.${built ? '' : ' You would have to build one first, and soon.'}`,
-  askSteward: (built) => `Someone came to the gate today: their cousin is in the city cells, set to be executed at the next games. A Liaison can buy prisoners out.${built ? ' Ours could.' : ' We would need to build one.'}`,
-  found: (name) => `That is him on the Liaison's list: ${name}. Please. There isn't much time.`,
-  foundSteward: (name) => `The cousin is on the Liaison's list: ${name}. If you mean to buy him, don't wait.`,
-  saved: 'You got him out. I will not forget it, Lanista. Neither will he.',
-  savedSteward: (name) => `${name} is out of the cells and in our barracks. Whoever came to the gate will be grateful.`,
-  executed: 'They executed my cousin this morning. You could have stopped it.',
-  executedSteward: 'The cousin from the cells was executed this morning.',
+  ask: (built) => `Lanista. A word, please. My cousin is in the city cells. They took him off the street with a dozen others, and nobody will tell us what for. They mean to put him in front of the beasts at the next games. The Liaison can buy prisoners out of the cells. Please. Get him out.${built ? '' : ' I know we have no Liaison. I know what it costs. I am asking anyway.'}`,
+  askSteward: (built) => `A woman came to the gate today, and wouldn't leave. Her cousin is in the city cells, to be fed to the beasts at the next games. She thinks a Lanista can buy him out. She's right: a Liaison can.${built ? ' Ours could, if you asked it to.' : ' We\'d have to build one first.'} I told her I'd mention it. I've mentioned it.`,
+  found: (name) => `That's him. On the Liaison's list: ${name}. Thinner than I remember. Please, Lanista. There isn't much time.`,
+  foundSteward: (name) => `The cousin is on the Liaison's list: ${name}. Cheap, as these things go. If you mean to buy him, don't wait for the price to fall. It won't. He will.`,
+  saved: 'You got him out. He hasn\'t stopped eating since he walked through the gate. I will not forget this, Lanista. Neither will he.',
+  savedSteward: (name) => `${name} is out of the cells and asleep in our barracks. The woman from the gate came back to thank you. I told her you were busy. You were.`,
+  executed: 'They put my cousin in front of the beasts this morning. I heard it from the gate. You could have stopped it, Lanista. You knew, and you could have stopped it.',
+  executedSteward: 'The cousin from the cells went to the beasts this morning. The woman stopped coming to the gate. I find I keep looking for her.',
 };
 export const LIAISON_LINES = {
-  saved: (f) => `${f} was on the list for the beasts, or the cross. Now they're on ours. I suppose that makes you the only Lanista in Rome who saves lives by buying them. Don't let it get about; it'll ruin your reputation.`,
+  saved: (f) => `${f} was on the list for the beasts, or the cross. Now they're on ours. I suppose that makes you the only Lanista in the empire who saves lives by buying them. Don't let it get about; it'll ruin your reputation.`,
 };
