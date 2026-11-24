@@ -152,6 +152,8 @@ export function resolveRevolt(run, how, ev, out) {
     out.push(`${UNREST.putDownFavor} Favour`);
     run.unrest = UNREST.afterPutDown;
     run.unrestWarned = null;
+    // A beaten revolt leaves its fighters cowed, not still Mutinous (7.9, review brief 4.2: off while cowedMorale is null).
+    if (UNREST.cowedMorale != null) for (const f of run.roster.filter(isMutinous)) f.morale = Math.max(f.morale, UNREST.cowedMorale);
   } else {
     out.push('the guards are overrun');
     run.status = 'lost';

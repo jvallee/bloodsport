@@ -264,7 +264,7 @@ export const KINDS = {
   human: { name: 'Human', basePower: 5, traits: ['hateful', 'masochist', 'underdog'] },
   android: { name: 'Android', basePower: 5, traits: ['quantumAnalyzer', 'alloyedSkin', 'perpetualMotion'] },
   elf: { name: 'Elf', basePower: 5, traits: ['firebug', 'footwork', 'egoArmour', 'elvenEyes'] },
-  orc: { name: 'Orc', basePower: 6, traits: ['bloodFaith', 'unbreakable', 'bloodlust'] },
+  orc: { name: 'Orc', basePower: 5, traits: ['bloodFaith', 'unbreakable', 'bloodlust'] },
   vampire: { name: 'Vampire', basePower: 5, traits: ['bloodDrinker', 'nightborn', 'mesmerize'] },
   basa: { name: 'Basa', basePower: 5, traits: ['thickHide', 'pounce', 'rampage'] },
   revenant: { name: 'Revenant', basePower: 5, traits: ['deathless', 'graveChill', 'cinderHeart'], exotic: true },
@@ -647,7 +647,7 @@ export const DEMANDS = {
 export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] };
 
 // Season mode (short career): Tournament -> Boss per tier, scaled purses, training, market, and opponent Power.
-export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 12], grandPower: 19, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
+export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 10], grandPower: 21, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],

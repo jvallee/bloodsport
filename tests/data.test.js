@@ -47,10 +47,9 @@ test('injury weights toward the Death Gate: Distracted 0; Poisoned, Maimed, Sens
   for (const i of INJURIES.filter((x) => x.tag !== 'death')) assert.equal(i.weight, i.tag === 'distracted' ? 0 : heavy.includes(i.tag) ? 2 : 1, i.tag);
 });
 
-test('every kind trait is defined and Orc starts at Power 6', () => {
+test('every kind trait is defined and every kind starts at Power 5 (7.9, 4.4: the Orc was 6)', () => {
   for (const k of Object.values(KINDS)) for (const t of k.traits) assert.ok(TRAITS[t], t);
-  assert.equal(KINDS.orc.basePower, 6);
-  assert.equal(KINDS.human.basePower, 5);
+  for (const [id, k] of Object.entries(KINDS)) assert.equal(k.basePower, 5, id);
 });
 
 test('circuits escalate: opponent Power rises within and across tiers', () => {

@@ -1189,3 +1189,11 @@ Placeholder numbers (`ESPIONAGE`). Own dice (`run.rng.espionage`).
 - The Chains Break, Palatine choice: a palace mole as ringleader is unmasked and adds `UNREST.moleTip` (15) suspicion on
   top of the usual 15, instead of becoming the plot's champion. The unrest still calms.
 - The careful bot's Morale decor only picks pieces that add comfort and aren't Temperament pieces.
+
+## 7.9.0: balance from the review brief (Phase 4)
+
+| Number | Before → after | Why |
+|---|---|---|
+| `SHORT.oppPower` (Season Boss bonus per arena) | [2, 4, 9, 12] → [2, 4, 9, 10] | 4.1: the Imperial Boss was won less often per attempt (21%) than the Grand Tournament (31%). |
+| `SHORT.grandPower` | 19 → 21 | 4.1: the Grand is the climax; a new gate keeps it harder per attempt than the Imperial Boss. |
+| `KINDS.orc.basePower` | 6 → 5 | 4.4: Power 6 made up for the Orc having no combat trait; it now has three, about as strong as other kinds' (52.5% at equal Power vs 52–55%), and at its natural Power it won 58.5% against a Power-5 field. Every kind now starts at 5, as the Basa did in v6. |

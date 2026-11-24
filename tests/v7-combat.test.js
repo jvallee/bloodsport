@@ -205,8 +205,8 @@ test('Contract D combat rules: Axe +5% injure, Viper Venom +15 severity, COMBAT 
   assert.equal(COMBAT.axeInjure, 5000);
   assert.equal(COMBAT.ornithariusBase, 5000);
   assert.equal(INJURIES.find((i) => i.tag === 'blinded').weight, 2);
-  assert.deepEqual(SHORT.oppPower, [2, 4, 9, 12]);
-  assert.equal(SHORT.grandPower, 19);
+  assert.deepEqual(SHORT.oppPower, [2, 4, 9, 10]); // 7.9 (4.1): the Imperial Boss 12 → 10, the Grand 19 → 21
+  assert.equal(SHORT.grandPower, 21);
   assert.equal(SHORT.purse, 1.6);
   assert.deepEqual(SHORT.marketPower, [0, 2, 6, 10]);
   assert.deepEqual(TRAINING, { fullFeeFrom: 4, cheapFee: 2, midTier: 3, midFee: 3 });
