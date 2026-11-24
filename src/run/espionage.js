@@ -3,11 +3,11 @@
 
 import { createRng, deriveSeed, next, pick } from '../rng.js';
 import { ESPIONAGE, CIRCUITS } from '../data.js';
-import { MOLE_CLUES, MOLE_TELLS } from '../quests.js';
+import { MOLE_CLUES, MOLE_TELLS, AFTERMATH_LINES } from '../quests.js';
 import { isTournamentWeek } from '../calendar.js';
 import { maxLevel, oracleLevel } from '../ludus.js';
 import {
-  log, chronicle, findFighter, bumpMorale, monthOf, assertOk, activeModalOrPendingBlocker, changeFavor, removeFighter, isInActiveBracket,
+  log, chronicle, findFighter, bumpMorale, monthOf, assertOk, activeModalOrPendingBlocker, changeFavor, removeFighter, isInActiveBracket, talk,
 } from './helpers.js';
 import { plotActive, changeSuspicion } from './plotEngine.js';
 import { houseOf, opponentFor } from './houses.js';
@@ -126,6 +126,7 @@ export function resolveMole(run, how, ev, out) {
     f.mole = { ...f.mole, exposed: true, turned: true };
     chronicle(run, f, `Unmasked as a mole for ${masterName(run, f.mole.master)}, and turned: now they feed their masters lies.`);
     out.push(`−${ESPIONAGE.turnCost} Gold`, `${f.name} now feeds ${masterName(run, f.mole.master)} a false playbook`);
+    talk(run, `mole-${f.id}`, [{ speaker: 'fighter', fighterId: f.id, text: AFTERMATH_LINES.turned }]);
     return;
   }
   if (how === 'ransom') {
@@ -133,6 +134,7 @@ export function resolveMole(run, how, ev, out) {
     if (house) house.feud = 0;
     chronicle(run, f, `Unmasked as a mole, and sold back to ${masterName(run, f.mole.master)}.`);
     removeFighter(run, f);
+    talk(run, `mole-${f.id}`, [{ speaker: 'narrator', text: AFTERMATH_LINES.ransomed(f.name, masterName(run, f.mole.master)) }]);
     out.push(`+${ESPIONAGE.ransom} Gold`, `${f.name} goes back to ${masterName(run, f.mole.master)}${house ? '; the feud is over' : ''}`);
     return;
   }
@@ -144,6 +146,7 @@ export function resolveMole(run, how, ev, out) {
   }
   removeFighter(run, f, { fallen: { body: true, spy: true } });
   for (const x of run.roster) bumpMorale(x, ESPIONAGE.executeMorale);
+  talk(run, `mole-${f.id}`, [{ speaker: 'steward', text: AFTERMATH_LINES.executed }]);
   out.push(`${f.name} is executed in the yard`, `everyone ${ESPIONAGE.executeMorale} Morale`);
 }
 

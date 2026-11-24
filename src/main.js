@@ -16,7 +16,7 @@ import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, 
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
-import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene } from './dialogue.js';
+import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene, endingScene } from './dialogue.js';
 import { DEMANDS, DEMAND, CIRCUITS, SUMMONS } from './data.js';
 import { snapshot, monthDigest } from './digest.js';
 import { fightView, diceTime, setFightPace, roundTiming, roundEndTime, sideCardHtml } from './ui/fightView.js';
@@ -163,6 +163,13 @@ function talkBeat(b) {
 // The Emperor drops in at turning points, once each per career, when nothing else is on screen.
 function checkScene() {
   if (scene || eventResult || match || setupChoice || showHelp || !scenesSeen().includes('opening')) return; // the Emperor's visits come after the opening
+  // The career has ended: one last word, once (7.8).
+  const ending = endingScene(run);
+  if (ending && !scenesSeen().includes('ending')) {
+    markSceneSeen('ending');
+    scene = { id: 'ending', beat: 0, beats: ending };
+    return;
+  }
   // The Emperor's demand met, the moment it is; and missed, when its fight day ends (the designer, 5.4.0).
   if (run.demand && demandMet(run) && !scenesSeen().includes(`demand-met-${run.demand.week}`)) {
     markSceneSeen(`demand-met-${run.demand.week}`);
