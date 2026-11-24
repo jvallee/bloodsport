@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.8.1)
 
+- **Bets after an item:** using an item (War Paint, a Berserker Mushroom and the like) before Round 1 now updates the bet buttons at once. They used to keep showing the old, bigger payout, and the bet then paid less or was refused. Feed the Ash used before Round 1 is priced in too.
 - A vampire's Blood Drinker closing a Bleeding wound now says so (it used to say a Distraction closed).
 
 ## 7.8.0 (2026-11-24): fights with more feeling

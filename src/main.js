@@ -1,7 +1,7 @@
 // App state, saving, coach tips and event wiring. Game rules live in run.js / fight.js; markup in src/ui/.
 
 import { mortalDanger, canThrowTowel, suggestTactic, hypeOf } from './fight.js';
-import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betOdds, betCap, spareFavorWhy, owedLeft, keepsBuyIn, overtrainedByWeek, demandMet, espionageOdds } from './run.js';
+import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betQuote, spareFavorWhy, owedLeft, keepsBuyIn, overtrainedByWeek, demandMet, espionageOdds } from './run.js';
 import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
@@ -362,8 +362,7 @@ function renderFight() {
   }
   fightEl.hidden = false;
   // The bookmaker's quote, worked out once per match (it runs the odds simulation).
-  if (match.round === 0 && !match.over && !match.bet && !match.betQuote) match.betQuote = { odds: betOdds(run, match), cap: betCap(run, match) };
-  if (match.betQuote) match.betQuote.gold = run.gold;
+  match.betQuote = betQuote(run, match); // live: an item used before Round 1 changes the odds (7.8.1)
   const nextBlocker = match.summary?.next ? fightBlocker(run, match.a.f.id, match.bout.tier) : null;
   fightEl.classList.toggle('quick', prefs.pace === 'quick'); // 7.7: Quick pace speeds the dice animation too
   fightEl.innerHTML = fightView(match, ui, { ...match.bout, keepsBuyIn: keepsBuyIn(run, match.bout.tier) }, tutorialCard(fightTutorial(), 'fight'), run.inventory.items, nextBlocker, run.mercy && { ...run.mercy, favorWhy: spareFavorWhy(run), owedLeft: owedLeft(run) }, bracketView(run, match.bout.tier));
