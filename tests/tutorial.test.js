@@ -72,3 +72,42 @@ test('the tutorial explains the trainer cap the first time a fighter reaches it'
   assert.match(step.body, /Trainer Room/);
   assert.match(step.body, /Gold/);
 });
+
+// 7.10 (the designer: improve the tutorial): a step after the first fight, and tips for the systems added since.
+test('after the first fight the tutorial month ends with Medbay and End week', () => {
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  advanceToTournament(run);
+  run.history.push({ week: run.week, tier: 1, won: true, fighterId: f.id });
+  const done = ['recruit', 'jobs', 'endweek', 'tofight', 'bout'];
+  const step = nextStep(GUIDE, done, run);
+  assert.equal(step?.id, 'firstweekend');
+  assert.match(step.text, /Medbay/);
+  assert.equal(step.goal(run), false);
+  run.bouts = null;
+  assert.equal(step.goal(run), true);
+});
+
+test('tips for unrest, moles, the Liaison, the tribute and events come up when they first matter', async () => {
+  const { MORALE } = await import('../src/data.js');
+  const { espState } = await import('../src/run.js');
+  const fresh = ['event', 'tribute', 'mutinous', 'mole', 'liaison'];
+  const tip = (run) => nextStep(STEPS, STEPS.map((s) => s.id).filter((id) => !fresh.includes(id)), run)?.id; // the older tips done
+  const run = createRun(1);
+  const f = recruit(run, run.market[0].id);
+  assert.equal(tip(run), undefined);
+  f.morale = MORALE.mutinous - 1;
+  assert.equal(tip(run), 'mutinous');
+  f.morale = 60;
+  espState(run).clues = [{ week: 1, text: 'x' }];
+  assert.equal(tip(run), 'mole');
+  espState(run).clues = [];
+  run.liaisonOffers = [{ id: 'x' }];
+  assert.equal(tip(run), 'liaison');
+  run.liaisonOffers = [];
+  run.recentEvents = ['brawl'];
+  assert.equal(tip(run), 'event');
+  run.recentEvents = [];
+  run.week = 34;
+  assert.equal(tip(run), 'tribute');
+});

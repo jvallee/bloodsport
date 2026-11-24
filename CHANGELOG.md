@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.10.0)
 
+- **A better tutorial:** the first month now ends with a word from your steward after your first fight (heal the hurt, end the week, and you're on your own). New tips explain, the first time they matter: random events, Fortune's wheel, the Emperor's tribute, a Mutinous fighter, a mole's clues, and the Liaison's prisoners. The older tips say a little more (signature moves at level 3, the fighter's Story).
 - **The palace has a face:** Prefect Aulus Crassinus calls on your house as the palace's suspicion grows: a courtesy call, a dinner with your neighbours, a report he is writing slowly. He leads the raid and makes the offer to name names.
 - **The cousin comes back:** if you bought him out of the cells, he is there at the end: first over the rail at the coup, or among the executed if you named the names.
 - **Endings set the scene:** every ending now opens with a moment before anyone speaks (on the coup, your champion turning towards the imperial box), and the Emperor's visits begin with a lead-in instead of starting cold. Winning on the loyalist side has its own ending, and your steward's last word fits how the career ended (no more "don't let it go to your head" after the Emperor is dead).

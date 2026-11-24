@@ -27,14 +27,14 @@ Every piece of story text in the game, with the file and line where it lives (cl
 
 | Where | Text |
 |---|---|
-| [src/tutorial.js:10](../src/tutorial.js#L10) | **Another Day on Your Computer** |
-| [src/tutorial.js:12](../src/tutorial.js#L12) | (starts here, several lines) You are scrolling, cursing, dare I say surfing the web. Suddenly the screen shimmers. A hand reaches out of it, grabs you by the head and pulls you through.       You land hard on cold stone, under a sun that isn't yours. This is Battleworld, whose portals pull warriors from every world and century to feed the arenas of Emperor Silbannacus, a Roman usurper who fused magic and machinery into an empire of bloodsport.       Then everything goes dark. |
-| [src/tutorial.js:16](../src/tutorial.js#L16) | **How you win** |
-| [src/tutorial.js:19](../src/tutorial.js#L19) | (starts here, several lines) Climb four arenas, from the Dirt Pits to the Imperial Coliseum. Each arena holds a circuit: Tournament 1 → Tournament 2 → Boss.       Beat all four Bosses, then win the Grand Tournament, and the Emperor names you Master of the Games.       You don't fight. You recruit, train, heal and choose who to send, then make the hard calls from your box above the sand. |
-| [src/tutorial.js:22](../src/tutorial.js#L22) | **How you lose** |
-| [src/tutorial.js:25](../src/tutorial.js#L25) | (starts here, several lines) The Emperor watches you through Imperial Favour. Losing a Boss in your top arena, forfeiting, and failing to pay his yearly tribute all cost Favour. At 0 Favour you're executed.       You also fall if every gladiator is dead and you can't afford another, or if your miserable gladiators revolt.       Your fighters are mortal. One injury is survivable; with two injuries, losing a round can kill them. Between rounds you can always capitulate to save a fighter, at the cost of the match. |
-| [src/tutorial.js:28](../src/tutorial.js#L28) | **Power, Speed and luck** |
-| [src/tutorial.js:29](../src/tutorial.js#L29) | (starts here, several lines) Power wins rounds. What counts is the gap between the fighters: +1 is 55% per round, +3 is 70%, +5 is 95%.       Speed decides who strikes first (+10% to win that round, and the first chance to wound), and being faster makes you harder to wound. A balanced fighter wins and stays healthy.       Traits, weapons and injuries tilt the odds further. Every number is shown in the fight and explained in the Codex. Good luck, Lanista. |
+| [src/tutorial.js:11](../src/tutorial.js#L11) | **Another Day on Your Computer** |
+| [src/tutorial.js:13](../src/tutorial.js#L13) | (starts here, several lines) You are scrolling, cursing, dare I say surfing the web. Suddenly the screen shimmers. A hand reaches out of it, grabs you by the head and pulls you through.       You land hard on cold stone, under a sun that isn't yours. This is Battleworld, whose portals pull warriors from every world and century to feed the arenas of Emperor Silbannacus, a Roman usurper who fused magic and machinery into an empire of bloodsport.       Then everything goes dark. |
+| [src/tutorial.js:17](../src/tutorial.js#L17) | **How you win** |
+| [src/tutorial.js:20](../src/tutorial.js#L20) | (starts here, several lines) Climb four arenas, from the Dirt Pits to the Imperial Coliseum. Each arena holds a circuit: Tournament 1 → Tournament 2 → Boss.       Beat all four Bosses, then win the Grand Tournament, and the Emperor names you Master of the Games.       You don't fight. You recruit, train, heal and choose who to send, then make the hard calls from your box above the sand. |
+| [src/tutorial.js:23](../src/tutorial.js#L23) | **How you lose** |
+| [src/tutorial.js:26](../src/tutorial.js#L26) | (starts here, several lines) The Emperor watches you through Imperial Favour. Losing a Boss in your top arena, forfeiting, and failing to pay his yearly tribute all cost Favour. At 0 Favour you're executed.       You also fall if every gladiator is dead and you can't afford another, or if your miserable gladiators revolt.       Your fighters are mortal. One injury is survivable; with two injuries, losing a round can kill them. Between rounds you can always capitulate to save a fighter, at the cost of the match. |
+| [src/tutorial.js:29](../src/tutorial.js#L29) | **Power, Speed and luck** |
+| [src/tutorial.js:30](../src/tutorial.js#L30) | (starts here, several lines) Power wins rounds. What counts is the gap between the fighters: +1 is 55% per round, +3 is 70%, +5 is 95%.       Speed decides who strikes first (+10% to win that round, and the first chance to wound), and being faster makes you harder to wound. A balanced fighter wins and stays healthy.       Traits, weapons and injuries tilt the odds further. Every number is shown in the fight and explained in the Codex. Good luck, Lanista. |
 
 ## 2. The hidden plot (v6): cards
 
@@ -525,39 +525,39 @@ The tutorial month (`GUIDE`): the steward's five steps for a new Lanista. Tags l
 
 | Where | Text |
 |---|---|
-| [src/tutorial.js:45](../src/tutorial.js#L45) | Tutorial month, step 1: Let's start with one gladiator. In the Market, look at each one's Power (the sword: wins rounds) and Speed (the arrow: strikes first), then press Recruit on at least one of them. |
-| [src/tutorial.js:53](../src/tutorial.js#L53) | Tutorial month, step 2: Now the Ludus. Every fighter does one job a week. Give your strongest fighter +1 Power: training costs a little Gold and adds ${STRESS.train} Stress. The other can Rest for now; one Trainer Room trains one fighter at a time. |
-| [src/tutorial.js:62](../src/tutorial.js#L62) | Tutorial month, step 3: Jobs are set. Make sure at least one fighter is training: only a fighter on Train Power (+1 Power) or Train Speed (+3 Speed) gets stronger, and an untrained house falls behind fast. Then press End week and the week plays out: training, rest and healing all happen at once. |
-| [src/tutorial.js:70](../src/tutorial.js#L70) | Tutorial month, step 4: The last week of every month is fight day. Keep training, and rest a fighter whose Stress passes ${STRESS.overtrained - STRESS.train}: at ${STRESS.overtrained} they're overtrained and fight worse. When you're ready, Skip to tournament takes you straight there. |
-| [src/tutorial.js:78](../src/tutorial.js#L78) | Tutorial month, step 5: Fight day. Each fighter's line shows their odds, injury risk and the Power both sides will fight with. Sending one costs a little Prestige; winning pays it back with more. Pick your best and press Send. |
-| [src/tutorial.js:87](../src/tutorial.js#L87) | **The Trainer cap** |
-| [src/tutorial.js:88](../src/tutorial.js#L88) | A fighter has learned everything this Trainer Room can teach. Upgrade the Trainer Room in the Estate to raise the cap (3 → 5 → 8 → 13 → 21 points per fighter). Each level also raises the weekly fee by 1 Gold per trainee, so plan your Gold. |
-| [src/tutorial.js:93](../src/tutorial.js#L93) | **Watch the Stress bar** |
-| [src/tutorial.js:94](../src/tutorial.js#L94) | Training stacks Stress. At 50+ a fighter is overtrained: they can't train, and in the arena they fight at −1 Power with one ability lost. Train, train, rest keeps them sharp. |
-| [src/tutorial.js:99](../src/tutorial.js#L99) | **After the fight** |
-| [src/tutorial.js:100](../src/tutorial.js#L100) | Wins pay Gold and Prestige; losses pay a little Gold. Injuries stay until healed: put hurt fighters on the Medbay job. Check the house log on the left to see what happened each week. |
-| [src/tutorial.js:105](../src/tutorial.js#L105) | **Injuries and the Death Gate** |
-| [src/tutorial.js:106](../src/tutorial.js#L106) | An injured fighter shows red chips and filled Death Gate dots. At two dots the gate is open: losing a round can kill them. Heal them in the Medbay, or pay the Emergency Surgeon if you need them right away. |
-| [src/tutorial.js:111](../src/tutorial.js#L111) | **A Boss fight** |
-| [src/tutorial.js:112](../src/tutorial.js#L112) | Bosses are stronger and fight under a special arena rule (shown in red). They can't be skipped. Beat your top arena's Boss and your fighter earns a Title (+1 Power), you gain Favour and a new arena opens. Lose and you lose Favour (more in higher tiers), and that Boss will be waiting for you, stronger. Remember: a "Strong favourite" still loses about one match in four. |
-| [src/tutorial.js:117](../src/tutorial.js#L117) | **Level up!** |
-| [src/tutorial.js:118](../src/tutorial.js#L118) | Every match earns XP. When a fighter levels up, pick one of three perks on their card. Some perks need both Power and Speed, which is a reason to build balanced fighters. |
-| [src/tutorial.js:123](../src/tutorial.js#L123) | **More arenas, more fights** |
-| [src/tutorial.js:124](../src/tutorial.js#L124) | Your old arenas still hold bouts every tournament week. Send a different fighter to each to earn Gold, XP and Renown. Only your top arena can win you Favour. Win 3 times in an arena (or beat its Boss) to become its Champion; Champions are booed if they go back, but rookies fight there freely. Opponents scout a fighter who fights in your top arena two months running (+1 Power against them), so rotate your stars. |
-| [src/tutorial.js:129](../src/tutorial.js#L129) | **Keep your stars happy** |
-| [src/tutorial.js:130](../src/tutorial.js#L130) | Winning makes fighters famous (Renown), and famous fighters expect better rooms. Their Morale drifts toward comfort minus expectations: place decor, upgrade Quarters, build an Entertainment Room. Inspired fighters fight better; Discontented ones won't train. |
-| [src/tutorial.js:135](../src/tutorial.js#L135) | **Your house has grown** |
-| [src/tutorial.js:136](../src/tutorial.js#L136) | A new Prestige level unlocks room plots and buildings. Visit the Estate: plots are limited, so choose what your house needs most. Trainer upgrades raise how far fighters can train. |
-| [src/tutorial.js:145](../src/tutorial.js#L145) | **How a round works** |
-| [src/tutorial.js:146](../src/tutorial.js#L146) | Each round: the faster fighter (Speed + a die) strikes first, Power decides the odds (the gauge shows the gap), traits pop up as coloured tags, then a roll decides the round. After that, each fighter rolls to injure the other. First to win two rounds takes the match. |
-| [src/tutorial.js:151](../src/tutorial.js#L151) | **Read your opponent** |
-| [src/tutorial.js:152](../src/tutorial.js#L152) | Before each round, pick a tactic. Press beats Feint, Feint beats Guard, Guard beats Press: guess right and you get +10% to win the round. Every fighter has a humor (temperament) that hints at what they'll do: a Choleric opponent loves to Press, so Guard against them. The ★ marks what auto-play would pick. |
-| [src/tutorial.js:157](../src/tutorial.js#L157) | **Your call between rounds** |
-| [src/tutorial.js:158](../src/tutorial.js#L158) | Fight on, or capitulate: you lose the match and the buy-in, but your fighter is guaranteed to survive. It matters most when the Death Gate is open (usually two injuries). |
-| [src/tutorial.js:163](../src/tutorial.js#L163) | **Mortal danger** |
-| [src/tutorial.js:164](../src/tutorial.js#L164) | Your fighter's Death Gate is open (usually two injuries; lions in the arena open it sooner). If they lose the next round and are wounded, they can die. Is this match worth it? |
-| [src/tutorial.js:169](../src/tutorial.js#L169) | **Why you won or lost** |
-| [src/tutorial.js:170](../src/tutorial.js#L170) | Open "Show the round-by-round math" to see every number: Power, the gap, each bonus, and the roll. Nothing is hidden. |
+| [src/tutorial.js:46](../src/tutorial.js#L46) | Tutorial month, step 1: Let's start with one gladiator. In the Market, look at each one's Power (the sword: wins rounds) and Speed (the arrow: strikes first), then press Recruit on at least one of them. |
+| [src/tutorial.js:54](../src/tutorial.js#L54) | Tutorial month, step 2: Now the Ludus. Every fighter does one job a week. Give your strongest fighter +1 Power: training costs a little Gold and adds ${STRESS.train} Stress. The other can Rest for now; one Trainer Room trains one fighter at a time. |
+| [src/tutorial.js:63](../src/tutorial.js#L63) | Tutorial month, step 3: Jobs are set. Make sure at least one fighter is training: only a fighter on Train Power (+1 Power) or Train Speed (+3 Speed) gets stronger, and an untrained house falls behind fast. Then press End week and the week plays out: training, rest and healing all happen at once. |
+| [src/tutorial.js:71](../src/tutorial.js#L71) | Tutorial month, step 4: The last week of every month is fight day. Keep training, and rest a fighter whose Stress passes ${STRESS.overtrained - STRESS.train}: at ${STRESS.overtrained} they're overtrained and fight worse. When you're ready, Skip to tournament takes you straight there. |
+| [src/tutorial.js:79](../src/tutorial.js#L79) | Tutorial month, step 5: Fight day. Each fighter's line shows their odds, injury risk and the Power both sides will fight with. Sending one costs a little Prestige; winning pays it back with more. Pick your best and press Send. |
+| [src/tutorial.js:96](../src/tutorial.js#L96) | **The Trainer cap** |
+| [src/tutorial.js:97](../src/tutorial.js#L97) | A fighter has learned everything this Trainer Room can teach. Upgrade the Trainer Room in the Estate to raise the cap (3 → 5 → 8 → 13 → 21 points per fighter). Each level also raises the weekly fee by 1 Gold per trainee, so plan your Gold. |
+| [src/tutorial.js:102](../src/tutorial.js#L102) | **Watch the Stress bar** |
+| [src/tutorial.js:103](../src/tutorial.js#L103) | Training stacks Stress. At 50+ a fighter is overtrained: they can't train, and in the arena they fight at −1 Power with one ability lost. Train, train, rest keeps them sharp. |
+| [src/tutorial.js:108](../src/tutorial.js#L108) | **After the fight** |
+| [src/tutorial.js:109](../src/tutorial.js#L109) | Wins pay Gold and Prestige; losses pay a little Gold. Injuries stay until healed: put hurt fighters on the Medbay job. Check the house log on the left to see what happened each week. |
+| [src/tutorial.js:114](../src/tutorial.js#L114) | **Injuries and the Death Gate** |
+| [src/tutorial.js:115](../src/tutorial.js#L115) | An injured fighter shows red chips and filled Death Gate dots. At two dots the gate is open: losing a round can kill them. Heal them in the Medbay, or pay the Emergency Surgeon if you need them right away. |
+| [src/tutorial.js:120](../src/tutorial.js#L120) | **A Boss fight** |
+| [src/tutorial.js:121](../src/tutorial.js#L121) | Bosses are stronger and fight under a special arena rule (shown in red). They can't be skipped. Beat your top arena's Boss and your fighter earns a Title (+1 Power), you gain Favour and a new arena opens. Lose and you lose Favour (more in higher tiers), and that Boss will be waiting for you, stronger. Remember: a "Strong favourite" still loses about one match in four. |
+| [src/tutorial.js:126](../src/tutorial.js#L126) | **Level up!** |
+| [src/tutorial.js:127](../src/tutorial.js#L127) | Every match earns XP. When a fighter levels up, pick one of three perks on their card. Some perks need both Power and Speed, which is a reason to build balanced fighters. |
+| [src/tutorial.js:132](../src/tutorial.js#L132) | **More arenas, more fights** |
+| [src/tutorial.js:133](../src/tutorial.js#L133) | Your old arenas still hold bouts every tournament week. Send a different fighter to each to earn Gold, XP and Renown. Only your top arena can win you Favour. Win 3 times in an arena (or beat its Boss) to become its Champion; Champions are booed if they go back, but rookies fight there freely. Opponents scout a fighter who fights in your top arena two months running (+1 Power against them), so rotate your stars. |
+| [src/tutorial.js:138](../src/tutorial.js#L138) | **Keep your stars happy** |
+| [src/tutorial.js:139](../src/tutorial.js#L139) | Winning makes fighters famous (Renown), and famous fighters expect better rooms. Their Morale drifts toward comfort minus expectations: place decor, upgrade Quarters, build an Entertainment Room. Inspired fighters fight better; Discontented ones won't train. |
+| [src/tutorial.js:180](../src/tutorial.js#L180) | **Your house has grown** |
+| [src/tutorial.js:181](../src/tutorial.js#L181) | A new Prestige level unlocks room plots and buildings. Visit the Estate: plots are limited, so choose what your house needs most. Trainer upgrades raise how far fighters can train. |
+| [src/tutorial.js:190](../src/tutorial.js#L190) | **How a round works** |
+| [src/tutorial.js:191](../src/tutorial.js#L191) | Each round: the faster fighter (Speed + a die) strikes first, Power decides the odds (the gauge shows the gap), traits pop up as coloured tags, then a roll decides the round. After that, each fighter rolls to injure the other. First to win two rounds takes the match. |
+| [src/tutorial.js:196](../src/tutorial.js#L196) | **Read your opponent** |
+| [src/tutorial.js:197](../src/tutorial.js#L197) | Before each round, pick a tactic. Press beats Feint, Feint beats Guard, Guard beats Press: guess right and you get +10% to win the round. Every fighter has a humor (temperament) that hints at what they'll do: a Choleric opponent loves to Press, so Guard against them. The ★ marks what auto-play would pick. |
+| [src/tutorial.js:202](../src/tutorial.js#L202) | **Your call between rounds** |
+| [src/tutorial.js:203](../src/tutorial.js#L203) | Fight on, or capitulate: you lose the match and the buy-in, but your fighter is guaranteed to survive. It matters most when the Death Gate is open (usually two injuries). |
+| [src/tutorial.js:208](../src/tutorial.js#L208) | **Mortal danger** |
+| [src/tutorial.js:209](../src/tutorial.js#L209) | Your fighter's Death Gate is open (usually two injuries; lions in the arena open it sooner). If they lose the next round and are wounded, they can die. Is this match worth it? |
+| [src/tutorial.js:214](../src/tutorial.js#L214) | **Why you won or lost** |
+| [src/tutorial.js:215](../src/tutorial.js#L215) | Open "Show the round-by-round math" to see every number: Power, the gap, each bonus, and the roll. Nothing is hidden. |
 
 The "next step" bar (`src/hints.js`):
 
@@ -1020,3 +1020,4 @@ picked by the dice kept their length, so careers play the same.
 | [src/quests.js](../src/quests.js) `stewardGrandDone` | The steward's last word: coup, loyalist, an ordinary win. |
 | [src/plot.js](../src/plot.js) `PREFECT`, `PREFECT_LINES`; `raid`, `theOffer` | The Praetorian prefect's name and his three calls (suspicion 20, 40, 60); he now leads the raid and makes the offer. |
 | [src/run/plotEngine.js](../src/run/plotEngine.js) `resolveCoup`, `betray` | The cousin's callback lines in the coup and betrayal epilogues. |
+| [src/tutorial.js](../src/tutorial.js) `GUIDE`, `STEPS` | 7.10 tutorial pass: the recruit and bout steps; the new "firstweekend" step; the steward's tips on events, Fortune's wheel, the tribute, a Mutinous fighter, moles and the Liaison; longer trainer-cap, aftermath and level-up tips. |
