@@ -1,0 +1,422 @@
+// The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
+
+import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE, MERCY, BET, HYPE, ROUND_TACTICS } from '../data.js';
+import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf, signatureBlocker, hypeOf, opponentTell, tellForecast, opponentUnleashesNext, firstStrikeChance } from '../fight.js';
+import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
+import { esc, safeColor, fighterCard, mercyChoices, ICON } from './components.js';
+import { roundStats } from '../explain.js';
+import { purseGold } from '../run.js';
+
+const DIE_FACES = '⚀⚁⚂⚃⚄⚅';
+
+// What this side actually brings to the coming round (everything applied), so the card never misleads.
+const statLine = (stats, side) => `<div class="round-stats" title="Power and Speed in Round ${stats.round}, with gear, Titles, items, injuries, Scouted, Challenger and arena rules applied">Round ${stats.round}: <b>Power ${stats[side].power}</b> · <b>Speed ${stats[side].speed}</b></div>`;
+
+function tagPills(r) {
+  const pills = [];
+  const add = (side, mods, percent) => mods.forEach((m) => pills.push({ side, text: modLabel(m, percent) }));
+  if (r.initiative.reason === 'footwork') pills.push({ side: r.initiative.first, text: 'Footwork: strikes first' });
+  if (r.initiative.reason === 'concussed') pills.push({ side: r.initiative.first === 'A' ? 'B' : 'A', text: 'Concussed: strikes second' });
+  for (const side of ['A', 'B']) add(side, r.initiative.speed[side].mods, false);
+  add('A', r.power.A.mods, false);
+  add('B', r.power.B.mods, false);
+  add('A', r.win.modsA, true);
+  add('B', r.win.modsB, true);
+  for (const c of r.checks) for (const m of c.mods) if (m.value) add(m.side, [m], true);
+  const seen = new Set();
+  return pills.filter((p) => !seen.has(p.side + p.text) && seen.add(p.side + p.text));
+}
+
+// What both sides chose last round, and who read whom.
+function tacticLine(m, r) {
+  const t = (side) => TACTICS[r.stances?.[side] ?? 'steady'];
+  if (!r.stances) return '';
+  const who = r.counter ? `${esc((r.counter === 'A' ? m.a : m.b).f.name)} read it: ${t(r.counter).name} beats ${t(r.counter === 'A' ? 'B' : 'A').name} (+10%)` : 'No counter';
+  return `<div class="tactic-line ${r.counter ? (r.counter === 'A' ? 'good' : 'bad') : ''}">${t('A').icon} You: <b>${t('A').name}</b> · ${t('B').icon} They: <b>${t('B').name}</b> · ${who}</div>`;
+}
+
+// The dice tumble for this long before the round plays out (seconds).
+export const DICE_TIME = 1.4;
+const LINE_GAP = 0.45;
+const SUSPENSE = 1; // the pause ("Steel meets steel…") before the round's winner is announced
+// 7.7: the player's fight pace (a preference; display timing only, no dice). Quick shortens the dice and the lines.
+export const FIGHT_PACE = { full: 1, quick: 0.4 };
+let pace = 1;
+export function setFightPace(name) { pace = FIGHT_PACE[name] ?? 1; }
+export const diceTime = () => DICE_TIME * pace;
+const lineGap = () => LINE_GAP * pace;
+// The round that decides the match plays in slow motion at either pace: a longer pause, a "Decider" banner.
+const isDecider = (m, r) => m.over && r === m.rounds.at(-1) && m.result?.reason !== 'towel';
+const suspenseOf = (m, r) => (isDecider(m, r) ? SUSPENSE * 2 : SUSPENSE * pace);
+
+// Map each check in r.checks to the narration line timestamp where that blow lands.
+function computeBlowTimes(r, lines, delays, rollAt, reveal, showMath) {
+  const checks = r.checks ?? [];
+  const blowTimes = [];
+  let idx = rollAt >= 0 ? rollAt + 1 : lines.length;
+  let lastAt = reveal;
+  for (const c of checks) {
+    if (showMath) {
+      const t = delays[idx] ?? lastAt + lineGap();
+      blowTimes.push(t);
+      lastAt = t;
+      idx += 1;
+      if (c.allIn) continue;
+      if (c.drained && lines[idx]?.type === 'effect') idx += 1;
+      if (c.parry && (lines[idx]?.type === 'parry' || lines[idx]?.type === 'hit')) idx += 1;
+      if (c.injury && (lines[idx]?.type === 'injury' || lines[idx]?.type === 'death')) idx += 1;
+    } else {
+      let matched = null;
+      if (c.allIn) {
+        if (lines[idx]?.type === 'death') { matched = delays[idx]; idx += 1; }
+      } else {
+        if (c.counter && c.hit && lines[idx]?.type === 'hit') { matched ??= delays[idx]; idx += 1; }
+        if (c.drained && lines[idx]?.type === 'effect') { matched ??= delays[idx]; idx += 1; }
+        if (c.parry?.success && lines[idx]?.type === 'parry') { matched ??= delays[idx]; idx += 1; }
+        if (c.injury && (lines[idx]?.type === 'injury' || lines[idx]?.type === 'death')) { matched ??= delays[idx]; idx += 1; }
+      }
+      const t = matched ?? lastAt + lineGap();
+      blowTimes.push(t);
+      lastAt = t;
+    }
+  }
+  return blowTimes;
+}
+
+// When each line of the round's story appears: the line naming the winner waits a beat of suspense,
+// and lands with the banner. `reveal` is that moment; `end` is the last line; `blowTimes` matches r.checks.
+export function roundTiming(m, r, showMath = false) {
+  const lines = (showMath ? narrateRound : narrateStory)(m, r);
+  const rollAt = lines.findIndex((l) => l.type === 'roll');
+  const pause = suspenseOf(m, r);
+  const delays = lines.map((l, i) => diceTime() + 0.3 + i * lineGap() + (rollAt >= 0 && i >= rollAt ? pause : 0));
+  const reveal = rollAt >= 0 ? delays[rollAt] : diceTime() + 0.3 + lines.length * lineGap() + pause;
+  const hurt = lines.findIndex((l, i) => i >= rollAt && (l.type === 'injury' || l.type === 'death'));
+  const blowTimes = computeBlowTimes(r, lines, delays, rollAt, reveal, showMath);
+  return { lines, delays, reveal, end: Math.max(reveal, delays.at(-1) ?? 0), shake: hurt >= 0 ? delays[hurt] : reveal, blowTimes };
+}
+export const revealTime = (m, r, showMath = false) => roundTiming(m, r, showMath).reveal;
+// When the round has fully played out (auto-play waits for this, plus a moment to take it in).
+export const roundEndTime = (m, r, showMath = false) => roundTiming(m, r, showMath).end;
+
+// Renders one fighter's card on the fight screen; when `revealed: false` and `r.before` exists, renders the pre-round
+// snapshot so death, new wounds, disabled slots and post-round Power never spoil the round at t=0s.
+export function sideCardHtml(m, side, ui, { revealed = true, freshOpts = {} } = {}) {
+  const c = side === 'A' ? m.a : m.b;
+  const last = m.rounds.at(-1);
+  const before = !revealed && last?.before ? last.before[side.toLowerCase()] : null;
+  const oppOpts = side === 'B' ? { opponent: { boss: m.boss, earlyRound: m.earlyRound } } : {};
+  if (before) {
+    const fSnap = { ...c.f, alive: before.alive, injuries: before.injuries };
+    const cSnap = { ...c, f: fSnap, disabled: before.disabled, roundsWon: before.roundsWon };
+    const live = before.power && typeof before.power === 'object'
+      ? { power: before.power.total ?? before.power.power, mods: before.power.mods ?? [] }
+      : { power: before.power ?? c.f.power, mods: [] };
+    return fighterCard(fSnap, { combatant: cSnap, live, ...oppOpts, compact: true, stress: side === 'A' });
+  }
+  const stats = roundStats(m);
+  return fighterCard(c.f, { combatant: c, live: stats[side], ...freshOpts, ...oppOpts, compact: true, stress: side === 'A' });
+}
+
+// The round's winner, big and clear: who took it, and the score it leaves.
+function roundBanner(m, r, delay) {
+  const late = delay ? ` late" style="animation-delay:${delay}s` : '';
+  const ours = r.winner === 'A';
+  const who = esc((ours ? m.a : m.b).f.name);
+  const text = r.death ? (ours ? `☠ ${esc(m.b.f.name)} falls` : `☠ ${esc(m.a.f.name)} falls`)
+    : ours ? `⚔ Round ${r.round} to ${who}!` : `Round ${r.round} to ${who}`;
+  const decider = isDecider(m, r) && !r.death ? '<em class="decider-tag">Decider!</em>' : '';
+  return `<div class="round-banner ${ours ? 'win' : 'loss'}${isDecider(m, r) ? ' decider' : ''}${late}" role="status">${decider}${text}<small>${m.a.roundsWon}–${m.b.roundsWon}</small></div>`;
+}
+
+// Who strikes first: two dice tumble, then land. Footwork and Concussed skip the roll.
+function initiativeRoll(m, r, animate) {
+  const init = r.initiative;
+  const name = (side) => esc((side === 'A' ? m.a : m.b).f.name);
+  const cls = animate ? '' : ' still';
+  if (init.reason === 'footwork' || init.reason === 'concussed') {
+    const why = init.reason === 'footwork' ? `${name(init.first)} is faster and darts in first (Footwork).` : `${name(init.first === 'A' ? 'B' : 'A')} is Concussed and must strike second.`;
+    return `<div class="initiative${cls}"><div class="init-title">Who strikes first?</div><div class="init-auto">${why}</div></div>`;
+  }
+  const side = (s) => {
+    const speed = init.speed[s].total;
+    const roll = init.rolls[s];
+    return `<div class="init-side ${s.toLowerCase()}${init.first === s ? ' first' : ''}">
+      <div class="init-name">${name(s)}</div>
+      <div class="init-math">Speed ${speed} + <span class="die${cls}" role="img" aria-label="rolled ${roll}"><span class="face">${DIE_FACES[roll - 1]}</span></span> = <b class="reveal${cls}">${speed + roll}</b></div>
+    </div>`;
+  };
+  const tie = init.reason === 'tiebreak' ? ' (tied: a coin flip decides)' : '';
+  return `<div class="initiative${cls}"><div class="init-title">Who strikes first? Speed + a die</div>
+    <div class="init-sides">${side('A')}<span class="vs">vs</span>${side('B')}</div>
+    <div class="init-result reveal${cls}">⚡ ${name(init.first)} strikes first${tie}: +10% to win the round and the first chance to wound.</div></div>`;
+}
+
+function feed(m, ui) {
+  const pre = m.preMatch.map((p) => `<div class="line warn static">${esc(m.a.f.name)} is overtrained and loses ${esc(p.disabled.map((s) => slotName(m.a.f, s)).join(', ') || 'focus')} for this match.</div>`).join('');
+  return pre + m.rounds.map((r) => {
+    const animate = r.round === ui.animateRound;
+    const { lines: story, delays } = roundTiming(m, r, ui.showMath);
+    const lines = story.map((l, i) =>
+      `<div class="line ${l.type}${animate ? '' : ' static'}" style="${animate ? `animation-delay:${delays[i]}s` : ''}">${esc(l.text)}</div>`).join('');
+    return `<h4>Round ${r.round}</h4>${lines}`;
+  }).join('');
+}
+
+// After the match: everything it changed, in one place.
+function report(s) {
+  if (!s) return '';
+  const row = (label, value, tone = '') => `<div class="rep-row ${tone}"><span>${label}</span><b>${value}</b></div>`;
+  const plus = (n) => `${n > 0 ? '+' : ''}${n}`;
+  const tone = (n) => (n > 0 ? 'good' : n < 0 ? 'bad' : '');
+  const rows = [
+    row('Gold', plus(purseGold(s)), tone(purseGold(s))),
+    row('Prestige', plus(s.prestige), tone(s.prestige)),
+    s.favor ? row('Imperial Favour', plus(s.favor), tone(s.favor)) : '',
+    s.died ? '' : row('XP', `${plus(s.xp)}${s.levels ? ` · ⭐ level up! Choose a perk on their card` : ''}`, 'good'),
+    s.died ? '' : row('Renown', plus(s.renown), tone(s.renown)),
+    s.died ? '' : row('Morale', plus(s.morale), tone(s.morale)),
+    s.injuries?.length ? row('New injuries', `${esc(s.injuries.join(', '))}: heal them in the Medbay`, 'bad') : '',
+    s.loot ? row('Loot', `${esc(GEAR[s.loot].name)} → storeroom`, 'good') : '',
+    s.title ? row(s.titlePower > 1 ? 'Titles' : 'Title', `🏆 ${esc(s.title)}${s.title === 'Master of the Games' ? '' : ` (+${s.titlePower ?? 1} Power)`}`, 'good') : '',
+    s.champion ? row('The crowd', 'boos a champion back in the pits', 'bad') : s.crushing ? row('The crowd', 'jeers the mismatch', 'bad') : '',
+    s.bloodFaith ? row('Blood Faith', 'buy-in refunded', 'good') : '',
+    s.refund ? row('The Boss Final', `${s.refund} Prestige buy-in returned`, 'good') : '',
+    s.nemesis ? row('Nemesis', `☠ ${esc(s.nemesis)} is beaten`, 'good') : '',
+    s.hype ? row('Crowd hype', `📣 ${s.hype.hype}${s.hype.renown ? `: +${s.hype.renown} Renown` : ''}${s.hype.gold ? `, +${s.hype.gold} Gold` : ''}`, s.hype.renown ? 'good' : '') : '',
+    s.bet ? row('Your bet', s.bet.won ? `🪙 won: ${s.bet.payout} Gold back on ${s.bet.stake} (+${s.bet.payout - s.bet.stake} profit)` : `🪙 lost: ${s.bet.stake} Gold`, s.bet.won ? 'good' : 'bad') : '',
+    s.bribed ? row('Capitulation', 'forgiven: no Favour or Renown lost', 'good') : '',
+    s.saved ? row("Proserpina's Coin", `${esc(s.fighter)} fell, but was carried out alive. The coin is spent.`, 'good') : '',
+    s.wager ? row("The Fates' Wager", s.wager.won ? `won: +${s.wager.gold} Gold, +${s.wager.renown} Renown` : `lost: ${s.wager.gold} Gold`, s.wager.won ? 'good' : 'bad') : '',
+    s.verdict === 'spare' ? row('Verdict', '👍 Spared: the Emperor approves', 'good') : '',
+    s.verdict === 'kill' ? row('Verdict', `👎 Killed${s.mark ? ` · 💀 earned the mark ${esc(s.mark)}` : ''}`, 'bad') : '',
+    s.verdict && s.verdict === s.mercy ? row('The crowd', 'roars its approval', 'good') : '',
+    s.feud && s.verdict === 'kill' ? row('Feud', esc(s.feud), 'bad') : '',
+    s.owed ? row('A life owed', esc(s.owed), 'good') : '',
+    s.died ? row('Fallen', `${esc(s.fighter)}'s gear returns to the storeroom`, 'bad') : '',
+  ].join('');
+  // Version 6 (phase 4): confetti for a Title.
+  const confetti = s.title ? `<div class="confetti" aria-hidden="true">${Array.from({ length: 24 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i % 6) * 0.12}s;--c:${['#d9b45a', '#e0603c', '#8fc98f', '#f0e2b8'][i % 4]}"></i>`).join('')}</div>` : '';
+  return `<div class="report">${confetti}<h3>After the fight</h3>${rows}</div>`;
+}
+
+// Thumbs up or down: the beaten opponent's fate, with what the crowd wants.
+function mercyPanel(m, mercy, late) {
+  const blood = mercy.crowd === 'kill';
+  // `favorWhy` (from spareFavorWhy) says why a spare earns no Favour; without it, the old rule (top arena, a mercy chant).
+  const why = mercy.favorWhy !== undefined ? mercy.favorWhy : mercy.top === false ? 'no Favour in a lower arena' : blood ? 'no Favour: the Emperor wanted blood too' : null;
+  const favor = why ?? `+${MERCY.spareFavor} Favour`;
+  const debt = mercy.owedLeft ? `${m.house ? m.house.name : 'Their house'} already owes you a life (${mercy.owedLeft} month${mercy.owedLeft === 1 ? '' : 's'} left): no new debt` : `${m.house ? m.house.name : 'Their house'} will owe you a life (−1 Power against you)`;
+  const spare = blood ? [favor, debt] : [favor, `+${MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`];
+  const kill = blood ? [`+${MERCY.killRenown + MERCY.crowdRenown} Renown`, `+${MERCY.crowdMorale} Morale`, 'A kill toward the kill marks'] : [`+${MERCY.killRenown + MERCY.infamyRenown} Renown (infamy)`, 'A kill toward the kill marks', ...(m.house ? [`${m.house.name} will swear a feud`] : [])];
+  return `<div class="mercy${late}">${mercyChoices({ title: `${esc(mercy.opp)} lies beaten in the sand. All eyes turn to you, Lanista.`, blood, spare, kill })}</div>`;
+}
+
+// The crowd's hype (fun idea #6): fills on upsets, wounds, kills and comebacks; held back until the round is revealed.
+// Version 6 (phase 4): Guard drains it; at the mark (HYPE.favour) the crowd is with your fighter for the next round.
+function hypeMeter(m, hold) {
+  const h = hypeOf(m);
+  const roar = m.a.roar && !m.over;
+  const line = roar ? `<div class="sub roar-line">📣 The crowd is with ${esc(m.a.f.name)}: +${HYPE.favourPower} Power this round. Guarding will cool them.</div>` : '';
+  return `<div class="hype-wrap${hold}"><div class="hype${roar ? ' roar' : ''}" title="The crowd's hype: upsets, wounds, kills, signature moves, comebacks and Press fill it; Guard drains it. At the mark (${HYPE.favour}) the crowd is with your fighter: +${HYPE.favourPower} Power that round. At the end it pays Renown (and Gold, on a win).">📣 <span class="hypebar"><span style="width:${h}%"></span><b class="mark" style="left:${HYPE.favour}%"></b></span> <small>${h}</small></div>${line}</div>`;
+}
+
+// Betting on your own fighter, before Round 1 (fun idea #3). `m.betQuote` ({ odds, cap, gold }) is set by src/main.js.
+function betRow(m) {
+  if (m.bet) return `<div class="sub bet-placed">🪙 You bet ${m.bet.stake} Gold on ${esc(m.a.f.name)}: a win returns ${m.bet.payout} (+${m.bet.payout - m.bet.stake}).</div>`;
+  const q = m.betQuote;
+  if (!q) return '';
+  const stakes = BET.stakes.filter((s) => s <= q.cap).map((s) => `<button class="btn small" data-action="bet" data-amount="${s}" ${s > q.gold ? `disabled title="Needs ${s} Gold"` : Math.floor(s * q.odds) <= s ? `disabled title="At these odds a ${s} Gold bet would win nothing"` : `title="Win: ${Math.floor(s * q.odds)} Gold back (+${Math.floor(s * q.odds) - s}). Lose: −${s}."`}>${s} Gold → ${Math.floor(s * q.odds)}</button>`).join('');
+  return `<div class="items-row bet-row"><span class="sub">🪙 Bet on ${esc(m.a.f.name)} at ×${q.odds.toFixed(2)} (a win returns your stake × ${q.odds.toFixed(2)}):</span>${stakes}</div>`;
+}
+
+// The signature move (level 3+): ready, used, or how to unlock it.
+function signatureRow(m) {
+  const sig = signatureOf(m.a.f);
+  if (!sig) return SIGNATURES[m.a.f.cls] ? `<div class="sub">★ Signature move <b>${esc(SIGNATURES[m.a.f.cls].name)}</b> unlocks at level ${SIGNATURE.level}.</div>` : '';
+  if (m.a.sigRound) return `<div class="sub">★ ${esc(sig.name)} ${m.a.sigRound > m.round ? 'will be unleashed this round' : 'has been used this fight'}.</div>`;
+  // Disabled, with the reason, when it can't be used (the designer, 5.4.2: an overtrained Cestus loses the class ability it needs).
+  const why = signatureBlocker(m);
+  if (why) return `<div class="items-row"><button class="btn signature" disabled title="${esc(why)}">★ ${esc(sig.name)} <small>${esc(why)}</small></button></div>`;
+  return `<div class="items-row"><button class="btn signature" data-action="signature" title="${esc(sig.desc)}">★ ${esc(sig.name)} <small>${esc(sig.desc)} Once per fight.</small></button></div>`;
+}
+
+function whyTable(m, late = '') {
+  const rows = m.rounds.map((r) => {
+    const mods = (list) => (list.length ? ` <small>(${list.map((x) => esc(modLabel(x, false))).join(', ')})</small>` : '');
+    const hurts = r.checks.filter((c) => c.injury).map((c) => `${esc((c.defender === 'A' ? m.a : m.b).f.name)}: ${esc(c.injury.name)}`).join('<br>') || '—';
+    return `<tr>
+      <td>${r.round}</td>
+      <td>${r.power.A.total}${mods(r.power.A.mods)}</td>
+      <td>${r.power.B.total}${mods(r.power.B.mods)}</td>
+      <td>${signed(r.delta)}</td>
+      <td>${fmtPct(r.win.base)} → ${fmtPct(r.win.chance)}</td>
+      <td>${fmtPct(r.roll)}</td>
+      <td>${esc((r.winner === 'A' ? m.a : m.b).f.name)}</td>
+      <td>${hurts}</td>
+    </tr>`;
+  }).join('');
+  return `<details class="why${late}"><summary>Show the round-by-round maths</summary><div class="why-scroll"><table>
+    <thead><tr><th>Rd</th><th>Your Power</th><th>Their Power</th><th>Delta</th><th>Win chance (base → final)</th><th>Roll</th><th>Round to</th><th>Injuries</th></tr></thead>
+    <tbody>${rows}</tbody></table><p class="sub">You win a round when the roll is at or under your win chance.</p></div></details>`;
+}
+
+// Version 6 (phase 4): the opponent's tell, read by your Oracle. Words are PLACEHOLDER for the designer.
+const TELLS = {
+  press: (name) => `${name} rolls their shoulders and edges forward: they mean to Press.`,
+  feint: (name) => `${name}'s eyes flick to your off side: they mean to Feint.`,
+  guard: (name) => `${name} settles low behind their guard: they mean to Guard.`,
+};
+
+// All In, the clutch choice at the Death Gate (version 6, phase 4), with its death risk beside Steady's.
+function allInButton(m) {
+  const t = TACTICS.allIn;
+  const risk = Math.round(deathRisk(m, 'allIn') * 100);
+  return `<button class="btn big tactic all-in" data-action="next-round" data-stance="allIn" title="${esc(t.desc)}"><span class="tactic-main">${ICON.allIn} ${t.name}</span><small>about ${risk}% death</small></button>`;
+}
+
+const tacticIcon = (k) => ICON[k] ?? TACTICS[k]?.icon ?? '';
+
+// Choose this round's tactic: each button plays the round. The suggestion (what auto-play would do) is marked.
+function tacticPicker(m) {
+  const round = m.round + 1;
+  const suggested = suggestTactic(m);
+  const h = m.b.f.humor ? HUMORS[m.b.f.humor] : null;
+  const buttons = ROUND_TACTICS.map((k) => [k, TACTICS[k]]).map(([k, t]) => `<button class="btn big tactic${k === suggested ? ' primary' : ''}" data-action="next-round" data-stance="${k}" title="${esc(t.desc)}">
+      <span class="tactic-main">${tacticIcon(k)} ${t.name}</span>${k === suggested ? '<small class="tactic-sug">★ suggested</small>' : ''}</button>`).join('')
+    + (mortalDanger(m.a) ? allInButton(m) : '');
+  const last = m.rounds.at(-1);
+  const read = h ? `${esc(m.b.f.name)} is <b>${h.name}</b>: ${esc(h.tell)}.${last ? ` Last round they chose <b>${TACTICS[last.stances.B].name}</b>.` : ''}` : `${esc(m.b.f.name)} has no clear habits.`;
+  const tell = opponentTell(m);
+  const tellLine = tell ? `<div class="tell">👁 ${esc(TELLS[tell](m.b.f.name))} <small>Weighing the tell against their temper: about ${tellForecast(m)}% they ${esc(TACTICS[tell].name)}.</small></div>` : '';
+  const sig = opponentUnleashesNext(m) ? `<div class="tell warn">⚠ ${esc(m.b.f.name)} is gathering for ${esc(SIGNATURES[m.b.f.cls].name)}: it comes this round.</div>` : '';
+  // 7.7: who is likely to strike first decides close rounds; show it (the tactic chosen can still change Speed).
+  const first = Math.round(100 * firstStrikeChance(m, round));
+  const firstLine = `<div class="first-strike" title="Speed plus a die each; Concussed always strikes second; Footwork strikes first when faster. Your tactic this round can still change it.">⚡ Strikes first: ${esc(m.a.f.name)} about <b>${first}%</b> · ${esc(m.b.f.name)} about <b>${100 - first}%</b></div>`;
+  return `<div class="tactics"><div class="label">Round ${round}: choose your tactic</div>
+    ${sig}${tellLine}${firstLine}
+    <div class="tactic-grid">${buttons}</div>
+    <div class="sub">${read} <span class="counters">${ICON.press} Press beats ${ICON.feint} Feint · ${ICON.feint} Feint beats ${ICON.guard} Guard · ${ICON.guard} Guard beats ${ICON.press} Press (+10% win chance)</span></div></div>`;
+}
+
+function controls(m, ui, bout, items = {}, nextBlocker = null, mercy = null) {
+  if (m.over) {
+    const won = m.result.winner === 'A';
+    const advice = adviceFor(m);
+    const last = m.rounds.at(-1);
+    const at = last?.round === ui.animateRound ? roundEndTime(m, last, ui.showMath) : 0;
+    const lateAt = (sec) => (at ? ` late" style="animation-delay:${(at + sec).toFixed(2)}s` : '');
+    const lateBanner = lateAt(0.4);
+    const lateText = lateAt(0.65);
+    const lateReport = lateAt(0.9);
+    const lateActions = lateAt(1.25);
+    const first = won && m.summary?.firstWin ? `<div class="first-win${lateBanner}"><div class="first-win-title">🏆 Your first victory!</div><div>The house's first win. The crowd will remember your colours, and every win from here pays Gold and Prestige: win the arena's Boss fight to conquer it and climb.</div></div>` : '';
+    const nextControls = mercy ? mercyPanel(m, mercy, lateActions) : `<div class="end-actions${lateActions}">${m.summary?.next ? `<div class="row"><button class="btn primary big" data-action="fight" data-id="${esc(m.a.f.id)}" data-tier="${bout.tier}" ${nextBlocker ? `disabled title="${esc(nextBlocker)}"` : ''}>On to the ${esc(m.summary.next)}</button>
+        <button class="btn danger big" data-action="withdraw" data-tier="${bout.tier}" title="Leave the tournament now: it counts as capitulating, and your fighter is safe">Withdraw</button></div>
+        ${nextBlocker ? `<div class="why-not">${esc(nextBlocker)} ${/perk/.test(nextBlocker) ? '(on their card, back in the Ludus)' : ''}</div>` : ''}` : ''}
+      <button class="btn ${m.summary?.next ? '' : 'primary '}big" data-action="leave-fight">${m.summary?.next ? 'Back to the Ludus (fight on later this week)' : 'Return to the Ludus'}</button></div>`;
+    return `${first}<div class="result ${won ? 'win' : 'loss'}${lateBanner}">${won ? 'Victory' : m.result.reason === 'towel' ? 'Capitulated' : m.result.reason === 'death' ? 'Slain' : 'Defeat'}</div>
+      <div class="result-text${lateText}">${esc(resultText(m))}</div>
+      ${m.summary?.lastWords ? `<blockquote class="last-words${lateText}">“${esc(m.summary.lastWords)}”</blockquote>` : ''}
+      ${m.summary?.eulogy ? `<div class="eulogy${lateText}">⚰ ${esc(m.summary.eulogy)}${m.summary.story?.length ? `<ul>${m.summary.story.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}</div>` : ''}
+      <div class="report-wrap${lateReport}">${report(m.summary)}</div>
+      ${advice ? `<div class="advice${lateActions}">💡 ${esc(advice)}</div>` : ''}
+      ${whyTable(m, lateActions)}
+      ${nextControls}`;
+  }
+  const owned = Object.entries(items).filter(([, n]) => n > 0);
+  // One of each kind per fight: items already used drop out of the row.
+  const used = m.itemsUsed ?? [];
+  const usable = owned.filter(([k]) => !used.includes(k));
+  const itemRow = `${used.length ? `<div class="sub">Used this fight: ${used.map((k) => esc(CONSUMABLES[k].name)).join(', ')}.</div>` : ''}${usable.length
+    ? `<div class="items-row"><span class="sub">Use an item (one of each kind per fight):</span>${usable.map(([k, n]) => `<button class="btn small" data-action="use-item" data-item="${k}" title="${esc(CONSUMABLES[k].desc)}">${esc(CONSUMABLES[k].name)} ×${n}</button>`).join('')}</div>`
+    : ''}`;
+  if (m.round === 0) {
+    // A fighter who walks in with the Death Gate open is warned before Round 1 too.
+    const pre = mortalDanger(m.a) ? `<div class="alert">⚠ MORTAL DANGER from the first round: ${esc(m.a.f.name)} enters with ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'}. Losing Round 1: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death. Capitulating is only possible between rounds.</div>` : '';
+    return `${signatureRow(m)}${itemRow}${betRow(m)}<div class="decide">${pre}${tacticPicker(m)}<div class="row"><button class="btn big" data-action="auto-play" title="Plays every round with the suggested tactic, pausing at the Death Gate">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button><button class="btn big" data-action="skip-fight" title="Play the rest of the match at once with the suggested tactic. It stops at the Death Gate while you can still capitulate.">Skip to the result</button></div></div>`;
+  }
+  const danger = mortalDanger(m.a);
+  const alert = danger ? `<div class="alert">⚠ MORTAL DANGER: ${esc(m.a.f.name)} has ${effectiveInjuries(m.a.f)} injur${effectiveInjuries(m.a.f) === 1 ? 'y' : 'ies'} and can die if they lose the next round. Fighting on: about <b>${Math.round(deathRisk(m) * 100)}%</b> chance of death this round${canThrowTowel(m) ? '' : ' (and the Emperor forbids capitulating)'}. Or go 🔥 <b>All In</b>: a better chance to take the round, but lose it and they fall.</div>` : '';
+  const paused = ui.auto && danger ? '<div class="sub">Auto-play paused: your call.</div>' : '';
+  // 7.8: the decision (the Death Gate alert, the tactics, Capitulate) is one block, pinned to the bottom on a phone.
+  return `${paused}
+    <div>Score ${m.a.roundsWon}–${m.b.roundsWon}. First to two wins. Your call, Lanista.</div>
+    ${signatureRow(m)}
+    ${itemRow}
+    <div class="decide">${alert}
+    ${tacticPicker(m)}
+    <div class="row">
+      ${canThrowTowel(m) ? `<button class="btn danger big" data-action="towel" title="Give up the match and the buy-in. Your fighter is guaranteed to survive.">${bout.keepsBuyIn ? 'Capitulate (the buy-in comes back)' : `Capitulate (lose ${bout.buyIn} Prestige)`}</button>` : ''}
+      <button class="btn big" data-action="auto-play">${ui.auto ? 'Auto-play: on' : 'Auto-play'}</button>
+      ${danger && canThrowTowel(m) ? '' : '<button class="btn big" data-action="skip-fight" title="Play the rest of the match at once with the suggested tactic. It stops at the Death Gate while you can still capitulate.">Skip to the result</button>'}
+    </div></div>`;
+}
+
+// The tournament bracket on the fight screen: won rounds struck through, this match (or the next one) marked.
+export function bracketStrip(bracket, over) {
+  if (!bracket) return '';
+  const items = bracket.rounds.map((r, i) => {
+    const state = i < bracket.round ? 'done' : i === bracket.round ? (over ? 'next' : 'now') : '';
+    const note = state === 'now' ? ' · this match' : state === 'next' ? ' · up next' : '';
+    return `<li class="${state}"><b>${esc(r.label)}${note}</b><small>${esc(r.name)} · Power ${r.power}</small></li>`;
+  }).join('');
+  return `<div class="bracket fight-bracket" aria-label="Tournament bracket"><ol>${items}</ol></div>`;
+}
+
+// `nextBlocker`: why the bracket's next match can't start yet (e.g. a perk to choose), or null.
+// `mercy`: the pending thumbs-up-or-down verdict (run.mercy), if any.
+// `bracket`: bracketView(run, tier) during a three-match tournament, or null.
+export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = null, mercy = null, bracket = null) {
+  const last = m.rounds.at(-1);
+  const delta = last ? last.delta : 0;
+  const pills = last ? tagPills(last) : [];
+  const animate = Boolean(last) && last.round === ui.animateRound;
+  const shook = animate && last.death ? ' shake kill' : animate && last.checks.some((c) => c.injury) ? ' shake' : '';
+  const debuff = m.debuff ? BOSS_DEBUFFS[m.debuff] : null;
+  const stats = roundStats(m);
+  // While the dice roll and the round plays out, hold back the score and the winner so the result isn't spoiled.
+  const timing = animate ? roundTiming(m, last, ui.showMath) : null;
+  const reveal = timing?.reveal ?? 0;
+  const hold = (delay) => (animate ? ` late" style="animation-delay:${delay}s` : '');
+  // The round's winner glows; the loser's card dims a little. Static on non-round redraws so it doesn't replay.
+  const sideCls = (side) => (last && last.winner !== 'towel' ? `${last.winner === side ? ' round-won' : ' round-lost'}${animate ? '' : ' static'}` : '');
+  const sideStyle = animate ? ` style="--reveal:${reveal}s"` : '';
+  const hasSnapshot = animate && Boolean(last?.before);
+  // Fallback wound delay when a legacy round record lacks `r.before`.
+  const fresh = (side) => (animate && !hasSnapshot ? { fresh: last.checks.filter((c) => c.defender === side && c.injury && c.injury.tag !== 'death').length, freshAt: timing.shake } : {});
+  // A flash and a floating label on the card that takes the blow.
+  const pop = (side) => {
+    if (!animate) return '';
+    const hits = last.checks.filter((c) => c.defender === side && c.injury);
+    if (!hits.length) return '';
+    const text = hits.some((c) => c.injury.tag === 'death') ? '☠' : hits.map((c) => esc(c.injury.name)).join(' · ');
+    return `<div class="hit-pop${hits.some((c) => c.injury.tag === 'death') ? ' death' : ''}" style="animation-delay:${timing.shake}s" aria-hidden="true">${text}</div>`;
+  };
+  return `
+    <div class="fight">
+      <div class="fight-head">
+        <div><h2>${esc(bout.name)}</h2>${debuff ? `<div class="debuff" title="${esc(debuff.desc)}">☠ ${esc(debuff.name)}: ${esc(debuff.desc)}</div>` : ''}${m.festival ? `<div class="festival now">🏛 ${esc(FESTIVAL_BY_ID[m.festival].name)}: ${esc(FESTIVAL_BY_ID[m.festival].desc)}</div>` : ''}</div>
+        <div class="score${hold(reveal)}" aria-label="Score"><span class="a">${m.a.roundsWon}</span> – <span class="b">${m.b.roundsWon}</span></div>
+      </div>
+      ${bracketStrip(bracket, m.over)}
+      <div class="arena${shook}"${shook ? ` style="animation-delay:${timing?.shake ?? 0}s"` : ''}>
+        <div class="side${sideCls('A')}"${sideStyle}>${pop('A')}<div class="side-label a">Your gladiator</div><div id="side-card-A">${sideCardHtml(m, 'A', ui, { revealed: !hasSnapshot, freshOpts: fresh('A') })}</div><div class="${hold(reveal)}">${statLine(stats, 'A')}</div></div>
+        <div class="center">
+          <div class="gauge-labels"><span>You're stronger</span><span>Power Delta ${last ? signed(delta) : '0'}</span><span>They're stronger</span></div>
+          <div class="gauge" title="Leans towards the stronger side: yours on the left, theirs on the right"><div class="needle" style="left:${((10 - delta) / 20) * 100}%"></div></div>
+          ${hypeMeter(m, hold(reveal))}
+          ${m.a.f.risen && !m.rounds?.length ? `<div class="sub chant">📣 The crowd remembers ${esc(m.a.f.name)}. They chant the name they buried: +${HYPE.risen} hype.</div>` : ''}
+          ${last ? initiativeRoll(m, last, animate) : ''}
+          ${last ? tacticLine(m, last) : ''}
+          ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span>${animate ? `<span class="suspense${isDecider(m, last) ? ' slow' : ''}" style="--from:${reveal - suspenseOf(m, last)}s;--reveal:${reveal}s">${isDecider(m, last) ? 'Everything on one blow…' : 'Steel meets steel…'}</span>` : ''}</div>${roundBanner(m, last, reveal)}` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
+          <div class="tags">${pills.map((p, i) => `<span class="tag ${p.side.toLowerCase()}${animate ? '' : ' static'}"${animate ? ` style="animation-delay:${diceTime() + i * 0.2}s"` : ''}>${esc(p.text)}</span>`).join('')}</div>
+          <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><span class="feed-tools"><button class="link" data-action="toggle-pace" title="How fast rounds play out (the deciding round always takes its time)">${pace < 1 ? 'Full pace' : 'Quick pace'}</button> <button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the maths'}</button></span></div>
+          <div class="feed" id="feed">${feed(m, ui)}</div>
+        </div>
+        <div class="side${sideCls('B')}"${sideStyle}>${pop('B')}<div class="side-label b">${m.house ? `Opponent · <span style="color:${safeColor(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div><div id="side-card-B">${sideCardHtml(m, 'B', ui, { revealed: !hasSnapshot, freshOpts: fresh('B') })}</div><div class="${hold(reveal)}">${statLine(stats, 'B')}</div></div>
+      </div>
+      ${tutorial}
+      <div class="controls${m.over ? '' : hold((timing?.end ?? 0) + 0.3)}">${controls(m, ui, bout, items, nextBlocker, mercy)}</div>
+    </div>`;
+}
