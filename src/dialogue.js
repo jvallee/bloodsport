@@ -67,37 +67,49 @@ export const SCENES = {
   firstBoss: [
     {
       speaker: "emperor",
-      text: "One of yours has beaten a Boss. The crowd enjoyed it. So did I, briefly.",
+      text: "One of yours has beaten a Boss. The crowd enjoyed it. So did I, for nearly a minute.",
     },
     {
       speaker: "emperor",
-      text: "Do not let it go to your head, Lanista. Heads come off easily in my empire.",
+      text: "I have had the Boss's name struck from the arena walls. Bosses are like roof tiles: there is always another, and nobody remembers the old one.",
+    },
+    {
+      speaker: "emperor",
+      text: "Do not let it go to your head, Lanista. Heads come off easily in my empire. I have a man for it.",
     },
   ],
   tribute: [
     {
       speaker: "emperor",
-      text: "Winter, and my collectors have knocked on your door. A Lanista who pays is a Lanista who lives. Remember the arithmetic.",
+      text: "Winter, and my collectors have knocked on your door. They tell me you paid. They sounded almost disappointed.",
+    },
+    {
+      speaker: "emperor",
+      text: "A Lanista who pays is a Lanista who lives. It is the only arithmetic in this empire, and I have made it very simple.",
     },
   ],
   lowFavor: [
     {
       speaker: "emperor",
-      text: "Your name came up at dinner, Lanista. Nobody enjoyed it.",
+      text: "Your name came up at dinner, Lanista. Somewhere between the lampreys and the dormice. Nobody enjoyed it.",
     },
     {
       speaker: "emperor",
-      text: "Give me a reason to say it differently. Soon.",
+      text: "I have a short list of houses that bore me. It used to be longer. Give me a reason to take you off it. Soon.",
     },
   ],
   grand: [
     {
       speaker: "emperor",
-      text: "So. You have reached my Grand Tournament. I will be watching from my box.",
+      text: "So. You have reached my Grand Tournament. The whole city has bought a seat, and I have bought the city.",
     },
     {
       speaker: "emperor",
-      text: "Win, and you stand beside me. Lose, and you will have climbed a very long way to fall.",
+      text: "Every house that ever mattered has stood where you are standing. Most of them are buried under it.",
+    },
+    {
+      speaker: "emperor",
+      text: "Win, and you stand beside me in the box. Lose, and you will have climbed a very long way to fall. I will be watching either way. I always am.",
     },
   ],
 };
@@ -131,30 +143,36 @@ export function endingKind(run) {
 }
 export const ENDING_SCENES = {
   grand: [
+    { speaker: "narrator", text: "The noise does not stop. It rolls around the Coliseum like the sea in a bowl, and somewhere in it is your name." },
     { speaker: "emperor", text: "Master of the Games. Stand beside me, Lanista, so the crowd can see who made you." },
+    { speaker: "emperor", text: "Wave. No, smaller. You are a gift I gave them, not a god." },
     { speaker: "emperor", text: "Enjoy it. My favourites have short lives and magnificent funerals." },
   ],
   coup: [
-    { speaker: "emperor", text: "You. I pulled you out of nothing, and this is how you thank—" },
-    { speaker: "narrator", text: "The crowd does not let him finish. The imperial box stands empty, and the sand is quiet for the first time in a hundred years." },
+    { speaker: "emperor", text: "You. I pulled you out of nothing. I gave you a house, a name, a crowd. And this is how you thank—" },
+    { speaker: "narrator", text: "The crowd does not let him finish." },
+    { speaker: "narrator", text: "When the dust settles the imperial box stands empty, and the sand is quiet for the first time in a hundred years. Somebody, somewhere high in the stands, begins to laugh. Then everybody does." },
   ],
   martyr: [
-    { speaker: "emperor", text: "A broken chain on every door, and not one of them could open mine. Scrub them off." },
-    { speaker: "narrator", text: "By morning the doors are clean. By evening, someone has chalked the chain back on one of them." },
+    { speaker: "emperor", text: "A broken chain on every door in the city, and not one of them could open mine. Scrub them off. All of them." },
+    { speaker: "narrator", text: "They scrub all night. By morning the doors are clean." },
+    { speaker: "narrator", text: "By evening, someone has chalked the chain back on one of them. Small, low down, where a child could reach." },
   ],
   treason: [
+    { speaker: "emperor", text: "Treason. Such an old word. It still fits so many people." },
     { speaker: "emperor", text: "I told you I know what a person will do to keep breathing. I did not think you would be so bad at it." },
   ],
   favour: [
-    { speaker: "emperor", text: "I warned you, Lanista. You had one thing to give me, and you stopped giving it." },
-    { speaker: "emperor", text: "Never mind. You will entertain my guests one last time, from the wrong side of the sand." },
+    { speaker: "emperor", text: "I warned you, Lanista. You had one thing to give me: a reason to keep you. You stopped giving it." },
+    { speaker: "emperor", text: "Never mind. You will entertain my guests one last time, from the wrong side of the sand. I am told the lions have been saving themselves." },
   ],
   broke: [
+    { speaker: "steward", text: "The last fighter is gone, and the strongbox is empty. I've counted it four times. It doesn't help." },
     { speaker: "emperor", text: "An empty ludus and an empty purse. I need not even sign the order. The city will see to you for free." },
   ],
   revolt: [
-    { speaker: "narrator", text: "The chains break, and the first thing they find is you." },
-    { speaker: "emperor", text: "A Lanista killed by their own stock. Write it down; it will amuse the Senate." },
+    { speaker: "narrator", text: "The guards drop their spears and run. The chains break, and the first thing the freed men find is you." },
+    { speaker: "emperor", text: "A Lanista killed by their own stock. Write it down; it will amuse the Senate. Then have the barracks burned. I don't want the idea spreading." },
   ],
 };
 export const endingScene = (run) => ENDING_SCENES[endingKind(run)] ?? null;

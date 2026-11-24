@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## Unreleased (7.9.1)
+
+- **Richer words (a first pass):** the Emperor's visits and the ending scenes say more, and with more bite.
+
 ## 7.9.0 (2026-11-24): balance, and a cousin in the cells
 
 - **Wound items are worth buying:** Viper Venom, Blood Thinner and Blinding Powder now also give +3% win chance for the round you use them. Before, they wounded the opponent without helping you win the match.
