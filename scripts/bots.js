@@ -171,20 +171,27 @@ const WOUND_ITEMS = ['viperVenom', 'bloodThinner', 'blindingPowder'];
 // 7.6: one covert op a month against the next top-arena opponent: bribe the armourer when they wear armour, else steal
 // their playbook.
 function covertOps(run, reserve) {
+  // Only where it matters and when a caught agent can be afforded: before a top-arena Boss, with Favour to spare.
+  if (!boutFor(run, run.topTier).boss || run.favor <= 30) return;
   const type = opTarget(run)?.gear?.armor && run.gold - ESPIONAGE.ops.armourer.cost >= reserve ? 'armourer' : 'playbook';
   if (covertOpBlocker(run, type) || run.gold - ESPIONAGE.ops[type].cost < reserve) return;
   covertOp(run, type);
   usage(run).covertOps += 1;
 }
 
-// 7.6: a deliberate Temperament choice: the strongest fighter gets a Wine Amphora (comfort, and the crowd's Hype).
+// 7.6: a deliberate Temperament choice for the strongest fighter, by what they need: a temper prone to fear
+// (Melancholic, Phlegmatic) gets a Skull Rack (scars turn Enraged); one whose Morale falls short of Inspired gets a Wine
+// Amphora (the most comfort); otherwise nothing.
 function temperStar(run, reserve) {
   const star = [...run.roster].filter((f) => f.kind !== 'revenant').sort((a, b) => effectivePower(b) - effectivePower(a))[0];
-  if (!star || star.decor.wineAmphora) return;
-  if (!run.inventory.decor.wineAmphora && (buyDecorBlocker(run, 'wineAmphora') || run.gold - DECOR.wineAmphora.price < reserve)) return;
-  if (!run.inventory.decor.wineAmphora) buyDecor(run, 'wineAmphora');
-  if (!assignDecorBlocker(run, star.id, 'wineAmphora')) {
-    assignDecor(run, star.id, 'wineAmphora');
+  if (!star || Object.keys(DECOR).some((k) => DECOR[k].humor && star.decor[k] > 0)) return;
+  const item = ['melancholic', 'phlegmatic'].includes(star.humor) ? 'skullRack'
+    : moraleTarget(run, star).target < MORALE.inspired ? 'wineAmphora' : null;
+  if (!item) return;
+  if (!run.inventory.decor[item] && (buyDecorBlocker(run, item) || run.gold - DECOR[item].price < reserve)) return;
+  if (!run.inventory.decor[item]) buyDecor(run, item);
+  if (!assignDecorBlocker(run, star.id, item)) {
+    assignDecor(run, star.id, item);
     usage(run).temperament += 1;
   }
 }
