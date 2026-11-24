@@ -570,6 +570,7 @@ export function finishMatch(run, match) {
     chronicle(run, fighter, `Fell in ${bout.name}, killed by ${opp.name}.`);
     const fWins = winsOf(run, fighter);
     summary.eulogy = `Here lies ${fighter.name}: ${fWins} win${fWins === 1 ? '' : 's'}${fighter.kills ? `, ${fighter.kills} kill${fighter.kills === 1 ? '' : 's'}` : ''}${fighter.titles.length ? `, ${fighter.titles.join(', ')}` : ''}.`;
+    summary.story = (fighter.story ?? []).slice(-4).map((e) => e.text); // 7.8: their last chapters, for the fight screen
     removeFighter(run, fighter, { fallen: { arena: true } });
     for (const f of run.roster) bumpMorale(f, MORALE.allyDeath);
     log(run, `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad');
@@ -587,7 +588,7 @@ export function finishMatch(run, match) {
   }
   settleBout(run, tier);
   pushResult(run, summary);
-  log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad');
+  if (fighter.alive) log(run, `${fighter.name} ${won ? 'won' : 'lost'} ${bout.name}.`, won ? 'good' : 'bad'); // a death is logged once, above
   const fought = (match.round ?? 0) > 0;
   if (!won && fought) recordNemesis(run, opp, tier, fighter, bout.boss);
   advanceArena(run, tier, won, arena.opponent, fought && opp === arena.opponent);

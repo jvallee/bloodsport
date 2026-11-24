@@ -391,6 +391,11 @@ main { padding: 16px; max-width: 1320px; margin: 0 auto; }
 .init-auto { font-size: 14px; color: var(--gold); }
 /* 7.7 Quick pace (#fight.quick): the dice tumble in 0.5 s instead of 1.3 s (fightView's diceTime). */
 /* 7.7 the first-strike chance under the tactic label */
+/* 7.8 a death: the eulogy on the fight screen, and names under the fallen's faces */
+.eulogy { margin: 8px auto; max-width: 560px; color: var(--muted); font-style: italic; text-align: center; }
+.eulogy ul { list-style: none; padding: 0; margin: 6px 0 0; font-size: 13px; }
+.fallen-face { display: inline-flex; flex-direction: column; align-items: center; margin: 0 4px; }
+.fallen-face small { font-size: 11px; color: var(--muted); }
 .first-strike { font-size: 13px; color: var(--muted); margin: 2px 0 6px; }
 .first-strike b { color: var(--text); }
 #fight.quick .die::before { animation: dice-faces 0.17s steps(1) 3, fade-out 0s 0.5s forwards; }

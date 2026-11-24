@@ -86,3 +86,28 @@ test('2.4 the odds cache key holds only what a fight reads: a job, Stress, XP or
   assert.notEqual(fightKey({ ...g, power: g.power + 1 }), key);
   assert.notEqual(fightKey({ ...g, injuries: [{ tag: 'fleshWound', weight: 1 }] }), key);
 });
+
+test('2.8 a death: the fight screen gives the eulogy and their story; the log says it once; the end screen names the fallen', async () => {
+  const { fightView } = await import('../src/ui/fightView.js');
+  const { endBanner } = await import('../src/ui/views.js');
+  const { createRun, recruit, advanceToTournament, startMatch, finishMatch, choosePerk } = await import('../src/run.js');
+  const run = createRun(81);
+  const f = recruit(run, run.market[0].id);
+  for (const x of run.roster) while (x.pendingPerks.length) choosePerk(run, x.id, x.pendingPerks[0][0]);
+  advanceToTournament(run);
+  for (const x of run.roster) while (x.pendingPerks.length) choosePerk(run, x.id, x.pendingPerks[0][0]);
+  const m = startMatch(run, f.id, 1);
+  m.over = true;
+  m.round = 2;
+  m.result = { winner: 'B', reason: 'death' };
+  m.a.f.alive = false;
+  const logBefore = run.log.length;
+  m.summary = finishMatch(run, m);
+  const lines = run.log.slice(logBefore).map((l) => l.text ?? l);
+  assert.ok(lines.some((t) => /died in/.test(t)));
+  assert.ok(!lines.some((t) => new RegExp(`${f.name} lost`).test(t)), 'no "lost" straight after "died"');
+  const html = fightView(m, { animateRound: 0, showMath: false }, { name: 'The Dirt Pits', tier: 1 });
+  assert.match(html, /class="eulogy"[^]*Here lies[^]*Fell in/);
+  run.status = 'lost';
+  assert.match(endBanner(run, null), new RegExp(`class="fallen-faces"[^]*<small>${f.name}</small>`));
+});

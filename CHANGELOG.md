@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.8.0)
 
+- **A fighter's death is remembered:** when a fighter dies, the fight screen now gives their epitaph and the last chapters of their story. The house log no longer says "lost" straight after "died", and the end of a career shows the names of the fallen under their faces.
 - **One name per rule:** giving up a match between rounds is always called capitulating now (the Codex called it forfeiting, which is a different thing: giving up a bout before it starts, and the Emperor's summons called it yielding). British spelling throughout: Humours, maths, the Quantum Analyser.
 
 ## 7.7.0 (2026-11-24): quicker and clearer fights

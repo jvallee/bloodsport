@@ -186,7 +186,7 @@ export function endBanner(run, legacy = null) {
     <div class="end-grid">
       <div><div class="label">The career</div>${formatDate(run.week)}<br>${wins} won, ${fought.length - wins} lost · ${kills} kill${kills === 1 ? '' : 's'}<br>Top arena: ${esc(arenaName(run.topTier))}<br>House rank: #${rank} of ${standings(run).length} · Glory ${run.glory ?? 0}</div>
       ${best ? `<div class="end-best">${portrait(best, 64)}<div><div class="label">Best fighter</div><b>${esc(best.name)}</b> (${esc(KINDS[best.kind].name)})<br>${bestWins} win${bestWins === 1 ? '' : 's'} · Renown ${best.renown}${best.titles?.length ? `<br>🏆 ${esc(best.titles.join(', '))}` : ''}${best.alive ? '' : '<br>Fell in the arena'}</div></div>` : ''}
-      ${deaths ? `<div><div class="label">The fallen</div><div class="fallen-faces">${run.fallen.map((f) => `<span title="${esc(f.name)}">${portrait(f, 40)}</span>`).join('')}</div></div>` : ''}
+      ${deaths ? `<div><div class="label">The fallen</div><div class="fallen-faces">${run.fallen.map((f) => `<span class="fallen-face">${portrait(f, 40)}<small>${esc(f.name)}</small></span>`).join('')}</div></div>` : ''}
     </div>
     <div class="row"><button class="btn primary" data-action="new-run">New career</button><button class="btn" data-action="replay-seed">Replay seed ${esc(run.seed)}</button></div></div>`;
 }
