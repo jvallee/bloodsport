@@ -102,3 +102,11 @@ test('the save-failed banner tells the player to export their save', async () =>
   const { saveFailedBanner } = await import('../src/ui/views.js');
   assert.match(saveFailedBanner(), /role="alert"[^]*not being saved[^]*Export your save/);
 });
+
+test('a career that would not load: the dialog gives the reason and four ways out', async () => {
+  const { loadFailedModal } = await import('../src/ui/views.js');
+  const html = loadFailedModal({ message: 'This save is from a newer version of the game (v9).' });
+  assert.match(html, /role="dialog"[^]*newer version of the game \(v9\)/);
+  for (const action of ['load-failed-download', 'bug-open', 'careers-open', 'load-failed-close']) assert.match(html, new RegExp(`data-action="${action}"`));
+  assert.match(loadFailedModal({ message: '<b>x</b>' }), /&lt;b&gt;x/, 'escaped');
+});

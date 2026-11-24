@@ -6,7 +6,7 @@ import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
-import { saveFailedBanner } from './ui/views.js';
+import { saveFailedBanner, loadFailedModal } from './ui/views.js';
 import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom } from './careers.js';
 import { estimateOdds } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
@@ -88,6 +88,8 @@ const saveCodex = () => storage.set(CODEX_KEY, JSON.stringify(codex));
 const savePrefs = () => storage.set(PREFS_KEY, JSON.stringify(prefs));
 // A failed save shows a lasting warning (render) until a later save works.
 let saveFailed = false;
+// A saved career that wouldn't load: { id, message }, shown as a dialog with ways out.
+let loadFailed = null;
 const save = () => {
   if (!run || !careerId) return;
   saveFailed = !saveCareer(storage, careers, careerId, run, Date.now()).ok;
@@ -214,6 +216,7 @@ for (const type of ['click', 'change']) {
 }
 function activeModal() {
   if (bug) return 'bug';
+  if (loadFailed) return 'loadFailed';
   if (careersOpen) return 'careers';
   if (overtrainWarn) return 'overtrain';
   if (setupChoice) return 'setup';
@@ -264,7 +267,7 @@ function render() {
   else body = ludusTab(run, oddsFor);
   checkScene();
   const guide = guideStep();
-  const modal = careersOpen ? careersModal(careers, careerId) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
+  const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal() : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
@@ -409,15 +412,21 @@ function boot() {
   loadPrefs();
   careers = loadIndex(storage, () => freshId({ list: [] }, Date.now()));
   const urlSeed = Number(new URLSearchParams(location.search).get('seed'));
-  if (careers.active && openCareer(careers.active)) return;
+  const broken = careers.active;
+  const opened = broken ? openCareer(broken) : null;
+  if (opened === true) return;
   newRun(Number.isInteger(urlSeed) && urlSeed > 0 ? urlSeed : null);
+  // The saved career wouldn't load: say why and offer the way out, instead of silently starting afresh (its save is kept).
+  if (typeof opened === 'string') { loadFailed = { id: broken, message: opened }; render(); }
 }
 
-// Switch to a saved career (false if its save can't be read).
+// Switch to a saved career: true, or why it couldn't (the career being played stays as it was).
+// It is loaded and drawn before it becomes the active career.
 function openCareer(id) {
   const saved = loadCareerText(storage, id);
-  if (saved) {
-    try {
+  if (!saved) return 'Its save is missing from this browser.';
+  const before = { run, careerId, tab };
+  try {
       const loaded = deserialize(saved);
       resetCareerUiState();
       run = loaded;
@@ -431,14 +440,15 @@ function openCareer(id) {
         if (run.week > 0 || run.roster.length) markSceneSeen('opening');
         else scene = { id: 'opening', beat: 0 };
       }
-      save();
       render();
+      save();
       return true;
-    } catch (err) {
-      console.warn('Could not load the saved career:', err.message);
-    }
+  } catch (err) {
+    console.warn('Could not load the saved career:', err.message);
+    ({ run, careerId, tab } = before);
+    if (run) render();
+    return err.message;
   }
-  return false;
 }
 // A new career needs a free place in the list.
 function roomForCareer() {
@@ -479,12 +489,27 @@ const actions = {
     summaries = []; achieved = []; stewardNotes = [];
     gameAction('advance');
   },
-  'careers-open': () => { careersOpen = true; showHelp = false; },
+  'careers-open': () => { careersOpen = true; showHelp = false; loadFailed = null; },
+  'load-failed-close': () => { loadFailed = null; },
+  'load-failed-download': () => {
+    const text = loadCareerText(storage, loadFailed?.id);
+    if (!text) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    a.download = `blood-and-circus-save-${loadFailed.id}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  },
   'jump-bout': () => { scrollAfterRender = '.panel.bout'; }, // a phone, fight day: scrolled to once the page is redrawn
   'careers-close': () => { careersOpen = false; },
   'career-load': (d) => {
     careersOpen = false;
-    if (d.id !== careerId && openCareer(d.id)) return;
+    if (d.id !== careerId) {
+      const opened = openCareer(d.id);
+      if (opened === true) return;
+      loadFailed = { id: d.id, message: opened };
+      careersOpen = false;
+    }
     if (d.id !== careerId) alert('That save could not be loaded.');
     render();
   },
@@ -809,6 +834,10 @@ document.addEventListener('keydown', (e) => {
   if (topModal) {
     if (topModal === 'bug') {
       if (e.key === 'Escape' && !bug?.error) { bug = null; bugStatus = ''; renderBug(); }
+      return;
+    }
+    if (topModal === 'loadFailed') {
+      if (e.key === 'Escape') { loadFailed = null; render(); }
       return;
     }
     if (topModal === 'careers') {

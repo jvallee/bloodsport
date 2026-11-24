@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.5.0)
 
+- **A career that won't load is no longer quietly replaced:** the game tells you why and lets you download that save, report a bug, open your careers, or play a new career. The broken save stays in your browser.
 - **A save that fails is no longer silent:** if your browser refuses to store the career (its storage full, for example), a warning stays at the top of the page telling you to export your save, and the career list doesn't claim a fresh save.
 - **Finished careers no longer fill your career list:** only careers still in play count toward the limit of 8, and starting a new one makes room by dropping the oldest finished career (its result stays in your Legacy record).
 

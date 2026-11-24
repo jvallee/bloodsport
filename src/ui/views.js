@@ -1125,3 +1125,15 @@ export function fortunePanel(run, { animate = true } = {}) {
 
 // 7.5: the browser refused to save (storage full or blocked). Stays until a save works again.
 export const saveFailedBanner = () => `<div class="banner save-failed" role="alert"><b>⚠ This career is not being saved.</b> Your browser refused to store it (its storage may be full). Export your save now from <b>Careers</b>, or delete an old career to make room; progress since the last save will be lost if you close this page.</div>`;
+
+// 7.5: a saved career that wouldn't load. Its save is kept; the player chooses what to do.
+export const loadFailedModal = ({ message }) => `<div class="modal load-failed" role="dialog" aria-modal="true" aria-label="A career couldn't be loaded"><div class="modal-body">
+  <h2>This career couldn't be loaded</h2>
+  <p>${esc(message)}</p>
+  <p class="sub">Its save is still in this browser. Download it to keep it safe or send it with a bug report.</p>
+  <div class="actions">
+    <button class="btn" data-action="load-failed-download">Download this save</button>
+    <button class="btn" data-action="bug-open">Report a bug</button>
+    <button class="btn" data-action="careers-open">Your careers</button>
+    <button class="btn primary" data-action="load-failed-close">Play the new career</button>
+  </div></div></div>`;
