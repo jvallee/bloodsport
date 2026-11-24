@@ -8,7 +8,7 @@ Written 2026-11-23 at the end of a cloud session. Read this first, then `CLAUDE.
 A turn-based gladiator-house management roguelike: plain HTML/CSS/JS ES modules, no build step, no dependencies, served
 as-is by GitHub Pages from `main`.
 
-- Repo: `github.com/jvallee/bloodsport`. Live game: https://jvallee.github.io/bloodsport/ (version **7.4.1**).
+- Repo: `github.com/jvallee/bloodsport`. Live game: https://jvallee.github.io/bloodsport/ (version **7.5.0**).
 - Frozen older versions: `/v1/` … `/v6/` (don't edit them).
 - Node 20+ is all you need. `npm test` (about 15 s), `npm run serve` (play at http://localhost:8000), `npm run check`
   (balance gates, about 12 min on 4 cores; run it in the background).
@@ -47,6 +47,21 @@ as-is by GitHub Pages from `main`.
 6. Check the live site loads: https://jvallee.github.io/bloodsport/ (no console errors, careers load).
 7. **Still to do:** delete the merged branches: `git push origin --delete v7.0.0 v7.1.0 v7.2.0 v7.4.1` (on the designer's machine this
    uses their own GitHub login, so it should work).
+
+## 3b. 7.5.0 (2026-11-24): the review brief's Phase 1, minus 1.4
+
+A five-part review of 7.4.0 produced a phased brief; the designer accepted its recommended answers (D1: a fight survives a
+reload; D2: one dry steward voice, the designer writes it; D3: keep difficulty, fix the Grand Tournament (4.1) only, keep
+the Heat order; D4: show the hidden intro pages under How to play). Done in 7.5.0: tests run on every push
+(`.github/workflows/test.yml`); failed saves warn (1.2); a save that won't load opens a dialog (1.3); only careers in play
+count toward the 8 (1.5); two tabs, save import, bracket notice keys (1.7); no key or click past a hidden Death Gate warning
+(1.1, `src/ui/keys.js`); `scripts/sweep.js` sweeps Seasons by default and has a `--set` mode on the worker pool (3.3, 3.4).
+
+**Next, in order:** 1.4 (resume a fight after a reload: store the live match with its dice state; replays must still
+match; its own release, with `npm run check`), then Phase 3 (teach the bots the 7.1–7.4 systems, a usage report, intervals
+on gate rates), then Phase 2 (feel: fight pace option, first-strike chance, unrest/mole hints, odds speed, fewer clicks,
+phone fight screen, one name per rule, death and narration, the hidden intro pages), then Phase 4 (4.1 the Grand
+Tournament harder than the Imperial Boss, with a gate; 4.2 repeated Chains Break; 4.3 wound item prices; 4.4 the Orc).
 
 ## 4. Open items after 7.4.1 (ask the designer before starting any)
 - **Words:** everything new in 7.1–7.4 is first-draft wording marked PLACEHOLDER, listed in `docs/text-to-rewrite.md`
