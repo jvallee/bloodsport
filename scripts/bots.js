@@ -522,6 +522,7 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
     }
     if (strategy === 'careful') carefulWeek(run, opts);
     else recklessWeek(run);
+    if (run.status !== 'active') break; // the week's own actions can end a career (an event judging Favour)
     advanceWeek(run);
     if (moleOf(run)) usage(run).molesMet += 1; // weeks with a mole in the house (7.6)
   }
