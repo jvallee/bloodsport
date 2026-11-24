@@ -253,6 +253,7 @@ function activeModal() {
 }
 
 function resetCareerUiState() {
+  otherTab = false; // another tab's saves were of the career being left (7.8.1)
   clearTimeout(autoTimer);
   clearTimeout(revealTimer);
   stopAllSounds();
@@ -539,7 +540,6 @@ const actions = {
       loadFailed = { id: d.id, message: opened };
       careersOpen = false;
     }
-    if (d.id !== careerId) alert('That save could not be loaded.');
     render();
   },
   'career-delete': (d) => {
