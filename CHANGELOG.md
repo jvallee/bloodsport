@@ -2,6 +2,12 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.12.0 (2026-11-25): a new look, and End week always to hand
+
+- **A new look** (from the 7.11 review, tried as a preview first): a darker, torch-lit style; a one-row header with icons on a computer; on a phone, a compact header, the tabs at the bottom of the screen, and the Ludus split into Gladiators, Fight day and House & log; a two-by-two grid of tactics in fights; tidier Market and Estate cards.
+- **End week is always to hand:** End week (and To fight day) now sit in the bottom-right corner on a computer, and in a bar just above the tabs on a phone, on every screen. On fight day, while your top arena still needs a fighter, the bar takes you straight to the bouts.
+- The fight-day hint no longer says the odds are "on the right" (on a phone they aren't).
+
 ## 7.11.0 (2026-11-25): word in the city, fighters' voices, and fixes
 
 From an independent review of 7.10.0. The review's new look for desktop and phone can be tried at `/v7-beta/`.
