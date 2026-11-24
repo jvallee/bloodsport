@@ -3,13 +3,13 @@
 import { int, next, pick } from '../rng.js';
 import { CIRCUITS, GEAR, SPY, POLITICAL, PLOT, SHORT, FORTUNE } from '../data.js';
 import { RELICS, hasRelic } from '../fortune.js';
-import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, isArmed } from '../plot.js';
+import { CELL_IDS, CLUES, PLOT_EVENTS, SUSPICION_SIGNS, SUSPICION_LINES, isArmed } from '../plot.js';
 import { MOOD_WEEKS } from '../events.js';
 import { dateOf } from '../calendar.js';
 import { medbaySlots, maxLevel, effectAt } from '../ludus.js';
 import {
   GRAND_TIER, clamp, log, findFighter, chronicle, bumpMorale, isShort, hasPolicy,
-  removeFighter, changeFavor,
+  removeFighter, changeFavor, talk,
 } from './helpers.js';
 
 // Some prisoners are secretly political; their record carries clues and they come cheap.
@@ -42,7 +42,23 @@ export function joinPlot(run, f) {
   if (!run.plot.cells.includes(f.political.cell)) run.plot.cells.push(f.political.cell);
 }
 
-export const changeSuspicion = (run, n) => { run.plot.suspicion = clamp(run.plot.suspicion + n, 0, 100); };
+export const changeSuspicion = (run, n) => {
+  const before = run.plot.suspicion;
+  run.plot.suspicion = clamp(run.plot.suspicion + n, 0, 100);
+  suspicionWarnings(run, before);
+};
+// The first time suspicion crosses the informer and cold lines, someone says so (7.10; cosmetic: talk only). PLACEHOLDER.
+function suspicionWarnings(run, before) {
+  const p = run.plot;
+  const s = PLOT.suspicion;
+  const rebel = run.roster.find((f) => f.political);
+  if (before < s.informer && p.suspicion >= s.informer) {
+    talk(run, 'suspicion-informer', [rebel
+      ? { speaker: 'rebel', fighterId: rebel.id, text: SUSPICION_LINES.informer }
+      : { speaker: 'steward', text: SUSPICION_LINES.informerSteward }]);
+  }
+  if (before < s.cold && p.suspicion >= s.cold) talk(run, 'suspicion-cold', [{ speaker: 'steward', text: SUSPICION_LINES.cold }]);
+}
 
 export function addContact(run, name, cell, how) {
   run.plot.freed.push({ name, cell, how, week: run.week, caught: false });

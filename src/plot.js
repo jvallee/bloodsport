@@ -52,6 +52,13 @@ export const SUSPICION_SIGNS = {
   ready: ['The chalk marks are everywhere now, and nobody scrubs them off.', 'In the barracks, blades are oiled at night that nobody will admit to owning.', 'The city is waiting for the Emperor\'s games.'],
 };
 
+// Said the first time suspicion crosses the informer and cold lines (7.10). PLACEHOLDER lines.
+export const SUSPICION_LINES = {
+  informer: 'We have been careless, Lanista. There is a new face at the water-seller\'s, and he buys nothing. For a while, do only what matters.',
+  informerSteward: 'A man at the water-seller\'s has been watching our gate for a week. He buys nothing. I\'ve started buying nothing too, so we look the same.',
+  cold: 'An invitation to the palace was withdrawn this morning, with no reason given. In this city, no reason is the worst kind. Whatever you are doing at night, Lanista, do less of it.',
+};
+
 const political = (run) => run.roster.filter((f) => f.political);
 const anyFighter = (run) => run.roster;
 const asker = (list) => (run, rng) => (list(run).length ? { f: pick(rng, list(run)).id } : null);
