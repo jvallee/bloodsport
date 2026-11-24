@@ -71,3 +71,18 @@ test('2.3 the Estate tab shows a dot when there are clues or a covert op to run'
   espState(run).clues = [{ week: 1, text: 'x' }];
   assert.match(topbar(run, 'ludus', 0, true), /data-tab="estate">Estate<span class="dot"/);
 });
+
+test('2.4 the odds cache key holds only what a fight reads: a job, Stress, XP or story change keeps it', async () => {
+  const { fightKey, estimateOdds } = await import('../src/odds.js');
+  const { createRun, recruit } = await import('../src/run.js');
+  const run = createRun(79);
+  const f = recruit(run, run.market[0].id);
+  const opp = run.arenas[1].opponent;
+  const key = fightKey(f);
+  const odds = estimateOdds(f, opp, { n: 200 });
+  const g = { ...structuredClone(f), job: 'trainSpeed', stress: f.stress + 17, xp: f.xp + 3, story: [...(f.story ?? []), { week: 9, text: 'x' }], mood: { n: 5, weeks: 2 } };
+  assert.equal(fightKey(g), key);
+  assert.deepEqual(estimateOdds(g, opp, { n: 200 }), odds, 'those fields really do not change a fight');
+  assert.notEqual(fightKey({ ...g, power: g.power + 1 }), key);
+  assert.notEqual(fightKey({ ...g, injuries: [{ tag: 'fleshWound', weight: 1 }] }), key);
+});

@@ -9,7 +9,7 @@ import { exportSave, importSave } from './savefile.js';
 import { saveFailedBanner, loadFailedModal, summaryKey, otherTabBanner } from './ui/views.js';
 import { fightKey } from './ui/keys.js';
 import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom, careerKey } from './careers.js';
-import { estimateOdds } from './odds.js';
+import { estimateOdds, fightKey } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, dailySetup, careerSetup } from './legacy.js';
 import { nextHint } from './hints.js';
@@ -115,7 +115,7 @@ function oddsFor(f, tier = run.topTier, opp = opponentFor(run, tier)) {
   const opts = matchOptions(run, f, tier);
   // 7.4: stolen plans, a double agent and this month's covert op change the real fight, so the odds include them.
   const spy = espionageOdds(run, opp);
-  const key = JSON.stringify([f, spy, opts]);
+  const key = JSON.stringify([fightKey(f), spy, opts]); // 7.7: only what a fight reads (a job click keeps the odds)
   if (!oddsCache.has(key)) {
     if (oddsCache.size > 200) oddsCache.clear();
     oddsCache.set(key, estimateOdds(f, spy.opp, { ...opts, boostsA: spy.boostsA, boostsB: spy.boostsB, vengeanceB: spy.vengeanceB, n: 400 }));
