@@ -1,6 +1,6 @@
 # Brief for an agent working on Blood and Circus on the designer's machine
 
-Written 2026-11-23 at the end of a cloud session; current state updated 2026-11-24 (7.8.1). Read this first, then `CLAUDE.md` (the rules) and `docs/HANDOFF.md`
+Written 2026-11-23 at the end of a cloud session; current state updated 2026-11-24 (7.9.0). Read this first, then `CLAUDE.md` (the rules) and `docs/HANDOFF.md`
 (the designer's preferences and history). Where they disagree with this brief about *current state*, this brief is newer.
 
 ## 1. What this is
@@ -8,7 +8,7 @@ Written 2026-11-23 at the end of a cloud session; current state updated 2026-11-
 A turn-based gladiator-house management roguelike: plain HTML/CSS/JS ES modules, no build step, no dependencies, served
 as-is by GitHub Pages from `main`.
 
-- Repo: `github.com/jvallee/bloodsport`. Live game: https://jvallee.github.io/bloodsport/ (version **7.8.1**).
+- Repo: `github.com/jvallee/bloodsport`. Live game: https://jvallee.github.io/bloodsport/ (version **7.9.0**).
 - Frozen older versions: `/v1/` … `/v6/` (don't edit them).
 - Node 20+ is all you need. `npm test` (about 15 s), `npm run serve` (play at http://localhost:8000), `npm run check`
   (balance gates, about 12 min on 4 cores; run it in the background).
@@ -17,11 +17,11 @@ as-is by GitHub Pages from `main`.
 
 | Branch | State |
 |---|---|
-| `main` | **7.8.1, live.** Tags `v7.0` … `v7.8.0` come from the Action. |
-| `v7.9.0` | **Phase 4 in progress** (review brief): 4.1 the Grand Tournament harder than the Imperial Boss with a new gate (first run failed two gates; a sweep of `SHORT.grandPower` is under way), 4.2 a revolt put down leaves its fighters cowed (Morale 30), 4.4 the Orc at Power 5, and the designer's cousin quest (a fighter asks you to buy their cousin, a political prisoner, from the Liaison at the Bronze Arena). Needs a passing `npm run check` before release. Open questions for the designer: wound item design (4.3: no price fixes them) and covert ops (still cost wins). |
-| `v7.0.0` … `v7.8.1` | Release branches, all merged into `main`. The designer agreed to delete them; cloud sessions can't. |
+| `main` | **7.9.0, live** (24/24 gates). Tags `v7.0` … `v7.9.0` come from the Action. |
+| `v7.0.0` … `v7.9.0` | Release branches, all merged into `main`. The designer agreed to delete them; cloud sessions can't. |
 
-Released since 7.4.1: 7.5.0 and 7.5.1 (Phase 1: saves and a fight that survives a reload), Phase 3 tooling (bots, usage
+Released since 7.4.1: 7.9.0 (Phase 4 balance: Imperial Boss −2, Orc Power 5, cowed revolts, wound items +3% win, cheaper
+covert ops; the cousin in the cells), 7.5.0 and 7.5.1 (Phase 1: saves and a fight that survives a reload), Phase 3 tooling (bots, usage
 gate, 23 gates), 7.7.0 and 7.8.0 (Phase 2: fight pace, first-strike chance, hints, phone fight screen, one name per rule,
 deaths and narration, endings), 7.8.1 (fixes from a code review: two tabs, live bet odds, Blood Drinker wording, a stray
 alert, phone spacing).
@@ -63,7 +63,10 @@ count toward the 8 (1.5); two tabs, save import, bracket notice keys (1.7); no k
 (1.1, `src/ui/keys.js`); `scripts/sweep.js` sweeps Seasons by default and has a `--set` mode on the worker pool (3.3, 3.4).
 
 **Done since:** 1.4 (7.5.1), Phase 3 (findings in `docs/roadmap-v2.md` "v7.6 tooling") and Phase 2 (7.7.0, 7.8.0).
-**In progress:** Phase 4 on `v7.9.0` (see §2).
+Phase 4 is done in 7.9.0 (see `docs/roadmap-v2.md` "v7.9.0" and `docs/fight-rules.md` "7.9.0"), with the designer's cousin
+quest. **Next, ask the designer:** their voice pass on the PLACEHOLDER text (`docs/text-to-rewrite.md` sections 15–17); first
+careers now win 23% (6 points below the 7.6 bots, outside their 1–4 point comfort range, inside the gate); the climax gate
+passes by only 3 points.
 
 ## 4. Open items after 7.4.1 (ask the designer before starting any)
 - **Words:** everything new in 7.1–7.4 is first-draft wording marked PLACEHOLDER, listed in `docs/text-to-rewrite.md`
