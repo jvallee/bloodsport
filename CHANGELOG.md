@@ -2,6 +2,14 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.8.1 (2026-11-24): fixes
+
+- **Phones:** the fight report no longer ends in half a screen of empty space once the fight is over.
+- **Two tabs:** after another tab took over a career, starting or switching to a different career in this tab didn't save it (and kept saying it was played in another tab) until you reloaded the page. It saves again now.
+- Opening a damaged save from Careers shows the recovery box only, without an extra browser alert on top.
+- **Bets after an item:** using an item (War Paint, a Berserker Mushroom and the like) before Round 1 now updates the bet buttons at once. They used to keep showing the old, bigger payout, and the bet then paid less or was refused. Feed the Ash used before Round 1 is priced in too.
+- A vampire's Blood Drinker closing a Bleeding wound now says so (it used to say a Distraction closed).
+
 ## 7.8.0 (2026-11-24): fights with more feeling
 
 - **Last words:** when a career ends, the Emperor (or the narrator) has a final word, different for every way it can end. After The Chains Break, the revolt's leader says what they think of your answer, and an unmasked mole's fate gets a line of its own.

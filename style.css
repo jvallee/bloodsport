@@ -800,7 +800,7 @@ details.fold:not([open]) > summary h2::before { content: '▸ '; }
 /* 7.8 on a phone: the fight's decision (Death Gate alert, tactics, Capitulate) stays pinned to the bottom of the screen. */
 @media (max-width: 600px) {
   #fight .decide { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; max-height: 55vh; overflow-y: auto; background: var(--bg); padding: 8px 12px 12px; border-top: 1px solid var(--line); box-shadow: 0 -8px 14px rgba(0, 0, 0, 0.55); }
-  #fight .fight { padding-bottom: 58vh; } /* room to scroll the story above the pinned decision */
+  #fight .fight:has(.decide) { padding-bottom: 58vh; } /* room to scroll the story above the pinned decision (only while there is one) */
 }
 @media (max-width: 760px) {
   .top-actions { display: none; }

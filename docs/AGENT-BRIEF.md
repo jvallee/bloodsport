@@ -1,6 +1,6 @@
 # Brief for an agent working on Blood and Circus on the designer's machine
 
-Written 2026-11-23 at the end of a cloud session. Read this first, then `CLAUDE.md` (the rules) and `docs/HANDOFF.md`
+Written 2026-11-23 at the end of a cloud session; current state updated 2026-11-24 (7.8.1). Read this first, then `CLAUDE.md` (the rules) and `docs/HANDOFF.md`
 (the designer's preferences and history). Where they disagree with this brief about *current state*, this brief is newer.
 
 ## 1. What this is
@@ -8,7 +8,7 @@ Written 2026-11-23 at the end of a cloud session. Read this first, then `CLAUDE.
 A turn-based gladiator-house management roguelike: plain HTML/CSS/JS ES modules, no build step, no dependencies, served
 as-is by GitHub Pages from `main`.
 
-- Repo: `github.com/jvallee/bloodsport`. Live game: https://jvallee.github.io/bloodsport/ (version **7.5.0**).
+- Repo: `github.com/jvallee/bloodsport`. Live game: https://jvallee.github.io/bloodsport/ (version **7.8.1**).
 - Frozen older versions: `/v1/` … `/v6/` (don't edit them).
 - Node 20+ is all you need. `npm test` (about 15 s), `npm run serve` (play at http://localhost:8000), `npm run check`
   (balance gates, about 12 min on 4 cores; run it in the background).
@@ -17,9 +17,14 @@ as-is by GitHub Pages from `main`.
 
 | Branch | State |
 |---|---|
-| `main` | **7.4.1, live** (released at the end of the cloud session; all 22 gates passed). Tags `v7.0`, `v7.4`, and `v7.4.1` from the Action. |
-| `v7.4.1` | Merged into `main`; can be deleted. |
-| `v7.0.0`, `v7.1.0`, `v7.2.0` | Old release branches, all fully merged into `main`. The designer agreed to delete them; the cloud session wasn't allowed to. |
+| `main` | **7.8.1, live.** Tags `v7.0` … `v7.8.0` come from the Action. |
+| `v7.9.0` | **Phase 4 in progress** (review brief): 4.1 the Grand Tournament harder than the Imperial Boss with a new gate (first run failed two gates; a sweep of `SHORT.grandPower` is under way), 4.2 a revolt put down leaves its fighters cowed (Morale 30), 4.4 the Orc at Power 5, and the designer's cousin quest (a fighter asks you to buy their cousin, a political prisoner, from the Liaison at the Bronze Arena). Needs a passing `npm run check` before release. Open questions for the designer: wound item design (4.3: no price fixes them) and covert ops (still cost wins). |
+| `v7.0.0` … `v7.8.1` | Release branches, all merged into `main`. The designer agreed to delete them; cloud sessions can't. |
+
+Released since 7.4.1: 7.5.0 and 7.5.1 (Phase 1: saves and a fight that survives a reload), Phase 3 tooling (bots, usage
+gate, 23 gates), 7.7.0 and 7.8.0 (Phase 2: fight pace, first-strike chance, hints, phone fight screen, one name per rule,
+deaths and narration, endings), 7.8.1 (fixes from a code review: two tabs, live bet odds, Blood Drinker wording, a stray
+alert, phone spacing).
 
 ### The 7.4.1 fixes already on `v7.4.1` (one commit each)
 1. No tell at 0% accuracy: a stolen playbook without an Oracle gave a guaranteed-wrong tell in Rounds 2–3 (`src/fight.js`).
@@ -57,10 +62,8 @@ the Heat order; D4: show the hidden intro pages under How to play). Done in 7.5.
 count toward the 8 (1.5); two tabs, save import, bracket notice keys (1.7); no key or click past a hidden Death Gate warning
 (1.1, `src/ui/keys.js`); `scripts/sweep.js` sweeps Seasons by default and has a `--set` mode on the worker pool (3.3, 3.4).
 
-**Done since:** 1.4 (7.5.1: a fight survives a reload) and Phase 3 (bots use the 7.1–7.4 systems, a brawler bot, a usage
-report and gate, intervals; 23 gates; findings in `docs/roadmap-v2.md` "v7.6 tooling"). **Next:** Phase 2 (feel: fight pace option, first-strike chance, unrest/mole hints, odds speed, fewer clicks,
-phone fight screen, one name per rule, death and narration, the hidden intro pages), then Phase 4 (4.1 the Grand
-Tournament harder than the Imperial Boss, with a gate; 4.2 repeated Chains Break; 4.3 wound item prices; 4.4 the Orc).
+**Done since:** 1.4 (7.5.1), Phase 3 (findings in `docs/roadmap-v2.md` "v7.6 tooling") and Phase 2 (7.7.0, 7.8.0).
+**In progress:** Phase 4 on `v7.9.0` (see §2).
 
 ## 4. Open items after 7.4.1 (ask the designer before starting any)
 - **Words:** everything new in 7.1–7.4 is first-draft wording marked PLACEHOLDER, listed in `docs/text-to-rewrite.md`
