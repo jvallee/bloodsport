@@ -6,8 +6,8 @@ import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
-import { saveFailedBanner, loadFailedModal } from './ui/views.js';
-import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom } from './careers.js';
+import { saveFailedBanner, loadFailedModal, summaryKey, otherTabBanner } from './ui/views.js';
+import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom, careerKey } from './careers.js';
 import { estimateOdds } from './odds.js';
 import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, dailySetup, careerSetup } from './legacy.js';
@@ -90,8 +90,10 @@ const savePrefs = () => storage.set(PREFS_KEY, JSON.stringify(prefs));
 let saveFailed = false;
 // A saved career that wouldn't load: { id, message }, shown as a dialog with ways out.
 let loadFailed = null;
+// Another tab saved this career (7.5): this tab stops saving so it can't overwrite that progress.
+let otherTab = false;
 const save = () => {
-  if (!run || !careerId) return;
+  if (!run || !careerId || otherTab) return;
   saveFailed = !saveCareer(storage, careers, careerId, run, Date.now()).ok;
 };
 
@@ -285,7 +287,7 @@ function render() {
   const fortune = fortunePanel(run, { animate: fortuneDealKey(run) !== dealtHand });
   if (fortune) dealtHand = fortuneDealKey(run);
   document.body.dataset.house = run.setup?.colour ?? '';
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${saveFailed ? saveFailedBanner() : ''}${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run))}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${modal}`;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${otherTab ? otherTabBanner() : saveFailed ? saveFailedBanner() : ''}${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run))}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${modal}`;
   const stickyHead = app.querySelector('.sticky-head');
   if (stickyHead) document.documentElement.style.setProperty('--head-h', `${stickyHead.offsetHeight + 8}px`);
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
@@ -543,7 +545,7 @@ const actions = {
   'result-close': () => { eventResult = null; },
   'intro-replay': () => { scene = { id: 'opening', beat: 0 }; showHelp = false; },
   'dismiss-summary': (d) => {
-    summaries = summaries.filter((s) => `${s.week}-${s.tier}-${s.fighterId}` !== d.key);
+    summaries = summaries.filter((s) => summaryKey(s) !== d.key);
   },
   'notice-page': (d) => { noticePage = Number(d.page); },
   'auto-play': () => { ui.auto = !ui.auto; },
@@ -572,9 +574,12 @@ const actions = {
       if (!file) return;
       try {
         const data = importSave(await file.text());
-        if (!roomForCareer() || !confirm('Load this save as a new career? Your Codex and Legacy are replaced by the file\'s; your other careers are kept.')) return;
-        storage.set(CODEX_KEY, JSON.stringify(data.codex));
-        storage.set(LEGACY_KEY, JSON.stringify(data.legacy));
+        if (!roomForCareer() || !confirm('Load this save as a new career? Your other careers, Codex and Legacy are kept.')) return;
+        // Replacing your own Codex and Legacy is opt-in (7.5): Cancel keeps them.
+        if (confirm('Also replace your Codex and Legacy with the ones in the file? Cancel keeps yours.')) {
+          storage.set(CODEX_KEY, JSON.stringify(data.codex));
+          storage.set(LEGACY_KEY, JSON.stringify(data.legacy));
+        }
         const id = freshId(careers, Date.now());
         saveCareer(storage, careers, id, deserialize(data.career), Date.now());
         location.reload();
@@ -827,6 +832,14 @@ const pressButton = (selector) => {
   if (b && !b.disabled) b.click();
   return Boolean(b && !b.disabled);
 };
+
+// Two tabs on one career would overwrite each other's saves; the tab that didn't save last steps back.
+window.addEventListener('storage', (e) => {
+  if (careerId && e.key === careerKey(careerId) && e.newValue !== null) {
+    otherTab = true;
+    render();
+  }
+});
 
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select')) return;

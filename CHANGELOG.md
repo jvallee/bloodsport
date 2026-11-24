@@ -4,6 +4,9 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.5.0)
 
+- **Two tabs on one career:** if you play a career in another tab, the older tab says so and stops saving, so it can't overwrite your newer progress.
+- **Importing a save keeps your own Codex and Legacy** unless you choose to replace them.
+- **Boss bracket notices:** each of a bracket's results can now be dismissed on its own (dismissing one closed them all).
 - **A career that won't load is no longer quietly replaced:** the game tells you why and lets you download that save, report a bug, open your careers, or play a new career. The broken save stays in your browser.
 - **A save that fails is no longer silent:** if your browser refuses to store the career (its storage full, for example), a warning stays at the top of the page telling you to export your save, and the career list doesn't claim a fresh save.
 - **Finished careers no longer fill your career list:** only careers still in play count toward the limit of 8, and starting a new one makes room by dropping the oldest finished career (its result stays in your Legacy record).

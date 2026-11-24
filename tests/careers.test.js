@@ -110,3 +110,11 @@ test('a career that would not load: the dialog gives the reason and four ways ou
   for (const action of ['load-failed-download', 'bug-open', 'careers-open', 'load-failed-close']) assert.match(html, new RegExp(`data-action="${action}"`));
   assert.match(loadFailedModal({ message: '<b>x</b>' }), /&lt;b&gt;x/, 'escaped');
 });
+
+test('each notice of a bracket has its own dismiss key; the other-tab warning explains itself', async () => {
+  const { summaryKey, otherTabBanner } = await import('../src/ui/views.js');
+  const base = { week: 9, tier: 3, fighterId: 'f1' };
+  const keys = ['Quarter-final', 'Semi-final', undefined].map((bracket) => summaryKey({ ...base, bracket }));
+  assert.equal(new Set(keys).size, 3);
+  assert.match(otherTabBanner(), /another tab[^]*no longer saves/);
+});

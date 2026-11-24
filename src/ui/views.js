@@ -325,7 +325,7 @@ export function summaryBanner(s) {
   if (s.bloodFaith) bits.push('Blood Faith refunded the buy-in');
   if (s.refund) bits.push('reaching the Boss returned the buy-in');
   if (s.levelUp) bits.push(`⭐ House Prestige level ${s.levelUp}! Visit the Estate.`);
-  return `<div class="banner ${s.won ? 'win' : 'loss'}${s.injuries?.length ? ' hurt' : ''}"><button class="close" data-action="dismiss-summary" data-key="${esc(s.week)}-${esc(s.tier)}-${esc(s.fighterId)}" aria-label="Dismiss">×</button>
+  return `<div class="banner ${s.won ? 'win' : 'loss'}${s.injuries?.length ? ' hurt' : ''}"><button class="close" data-action="dismiss-summary" data-key="${esc(summaryKey(s))}" aria-label="Dismiss">×</button>
     <h2>${esc(s.name)}: ${esc(s.fighter)} ${verdict}</h2><div>${bits.map(esc).join(' · ')}</div></div>`;
 }
 
@@ -1137,3 +1137,9 @@ export const loadFailedModal = ({ message }) => `<div class="modal load-failed" 
     <button class="btn" data-action="careers-open">Your careers</button>
     <button class="btn primary" data-action="load-failed-close">Play the new career</button>
   </div></div></div>`;
+
+// A fight notice's dismiss key: a bracket's Quarter-final, Semi-final and Final each have their own (7.5).
+export const summaryKey = (s) => `${s.week}-${s.tier}-${s.fighterId}-${s.bracket ?? ''}`;
+
+// 7.5: this career was saved by another tab; this one stops saving so it can't overwrite that progress.
+export const otherTabBanner = () => `<div class="banner save-failed" role="alert"><b>⚠ This career was played in another tab.</b> This tab no longer saves, so it can't overwrite that progress. Reload the page to carry on from the newest save.</div>`;
