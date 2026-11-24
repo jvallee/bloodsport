@@ -200,7 +200,7 @@ export const EVENTS = [
   // 7.4 A mole unmasked by an investigation (src/run/espionage.js; never drawn at random). PLACEHOLDER words.
   {
     id: 'moleUnmasked', who: 'any', title: 'A mole in the house', when: () => false,
-    text: ({ f, house }) => `${f} confesses: every week they have been sending word to ${house}. The house waits to see what you do.`,
+    text: ({ f, house }) => `They bring ${f} to you in the yard with their hands tied. It doesn't take long: every week, for months, they have been sending word to ${house}. Your fighters' names, their wounds, their habits on the sand. The whole house has come out to watch. Nobody says anything. They are waiting to see what kind of Lanista you are.`,
     choices: [
       { label: 'Execute them in the yard', effects: { mole: 'execute' } },
       { label: 'Turn them: feed ${house} a false playbook (4 Gold)', cost: 4, needs: (run, ev) => (run.roster.find((f) => f.id === ev.f)?.mole?.master === 'palace' ? 'The palace sends no fighters to fool.' : null), effects: { mole: 'turn' } },
@@ -210,7 +210,7 @@ export const EVENTS = [
   // 7.3 The house rises (src/run/unrest.js opens it; never drawn at random). PLACEHOLDER words.
   {
     id: 'chainsBreak', who: 'any', title: 'The Chains Break', when: () => false, crisis: true,
-    text: ({ f }) => `Torches in the barracks. ${f} has the keys, and half the house behind them. The guards look to you. What you do in the next hour decides whether there is a Ludus at dawn.`,
+    text: ({ f }) => `Shouting in the barracks, then torches. ${f} has the keys, and half the house behind them, banging their bowls on the bars in time. The guards are young, and they are looking at you. What you do in the next hour decides whether there is a Ludus at dawn.`,
     choices: [
       { label: 'Open the coffers and the wine cellars (${price} Gold)', needs: (run, ev) => (run.gold < ev.price ? `Needs ${ev.price} Gold.` : null), effects: { revolt: 'coffers' } },
       { label: 'Send in the guards and the loyal (your ${loyal} Power against their ${mutineers})', effects: { revolt: 'guards' } },
