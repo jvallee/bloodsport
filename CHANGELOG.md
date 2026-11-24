@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## Unreleased (7.7.0)
+
+- **Quick pace for fights:** a "Quick pace" switch beside "Show the math" plays each round in about half the time (about 2.5 seconds instead of 5). The round that decides a match still takes its time. Your choice is remembered.
+
 ## 7.5.1 (2026-11-24): a fight survives a reload
 
 - **Reloading during a fight no longer counts as capitulating:** the fight is saved with your career and picks up exactly where it was, with the same dice, so nothing can be undone and nothing is lost. A phone discarding the tab, or a reload before Round 1, no longer costs you the buy-in, Favour or a new nemesis.

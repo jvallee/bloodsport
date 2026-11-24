@@ -18,7 +18,7 @@ import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
 import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene } from './dialogue.js';
 import { DEMANDS, DEMAND, CIRCUITS, SUMMONS } from './data.js';
 import { snapshot, monthDigest } from './digest.js';
-import { fightView, DICE_TIME, roundTiming, roundEndTime, sideCardHtml } from './ui/fightView.js';
+import { fightView, diceTime, setFightPace, roundTiming, roundEndTime, sideCardHtml } from './ui/fightView.js';
 import { roundSounds, setSound, stopAllSounds, sfx } from './ui/sound.js';
 
 const app = document.getElementById('app');
@@ -89,6 +89,7 @@ function loadPrefs() {
   try { prefs = { ...prefs, ...JSON.parse(storage.get(PREFS_KEY) ?? '{}') }; } catch { /* keep defaults */ }
   if (!Array.isArray(prefs.tutorial)) prefs.tutorial = [];
   ui.showMath = prefs.showMath;
+  setFightPace(prefs.pace);
   setSound(prefs.sound !== false);
   codex = loadCodex(storage.get(CODEX_KEY));
   legacy = loadLegacy(storage.get(LEGACY_KEY));
@@ -351,6 +352,7 @@ function renderFight() {
   if (match.round === 0 && !match.over && !match.bet && !match.betQuote) match.betQuote = { odds: betOdds(run, match), cap: betCap(run, match) };
   if (match.betQuote) match.betQuote.gold = run.gold;
   const nextBlocker = match.summary?.next ? fightBlocker(run, match.a.f.id, match.bout.tier) : null;
+  fightEl.classList.toggle('quick', prefs.pace === 'quick'); // 7.7: Quick pace speeds the dice animation too
   fightEl.innerHTML = fightView(match, ui, { ...match.bout, keepsBuyIn: keepsBuyIn(run, match.bout.tier) }, tutorialCard(fightTutorial(), 'fight'), run.inventory.items, nextBlocker, run.mercy && { ...run.mercy, favorWhy: spareFavorWhy(run), owedLeft: owedLeft(run) }, bracketView(run, match.bout.tier));
   const feed = document.getElementById('feed');
   if (feed) feed.scrollTop = feed.scrollHeight;
@@ -377,7 +379,7 @@ function playRoundSound() {
   const last = match.rounds.at(-1);
   const timing = roundTiming(match, last, ui.showMath);
   roundSounds(match, last, {
-    diceTime: DICE_TIME,
+    diceTime: diceTime(),
     revealAt: timing.reveal,
     blowTimes: timing.blowTimes,
     hype: hypeOf(match),
@@ -607,6 +609,11 @@ const actions = {
     setSound(prefs.sound);
     savePrefs();
     if (prefs.sound) sfx.event();
+  },
+  'toggle-pace': () => {
+    prefs.pace = prefs.pace === 'quick' ? 'full' : 'quick';
+    setFightPace(prefs.pace);
+    savePrefs();
   },
   'toggle-math': () => {
     ui.animateRound = 0; // switching views shouldn't replay the dice

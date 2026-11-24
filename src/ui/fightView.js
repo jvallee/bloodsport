@@ -39,9 +39,15 @@ function tacticLine(m, r) {
 export const DICE_TIME = 1.4;
 const LINE_GAP = 0.45;
 const SUSPENSE = 1; // the pause ("Steel meets steel…") before the round's winner is announced
-// The round that decides the match plays in slow motion: a longer pause, a "Decider" banner.
+// 7.7: the player's fight pace (a preference; display timing only, no dice). Quick shortens the dice and the lines.
+export const FIGHT_PACE = { full: 1, quick: 0.4 };
+let pace = 1;
+export function setFightPace(name) { pace = FIGHT_PACE[name] ?? 1; }
+export const diceTime = () => DICE_TIME * pace;
+const lineGap = () => LINE_GAP * pace;
+// The round that decides the match plays in slow motion at either pace: a longer pause, a "Decider" banner.
 const isDecider = (m, r) => m.over && r === m.rounds.at(-1) && m.result?.reason !== 'towel';
-const suspenseOf = (m, r) => (isDecider(m, r) ? SUSPENSE * 2 : SUSPENSE);
+const suspenseOf = (m, r) => (isDecider(m, r) ? SUSPENSE * 2 : SUSPENSE * pace);
 
 // Map each check in r.checks to the narration line timestamp where that blow lands.
 function computeBlowTimes(r, lines, delays, rollAt, reveal, showMath) {
@@ -51,7 +57,7 @@ function computeBlowTimes(r, lines, delays, rollAt, reveal, showMath) {
   let lastAt = reveal;
   for (const c of checks) {
     if (showMath) {
-      const t = delays[idx] ?? lastAt + LINE_GAP;
+      const t = delays[idx] ?? lastAt + lineGap();
       blowTimes.push(t);
       lastAt = t;
       idx += 1;
@@ -69,7 +75,7 @@ function computeBlowTimes(r, lines, delays, rollAt, reveal, showMath) {
         if (c.parry?.success && lines[idx]?.type === 'parry') { matched ??= delays[idx]; idx += 1; }
         if (c.injury && (lines[idx]?.type === 'injury' || lines[idx]?.type === 'death')) { matched ??= delays[idx]; idx += 1; }
       }
-      const t = matched ?? lastAt + LINE_GAP;
+      const t = matched ?? lastAt + lineGap();
       blowTimes.push(t);
       lastAt = t;
     }
@@ -83,8 +89,8 @@ export function roundTiming(m, r, showMath = false) {
   const lines = (showMath ? narrateRound : narrateStory)(m, r);
   const rollAt = lines.findIndex((l) => l.type === 'roll');
   const pause = suspenseOf(m, r);
-  const delays = lines.map((l, i) => DICE_TIME + 0.3 + i * LINE_GAP + (rollAt >= 0 && i >= rollAt ? pause : 0));
-  const reveal = rollAt >= 0 ? delays[rollAt] : DICE_TIME + 0.3 + lines.length * LINE_GAP + pause;
+  const delays = lines.map((l, i) => diceTime() + 0.3 + i * lineGap() + (rollAt >= 0 && i >= rollAt ? pause : 0));
+  const reveal = rollAt >= 0 ? delays[rollAt] : diceTime() + 0.3 + lines.length * lineGap() + pause;
   const hurt = lines.findIndex((l, i) => i >= rollAt && (l.type === 'injury' || l.type === 'death'));
   const blowTimes = computeBlowTimes(r, lines, delays, rollAt, reveal, showMath);
   return { lines, delays, reveal, end: Math.max(reveal, delays.at(-1) ?? 0), shake: hurt >= 0 ? delays[hurt] : reveal, blowTimes };
@@ -395,8 +401,8 @@ export function fightView(m, ui, bout, tutorial = '', items = {}, nextBlocker = 
           ${last ? initiativeRoll(m, last, animate) : ''}
           ${last ? tacticLine(m, last) : ''}
           ${last ? `<div class="odds"><span>Your round chance <b>${fmtPct(last.win.chance)}</b></span>${animate ? `<span class="suspense${isDecider(m, last) ? ' slow' : ''}" style="--from:${reveal - suspenseOf(m, last)}s;--reveal:${reveal}s">${isDecider(m, last) ? 'Everything on one blow…' : 'Steel meets steel…'}</span>` : ''}</div>${roundBanner(m, last, reveal)}` : '<div class="odds"><span>The crowd roars. Three rounds; first to two wins.</span></div>'}
-          <div class="tags">${pills.map((p, i) => `<span class="tag ${p.side.toLowerCase()}${animate ? '' : ' static'}"${animate ? ` style="animation-delay:${DICE_TIME + i * 0.2}s"` : ''}>${esc(p.text)}</span>`).join('')}</div>
-          <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the math'}</button></div>
+          <div class="tags">${pills.map((p, i) => `<span class="tag ${p.side.toLowerCase()}${animate ? '' : ' static'}"${animate ? ` style="animation-delay:${diceTime() + i * 0.2}s"` : ''}>${esc(p.text)}</span>`).join('')}</div>
+          <div class="feed-head"><span>${ui.showMath ? 'Every roll' : 'The story'}</span><span class="feed-tools"><button class="link" data-action="toggle-pace" title="How fast rounds play out (the deciding round always takes its time)">${pace < 1 ? 'Full pace' : 'Quick pace'}</button> <button class="link" data-action="toggle-math">${ui.showMath ? 'Show the story' : 'Show the math'}</button></span></div>
           <div class="feed" id="feed">${feed(m, ui)}</div>
         </div>
         <div class="side${sideCls('B')}"${sideStyle}>${pop('B')}<div class="side-label b">${m.house ? `Opponent · <span style="color:${safeColor(m.house.color)}">${esc(m.house.name)}</span>` : 'Opponent'}</div><div id="side-card-B">${sideCardHtml(m, 'B', ui, { revealed: !hasSnapshot, freshOpts: fresh('B') })}</div><div class="${hold(reveal)}">${statLine(stats, 'B')}</div></div>
