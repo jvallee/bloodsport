@@ -4,7 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.9.1)
 
-- **Richer words (a first pass):** the Emperor's visits and the ending scenes say more, and with more bite; the cousin in the cells, the aftermath of a revolt or an unmasked mole, and the clues a mole leaves, The Chains Break and the trouble before it are fuller scenes. Fight stories have two ways to tell each weapon's blow, and more ways to tell a round won, a quiet round and a death.
+- **Richer words (a first pass):** the Emperor's visits and the ending scenes say more, and with more bite; the cousin in the cells, the aftermath of a revolt or an unmasked mole, and the clues a mole leaves, The Chains Break and the trouble before it are fuller scenes. The rebel prisoner says more at each stage of the rising. Fight stories have two ways to tell each weapon's blow, and more ways to tell a round won, a quiet round and a death.
 
 ## 7.9.0 (2026-11-24): balance, and a cousin in the cells
 

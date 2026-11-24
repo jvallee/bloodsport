@@ -255,21 +255,24 @@ export function rebelStageScene(run, f, stage, { confessed = true } = {}) {
   const watched = (run.plot?.suspicion ?? 0) >= 40;
   const lines = {
     favours: [
-      say("You copied the sign. They saw. From now on they'll ask you for small things: a door left open, a stranger fed, a name forgotten."),
-      say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good."),
-      say("Who are they? Not yet. Do this well, and one day I'll tell you."),
+      say("You copied the sign. Don't look round; they saw. They see most things."),
+      say("From now on they'll ask you for small things. A door left open after curfew. A stranger fed and not asked his name. A name forgotten when the Praetorians ask for it."),
+      say("Do them, and they'll start to trust you. Refuse them twice, and they'll go quiet for good. You won't hear from them, and neither will I."),
+      say("Who are they? Not yet. Do this well, and one day I'll tell you everything. Today I'll only tell you this: they are more than you think."),
     ],
     cause: [
-      say("They trust you now. More than they trust me, I think."),
-      say("A rising needs a sword in the arena: one of your fighters, standing in the Grand Tournament when the Emperor watches. And it needs the barracks armed."),
-      say("Choose your champion carefully, Lanista. If they fall, the rising falls with them."),
+      say("They trust you now. More than they trust me, I think. I'm not jealous. I'm relieved."),
+      say("Here is the plan, as much as I'm allowed to know. The Emperor never misses the Grand Tournament. He sits in his box, a spear's throw from the sand."),
+      say("A rising needs a sword in that arena: one of your fighters, still standing when he watches. And it needs the barracks armed, for after."),
+      say("Choose your champion carefully, Lanista. If they fall, the rising falls with them, and nobody will remember that it was ever going to happen."),
     ],
     ready: [
-      say("It's ready. The blades are oiled, the crowd knows the signal, and your champion knows what to do."),
-      say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box. We'll do the rest."),
+      say("It's ready. The blades are oiled and hidden under the seats. Half the crowd knows the signal. Your champion knows what to do."),
+      say("When the Emperor comes to watch the Grand Tournament, win the Final. Then look up at his box."),
+      say("We'll do the rest. And Lanista, whatever happens after: thank you. Not many people would have listened to a prisoner."),
     ],
   }[stage] ?? [];
-  if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. Every favour you do us, they notice."));
+  if (watched) lines.push(say("And be careful. Praetorians have been asking questions about your house. They drink in the tavern across the road and never pay; someone is paying them to watch your gate. Every favour you do us, they notice."));
   return [{ speaker: "narrator", text: confessed ? `${f.name} finds you alone again.` : `${f.name} catches your eye across the yard, and waits until the guards have gone.` }, ...lines];
 }
 // The stage scene due now, if any: { id, fighter, beats }, while the plot runs and its prisoner (or another political
