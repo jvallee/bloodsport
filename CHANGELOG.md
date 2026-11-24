@@ -4,6 +4,7 @@ What changed from version to version, newest first. Each frozen version can stil
 
 ## Unreleased (7.7.0)
 
+- **Unrest, moles and covert ops are easier to notice:** the hint bar now warns when a fighter is Mutinous (with the house's unrest), when a mole has left clues, and when your agents could still work on your next opponent before fight day. The Estate tab shows a dot when something waits there, and How to play explains all three.
 - **See who strikes first:** before each round the fight screen shows each fighter's chance to strike first (it decides close rounds), counting Speed, Concussions and Footwork.
 - **Quick pace for fights:** a "Quick pace" switch beside "Show the math" plays each round in about half the time (about 2.5 seconds instead of 5). The round that decides a match still takes its time. Your choice is remembered.
 

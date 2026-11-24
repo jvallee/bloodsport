@@ -94,6 +94,8 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
   const marketBadge = run.liaisonOffers?.length || run.armourerStock.length ? '<span class="dot" title="New stock"></span>' : '';
   const codexBadge = codexNew ? `<span class="count" title="New Codex entries">${codexNew}</span>` : '';
   const levelUps = run.roster.filter((f) => f.pendingPerks.length).length;
+  // 7.7: clues of a mole, or a covert op that could still run, wait in the Estate.
+  const estateBadge = espState(run).clues.length || Object.keys(ESPIONAGE.ops).some((k) => !covertOpBlocker(run, k)) ? '<span class="dot" title="Whispers or covert ops waiting"></span>' : '';
   const ludusBadge = levelUps ? `<span class="count" title="Fighters waiting to choose a perk">${levelUps}</span>` : '';
   const low = run.favor <= FAVOR.warning;
   return `
@@ -123,7 +125,7 @@ export function topbar(run, tab, codexNew = 0, sound = true) {
           <button class="btn small" data-action="bug-open">Report a bug</button>
         </div></details>
       </header>
-      <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate')}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>
+      <nav class="tabs">${tabBtn('ludus', 'Ludus', ludusBadge)}${tabBtn('estate', 'Estate', estateBadge)}${tabBtn('market', 'Market', marketBadge)}${tabBtn('codex', 'Codex', codexBadge)}</nav>
     </div>
     ${run.bouts && run.boutPending && tab === 'ludus' ? '<button class="jump-bout" data-action="jump-bout">⚔ Fight day ↓</button>' : ''}`;
 }
@@ -948,6 +950,7 @@ export function helpModal() {
       <li><b>Equip them</b> from the storeroom: decor and gear belong to the house and pass on when a fighter falls.</li>
       <li><b>Climb</b> four arenas (Tournament → Boss in a season, or Tournament 1 → Tournament 2 → Boss on the Long Road), then win the Grand Tournament. Keep the Emperor's <b>Favour</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
       <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
+      <li><b>Keep the barracks calm.</b> A <b>Mutinous</b> fighter (Morale under 20) refuses to fight and stirs <b>unrest</b>; at 8 the chains break. Rival houses also plant <b>moles</b>: when clues appear, investigate a fighter from their card. With a Liaison or the Whispering Gallery you can run a <b>covert op</b> on your next opponent before fight day (see the Estate).</li>
       <li><b>Take Fortune's card.</b> Each month offers three: a <b>relic</b> the house keeps (up to 6, and some count a perk's tag, like Brute or Swift), a boon, gear, a fighter, or a wager. Spin again for Gold if none suit.</li>
       <li><b>Every career counts.</b> Win or lose, a career earns <b>Legacy XP</b>, and each Legacy level unlocks something for the careers after it: relics, a patron, house colours, legends who return. Win a career to unlock <b>Heat</b>: harder rules, a higher score, more XP.</li>
     </ol>

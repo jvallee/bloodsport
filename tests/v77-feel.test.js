@@ -44,3 +44,30 @@ test('2.2 the fight screen shows the first-strike chance for both fighters befor
   const html = fightView(m, { animateRound: 0, showMath: false }, { name: 'Test', tier: 1 });
   assert.match(html, /Strikes first: Aulus about <b>65%<\/b> · Brutus about <b>35%<\/b>/);
 });
+
+test('2.3 hints: a Mutinous fighter, a mole\'s clues, and a covert op still to run come before the idle-fighter hint', async () => {
+  const { nextHint } = await import('../src/hints.js');
+  const { createRun, recruit, espState } = await import('../src/run.js');
+  const run = createRun(77);
+  const f = recruit(run, run.market[0].id);
+  f.morale = 10;
+  run.unrest = 3;
+  assert.match(nextHint(run).text, new RegExp(`${f.name} is Mutinous \\(Morale 10\\)[^]*refuse to fight[^]*unrest \\(3/8\\)`));
+  f.morale = 60;
+  espState(run).clues = [{ week: 1, text: 'x' }];
+  assert.match(nextHint(run).text, /mole[^]*[Ii]nvestigate/);
+  espState(run).clues = [];
+  run.buildings.push({ id: 'bl', type: 'liaison', level: 1 });
+  const { weeksUntilTournament } = await import('../src/calendar.js');
+  while (weeksUntilTournament(run.week) !== 1) run.week += 1; // the week before fight day
+  assert.match(nextHint(run).text, /covert op|agents/);
+});
+
+test('2.3 the Estate tab shows a dot when there are clues or a covert op to run', async () => {
+  const { topbar } = await import('../src/ui/views.js');
+  const { createRun, espState } = await import('../src/run.js');
+  const run = createRun(78);
+  assert.doesNotMatch(topbar(run, 'ludus', 0, true), /data-tab="estate">Estate<span class="dot"/);
+  espState(run).clues = [{ week: 1, text: 'x' }];
+  assert.match(topbar(run, 'ludus', 0, true), /data-tab="estate">Estate<span class="dot"/);
+});
