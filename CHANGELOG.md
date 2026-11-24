@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## Unreleased (7.5.0)
+## 7.5.0 (2026-11-24): safer saves and fights
 
 - **No accidental rounds at the Death Gate:** while a round is still playing out, Space, Enter or a click only finishes showing it, so you always see the next round's choices (and any MORTAL DANGER warning) before acting. While MORTAL DANGER shows, Space and Enter do nothing: fighting on or capitulating takes a deliberate click.
 - **Two tabs on one career:** if you play a career in another tab, the older tab says so and stops saving, so it can't overwrite your newer progress.
