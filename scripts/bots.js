@@ -167,6 +167,7 @@ export const usage = (run) => {
   return usageOf.get(run);
 };
 const WOUND_ITEMS = ['viperVenom', 'bloodThinner', 'blindingPowder'];
+const NO_WOUND_ITEMS = new WeakSet(); // careers told not to buy them (opts.woundItems === false; probes)
 
 // 7.6: one covert op a month against the next top-arena opponent: bribe the armourer when they wear armour, else steal
 // their playbook.
@@ -246,8 +247,10 @@ function carefulWeek(run, opts) {
   else for (const b of run.buildings) if (b.type === 'trainer' && !upgradeBlocker(run, b.id)) upgrade(run, b.id);
   if (opts.gear !== false) equipAll(run, Math.max(4, saveForTribute));
   if (opts.morale !== false) keepHappy(run, Math.max(6, saveForTribute));
-  if (opts.morale !== false) temperStar(run, Math.max(8, saveForTribute));
-  covertOps(run, Math.max(8, saveForTribute));
+  if (opts.morale !== false && opts.temper !== false) temperStar(run, Math.max(8, saveForTribute));
+  // Covert ops cost a sound player wins as priced in 7.4 (docs/roadmap-v2.md, v7.6): only the brawler runs them, so the
+  // system is still measured; the careful bot plays soundly.
+  if (opts.spy !== false && opts.ops === true) covertOps(run, Math.max(8, saveForTribute));
   useLounge(run, opts);
   raiseTheDead(run, opts);
 
@@ -372,7 +375,7 @@ function stockItems(run) {
   }
   if (!star.injuries.length && powerGap <= 0 && buy('berserkerMushroom')) return;
   // Stronger than the Boss: a wound item, a different one each time (7.6).
-  if (powerGap > 0 && buy(WOUND_ITEMS[run.week % WOUND_ITEMS.length])) return;
+  if (powerGap > 0 && !NO_WOUND_ITEMS.has(run) && buy(WOUND_ITEMS[run.week % WOUND_ITEMS.length])) return;
   if (buy('ironTonic')) return;
   buy('warPaint');
 }
@@ -480,9 +483,10 @@ function answerSummonsBot(run, strategy) {
 export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxWeeks = 400, onWeek = null, ...opts } = {}) {
   if (strategy === 'brawler') {
     strategy = 'careful';
-    opts = { ...opts, morale: false, hunt: false };
+    opts = { ...opts, morale: false, hunt: false, ops: true };
   }
   const run = createRun(seed, opts.setup ?? {});
+  if (opts.woundItems === false) NO_WOUND_ITEMS.add(run);
   let bouts = 0;
   // Version 6 (phase 5): dead months, the enemy of "one more turn". A fight month is dead when it ends with nothing new:
   // no match fought, no fighter, relic, gear, item, level, perk or building gained (Gold and Stress don't count).
