@@ -2,7 +2,7 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
-## Unreleased (7.8.0)
+## 7.8.0 (2026-11-24): fights with more feeling
 
 - **Last words:** when a career ends, the Emperor (or the narrator) has a final word, different for every way it can end. After The Chains Break, the revolt's leader says what they think of your answer, and an unmasked mole's fate gets a line of its own.
 - **Livelier fight stories:** a wound is now described by the weapon or style that dealt it (a club crashes through a guard, a net drags a fighter down), first strikes and deaths have several ways of being told, and a round where nobody draws blood gets a line of its own.
