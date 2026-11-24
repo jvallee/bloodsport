@@ -53,6 +53,9 @@ function tacticText(m, r) {
 
 export const modLabel = (mod, percent) => `${mod.source} ${percent ? signed(mod.value / 1000) + '%' : signed(mod.value)}`;
 
+// What Blood Drinker can drain (src/fight.js), by tag.
+const DRAINED = { fleshWound: 'Flesh Wound', bleeding: 'Bleeding wound', distracted: 'Distraction' };
+
 export function narrateRound(m, r) {
   const name = (side) => (side === 'A' ? m.a : m.b).f.name;
   const fighter = (side) => (side === 'A' ? m.a : m.b).f;
@@ -100,7 +103,7 @@ export function narrateRound(m, r) {
         add('injury', text);
       }
     }
-    if (c.drained) add('effect', `${att} drinks deep: their own ${c.drained === 'fleshWound' ? 'Flesh Wound' : 'Distraction'} closes (Blood Drinker).`);
+    if (c.drained) add('effect', `${att} drinks deep: their own ${DRAINED[c.drained]} closes (Blood Drinker).`);
   }
 
   const INFLICTED = ['Club', 'Fists', 'Thorn Lash', 'Net'];
@@ -197,7 +200,7 @@ export function narrateStory(m, r) {
         add('injury', text);
       }
     }
-    if (c.drained) add('effect', `${att} drinks deep: their ${c.drained === 'fleshWound' ? 'Flesh Wound' : 'Distraction'} closes.`);
+    if (c.drained) add('effect', `${att} drinks deep: their ${DRAINED[c.drained]} closes.`);
   }
   // A round where nobody draws blood still gets a line (7.8).
   if (!r.checks.some((c) => c.injury || c.parry?.success || (c.counter && c.hit) || c.allIn)) {

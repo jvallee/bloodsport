@@ -256,7 +256,7 @@ export function useItem(run, match, key) {
 const betOddsCache = new WeakMap();
 export function betOdds(run, match) {
   const tier = match.bout?.tier ?? run.matchInfo?.tier ?? run.topTier;
-  const opts = { ...matchOptions(run, match.a.f, tier), useSignatures: false, n: 400, seed: 777, boostsA: match.a.boosts ?? null, boostsB: match.b.boosts ?? null, vengeanceB: Boolean(match.b.vengeance) };
+  const opts = { ...matchOptions(run, match.a.f, tier), useSignatures: false, n: 400, seed: 777, boostsA: match.a.boosts ?? null, boostsB: match.b.boosts ?? null, vengeanceB: Boolean(match.b.vengeance), ashA: match.a.ash ?? 0 };
   const key = JSON.stringify([match.a.f, match.b.f, opts]);
   const hit = betOddsCache.get(match);
   if (hit?.key === key) return hit.odds;
@@ -268,6 +268,11 @@ export function betOdds(run, match) {
 
 export const betCap = (run, match) => BET.perTier * Math.min(match.bout?.tier ?? run.matchInfo?.tier ?? run.topTier, CIRCUITS.length);
 export const betPayout = (stake, odds) => Math.floor(stake * odds);
+// What the bet buttons show (7.8.1): the live odds, so an item used before Round 1 is priced in. null when bets are closed.
+export function betQuote(run, match) {
+  if (!match || match.round !== 0 || match.over || match.bet) return null;
+  return { odds: betOdds(run, match), cap: betCap(run, match), gold: run.gold };
+}
 
 export function betBlocker(run, match, stake) {
   if (!run.inMatch || !match || match.over) return 'Bets are placed during a match.';
