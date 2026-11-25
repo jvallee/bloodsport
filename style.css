@@ -2317,3 +2317,7 @@ main { padding-bottom: 96px; }
 @media (prefers-reduced-motion: reduce) {
   .estate-flame, .estate-bob { animation: none; }
 }
+
+/* 7.14: the Estate's two-way view switch (it inherited a four-column grid and overflowed phones) */
+.est-mode-segs { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; max-width: 440px; }
+@media (max-width: 760px) { .est-mode-segs .seg { white-space: normal; padding: 6px 8px; } }
