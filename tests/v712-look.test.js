@@ -50,3 +50,13 @@ test('the End week dock: End week and To fight day between fights; on fight day 
   assert.doesNotMatch(weekDock(run), /advance-tournament/, 'already fight day');
   assert.equal(weekDock({ ...run, status: 'lost' }), '');
 });
+
+test('the Codex says which kind each kind trait belongs to (the designer, 7.12.1)', async () => {
+  const { ENTRIES } = await import('../src/codex.js');
+  const { KINDS } = await import('../src/data.js');
+  for (const e of ENTRIES.filter((x) => x.cat === 'trait')) {
+    const kind = Object.values(KINDS).find((k) => k.traits.includes(e.id));
+    assert.ok(kind, e.key);
+    assert.match(e.rules, new RegExp(`^${kind.name} trait\\.`), e.key);
+  }
+});
