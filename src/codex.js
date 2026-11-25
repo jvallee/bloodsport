@@ -93,7 +93,10 @@ function ruleText(cat, id) {
     const k = KINDS[id];
     return `Base Power ${k.basePower}. Each ${k.name} has one of these traits: ${k.traits.map((t) => TRAITS[t].name).join(', ')}.`;
   }
-  if (cat === 'trait') return TRAITS[id].desc;
+  if (cat === 'trait') { // 7.12.1 (the designer): say whose trait it is
+    const kind = Object.values(KINDS).find((k) => k.traits.includes(id));
+    return `${kind ? `${kind.name} trait. ` : ''}${TRAITS[id].desc}`;
+  }
   if (cat === 'class') return `${CLASSES[id].ability}: ${CLASSES[id].desc}`;
   if (cat === 'weapon') return `${WEAPONS[id].ability}: ${WEAPONS[id].desc}`;
   if (cat === 'injury') {

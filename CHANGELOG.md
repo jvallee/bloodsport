@@ -2,6 +2,10 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.12.1 (2026-11-25): the Codex names each trait's kind
+
+- Every entry under Kind traits in the Codex now starts with the kind it belongs to ("Orc trait.", "Elf trait."), so you can tell whose it is without looking it up under Kinds.
+
 ## 7.12.0 (2026-11-25): a new look, and End week always to hand
 
 - **A new look** (from the 7.11 review, tried as a preview first): a darker, torch-lit style; a one-row header with icons on a computer; on a phone, a compact header, the tabs at the bottom of the screen, and the Ludus split into Gladiators, Fight day and House & log; a two-by-two grid of tactics in fights; tidier Market and Estate cards.
