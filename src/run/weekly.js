@@ -9,7 +9,7 @@ import { RELICS, relicSum } from '../fortune.js';
 import { CELL_IDS } from '../plot.js';
 import { EVENT_BY_ID } from '../events.js';
 import { isTournamentWeek, isMonthStart, dateOf, WEEKS_PER_YEAR } from '../calendar.js';
-import { prestigeLevelFor, trainCost, healRate, stressRelief } from '../ludus.js';
+import { prestigeLevelFor, trainCost, healRate, stressRelief, ensureEstateSlots } from '../ludus.js';
 import {
   SAVE_VERSION, emptyDecor, emptyItems, createFighter, newId, takenNames, clampStress, log,
   findFighter, chronicle, isTraining, releaseTalk, assertOk, decorCalm, trainStress, netTrainStress,
@@ -96,6 +96,7 @@ export function createRun(seed = randomSeed(), setup = {}) {
   };
   for (const type of STARTING_BUILDINGS) run.buildings.push({ id: newId(run, 'b'), type, level: 1 });
   if (hasUnlock(run, 'oracle')) run.buildings.push({ id: newId(run, 'b'), type: 'oracle', level: 1 });
+  ensureEstateSlots(run);
   openArena(run, 1);
   refreshMarket(run);
   log(run, `You take charge of a bottom-tier Ludus in ${arenaName(1)}.`);

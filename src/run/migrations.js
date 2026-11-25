@@ -8,6 +8,7 @@ import {
 } from './helpers.js';
 import { makeHouses, openArena } from './houses.js';
 import { finishMatch } from './tournaments.js';
+import { ensureRoomLayout } from '../ludus.js';
 
 export const serialize = (run) => JSON.stringify(run);
 
@@ -154,6 +155,7 @@ function backfillFighters(run) {
   for (const f of fighters) {
     f.decor = { ...emptyDecor(), ...(f.decor ?? {}) };
     f.humor ??= humorFor(f);
+    ensureRoomLayout(f);
   }
 }
 

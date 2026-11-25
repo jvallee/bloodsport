@@ -1,6 +1,6 @@
 // Player-facing explanations shared by the web UI and the text port, so both always say the same thing. Pure.
 
-import { ECONOMY, FAVOR, MORALE, STRESS, BRACKET, HOUSES, SIGNATURES } from './data.js';
+import { ECONOMY, FAVOR, MORALE, STRESS, BRACKET, HOUSES, signatureDef } from './data.js';
 import { computePower, computeSpeed, effectiveInjuries, deathGateAt, opponentUnleashesNext } from './fight.js';
 import { boutFor, matchOptions, fightPowers, isChampionOf, bossLossFavor, GRAND_TIER, houseOf, opponentFor, crushingGapFor, hasBracket } from './run.js';
 
@@ -58,7 +58,7 @@ export function roundStats(match) {
   let a = match.a;
   let b = match.b;
   if (opponentUnleashesNext(match)) {
-    const sig = SIGNATURES[b.f.cls];
+    const sig = signatureDef(b.f);
     if (sig) {
       a = { ...a, boosts: sig.foe ? [...(a.boosts ?? []), { ...sig.foe, name: sig.name, round }] : a.boosts };
       b = { ...b, boosts: sig.boost ? [...(b.boosts ?? []), { ...sig.boost, name: sig.name, round }] : b.boosts, ash: sig.ash ? (b.ash ?? 0) + sig.ash : b.ash };

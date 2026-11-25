@@ -2,7 +2,7 @@
 
 import { createRng, int, pick } from '../rng.js';
 import {
-  decorComfort, ECONOMY, STRESS, TRAIN_GAIN, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, BOSS_DEBUFFS,
+  decorComfort, ECONOMY, STRESS, TRAIN_GAIN, KINDS, CLASSES, WEAPONS, NAMES, CIRCUITS, GRAND, BOSS_DEBUFFS, COMBAT,
   XP, PERKS, MORALE, GEAR, DECOR, FAVOR, HUMORS, DECREES, AUGMENTS, TITLES, RECRUIT, SHORT, QUESTS, HEAT, CONSUMABLES,
 } from '../data.js';
 import { relicSum } from '../fortune.js';
@@ -116,7 +116,9 @@ export const decorCount = (f) => Object.values(f.decor ?? {}).reduce((s, n) => s
 export const trainStress = (run, f) => Math.max(0, STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0) - relicSum(run, 'trainStress'));
 export const netTrainStress = (run, f) => trainStress(run, f) - stressRelief(run) - decorCalm(f);
 
-export const effectiveSpeed = (f) => f.speed + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].speed ?? 0), 0);
+export const effectiveSpeed = (f) => f.speed
+  + [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((s, k) => s + (GEAR[k].speed ?? 0), 0)
+  + (f.cls === 'ornitharius' && (f.decor?.bird ?? 0) >= 1 ? COMBAT.ornithariusSpeedCap : 0);
 export const effectivePower = (f) => powerParts(f).reduce((s, x) => s + x.value, 0);
 
 // Where standing Power comes from. Returning Hall legends carry old Titles that were not added to their f.power.
@@ -262,6 +264,7 @@ export function removeFighter(run, fighterOrId, { returnDecor = true, returnGear
       run.inventory.decor[k] = (run.inventory.decor[k] ?? 0) + (f.decor?.[k] ?? 0);
       if (f.decor) f.decor[k] = 0;
     }
+    delete f.roomLayout;
   }
   if (returnGear) {
     for (const slot of ['weapon', 'armor']) {

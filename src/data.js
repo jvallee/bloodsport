@@ -37,13 +37,22 @@ export const COMBAT = {
   parry: 20000,
   swordParry: 25000,
   riposteWin: 5000,
+  shieldCounterWin: 8000,
   counterInjure: 15000,
   elvenEyesMargin: 50000,
   axeInjure: 5000,
+  axePressWin: 6000,
   axeCleave: 15,
+  swordGuardWin: 5000,
+  fistsPressWin: 3000,
+  flailPressWin: 4000,
+  daggerWin: 5000,
+  daggerFeintWin: 4000,
   daggerInjure: 10000,
+  gunWin: 4000,
   gunInjure: 15000,
   ornithariusBase: 5000,
+  ornithariusSpeedCap: 1,
 };
 
 export const INJURIES = [
@@ -271,15 +280,27 @@ export const KINDS = {
 };
 
 export const CLASSES = {
-  cestus: { name: 'Cestus', ability: 'Progressive Overload', desc: 'Each round: +3/6/9% win chance and +5/10/15% injure chance.' },
-  sagittarius: { name: 'Sagittarius', ability: 'First Volley', desc: 'Each round (unless Blinded): coin flip for +10% win chance or +10% injure chance.' },
-  ornitharius: { name: 'Ornitharius', ability: 'Birds of Prey', desc: '+5% injure chance, plus +5% per Bird in quarters.' },
-  fighter: { name: 'Fighter', ability: 'Weaponsmaster', desc: 'Fights with a weapon specialty.' },
-  retiarius: { name: 'Retiarius', ability: 'Net and Trident', desc: 'Winning a round entangles the opponent: −3 Speed next round.' },
-  ashHungry: { name: 'Ash-Hungry', ability: 'Ash Stacks', desc: 'Each injury they inflict: +1 Power and +5% chance to injure for the rest of the match.' },
-  bloodBearer: { name: 'Blood-Bearer', ability: 'Off-Hand', desc: '+5% win chance; losing a round gives a free 15% off-hand strike at the winner.' },
-  thornBlade: { name: 'Thorn-Blade', ability: 'Thorn Lash', desc: 'Winning a round gives the opponent −2 Speed and −1 Power next round.', legacy: true },
-  samnite: { name: 'Samnite', ability: 'Shield Wall', desc: '20% chance to parry an injury with the shield; Concussed never costs them the first strike.', legacy: true },
+  cestus: { name: 'Cestus', ability: 'Progressive Overload', desc: 'Each round: +3/6/9% win chance and +5/10/15% injure chance. Pressing builds +5 extra Hype.' },
+  sagittarius: { name: 'Sagittarius', ability: 'First Volley', desc: 'Each round (unless Blinded): coin flip for +10% win chance or +10% injure chance. Steady aim adds +3% win chance and +5% injure chance.' },
+  ornitharius: { name: 'Ornitharius', ability: 'Birds of Prey', desc: '+5% injure chance plus +5% per Bird, and +1 Speed with a Bird in quarters. Feinting adds +4% win chance.' },
+  fighter: { name: 'Fighter', ability: 'Weaponsmaster', desc: 'Fights with a weapon specialty and a weapon-group signature.' },
+  retiarius: { name: 'Retiarius', ability: 'Net and Trident', desc: 'Winning a round entangles the opponent (−3 Speed next round). Feinting adds +4% win chance (+8% against an entangled foe).' },
+  ashHungry: { name: 'Ash-Hungry', ability: 'Ash Stacks', desc: 'Each injury they inflict: +1 Power and +5% injure chance for the rest of the match. Pressing adds +8% injure chance.' },
+  bloodBearer: { name: 'Blood-Bearer', ability: 'Off-Hand', desc: '+5% win chance; losing a round gives a free 15% off-hand strike at the winner (20% while Pressing).' },
+  thornBlade: { name: 'Thorn-Blade', ability: 'Thorn Lash', desc: 'Winning a round gives the opponent −2 Speed and −1 Power next round. Feinting adds +5% injure chance.', legacy: true },
+  samnite: { name: 'Samnite', ability: 'Shield Wall', desc: '20% chance to parry an injury (+8% win next round); Concussed never costs them first strike. Guarding adds +5% win chance.', legacy: true },
+};
+
+// Class tactic resonances: how each class rewards piloting it in-character (off if class ability is disabled).
+export const CLASS_RESONANCE = {
+  cestus: { tactic: 'press', hype: 5, desc: 'Press: +5 extra crowd Hype.' },
+  sagittarius: { tactic: 'steady', win: 3000, injure: 5000, desc: 'Steady: +3% win chance and +5% chance to injure.' },
+  ornitharius: { tactic: 'feint', win: 4000, desc: 'Feint: +4% win chance while the flock masks your strike.' },
+  retiarius: { tactic: 'feint', win: 4000, entangledWin: 4000, desc: 'Feint: +4% win chance (+8% vs an entangled foe).' },
+  ashHungry: { tactic: 'press', injure: 8000, desc: 'Press: +8% chance to injure to spark Ash Stacks.' },
+  bloodBearer: { tactic: 'press', offhand: 20000, desc: 'Press: off-hand strike on a lost round rises to 20%.' },
+  thornBlade: { tactic: 'feint', injure: 5000, desc: 'Feint: +5% chance to injure.' },
+  samnite: { tactic: 'guard', win: 5000, desc: 'Guard: +5% win chance behind the tower shield.' },
 };
 
 export const SIGNATURE = { level: 3, bossLevel: 3, opponentLevel: 3 };
@@ -291,22 +312,38 @@ export const SIGNATURES = {
   retiarius: { name: 'Cast the Net', desc: 'Next round: the opponent −4 Speed and −5% win chance.', foe: { speed: -4, win: -5000 } },
   ashHungry: { name: 'Feed the Ash', desc: 'One Ash Stack now: +1 Power and +5% to injure for the rest of the match.', ash: 1 },
   bloodBearer: { name: 'Twin Fangs', desc: 'Next round: +10% win chance and +10% chance to injure.', boost: { win: 10000, injure: 10000 } },
-  thornBlade: { name: 'Thorn Storm', desc: 'Next round: the opponent −2 Power and −2 Speed.', foe: { power: -2, speed: -2 } },
-  samnite: { name: 'Shield Bash', desc: 'Next round: −20% chance to be injured and +10% win chance.', boost: { self: -20000, win: 10000 } },
+  thornBlade: { name: 'Thorn Storm', desc: 'Next round: the opponent −1 Power and −3 Speed.', foe: { power: -1, speed: -3 } },
+  samnite: { name: 'Shield Bash', desc: 'Next round: −20% chance to be injured and +15% win chance.', boost: { self: -20000, win: 15000 } },
+};
+
+export const WEAPON_GROUP = {
+  sword: 'bladed', dagger: 'bladed', axe: 'bladed',
+  club: 'heavy', flail: 'heavy', fists: 'heavy',
+  bow: 'ranged', spear: 'ranged', gun: 'ranged',
+};
+export const WEAPON_SIGNATURES = {
+  bladed: { name: 'Crimson Flourish', desc: 'Next round: +12% win chance and +10% chance to injure.', boost: { win: 12000, injure: 10000 } },
+  heavy: { name: 'Crushing Blow', desc: 'Next round: +1 Power and the opponent −2 Speed.', boost: { power: 1 }, foe: { speed: -2 } },
+  ranged: { name: 'Deadeye Volley', desc: 'Next round: +10% win chance and +3 Speed.', boost: { win: 10000, speed: 3 } },
+};
+export const signatureDef = (f) => {
+  if (!f) return null;
+  if (f.cls === 'fighter' && f.weapon && WEAPON_GROUP[f.weapon]) return WEAPON_SIGNATURES[WEAPON_GROUP[f.weapon]];
+  return SIGNATURES[f.cls] ?? null;
 };
 
 export const MERCY = { minInjuries: 1, spareFavor: 2, killRenown: 2, infamyRenown: 2, crowdRenown: 1, crowdMorale: 5 };
 
 export const WEAPONS = {
   club: { name: 'Club', ability: 'Knock Prone', desc: 'Winning a round gives the opponent −2 Speed and −5% win chance next round.' },
-  fists: { name: 'Fists', ability: 'Disarm', desc: "Winning a round disables the opponent's class ability next round." },
+  fists: { name: 'Fists', ability: 'Disarm', desc: "Winning a round disables the opponent's class ability next round. Pressing adds +3% win chance." },
   bow: { name: 'Bow', ability: 'Pin at Range', desc: 'Rounds 1–2: +1 Power against melee-only opponents (unless Blinded).' },
   spear: { name: 'Spear', ability: 'First-Strike Reach', desc: "Round 1: +3 Speed. Negates the opponent's Bow bonus." },
-  sword: { name: 'Sword', ability: 'Riposte', desc: '25% chance to parry an injury; a parry gives +3 Speed and +5% win chance next round.' },
-  flail: { name: 'Flail', ability: 'Shield-Breaker', desc: 'Injury checks ignore enemy parries and armour.' },
-  gun: { name: 'Gun', ability: 'Armour-Piercing Volley', desc: 'Rounds 1 and 3 (unless Blinded): +15% injure chance, ignores armour.' },
-  axe: { name: 'Axe', ability: 'Cleave', desc: '+5% chance to injure; wounds they inflict are worse (+15 on the injury roll).' },
-  dagger: { name: 'Dagger', ability: 'Backstab', desc: 'Striking first: +10% chance to injure that round.' },
+  sword: { name: 'Sword', ability: 'Riposte', desc: '25% chance to parry an injury (+3 Speed and +5% win next round). Guarding adds +5% win chance.' },
+  flail: { name: 'Flail', ability: 'Shield-Breaker', desc: 'Injury checks ignore enemy parries and armour. Pressing adds +4% win chance.' },
+  gun: { name: 'Gun', ability: 'Armour-Piercing Volley', desc: 'Rounds 1 and 3 (unless Blinded): +4% win and +15% injure chance, ignores armour.' },
+  axe: { name: 'Axe', ability: 'Cleave', desc: '+5% chance to injure and worse wounds (+15 on the injury roll). Pressing adds +6% win chance.' },
+  dagger: { name: 'Dagger', ability: 'Backstab', desc: 'Striking first: +5% win chance and +10% injure chance. Feinting adds +4% win chance.' },
 };
 
 // Comfort for Morale: 2 + price, unless an item sets its own (`comfort`).
@@ -319,7 +356,7 @@ export const isBladed = (f) => (f.cls === 'fighter' && AFFINITY.bladedWeapons.in
 // their room line says what they would do to that fighter's temper instead.
 // Temperament pieces: `humor` is where a fighter drifts after HUMOUR_DRIFT.weeks weeks with that piece dominant in their room.
 export const DECOR = {
-  bird: { group: 'craft', price: 1, calm: 5, name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale and −5 Stress a week. Ornitharius fighters also get +5% injure chance per Bird (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
+  bird: { group: 'craft', price: 1, calm: 5, name: 'Bird', feeds: 'Ornitharius', effect: 'Comfort for Morale and −5 Stress a week. Ornitharius fighters also get +5% injure chance per Bird and +1 Speed with a Bird in quarters (Birds of Prey).', helps: (f) => f.cls === 'ornitharius' },
   fireBrazier: { group: 'craft', price: 1, calm: 5, name: 'Fire Brazier', feeds: 'Firebug', effect: 'Comfort for Morale and −5 Stress a week. Elves with Firebug also get +1 Power per Fire Brazier.', helps: (f) => f.kindTrait === 'firebug' },
   trophy: { group: 'comfort', price: 2, name: 'Trophy Rack', feeds: 'Morale', effect: 'Comfort for Morale: a famous fighter likes to see their victories on the wall.', helps: () => false },
   shrine: { group: 'comfort', price: 3, calm: 10, name: 'Shrine of Mars', feeds: 'Stress', effect: 'Comfort for Morale and −10 Stress a week: prayer steadies a fighter between bouts.', helps: () => false },
@@ -586,7 +623,11 @@ export const MATCHUPS = [
   { style: 'dagger', vs: ['retiarius', 'sagittarius'], win: 5000, why: 'Inside their guard' },
   { style: 'retiarius', vs: ['sword', 'axe'], win: 5000, why: 'The net tangles a blade' },
   { style: 'bow', vs: ['retiarius'], win: 5000, why: 'Shoots before the net flies' },
-  { style: 'flail', vs: ['samnite', 'sword'], injure: 5000, why: 'Swings around a guard' },
+  { style: 'flail', vs: ['samnite', 'sword'], win: 5000, injure: 5000, why: 'Swings around a guard' },
+  { style: 'ornitharius', vs: ['bow', 'gun'], win: 5000, why: 'Hawks harry ranged aim' },
+  { style: 'samnite', vs: ['bloodBearer', 'dagger'], win: 5000, why: 'Tower shield turns light blades' },
+  { style: 'ashHungry', vs: ['samnite'], injure: 5000, why: 'Embers sear behind the shield' },
+  { style: 'thornBlade', vs: ['fists'], win: 4000, why: 'Barbed reach punishes bare hands' },
 ];
 
 export const NAMES = [
@@ -648,7 +689,7 @@ export const DEMANDS = {
 export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] };
 
 // Season mode (short career): Tournament -> Boss per tier, scaled purses, training, market, and opponent Power.
-export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 10], grandPower: 19, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
+export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 8], grandPower: 20, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],
@@ -699,5 +740,5 @@ export const PLOT = {
   // 7.10 (the designer: the rebellion should draw more suspicion): perPrisoner 1 -> 2, decay 2 -> 1 a month.
   suspicion: { perPrisoner: 2, perContact: 1, decay: 1, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
   // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
-  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, searchBribe: 6, clemencyFavor: 8, betrayFavor: 30, betrayGold: 22, betrayRelic: 'eagle', // betrayGold: the Emperor's purse for the names, × tier
+  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, searchBribe: 6, clemencyFavor: 8, betrayFavor: 30, betrayGold: 30, betrayRelic: 'eagle', // betrayGold: the Emperor's purse for the names, × tier
 };

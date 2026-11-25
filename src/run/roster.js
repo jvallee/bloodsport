@@ -11,6 +11,7 @@ import { meleeOnly } from '../fight.js';
 import { MOOD_WEEKS } from '../events.js';
 import {
   rosterCap, trainerRooms, trainCap, trainCost, medbaySlots, decorCap, liaisonLevel, maxLevel, effectAt, build, upgrade,
+  ensureRoomLayout, roomSlotById, decorZoneOf,
 } from '../ludus.js';
 import {
   JOBS, createFighter, newId, remember, takenNames, clamp, log, findFighter, chronicle, bumpMorale,
@@ -153,8 +154,8 @@ export function refreshArmourer(run) {
   run.armourerStock = Array.from({ length: effectAt('armourer', lv) }, () => pick(run.rng.market, pool));
 }
 
-export function buildRoom(run, type) {
-  const b = build(run, type);
+export function buildRoom(run, type, slot = null) {
+  const b = build(run, type, slot);
   if (type === 'armourer') refreshArmourer(run);
   if (type === 'liaison') refreshLiaison(run);
   return b;
@@ -536,7 +537,7 @@ export function buyDecor(run, item) {
   run.inventory.decor[item] += 1;
 }
 
-export function assignDecorBlocker(run, id, item) {
+export function assignDecorBlocker(run, id, item, slot = null) {
   const idle = idleBlocker(run);
   if (idle) return idle;
   const f = findFighter(run, id);
@@ -544,14 +545,82 @@ export function assignDecorBlocker(run, id, item) {
   if (!DECOR[item]) return 'Unknown decor item.';
   if (!run.inventory.decor[item]) return `No ${DECOR[item].name} in the storeroom. Buy one first.`;
   if (f.decor[item] >= decorCap(run)) return `Quarters fit ${decorCap(run)} of each item. Upgrade Fighter Quarters for more.`;
+  if (slot) {
+    const s = roomSlotById(slot);
+    if (!s) return 'Unknown room anchor.';
+    if (s.zone !== decorZoneOf(item)) return `${DECOR[item].name} belongs on a ${decorZoneOf(item)} anchor.`;
+  }
   return null;
 }
 
-export function assignDecor(run, id, item) {
-  assertOk(assignDecorBlocker(run, id, item));
+function placeInRoomLayout(f, item, preferredSlot = null) {
+  const layout = ensureRoomLayout(f);
+  if (preferredSlot) {
+    const s = roomSlotById(preferredSlot);
+    if (s && s.zone === decorZoneOf(item)) {
+      const occupant = Object.entries(layout).find(([k, sid]) => sid === preferredSlot && k !== item)?.[0];
+      if (!occupant) {
+        layout[item] = preferredSlot;
+        f.roomLayout = layout;
+        return;
+      }
+    }
+  }
+  ensureRoomLayout(f);
+}
+
+export function assignDecor(run, id, item, slot = null) {
+  assertOk(assignDecorBlocker(run, id, item, slot));
+  const f = findFighter(run, id);
   run.inventory.decor[item] -= 1;
-  findFighter(run, id).decor[item] += 1;
-  syncDrift(findFighter(run, id));
+  f.decor[item] += 1;
+  placeInRoomLayout(f, item, slot);
+  syncDrift(f);
+}
+
+export function buyAndAssignDecorBlocker(run, id, item, slot = null) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (!DECOR[item]) return 'Unknown decor item.';
+  if (f.decor[item] >= decorCap(run)) return `Quarters fit ${decorCap(run)} of each item. Upgrade Fighter Quarters for more.`;
+  if (slot) {
+    const s = roomSlotById(slot);
+    if (!s) return 'Unknown room anchor.';
+    if (s.zone !== decorZoneOf(item)) return `${DECOR[item].name} belongs on a ${decorZoneOf(item)} anchor.`;
+  }
+  if (!run.inventory.decor[item] && run.gold < DECOR[item].price) return `Needs ${DECOR[item].price} Gold.`;
+  return null;
+}
+
+export function buyAndAssignDecor(run, id, item, slot = null) {
+  assertOk(buyAndAssignDecorBlocker(run, id, item, slot));
+  if (!run.inventory.decor[item]) buyDecor(run, item);
+  assignDecor(run, id, item, slot);
+}
+
+export function moveDecorBlocker(run, id, item, slot) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (!DECOR[item] || !(f.decor?.[item] > 0)) return 'That decor item is not in their room.';
+  const s = roomSlotById(slot);
+  if (!s) return 'Unknown room anchor.';
+  if (s.zone !== decorZoneOf(item)) return `${DECOR[item].name} belongs on a ${decorZoneOf(item)} anchor.`;
+  return null;
+}
+
+export function moveDecorAnchor(run, id, item, slot) {
+  assertOk(moveDecorBlocker(run, id, item, slot));
+  const f = findFighter(run, id);
+  const layout = ensureRoomLayout(f);
+  const oldSlot = layout[item];
+  const occupant = Object.entries(layout).find(([k, sid]) => sid === slot && k !== item)?.[0];
+  if (occupant && oldSlot) layout[occupant] = oldSlot;
+  layout[item] = slot;
+  f.roomLayout = layout;
 }
 
 export function removeDecorBlocker(run, id, item) {
@@ -565,9 +634,14 @@ export function removeDecorBlocker(run, id, item) {
 
 export function removeDecor(run, id, item) {
   assertOk(removeDecorBlocker(run, id, item));
-  findFighter(run, id).decor[item] -= 1;
+  const f = findFighter(run, id);
+  f.decor[item] -= 1;
   run.inventory.decor[item] += 1;
-  syncDrift(findFighter(run, id));
+  if (f.decor[item] <= 0 && f.roomLayout) {
+    delete f.roomLayout[item];
+    if (!Object.keys(f.roomLayout).length) delete f.roomLayout;
+  }
+  syncDrift(f);
 }
 
 export function buyGearBlocker(run, index) {

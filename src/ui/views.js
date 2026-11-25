@@ -2,7 +2,7 @@
 
 import { MAX_CAREERS } from '../careers.js';
 import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
-import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR, HUMORS, HUMOUR_DRIFT, UNREST, ESPIONAGE } from '../data.js';
+import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR, HUMORS, HUMOUR_DRIFT, UNREST, ESPIONAGE } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, unlockText, levelFor, nextUnlock, unlocksAt, heatUnlocked, houseColours, dailyStreak, returningFor, LEGACY_LEVELS, HEAT, HOUSE_COLOURS } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import * as runApi from '../run.js';
@@ -15,12 +15,13 @@ import {
 } from '../run.js';
 import { stepText, INTRO } from '../tutorial.js';
 import {
-  plotCount, rosterCap, trainCap, trainCost, oracleLevel, buildBlocker, buildingKnown, upgradeBlocker, levelInfo, maxLevel, effectAt,
+  rosterCap, trainCap, trainCost, oracleLevel, maxLevel, effectAt,
 } from '../ludus.js';
 import { describeOdds } from '../odds.js';
 import { fighterWarnings, arenaStakes } from '../explain.js';
 import { gearText, slotLabel } from '../codex.js';
-import { esc, safeColor, safeTone, button, buttonWhy, fighterCard, ICON, BUILDING_ICON, mercyChoices, gearSpd } from './components.js';
+import { esc, safeColor, safeTone, button, buttonWhy, fighterCard, ICON, mercyChoices } from './components.js';
+import { renderEstatePanel } from './estateView.js';
 import { portrait, npcPortrait } from './portrait.js';
 import { SPEAKERS, tipSpeaker } from '../dialogue.js';
 import { cityHeadlines } from '../gazette.js';
@@ -651,7 +652,8 @@ function roomPanel(run, f) {
   const tab = roomTabs[f.id] === 'room' ? 'room' : 'decor';
   const tabs = [['room', 'Room'], ['decor', 'Decor']].map(([k, label]) => `<button class="seg${tab === k ? ' on' : ''}" role="tab" aria-selected="${tab === k}" data-action="room-tab" data-id="${esc(f.id)}" data-tab="${k}">${label}</button>`).join('');
   const body = tab === 'room' ? room : `<div class="decor-list">${f.humor ? `<p class="sub temper-line">${temperLine(f)}</p>` : ''}${decor}</div>`;
-  return { room: `<div class="segs room-tabs" role="tablist">${tabs}</div><div class="room-body">${body}</div>`, gear: `<div class="label">Gear (from the storeroom)</div>${gear}` };
+  const open2d = `<div class="row tight"><button class="btn small" data-action="estate-open-room" data-id="${esc(f.id)}">🏛 Open 2D Room</button></div>`;
+  return { room: `<div class="segs room-tabs" role="tablist">${tabs}</div>${open2d}<div class="room-body">${body}</div>`, gear: `<div class="label">Gear (from the storeroom)</div>${gear}` };
 }
 
 // Which tab each fighter's room panel shows (page state only; set by src/main.js).
@@ -664,7 +666,7 @@ function compareTable(run) {
     const wounds = f.injuries.length ? `<span class="bad" title="${esc(f.injuries.map((i) => INJURY_BY_TAG[i.tag].name).join(', '))}">${f.injuries.length}</span>` : '–';
     const stressCls = f.stress >= STRESS.overtrained ? ' class="bad"' : '';
     const moraleCls = f.morale < MORALE.restless ? ' class="bad"' : f.morale >= MORALE.inspired ? ' class="good"' : '';
-    return `<tr><td><a href="#card-${esc(f.id)}">${esc(f.name)}</a>${f.want ? ` <span title="${esc(WANTS[f.want.id].goal(f.want))}">💬</span>` : ''}<small>Lv ${f.level ?? 1}</small></td><td>${effectivePower(f)}</td><td>${f.speed + gearSpd(f)}</td><td${stressCls}>${f.stress}</td><td${moraleCls}>${f.morale}</td><td>${wounds}</td><td>${f.trained}/${trainCap(run)}</td><td>${jobLabel(run, f.job)}</td></tr>`;
+    return `<tr><td><a href="#card-${esc(f.id)}">${esc(f.name)}</a>${f.want ? ` <span title="${esc(WANTS[f.want.id].goal(f.want))}">💬</span>` : ''}<small>Lv ${f.level ?? 1}</small></td><td>${effectivePower(f)}</td><td>${effectiveSpeed(f)}</td><td${stressCls}>${f.stress}</td><td${moraleCls}>${f.morale}</td><td>${wounds}</td><td>${f.trained}/${trainCap(run)}</td><td>${jobLabel(run, f.job)}</td></tr>`;
   }).join('');
   return `<details class="more compare" data-key="compare" open><summary>📊 Compare</summary>
     <div class="compare-wrap"><table class="compare-table"><thead><tr><th>Gladiator</th><th title="Power, with gear and Titles">Pow</th><th title="Speed, with gear">Spd</th><th title="Stress (50+: Overtrained)">Str</th><th title="Morale (under ${MORALE.restless}: won't train)">Mor</th><th title="Injuries">Inj</th><th title="Training weeks used of the Trainer cap">Trn</th><th>Job</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
@@ -835,47 +837,8 @@ export function ludusTab(run, oddsFor, mobilePane = 'roster') {
 
 // ---------- Estate tab ----------
 
-function buildingCard(run, b) {
-  const def = BUILDINGS[b.type];
-  const pips = def.cost.map((_, i) => `<i class="${i < b.level ? 'on' : ''}"></i>`).join('');
-  const nextLevel = b.level < def.cost.length ? b.level + 1 : null;
-  const extra = def.extra ? `<div class="sub">${esc(def.extra(b.level))}</div>` : '';
-  const upWhy = nextLevel ? upgradeBlocker(run, b.id) : null;
-  const up = nextLevel
-    ? `<div class="next">Next: ${esc(def.effect(def.per[b.level]))}${def.extra ? `; ${esc(def.extra(nextLevel))}` : ''}</div><div class="room-foot">${button(`Upgrade · ${def.cost[b.level]} Gold`, 'upgrade', { id: b.id }, upWhy, 'btn small primary btn-block')}${upWhy ? `<div class="why-not">${esc(upWhy)}</div>` : ''}</div>`
-    : '<div class="next room-foot">Fully upgraded</div>';
-  return `<div class="room built dept-${def.dept}">
-    <div class="room-head"><span class="room-icon">${BUILDING_ICON[def.icon]}</span><b>${esc(def.name)}</b><span class="pips">${pips}</span></div>
-    <div>${esc(def.effect(def.per[b.level - 1]))}</div>${extra}${up}</div>`;
-}
-
-function emptyPlot(run) {
-  const options = Object.entries(BUILDINGS).filter(([type]) => buildingKnown(run, type)).map(([type, def]) => {
-    const reason = buildBlocker(run, type);
-    return `<button class="build-opt" data-action="build" data-type="${type}" ${reason ? `disabled title="${esc(reason)}"` : ''}>
-      <span>${BUILDING_ICON[def.icon]} <b>${esc(def.name)}</b> · ${def.cost[0]} Gold</span><small>${esc(def.effect(def.per[0]))}${reason ? ` · ${esc(reason)}` : ''}</small></button>`;
-  }).join('');
-  const last = plotCount(run) - run.buildings.length === 1;
-  return `<details class="room empty-plot"><summary>+ Empty plot: build here</summary>${last ? '<div class="why-not">⚠ This is your last free plot: buildings can\'t be torn down, so choose carefully. The next House level brings more.</div>' : ''}<div class="build-list">${options}</div></details>`;
-}
-
-export function estateTab(run) {
-  const free = plotCount(run) - run.buildings.length;
-  const order = Object.keys(DEPARTMENTS);
-  const built = [...run.buildings].sort((a, b) => order.indexOf(BUILDINGS[a.type].dept) - order.indexOf(BUILDINGS[b.type].dept));
-  const next = PRESTIGE_LEVELS[run.prestigeLevel];
-  const locked = next ? Array.from({ length: next.plots - plotCount(run) }, () => `<div class="room locked">🔒 Unlocks at Prestige level ${next.level} (${next.at} Prestige)</div>`).join('') : '';
-  const legend = order.map((d) => `<span class="legend dept-${d}">${DEPARTMENTS[d]}</span>`).join('');
-  return `
-    <section class="panel estate">
-      <h2>The Estate <small>${run.buildings.length}/${plotCount(run)} plots · up to ${levelInfo(run.prestigeLevel).maxFighters} fighters at this level</small></h2>
-      <p class="sub">Plots are limited, so every building is a trade-off. Better Quarters and an Entertainment Room keep famous fighters happy. Reaching new Prestige levels adds plots and unlocks new buildings.</p>
-      <div class="legends">${legend}</div>
-      <div class="villa">
-        <div class="roof"></div>
-        <div class="rooms">${built.map((b) => buildingCard(run, b)).join('')}${Array.from({ length: free }, () => emptyPlot(run)).join('')}${locked}</div>
-      </div>
-    </section>${loungePanel(run)}${espionagePanel(run)}`;
+export function estateTab(run, estateUi = {}) {
+  return `${renderEstatePanel(run, estateUi)}${loungePanel(run)}${espionagePanel(run)}`;
 }
 
 // 7.4 Whispers and covert ops: clues of a mole in the house, and at most one covert op a month against the next opponent.

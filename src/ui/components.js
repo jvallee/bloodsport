@@ -1,6 +1,6 @@
 // Shared UI pieces: escaping, buttons, icons, the fighter card. Returns HTML strings.
 
-import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS, SIGNATURES, SIGNATURE, HUMOUR_DRIFT } from '../data.js';
+import { KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, STRESS, PERKS, GEAR, XP, MORALE, KILL_MARKS, HUMORS, SCARS, AUGMENTS, CIRCUITS, COMBAT, SIGNATURE, signatureDef, HUMOUR_DRIFT } from '../data.js';
 
 const HUMOR_ICON = { choleric: '🔥', sanguine: '💨', melancholic: '🪨', phlegmatic: '💧' };
 import { effectiveInjuries, mortalDanger, deathGateAt, killMarks, signatureOf, opponentHasSignature } from '../fight.js';
@@ -92,7 +92,7 @@ function powerBadge(f, live) {
 // The signature move: ready from level 3 (used from the fight screen), shown dimmed before that.
 // `opponent` ({ boss }): an opponent's card shows the move only if they will use it.
 function signatureChip(f, opponent = null) {
-  const sig = SIGNATURES[f.cls];
+  const sig = signatureDef(f);
   if (!sig) return '';
   if (opponent) return opponentHasSignature(f, opponent.boss, opponent.earlyRound) ? `<span class="chip signature" title="Their signature move: ${esc(sig.desc)} They use it once they fall behind, or in Round 3.">★ ${esc(sig.name)}</span>` : '';
   const ready = Boolean(signatureOf(f));
@@ -137,7 +137,11 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
         <div class="id-row">${portrait(f, compact ? 44 : 52)}<div class="who"><h3><span class="nm">${esc(f.name)}</span></h3><div class="kind">${levelLine} ${KINDS[f.kind].name} · ${clsName}</div></div></div>
         <div class="badges">
           ${powerBadge(f, live)}
-          <div class="badge speed" title="Speed decides who strikes first (Speed + d6) and makes them harder to wound. ${f.speed}${gearSpd(f) ? ` ${gearSpd(f) > 0 ? '+' : '−'} ${Math.abs(gearSpd(f))} from gear` : ''}.">${ICON.speed}<b>${f.speed + gearSpd(f)}</b></div>
+          ${(() => {
+            const gSpd = gearSpd(f);
+            const bSpd = f.cls === 'ornitharius' && (f.decor?.bird ?? 0) >= 1 ? COMBAT.ornithariusSpeedCap : 0;
+            return `<div class="badge speed" title="Speed decides who strikes first (Speed + d6) and makes them harder to wound. ${f.speed}${gSpd ? ` ${gSpd > 0 ? '+' : '−'} ${Math.abs(gSpd)} from gear` : ''}${bSpd ? ` + ${bSpd} from Birds of Prey` : ''}.">${ICON.speed}<b>${f.speed + gSpd + bSpd}</b></div>`;
+          })()}
         </div>
       </div>
       <div class="traits">

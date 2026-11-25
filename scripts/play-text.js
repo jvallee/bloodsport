@@ -9,7 +9,7 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup, ALL_UNLOCKS, careerXp, levelFor, LEGACY_LEVELS } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURES, SIGNATURE, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort, ESPIONAGE, UNREST } from '../src/data.js';
+import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURE, CLASS_RESONANCE, signatureDef, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort, ESPIONAGE, UNREST } from '../src/data.js';
 import { PREFECT } from '../src/plot.js';
 import { cityHeadlines } from '../src/gazette.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
@@ -177,9 +177,9 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     const nextXp = XP.levels[f.level - 1];
     const lines = [
       `[${f.id}] ${identity(f)} (XP ${f.xp}${nextXp ? `/${nextXp}` : ', max level'})`,
-      `     Power ${effectivePower(f)} (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')}) · Speed ${effectiveSpeed(f)}${effectiveSpeed(f) !== f.speed ? ` (${f.speed} + ${effectiveSpeed(f) - f.speed} gear)` : ''} · Stress ${f.stress}${f.stress >= STRESS.overtrained ? ' OVERTRAINED' : ''} · Morale ${f.morale} ${moraleState(f).label} (heading to ${target}: comfort +${moraleTarget(run, f).comfort}, fame expects −${moraleTarget(run, f).expects}${f.morale >= MORALE.restless && target < MORALE.restless ? '; WILL TURN DISCONTENTED and stop training: more comfort needed' : ''}) · Renown ${f.renown}`,
+      `     Power ${effectivePower(f)} (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')}) · Speed ${effectiveSpeed(f)}${effectiveSpeed(f) !== f.speed ? ` (${f.speed} + ${effectiveSpeed(f) - f.speed} bonus)` : ''} · Stress ${f.stress}${f.stress >= STRESS.overtrained ? ' OVERTRAINED' : ''} · Morale ${f.morale} ${moraleState(f).label} (heading to ${target}: comfort +${moraleTarget(run, f).comfort}, fame expects −${moraleTarget(run, f).expects}${f.morale >= MORALE.restless && target < MORALE.restless ? '; WILL TURN DISCONTENTED and stop training: more comfort needed' : ''}) · Renown ${f.renown}`,
       `     Job: ${f.job} · trained ${f.trained}/${trainCap(run)} · Injuries: ${injuriesText(f)} · Death Gate ${gate}/${deathGateAt(f)}${gate >= deathGateAt(f) ? ' OPEN' : ''}`,
-      ...(f.humor ? [`     Humor: ${HUMORS[f.humor].name} (${HUMORS[f.humor].desc})`] : []),
+      ...(f.humor ? [`     Humour: ${HUMORS[f.humor].name} (${HUMORS[f.humor].desc})`] : []),
       ...((f.scars?.length || f.augments?.length) ? [`     Scars: ${(f.scars ?? []).map((sc) => `${SCARS[sc.id].name}${sc.vs ? ` vs ${sc.vs}` : ''}`).join(', ') || 'none'} · Augments: ${(f.augments ?? []).map((k) => AUGMENTS[k].name).join(', ') || 'none'}`] : []),
       `     ${abilities(f)}`,
       ...extras(f).map((x) => `     ${x}`),
@@ -192,7 +192,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   }
 
   function opponentBlock(f, boss = false, label = 'Opponent') {
-    const bits = [`Power ${effectivePower(f)}${effectivePower(f) !== f.power ? ` (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')})` : ''}`, `Speed ${effectiveSpeed(f)}`, ...(opponentHasSignature(f, boss) ? [`Signature: ${SIGNATURES[f.cls].name} (${SIGNATURES[f.cls].desc} Used when behind, or in Round 3)`] : []), `Renown ${f.renown}`, ...(f.humor ? [`${HUMORS[f.humor].name}: ${HUMORS[f.humor].tell}`] : []), ...extras(f)];
+    const bits = [`Power ${effectivePower(f)}${effectivePower(f) !== f.power ? ` (${powerParts(f).map((x, i) => (i ? `${x.value >= 0 ? '+' : ''}${x.value} ${x.label}` : `${x.label} ${x.value}`)).join(', ')})` : ''}`, `Speed ${effectiveSpeed(f)}`, ...(opponentHasSignature(f, boss) ? [`Signature: ${signatureDef(f).name} (${signatureDef(f).desc} Used when behind, or in Round 3)`] : []), `Renown ${f.renown}`, ...(f.humor ? [`${HUMORS[f.humor].name}: ${HUMORS[f.humor].tell}`] : []), ...extras(f)];
     const house = houseOf(run, f);
     return [`     ${label}: ${identity(f)}${house ? ` · fights for ${house.name}${house.feud ? ` (FEUD: +1 Power against you, ${plural(house.feud, 'month')} left)` : ''}${house.owed && !house.feud ? ` (OWES YOU A LIFE: −1 Power against you, ${plural(house.owed, 'month')} left)` : ''}${house.vengeance ? ` (your VENGEANCE: +5% win chance, ${plural(house.vengeance, 'month')} left)` : ''}` : ''}${f.rival ? ' · RIVAL (beat you before, now stronger)' : ''}${f.nemesis ? ` · NEMESIS ${f.nemesis.epithet} (beat your house ${f.nemesis.wins}×${f.nemesis.victims.length ? `, killed ${f.nemesis.victims.join(' and ')}` : ''}; +${f.nemesis.bonus} Power)` : ''}`, `       ${bits.join(' · ')}`, `       ${abilities(f)}`].join('\n');
   }
@@ -493,20 +493,25 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (!match.over) {
       const h = match.b.f.humor ? HUMORS[match.b.f.humor] : null;
       const last = match.rounds.at(-1);
-      lines.push(`  Tactics: ${ROUND_TACTICS.map((k) => `${k} (${TACTICS[k].desc})`).join('; ')}. Press beats Feint, Feint beats Guard, Guard beats Press (+10% win chance).`);
+      const nextRound = match.round + 1;
+      const classOn = !match.a.disabled.includes('class') && match.a.classDisabledRound !== nextRound;
+      const res = classOn ? CLASS_RESONANCE[match.a.f.cls] : null;
+      const wepHint = classOn ? { axe: 'Axe (Press): +6% win chance.', fists: 'Fists (Press): +3% win chance.', flail: 'Flail (Press): +4% win chance.', sword: 'Sword (Guard): +5% win chance.', dagger: 'Dagger (Feint): +4% win chance.' }[match.a.f.cls === 'fighter' ? match.a.f.weapon : null] : null;
+      const resNote = res ? ` Style bonus — ${res.desc}` : wepHint ? ` Style bonus — ${wepHint}` : '';
+      lines.push(`  Tactics: ${ROUND_TACTICS.map((k) => `${k} (${TACTICS[k].desc})`).join('; ')}. Press beats Feint, Feint beats Guard, Guard beats Press (+10% win chance).${resNote}`);
       if (mortalDanger(match.a)) lines.push(`  At the Death Gate you can also go allIn (${TACTICS.allIn.desc}): about ${Math.round(deathRisk(match, 'allIn') * 100)}% chance of death this round.`);
       const hype = hypeOf(match);
       lines.push(`  The crowd: ${hype}/${HYPE.max}. ${match.a.roar ? `The crowd is with ${match.a.f.name}: +${HYPE.favourPower} Power this round.` : `At ${HYPE.favour} the crowd is with your fighter (+${HYPE.favourPower} Power that round).`} Press and drama fill it; Guard drains it.`);
       const tell = opponentTell(match);
       if (tell) lines.push(`  Your Oracle reads a tell: ${match.b.f.name} means to ${TACTICS[tell].name}. Weighing the tell against their temper: about ${tellForecast(match)}% they ${TACTICS[tell].name}.`);
-      if (opponentUnleashesNext(match)) lines.push(`  WARNING: ${match.b.f.name} is gathering for ${SIGNATURES[match.b.f.cls].name}: it comes this round.`);
+      if (opponentUnleashesNext(match)) lines.push(`  WARNING: ${match.b.f.name} is gathering for ${signatureDef(match.b.f).name}: it comes this round.`);
       lines.push(`  ${match.b.f.name} is ${h ? `${h.name}: ${h.tell}` : 'without clear habits'}.${last ? ` Last round they chose ${last.stances.B}.` : ''} Suggested: ${suggestTactic(match)}.`);
       const usable = owned.filter(([k]) => !(match.itemsUsed ?? []).includes(k));
       if (match.itemsUsed?.length) lines.push(`  Items used this fight: ${match.itemsUsed.map((k) => CONSUMABLES[k].name).join(', ')}.`);
       const sig = signatureOf(match.a.f);
       // LLM-12: a signature the fighter can't use (its class ability is off) was offered as usable.
       if (sig) lines.push(match.a.sigRound ? `  Signature move ${sig.name}: ${match.a.sigRound > match.round ? 'ready for the next round' : 'used this fight'}.` : signatureBlocker(match) ? `  Signature move ${sig.name}: can't be used (${signatureBlocker(match)})` : `  Signature move (\`signature\`, once per fight): ${sig.name}. ${sig.desc}`);
-      else if (SIGNATURES[match.a.f.cls]) lines.push(`  Signature move ${SIGNATURES[match.a.f.cls].name} unlocks at level ${SIGNATURE.level}.`);
+      else if (signatureDef(match.a.f)) lines.push(`  Signature move ${signatureDef(match.a.f).name} unlocks at level ${SIGNATURE.level}.`);
       lines.push(usable.length ? `  Items (one of each kind per fight, \`use <item>\`): ${usable.map(([k, n]) => `${k} ×${n} (${CONSUMABLES[k].desc})`).join('; ')}` : owned.length ? '  No other fight items to use.' : '  No fight items (the Apothecary in the `market` sells them).');
     }
     lines.push(match.round === 0 ? '  `next <tactic>` to begin Round 1 (`next` alone uses the suggestion).' : `  \`next <tactic>\` to fight Round ${match.round + 1}${canThrowTowel(match) ? `, or \`capitulate\` (lose the match${keepsBuyIn(run, run.matchInfo.tier) ? '; the buy-in comes back' : ` and ${bout.buyIn} Prestige buy-in`}; your fighter survives)` : ''}.`);

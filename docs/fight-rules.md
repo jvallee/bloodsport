@@ -1246,3 +1246,37 @@ Bribe the Armourer 7 → 5 Gold. Chances unchanged.
 - **The cousin in the cells:** the asker is never a Revenant or a mole; the coup and betrayal epilogues name a living asker, mention the woman at the gate when the steward asked, and handle a cousin who died or was the champion.
 - **Spared opponents (`run.spared`):** sparing records the last 6 for Word in the city and the coup's epilogue.
 - **Voices (`src/voices.js`) and Word in the city (`src/gazette.js`):** last words on an arena death; up to two level-3 backstories a career (no Revenants, one per kind, the fighter must have fought or trained); the prefect's posture in the Whispering Gallery; two or three street headlines in the Ludus and the text port. No dice are rolled: bot careers play exactly as in 7.10.0.
+
+## 7.13.0: class balance and identity (from bloodsport-v7.13.0-classes.patch, the designer's email of 2026-11-25)
+- **Class tactic resonances (`CLASS_RESONANCE`):** each class gains a bonus for its own tactic (off while the class slot is
+  disabled): Cestus Press +5 Hype; Sagittarius Steady +3% win, +5% injure; Ornitharius Feint +4% win; Retiarius Feint +4% win
+  (+8% against an entangled foe); Ash-Hungry Press +8% injure; Blood-Bearer Press: off-hand strike 15% → 20%; Thorn-Blade Feint
+  +5% injure; Samnite Guard +5% win.
+- **Classes:** Ornitharius +1 Speed with a Bird in quarters (cap +1); Samnite: a successful shield parry gives +8% win next
+  round, Shield Bash +10% → +15% win (−20% self-injury); Thorn Storm −2 Power/−2 Speed → −1 Power/−3 Speed.
+- **Fighter signatures by weapon group:** Bladed (Sword, Dagger, Axe) Crimson Flourish +12% win, +10% injure; Heavy (Club,
+  Flail, Fists) Crushing Blow +1 Power, opponent −2 Speed; Ranged (Bow, Spear, Gun) Deadeye Volley +10% win, +3 Speed.
+- **Weapons:** Axe Press +6% win; Sword Guard +5% win; Fists Press +3% win; Flail Press +4% win and +5% win vs Samnite/Sword;
+  Dagger +5% win when striking first, Feint +4% win; Gun +4% win in Rounds 1 and 3 (unless Blinded).
+- **New matchups:** Ornitharius vs Bow/Gun +5% win; Samnite vs Blood-Bearer/Dagger +5% win; Ash-Hungry vs Samnite +5% injure;
+  Thorn-Blade vs Fists +4% win.
+- **Odds:** the odds simulation seeds each trial on its own (`deriveSeed(seed, i)`), so pricing an item or a bet compares like
+  with like; auto-play uses Feed the Ash in Round 1.
+
+## 7.14.0: balance after the class patch, and the villa
+With the 7.13 class patch as sent, 22/24 gates passed: the Grand was won more often per attempt than the Imperial Boss
+(32% vs 24%) and the loyalist's edge fell to +5 (rounded; below the 5-point floor). Swept (300 careers each):
+
+| Imperial / Grand Season bonus, betrayal Gold | Imperial vs Grand per attempt | First career | Full Legacy (Heat 1 / 3) | Gates failing |
+|---|---|---|---|---|
+| 10 / 19, 22 (as patched) | 24 / 32% | 32% | 42% (16 / 14) | climax, loyalist |
+| 10 / 21, 22 | 24 / 22% | 25% | 25% (11 / 9) | Full Legacy, Heat 1, decor |
+| 10 / 23, 22 | 24 / 13% | 16% | 18% (7 / 2) | five |
+| 8 / 20, 22 | 36 / 19% | 28% | 37% (18 / 11) | loyalist (+3) |
+| 8 / 21, 22 | 36 / 15% | 24% | 38% (15 / 5) | Heat 3 |
+| 8 / 20, Favour 30 → 40 | 36 / 19% | 28% | 37% | loyalist (+4) |
+| **8 / 20, betrayal Gold 30** | **36 / 19%** | **28%** | **37% (18 / 11)** | **none (24/24)** |
+
+Chosen: `SHORT.oppPower` [2, 4, 9, 10] → [2, 4, 9, 8], `SHORT.grandPower` 19 → 20, `PLOT.betrayGold` 22 → 30 (the
+Emperor's purse for the names, × tier). The villa (bloodsport-v7.14.0-estate.patch) changes no rules: bot careers play the
+same with and without it.

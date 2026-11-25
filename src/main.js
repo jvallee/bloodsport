@@ -40,6 +40,8 @@ let summaries = []; // this week's match results, newest last
 let noticePage = 0;
 let tab = 'ludus';
 let mobilePane = 'roster'; // mobile Ludus pane: 'roster' | 'bout' | 'week'
+const defaultEstateUi = () => ({ mode: 'villa', slot: 'ground-0', fighterId: null, roomSlot: null, movingItem: null, mobileFloor: 'ground' });
+let estateUi = defaultEstateUi();
 let showHelp = false;
 let autoTimer = null;
 let revealTimer = null;
@@ -280,6 +282,7 @@ function resetCareerUiState() {
   ui.animateRound = 0;
   ui.auto = false;
   ui.open = {};
+  estateUi = defaultEstateUi();
   for (const k of Object.keys(roomTabs)) delete roomTabs[k];
   oddsCache.clear();
 }
@@ -294,7 +297,7 @@ function render() {
   }
   if (fresh.length + (recordCareer(legacy, run) ? 1 : 0) + recordLegends(legacy, run).length) saveLegacy();
   let body;
-  if (tab === 'estate') body = estateTab(run);
+  if (tab === 'estate') body = estateTab(run, estateUi);
   else if (tab === 'market') body = marketTab(run);
   else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore) + legacyPanel(legacy);
   else body = ludusTab(run, oddsFor, mobilePane);
@@ -599,6 +602,24 @@ const actions = {
     ui.animateRound = 0;
   },
   'room-tab': (d) => { roomTabs[d.id] = d.tab; },
+  'estate-select-slot': (d) => { estateUi.slot = d.slot; },
+  'estate-mode': (d) => {
+    estateUi.mode = d.mode === 'room' ? 'room' : 'villa';
+    estateUi.movingItem = null;
+  },
+  'estate-open-room': (d) => {
+    tab = 'estate';
+    estateUi.mode = 'room';
+    estateUi.fighterId = d.id;
+    estateUi.roomSlot = null;
+    estateUi.movingItem = null;
+  },
+  'estate-mobile-floor': (d) => {
+    if (['upper', 'ground', 'catacomb'].includes(d.floor)) estateUi.mobileFloor = d.floor;
+  },
+  'estate-room-slot': (d) => { estateUi.roomSlot = d.slot; },
+  'estate-move-start': (d) => { estateUi.movingItem = d.item; },
+  'estate-move-cancel': () => { estateUi.movingItem = null; },
   'export-save': () => {
     const blob = new Blob([exportSave({ run, codex, legacy, version: VERSION })], { type: 'application/json' });
     const a = document.createElement('a');
@@ -768,11 +789,35 @@ const after = {
     tab = 'ludus';
     window.scrollTo(0, 0);
   },
+  build: () => {
+    const built = run.buildings[run.buildings.length - 1];
+    if (lastAction?.[1]?.slot) estateUi.slot = lastAction[1].slot;
+    else if (built?.slot) estateUi.slot = built.slot;
+  },
+  'assign-decor': () => {
+    estateUi.movingItem = null;
+    const f = run.roster.find((x) => x.id === lastAction?.[1]?.id);
+    if (f?.roomLayout?.[lastAction?.[1]?.item]) estateUi.roomSlot = f.roomLayout[lastAction[1].item];
+  },
+  'buy-assign-decor': () => {
+    estateUi.movingItem = null;
+    const f = run.roster.find((x) => x.id === lastAction?.[1]?.id);
+    if (f?.roomLayout?.[lastAction?.[1]?.item]) estateUi.roomSlot = f.roomLayout[lastAction[1].item];
+  },
+  'move-decor': () => {
+    estateUi.movingItem = null;
+    if (lastAction?.[1]?.slot) estateUi.roomSlot = lastAction[1].slot;
+  },
+  'remove-decor': () => {
+    estateUi.movingItem = null;
+  },
 };
 
 const SKIP_SAVE_ACTIONS = new Set([
   'new-run', 'replay-seed', 'start-career', 'daily-challenge', 'bug-reload', 'career-load',
   'bug-copy', 'bug-download', 'export-save', 'import-save', 'mobile-pane',
+  'estate-select-slot', 'estate-mode', 'estate-open-room', 'estate-mobile-floor',
+  'estate-room-slot', 'estate-move-start', 'estate-move-cancel',
 ]);
 
 document.addEventListener('click', (e) => {
@@ -810,7 +855,7 @@ document.addEventListener('click', (e) => {
     }
   });
   if (SKIP_SAVE_ACTIONS.has(name)) {
-    if (name === 'mobile-pane') guard('render', () => render());
+    if (name === 'mobile-pane' || name.startsWith('estate-')) guard('render', () => render());
     return;
   }
   if (cancelled) {
@@ -983,8 +1028,19 @@ document.addEventListener('keydown', (e) => {
     if (k === 'finish-reveal') { e.preventDefault(); finishReveal(); return; }
     if (k === 'ignore') { e.preventDefault(); return; }
   }
+  if (e.key === 'Escape' && !match && estateUi.movingItem) {
+    estateUi.movingItem = null;
+    render();
+    return;
+  }
   if (e.key === ' ' || e.key === 'Enter') {
     if (e.target.closest?.('button, summary')) return; // let focused buttons and fold-outs work as usual
+    const roleBtn = e.target.closest?.('[role="button"][data-action]');
+    if (roleBtn) {
+      e.preventDefault();
+      roleBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      return;
+    }
     const done = match ? pressButton('#fight [data-action=next-round].primary') || pressButton('#fight [data-action=next-round]') || pressButton('#fight [data-action=leave-fight]') : pressButton('#app [data-action=advance]');
     if (done) e.preventDefault();
   } else if ((e.key === 't' || e.key === 'T') && !match) pressButton('#app [data-action=advance-tournament]');
