@@ -341,3 +341,9 @@ rest of 7.10 (endings, the prefect, replies, the tutorial) is words only.
 | Evil road (loyalist over careful) | +19 | +9 |
 | Loyalist careers ending in treason | — | 3% |
 | Boss win per attempt | 90 · 57 · 37 · 24 · 21 | 90 · 57 · 37 · 25 · 21 |
+
+### v7.14.0 (the class patch, the villa, and a retune; `npm run check`, 300 careers): 24/24
+
+First career 28% ±5, reckless 4%, brawler 25%, full Legacy 37% (Heat 1 18%, Heat 3 11%), Long Road 25%, rebel careers: coup
+8%, treason 2%; loyalist +6 over careful. Boss win per attempt 89 · 59 · 35 · 36 · 19. The sweep that chose the numbers is in
+`docs/fight-rules.md` "7.14.0".

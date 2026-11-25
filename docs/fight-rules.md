@@ -1262,3 +1262,21 @@ Bribe the Armourer 7 → 5 Gold. Chances unchanged.
   Thorn-Blade vs Fists +4% win.
 - **Odds:** the odds simulation seeds each trial on its own (`deriveSeed(seed, i)`), so pricing an item or a bet compares like
   with like; auto-play uses Feed the Ash in Round 1.
+
+## 7.14.0: balance after the class patch, and the villa
+With the 7.13 class patch as sent, 22/24 gates passed: the Grand was won more often per attempt than the Imperial Boss
+(32% vs 24%) and the loyalist's edge fell to +5 (rounded; below the 5-point floor). Swept (300 careers each):
+
+| Imperial / Grand Season bonus, betrayal Gold | Imperial vs Grand per attempt | First career | Full Legacy (Heat 1 / 3) | Gates failing |
+|---|---|---|---|---|
+| 10 / 19, 22 (as patched) | 24 / 32% | 32% | 42% (16 / 14) | climax, loyalist |
+| 10 / 21, 22 | 24 / 22% | 25% | 25% (11 / 9) | Full Legacy, Heat 1, decor |
+| 10 / 23, 22 | 24 / 13% | 16% | 18% (7 / 2) | five |
+| 8 / 20, 22 | 36 / 19% | 28% | 37% (18 / 11) | loyalist (+3) |
+| 8 / 21, 22 | 36 / 15% | 24% | 38% (15 / 5) | Heat 3 |
+| 8 / 20, Favour 30 → 40 | 36 / 19% | 28% | 37% | loyalist (+4) |
+| **8 / 20, betrayal Gold 30** | **36 / 19%** | **28%** | **37% (18 / 11)** | **none (24/24)** |
+
+Chosen: `SHORT.oppPower` [2, 4, 9, 10] → [2, 4, 9, 8], `SHORT.grandPower` 19 → 20, `PLOT.betrayGold` 22 → 30 (the
+Emperor's purse for the names, × tier). The villa (bloodsport-v7.14.0-estate.patch) changes no rules: bot careers play the
+same with and without it.

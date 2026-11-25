@@ -2,6 +2,16 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 7.14.0 (2026-11-25): every class its own style, and a villa to walk through
+
+Two patches from the designer's email, applied as sent, then rebalanced.
+- **Every class has a tactic it's best at:** Cestus fighters whip up the crowd when they Press, Sagittarii aim better holding Steady, Ornitharii, Retiarii and Thorn-Blades are dangerous when they Feint, Ash-Hungry and Blood-Bearers reward Pressing, and Samnites are hard to beat behind the shield when they Guard. The tactic buttons show the bonus.
+- **Weapons feel different too:** an Axe hits harder when Pressing, a Sword when Guarding, a Dagger when it strikes first; a Gun is deadly in Rounds 1 and 3. A Fighter's signature move now depends on the weapon: Crimson Flourish for blades, Crushing Blow for heavy weapons, Deadeye Volley for bows, spears and guns.
+- **Weaker classes lifted:** an Ornitharius with a Bird in their room gains +1 Speed; a Samnite's shield parry sets up the next round, and Shield Bash hits harder. Thorn-Blade's signature is reined in a little.
+- **Your Estate is a villa:** three floors you can see into (the colonnade, the courtyard, the catacombs), with your gladiators resting, sparring and healing inside. Build on any open plot.
+- **Decorate a gladiator's room:** a cut-away view of each fighter's quarters where you place, move and stack decor on the walls and floor, with their Morale and temper shown as you go. Open it from a fighter's card.
+- **Balance:** with the new bonuses the Grand Tournament had become easier than the Imperial Coliseum's Boss again. The Imperial Boss is now 2 Power weaker and the Grand 1 stronger, and the Emperor pays more Gold for the names if you betray the rising. First careers win a little more often than in 7.12.
+
 ## 7.12.1 (2026-11-25): the Codex names each trait's kind
 
 - Every entry under Kind traits in the Codex now starts with the kind it belongs to ("Orc trait.", "Elf trait."), so you can tell whose it is without looking it up under Kinds.

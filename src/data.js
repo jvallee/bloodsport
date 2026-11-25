@@ -689,7 +689,7 @@ export const DEMANDS = {
 export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] };
 
 // Season mode (short career): Tournament -> Boss per tier, scaled purses, training, market, and opponent Power.
-export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 10], grandPower: 19, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
+export const SHORT = { purse: 1.6, prestige: 2.5, startGold: 20, startPrestige: 12, train: 2, rematch: false, trainCap: 0, oppPower: [2, 4, 9, 8], grandPower: 20, marketPower: [0, 2, 6, 10], bossLoss: 1.2, rival: 1 };
 export const NEMESIS = {
   returnChance: 0.35, minWeeks: 8, powerPerWin: 1, maxBonus: 3, renown: 3, goldPerTier: 5, favor: 3, max: 3,
   epithets: ['the Butcher', 'Bonebreaker', 'the Jackal', 'Sandreaper', 'the Grinning', 'Widowmaker', 'the Patient', 'Ironhide', 'the Mocking', 'Gravedigger', 'the Smiling Knife', 'Lionheart'],
@@ -740,5 +740,5 @@ export const PLOT = {
   // 7.10 (the designer: the rebellion should draw more suspicion): perPrisoner 1 -> 2, decay 2 -> 1 a month.
   suspicion: { perPrisoner: 2, perContact: 1, decay: 1, courier: 3, watch: 20, informer: 40, cold: 60, raid: 80 },
   // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
-  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, searchBribe: 6, clemencyFavor: 8, betrayFavor: 30, betrayGold: 22, betrayRelic: 'eagle', // betrayGold: the Emperor's purse for the names, × tier
+  armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, searchBribe: 6, clemencyFavor: 8, betrayFavor: 30, betrayGold: 30, betrayRelic: 'eagle', // betrayGold: the Emperor's purse for the names, × tier
 };
