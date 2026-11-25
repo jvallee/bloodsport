@@ -4,7 +4,7 @@
 import { playRound, throwTowel, useSignature } from './fight.js';
 import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom, pray, reanimate, exhibition, host, enact, investigate, covertOp,
-  assignDecor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
+  assignDecor, buyAndAssignDecor, moveDecorAnchor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
   recordMatchProgress, buyItem, useItem, placeBet, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy, checkQuests,
   answerSummons, refuseSummons, rite, stewardPlan, chooseFortune, rerollFortune, passFortune, rename,
 } from './run.js';
@@ -33,7 +33,9 @@ export const GAME_ACTIONS = {
   bet: ({ run, match }, d) => { placeBet(run, match, Number(d.amount)); },
   signature: ({ match }) => { useSignature(match); },
   mercy: ({ run }, d) => { resolveMercy(run, d.choice); },
-  'assign-decor': ({ run }, d) => { assignDecor(run, d.id, d.item); },
+  'assign-decor': ({ run }, d) => { assignDecor(run, d.id, d.item, d.slot || null); },
+  'buy-assign-decor': ({ run }, d) => { buyAndAssignDecor(run, d.id, d.item, d.slot || null); },
+  'move-decor': ({ run }, d) => { moveDecorAnchor(run, d.id, d.item, d.slot); },
   'remove-decor': ({ run }, d) => { removeDecor(run, d.id, d.item); },
   'buy-gear': ({ run }, d) => { buyGear(run, Number(d.index)); },
   'sell-gear': ({ run }, d) => { sellGear(run, Number(d.index)); },
@@ -58,7 +60,7 @@ export const GAME_ACTIONS = {
   'fortune-reroll': ({ run }) => { rerollFortune(run); },
   'fortune-pass': ({ run }) => { passFortune(run); },
   surgeon: ({ run }, d) => { surgeon(run, d.id, Number(d.index)); },
-  build: ({ run }, d) => { buildRoom(run, d.type); },
+  build: ({ run }, d) => { buildRoom(run, d.type, d.slot || null); },
   upgrade: ({ run }, d) => { upgradeRoom(run, d.id); },
   advance: ({ run }) => { advanceWeek(run); },
   'advance-tournament': ({ run }) => { advanceToTournament(run); },

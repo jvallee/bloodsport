@@ -264,6 +264,7 @@ export function removeFighter(run, fighterOrId, { returnDecor = true, returnGear
       run.inventory.decor[k] = (run.inventory.decor[k] ?? 0) + (f.decor?.[k] ?? 0);
       if (f.decor) f.decor[k] = 0;
     }
+    delete f.roomLayout;
   }
   if (returnGear) {
     for (const slot of ['weapon', 'armor']) {

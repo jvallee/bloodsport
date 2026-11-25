@@ -28,6 +28,7 @@ export {
   moraleTarget, moraleState, perkBlocker, choosePerk, prayPrice, prayBlocker, pray,
   ritePrice, riteBlocker, rite, reanimatePrice, raisable, reanimateBlocker, reanimate,
   exhibitionBlocker, exhibition, buyDecorBlocker, buyDecor, assignDecorBlocker, assignDecor,
+  buyAndAssignDecorBlocker, buyAndAssignDecor, moveDecorBlocker, moveDecorAnchor,
   removeDecorBlocker, removeDecor, buyGearBlocker, buyGear, equipBlocker, equip,
   sellPrice, sellGearBlocker, sellGear, unequipBlocker, unequip, unequipAllBlocker, unequipAll,
   buyItemBlocker, buyItem, surgeonPrice, surgeonBlocker, surgeon, treatFirstBlocker, treatFirst,
