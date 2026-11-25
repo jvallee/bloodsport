@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick, createRng, deriveSeed } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, COMBAT, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, HOUSES, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURES, SIGNATURE, UNDERDOG, HYPE, AMPHORA_HYPE, INTENT, ROUND_TACTICS, WOUND_STYLES, AFFINITY, BLEEDING, WEAPONS, CLASSES, DECOR, isBladed } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, COMBAT, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, HOUSES, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURE, CLASS_RESONANCE, signatureDef, UNDERDOG, HYPE, AMPHORA_HYPE, INTENT, ROUND_TACTICS, WOUND_STYLES, AFFINITY, BLEEDING, WEAPONS, CLASSES, DECOR, isBladed } from './data.js';
 import { Refused } from './errors.js';
 import { relicMods } from './fortune.js';
 
@@ -56,6 +56,7 @@ export function makeCombatant(fighter, side, arena = null) {
     overclockedRound: null, // Perpetual Motion Machine
     proneRound: null, // Club
     riposteRound: null, // Sword parry
+    shieldCounterRound: null, // Samnite shield parry
     roundsWon: 0,
     firstInjuryTaken: false, // boss debuff
     stance: null, // this round's tactic (TACTICS); cleared after the round
@@ -127,7 +128,7 @@ export function opponentOdds(m) {
   return leans;
 }
 
-// Tactic auto-play picks: Guard at the Death Gate; otherwise best EV against opponent habits and tells.
+// Tactic auto-play picks: Guard at the Death Gate; otherwise best EV against opponent habits, tells, and class resonance.
 export function suggestTactic(m) {
   if (mortalDanger(m.a)) return 'guard';
   const round = m.round + 1;
@@ -142,9 +143,21 @@ export function suggestTactic(m) {
   else if (!concA && kindActive(m.a, 'footwork', round) && faster > 0) pFirst = 1;
   else if (!concA && kindActive(m.b, 'footwork', round) && faster < 0) pFirst = 0;
   else pFirst = faster > 2 ? 0.8 : faster < -2 ? 0.2 : 0.5;
+  const res = slotActive(m.a, 'class', round) ? CLASS_RESONANCE[m.a.f.cls] : null;
+  const needHype = res?.hype && hypeOf(m) < HYPE.favour;
   const value = (k) => {
     const t = TACTICS[k];
     let v = (t.win ?? 0) + 0.5 * (t.injure ?? 0) - 0.5 * (t.self ?? 0) + pFirst * (1 - (odds[beats(k)] ?? 0)) * (t.firstStrike ?? 0) + (fest[k] ?? 0);
+    if (res && res.tactic === k) {
+      v += (res.win ?? 0) + (m.b.netRound === round ? (res.entangledWin ?? 0) : 0) + 0.5 * (res.injure ?? 0);
+      if (res.offhand) v += 2000;
+      if (needHype) v += 1500;
+    }
+    if (k === 'press' && weaponActive(m.a, 'axe', round)) v += COMBAT.axePressWin;
+    if (k === 'press' && weaponActive(m.a, 'fists', round)) v += COMBAT.fistsPressWin;
+    if (k === 'press' && weaponActive(m.a, 'flail', round)) v += COMBAT.flailPressWin;
+    if (k === 'guard' && weaponActive(m.a, 'sword', round)) v += COMBAT.swordGuardWin;
+    if (k === 'feint' && weaponActive(m.a, 'dagger', round)) v += COMBAT.daggerFeintWin;
     for (const [o, p] of Object.entries(odds)) {
       if (COUNTERS[k] === o) v += p * COUNTER.win;
       if (COUNTERS[o] === k) v -= p * COUNTER.win;
@@ -167,7 +180,7 @@ function activeScars(c, opp) {
   return (c.f.scars ?? []).filter((sc) => !sc.vs || sc.vs === styleOf(opp)).map((sc) => ({ ...SCARS[sc.id], label: sc.vs ? `${SCARS[sc.id].name} (${sc.vs})` : SCARS[sc.id].name }));
 }
 
-const decorOf = (c, item) => (c.arena === 'ironRules' ? 0 : c.f.decor[item]);
+const decorOf = (c, item) => (c.arena === 'ironRules' ? 0 : (c.f.decor?.[item] ?? 0));
 
 const RANGED_WEAPONS = ['bow', 'gun', 'spear'];
 export const meleeOnly = (c) => c.f.cls !== 'sagittarius' && !(c.f.cls === 'fighter' && RANGED_WEAPONS.includes(c.f.weapon));
@@ -176,6 +189,9 @@ export const meleeOnly = (c) => c.f.cls !== 'sagittarius' && !(c.f.cls === 'figh
 export function computeSpeed(c, round) {
   const mods = [];
   if (round === 1 && weaponActive(c, 'spear', round)) mods.push({ source: 'Spear', value: 3 });
+  if (classActive(c, 'ornitharius', round) && decorOf(c, 'bird') >= 1) {
+    mods.push({ source: 'Birds of Prey', value: COMBAT.ornithariusSpeedCap });
+  }
   if (c.proneRound === round) mods.push({ source: 'Prone', value: -2 });
   if (c.thornRound === round) mods.push({ source: 'Thorn Lash', value: -2 });
   if (c.netRound === round) mods.push({ source: 'Entangled', value: -3 });
@@ -292,8 +308,22 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (kindActive(c, 'thickHide', round)) self.push({ source: 'Thick Hide', value: -10000, armor: true });
   if (classActive(c, 'ashHungry', round) && c.ash) enemy.push({ source: 'Ash Stacks', value: 5000 * c.ash });
   if (classActive(c, 'bloodBearer', round)) win.push({ source: 'Off-Hand', value: 5000 });
-  if (weaponActive(c, 'axe', round)) enemy.push({ source: 'Axe', value: COMBAT.axeInjure });
+  if (weaponActive(c, 'axe', round)) {
+    enemy.push({ source: 'Axe', value: COMBAT.axeInjure });
+    if (c.stance === 'press') win.push({ source: 'Axe (Press)', value: COMBAT.axePressWin });
+  }
+  if (weaponActive(c, 'sword', round) && c.stance === 'guard') win.push({ source: 'Sword (Guard)', value: COMBAT.swordGuardWin });
+  if (weaponActive(c, 'fists', round) && c.stance === 'press') win.push({ source: 'Fists (Press)', value: COMBAT.fistsPressWin });
+  if (weaponActive(c, 'flail', round) && c.stance === 'press') win.push({ source: 'Flail (Press)', value: COMBAT.flailPressWin });
+  if (weaponActive(c, 'dagger', round) && c.stance === 'feint') win.push({ source: 'Dagger (Feint)', value: COMBAT.daggerFeintWin });
   if (c.riposteRound === round) win.push({ source: 'Riposte', value: COMBAT.riposteWin });
+  if (c.shieldCounterRound === round) win.push({ source: 'Shield Wall', value: COMBAT.shieldCounterWin });
+  const res = slotActive(c, 'class', round) ? CLASS_RESONANCE[c.f.cls] : null;
+  if (res && c.stance === res.tactic) {
+    const rw = (res.win ?? 0) + (opp.netRound === round ? (res.entangledWin ?? 0) : 0);
+    if (rw) win.push({ source: CLASSES[c.f.cls].ability, value: rw });
+    if (res.injure) enemy.push({ source: CLASSES[c.f.cls].ability, value: res.injure });
+  }
   if (slotActive(c, 'class', round)) {
     for (const x of matchupsFor(c, opp)) {
       if (x.win) win.push({ source: `${x.why}`, value: x.win });
@@ -306,7 +336,10 @@ export function computePhase2(c, opp, round, volley = {}) {
   }
   if (c.proneRound === round) win.push({ source: 'Prone', value: -5000 });
   const gunActive = weaponActive(c, 'gun', round) && round % 2 === 1 && !blind;
-  if (gunActive) enemy.push({ source: 'Armour-Piercing Volley', value: COMBAT.gunInjure });
+  if (gunActive) {
+    win.push({ source: 'Armour-Piercing Volley', value: COMBAT.gunWin });
+    enemy.push({ source: 'Armour-Piercing Volley', value: COMBAT.gunInjure });
+  }
   if (kindActive(c, 'alloyedSkin', round)) self.push({ source: 'Alloyed Skin', value: -10000, armor: true });
   if (kindActive(c, 'egoArmour', round) && eff === 0) {
     win.push({ source: 'Ego Armour', value: 5000 });
@@ -474,11 +507,11 @@ function inflictInjury(m, X, Y, r) {
 }
 
 // Roll 4B / 4C: X tries to injure Y. A counter (Elven Eyes / Off-hand) is a flat 15% check.
-export function injuryCheck(m, X, Y, r, label, counter = false) {
+export function injuryCheck(m, X, Y, r, label, counter = false, counterChance = COMBAT.counterInjure) {
   const round = r.round;
   const pX = computePhase2(X, Y, round, r.volley);
   const pY = computePhase2(Y, X, round, r.volley);
-  let base = COMBAT.counterInjure;
+  let base = counterChance;
   let mods = [];
   if (!counter) {
     base = r.winner === Y.side ? r.row.winnerInjury : r.row.loserInjury;
@@ -504,7 +537,10 @@ export function injuryCheck(m, X, Y, r, label, counter = false) {
     } else if (classActive(Y, 'samnite', round) && !pX.ignoresParry) {
       const parryRoll = rollE5(m.rng);
       check.parry = { roll: parryRoll, chance: COMBAT.parry, success: parryRoll <= COMBAT.parry, shield: true };
-      if (check.parry.success) return check;
+      if (check.parry.success) {
+        Y.shieldCounterRound = round + 1;
+        return check;
+      }
     }
     check.injury = inflictInjury(m, X, Y, r);
     if (check.injury.tag !== 'death' && classActive(X, 'ashHungry', round)) {
@@ -609,12 +645,12 @@ export function applyRoundEnd(m, r) {
 
 // ---------- Signature moves (level 3+, once per fight, for one round) ----------
 
-export const signatureOf = (f) => ((f.level ?? 1) >= SIGNATURE.level ? SIGNATURES[f.cls] ?? null : null);
+export const signatureOf = (f) => ((f.level ?? 1) >= SIGNATURE.level ? signatureDef(f) : null);
 
 export function signatureBlocker(m) {
   if (!m || m.over) return 'Signature moves are used during a match.';
   const sig = signatureOf(m.a.f);
-  if (!sig) return SIGNATURES[m.a.f.cls] ? `Signature moves unlock at level ${SIGNATURE.level}.` : 'This fighter has no signature move.';
+  if (!sig) return signatureDef(m.a.f) ? `Signature moves unlock at level ${SIGNATURE.level}.` : 'This fighter has no signature move.';
   if (m.a.sigRound) return `${sig.name} has already been used this fight.`;
   if (m.a.disabled.includes('class')) return `${sig.name} needs the class ability, and it's disabled this match.`;
   if (m.a.classDisabledRound === m.round + 1) return `${sig.name} needs the class ability, and they are disarmed next round.`;
@@ -622,7 +658,7 @@ export function signatureBlocker(m) {
 }
 
 function applySignature(c, opp, round) {
-  const sig = SIGNATURES[c.f.cls];
+  const sig = signatureDef(c.f);
   c.sigRound = round;
   if (sig.boost) c.boosts = [...(c.boosts ?? []), { ...sig.boost, name: sig.name, round }];
   if (sig.foe) opp.boosts = [...(opp.boosts ?? []), { ...sig.foe, name: sig.name, round }];
@@ -635,7 +671,7 @@ export function useSignature(m) {
   applySignature(m.a, m.b, m.round + 1);
 }
 
-export const opponentHasSignature = (f, boss = false, earlyRound = false) => Boolean(SIGNATURES[f.cls]) && (boss ? (f.level ?? 1) >= SIGNATURE.bossLevel : !earlyRound && (f.level ?? 1) >= SIGNATURE.opponentLevel);
+export const opponentHasSignature = (f, boss = false, earlyRound = false) => Boolean(signatureDef(f)) && (boss ? (f.level ?? 1) >= SIGNATURE.bossLevel : !earlyRound && (f.level ?? 1) >= SIGNATURE.opponentLevel);
 const opponentUnleashes = (m, round) => opponentHasSignature(m.b.f, m.boss, m.earlyRound) && !m.b.sigRound && slotActive(m.b, 'class', round) && (m.b.roundsWon < m.a.roundsWon || round === 3);
 export const opponentUnleashesNext = (m) => !m.over && opponentUnleashes(m, m.round + 1);
 
@@ -650,13 +686,14 @@ export function playRound(m, { stance = 'steady' } = {}) {
     b: { alive: B.f.alive, injuries: structuredClone(B.f.injuries), disabled: [...B.disabled], roundsWon: B.roundsWon, power: computePower(B, A, round), speed: computeSpeed(B, round).total },
   };
   if (opponentUnleashes(m, round)) applySignature(B, A, round);
-  r.signatures = [A, B].filter((c) => c.sigRound === round).map((c) => ({ side: c.side, name: SIGNATURES[c.f.cls].name }));
+  r.signatures = [A, B].filter((c) => c.sigRound === round).map((c) => ({ side: c.side, name: signatureDef(c.f).name }));
 
   // Step 0 — tactics.
   A.stance = TACTICS[stance] ? stance : 'steady';
   B.stance = opponentIntent(m, round).stance;
   r.tell = m.b.intent.tell;
   r.stances = { A: A.stance, B: B.stance };
+  r.resHype = A.stance === 'press' && classActive(A, 'cestus', round) ? (CLASS_RESONANCE.cestus?.hype ?? 0) : 0;
   r.counter = COUNTERS[A.stance] && COUNTERS[A.stance] === B.stance ? 'A' : COUNTERS[B.stance] && COUNTERS[B.stance] === A.stance ? 'B' : null;
 
   // Step 1 — strike order.
@@ -678,6 +715,7 @@ export function playRound(m, { stance = 'steady' } = {}) {
   const firstStriker = sideOf(m, r.initiative.first).f;
   p2[r.initiative.first].win.push({ source: 'First Strike', value: FIRST_STRIKE + (hasPerk(firstStriker, 'tactician') ? COMBAT.tactician : 0) });
   const firstSide = sideOf(m, r.initiative.first);
+  if (weaponActive(firstSide, 'dagger', round)) p2[r.initiative.first].win.push({ source: 'Backstab', value: COMBAT.daggerWin });
   if (tacticOf(firstSide)?.firstStrike && r.counter !== other(r.initiative.first)) p2[r.initiative.first].win.push({ source: tacticOf(firstSide).name, value: tacticOf(firstSide).firstStrike });
   r.win = { base: r.row.win, modsA: p2.A.win, modsB: p2.B.win };
   r.win.chance = clamp(r.row.win + sum(p2.A.win) - sum(p2.B.win), 1, 99999);
@@ -690,7 +728,10 @@ export function playRound(m, { stance = 'steady' } = {}) {
   injuryCheck(m, first, second, r, 'First strike');
   if (first.f.alive && second.f.alive) injuryCheck(m, second, first, r, 'Retaliation');
   const loser = sideOf(m, other(r.winner));
-  if (A.f.alive && B.f.alive && classActive(loser, 'bloodBearer', round)) injuryCheck(m, loser, sideOf(m, r.winner), r, 'Off-hand strike', true);
+  if (A.f.alive && B.f.alive && classActive(loser, 'bloodBearer', round)) {
+    const offChance = loser.stance === 'press' ? (CLASS_RESONANCE.bloodBearer?.offhand ?? COMBAT.counterInjure) : COMBAT.counterInjure;
+    injuryCheck(m, loser, sideOf(m, r.winner), r, 'Off-hand strike', true, offChance);
+  }
 
   // All In: lose the round and your fighter falls.
   if (TACTICS[A.stance]?.fallOnLoss && r.winner === 'B' && A.f.alive) {
@@ -746,7 +787,7 @@ export function hypeOf(m) {
     if (r.winner === 'A' && r.win?.chance < 40000) h += HYPE.upset;
     for (const c of r.checks ?? []) if (c.attacker === 'A' && c.injury) h += c.injury.tag === 'death' ? HYPE.kill : HYPE.wound;
     if (r.signatures?.some((x) => x.side === 'A')) h += HYPE.signature;
-    if (r.stances?.A === 'press') h += HYPE.press;
+    if (r.stances?.A === 'press') h += HYPE.press + (r.resHype ?? 0);
     if (r.stances?.A === 'guard') h += HYPE.guard;
     if (r.stances?.A === 'allIn') h += HYPE.allIn;
     if (r.counter === 'A') h += HYPE.read;

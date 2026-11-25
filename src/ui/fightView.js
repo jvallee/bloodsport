@@ -1,6 +1,6 @@
 // The fight overlay: tarot cards, Delta gauge, tag pills, story/math feed, capitulate decision, breakdown.
 
-import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, HUMORS, FESTIVAL_BY_ID, SIGNATURES, SIGNATURE, MERCY, BET, HYPE, ROUND_TACTICS } from '../data.js';
+import { BOSS_DEBUFFS, GEAR, CONSUMABLES, TACTICS, HUMORS, FESTIVAL_BY_ID, SIGNATURE, CLASS_RESONANCE, signatureDef, MERCY, BET, HYPE, ROUND_TACTICS } from '../data.js';
 import { effectiveInjuries, mortalDanger, canThrowTowel, suggestTactic, deathRisk, signatureOf, signatureBlocker, hypeOf, opponentTell, tellForecast, opponentUnleashesNext, firstStrikeChance } from '../fight.js';
 import { narrateRound, narrateStory, resultText, adviceFor, fmtPct, signed, modLabel, slotName } from '../narrate.js';
 import { esc, safeColor, fighterCard, mercyChoices, ICON } from './components.js';
@@ -233,7 +233,8 @@ function betRow(m) {
 // The signature move (level 3+): ready, used, or how to unlock it.
 function signatureRow(m) {
   const sig = signatureOf(m.a.f);
-  if (!sig) return SIGNATURES[m.a.f.cls] ? `<div class="sub">★ Signature move <b>${esc(SIGNATURES[m.a.f.cls].name)}</b> unlocks at level ${SIGNATURE.level}.</div>` : '';
+  const def = signatureDef(m.a.f);
+  if (!sig) return def ? `<div class="sub">★ Signature move <b>${esc(def.name)}</b> unlocks at level ${SIGNATURE.level}.</div>` : '';
   if (m.a.sigRound) return `<div class="sub">★ ${esc(sig.name)} ${m.a.sigRound > m.round ? 'will be unleashed this round' : 'has been used this fight'}.</div>`;
   // Disabled, with the reason, when it can't be used (the designer, 5.4.2: an overtrained Cestus loses the class ability it needs).
   const why = signatureBlocker(m);
@@ -281,15 +282,22 @@ const tacticIcon = (k) => ICON[k] ?? TACTICS[k]?.icon ?? '';
 function tacticPicker(m) {
   const round = m.round + 1;
   const suggested = suggestTactic(m);
+  const classOn = !m.a.disabled.includes('class') && m.a.classDisabledRound !== round;
+  const res = classOn ? CLASS_RESONANCE[m.a.f.cls] : null;
   const h = m.b.f.humor ? HUMORS[m.b.f.humor] : null;
-  const buttons = ROUND_TACTICS.map((k) => [k, TACTICS[k]]).map(([k, t]) => `<button class="btn big tactic${k === suggested ? ' primary' : ''}" data-action="next-round" data-stance="${k}" title="${esc(t.desc)}">
-      <span class="tactic-main">${tacticIcon(k)} ${t.name}</span>${k === suggested ? '<small class="tactic-sug">★ suggested</small>' : ''}</button>`).join('')
+  const wepRes = classOn ? { axe: ['press', 'Axe: +6% win chance.'], fists: ['press', 'Fists: +3% win chance.'], flail: ['press', 'Flail: +4% win chance.'], sword: ['guard', 'Sword: +5% win chance.'], dagger: ['feint', 'Dagger: +4% win chance.'] }[m.a.f.cls === 'fighter' ? m.a.f.weapon : null] : null;
+  const buttons = ROUND_TACTICS.map((k) => [k, TACTICS[k]]).map(([k, t]) => {
+    const bonus = res?.tactic === k ? ` ${res.desc}` : (wepRes && wepRes[0] === k ? ` ${wepRes[1]}` : '');
+    return `<button class="btn big tactic${k === suggested ? ' primary' : ''}" data-action="next-round" data-stance="${k}" title="${esc(t.desc + bonus)}">
+      <span class="tactic-main">${tacticIcon(k)} ${t.name}</span>${k === suggested ? '<small class="tactic-sug">★ suggested</small>' : ''}</button>`;
+  }).join('')
     + (mortalDanger(m.a) ? allInButton(m) : '');
   const last = m.rounds.at(-1);
   const read = h ? `${esc(m.b.f.name)} is <b>${h.name}</b>: ${esc(h.tell)}.${last ? ` Last round they chose <b>${TACTICS[last.stances.B].name}</b>.` : ''}` : `${esc(m.b.f.name)} has no clear habits.`;
   const tell = opponentTell(m);
   const tellLine = tell ? `<div class="tell">👁 ${esc(TELLS[tell](m.b.f.name))} <small>Weighing the tell against their temper: about ${tellForecast(m)}% they ${esc(TACTICS[tell].name)}.</small></div>` : '';
-  const sig = opponentUnleashesNext(m) ? `<div class="tell warn">⚠ ${esc(m.b.f.name)} is gathering for ${esc(SIGNATURES[m.b.f.cls].name)}: it comes this round.</div>` : '';
+  const oppSig = signatureDef(m.b.f);
+  const sig = opponentUnleashesNext(m) && oppSig ? `<div class="tell warn">⚠ ${esc(m.b.f.name)} is gathering for ${esc(oppSig.name)}: it comes this round.</div>` : '';
   // 7.7: who is likely to strike first decides close rounds; show it (the tactic chosen can still change Speed).
   const first = Math.round(100 * firstStrikeChance(m, round));
   const firstLine = `<div class="first-strike" title="Speed plus a die each; Concussed always strikes second; Footwork strikes first when faster. Your tactic this round can still change it.">⚡ Strikes first: ${esc(m.a.f.name)} about <b>${first}%</b> · ${esc(m.b.f.name)} about <b>${100 - first}%</b></div>`;

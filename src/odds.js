@@ -1,16 +1,16 @@
 // Pre-fight odds: simulate the real engine many times on copies. Uses its own RNG,
 // so previewing never changes the career's fight rolls. Pure.
 
-import { createRng } from './rng.js';
+import { createRng, deriveSeed } from './rng.js';
 import { createMatch, autoPlay, suggestTactic, signatureBlocker, useSignature } from './fight.js';
 
 export function estimateOdds(fighter, opponent, { debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, oracle = 0, useSignatures = true, n = 500, seed = 12345, boostsA = null, boostsB = null, vengeanceB = false, ashA = 0 } = {}) {
-  const rng = createRng(seed);
   const startInjuries = fighter.injuries.filter((i) => i.weight > 0).length;
   let win = 0;
   let hurt = 0;
   let death = 0;
   for (let i = 0; i < n; i++) {
+    const rng = createRng(deriveSeed(seed, i));
     const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger, festival, grudge, vengeance, boss, earlyRound, rebels, relics, oracle, fast: true });
     // A live match's boosts already in place (items used before Round 1, espionage) so a bet is priced on the real fight.
     if (boostsA) m.a.boosts = [...boostsA];
@@ -18,7 +18,7 @@ export function estimateOdds(fighter, opponent, { debuff = null, overtrained = f
     if (vengeanceB) m.b.vengeance = true;
     if (ashA) m.a.ash = ashA; // Feed the Ash used before Round 1 (7.8.1)
     autoPlay(m, (match) => {
-      if (useSignatures && !signatureBlocker(match) && (match.a.roundsWon < match.b.roundsWon || match.round >= 1)) {
+      if (useSignatures && !signatureBlocker(match) && (match.a.f.cls === 'ashHungry' || match.a.roundsWon < match.b.roundsWon || match.round >= 1)) {
         useSignature(match);
       }
       return suggestTactic(match);
