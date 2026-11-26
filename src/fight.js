@@ -2,7 +2,7 @@
 // Pure: no DOM. Each round returns a structured record; src/narrate.js turns it into text.
 
 import { next, rollE5, d100, d6, pick, createRng, deriveSeed } from './rng.js';
-import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, COMBAT, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, HOUSES, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURE, CLASS_RESONANCE, signatureDef, UNDERDOG, HYPE, AMPHORA_HYPE, INTENT, ROUND_TACTICS, WOUND_STYLES, AFFINITY, BLEEDING, WEAPONS, CLASSES, DECOR, isBladed } from './data.js';
+import { deltaRow, clampDelta, injuryForScore, INJURY_BY_TAG, INJURY_ROLL, COMBAT, EVASION, GEAR, MORALE, KILL_MARKS, TACTICS, COUNTERS, COUNTER, HUMORS, HOUSES, FESTIVAL_BY_ID, SCARS, AUGMENTS, MATCHUPS, SIGNATURE, SIGNATURES, WEAPON_SIGNATURES, CLASS_RESONANCE, signatureDef, UNDERDOG, HYPE, AMPHORA_HYPE, INTENT, ROUND_TACTICS, WOUND_STYLES, AFFINITY, BLEEDING, WEAPONS, CLASSES, DECOR, isBladed } from './data.js';
 import { Refused } from './errors.js';
 import { relicMods } from './fortune.js';
 
@@ -262,6 +262,7 @@ export function computePower(c, opp, round, raw = false) {
   if (c.scouted) mods.push({ source: 'Scouted', value: c.scouted });
   if (c.challenger) mods.push({ source: 'Challenger', value: c.challenger });
   if (c.grudge) mods.push({ source: c.grudge > 0 ? 'Feud' : 'Owes you a life', value: c.grudge });
+  if (c.debt?.power) mods.push({ source: `${c.debt.label} (${c.debt.houseName})`, value: c.debt.power });
   if (c.roar) mods.push({ source: 'The crowd', value: HYPE.favourPower }); // version 6: the crowd's favour
   for (const b of c.boosts ?? []) if (b.round === round && b.power) mods.push({ source: b.name, value: b.power });
   for (const r of relicMods(c, round, effectiveInjuries(f) >= 1)) if (r.power) mods.push({ source: r.name, value: r.power });
@@ -271,7 +272,9 @@ export function computePower(c, opp, round, raw = false) {
   if (kindActive(c, 'rampage', round) && c.rampage) mods.push({ source: 'Rampage', value: c.rampage });
   if (kindActive(c, 'cinderHeart', round) && round >= 2) mods.push({ source: 'Cinder Heart', value: 1 });
   if (classActive(c, 'ashHungry', round) && c.ash) mods.push({ source: 'Ash Stacks', value: c.ash });
-  if (f.kind === 'basa' && decorOf(c, 'lionCage')) mods.push({ source: 'Lion Cage', value: 1 });
+  if (f.kind === 'basa' && f.coreId !== 'basa' && decorOf(c, 'lionCage')) mods.push({ source: 'Lion Cage', value: 1 });
+  if (f.keepsake === 'tidalMemory' && c.arena !== 'ironRules') mods.push({ source: 'Sound of the Tide', value: 1 });
+  if (f.personalTrait === 'crackedGovernor' && f.jailbreakBoost > 0) mods.push({ source: 'Crucible Override', value: 1 });
   if (humorOf(c)?.power?.[round]) mods.push({ source: humorOf(c).name, value: humorOf(c).power[round] });
   if (c.festival?.ranged && !meleeOnly(c)) mods.push({ source: c.festival.name, value: c.festival.ranged });
   for (const sc of activeScars(c, opp)) if (sc.power) mods.push({ source: sc.label, value: sc.power });
@@ -318,7 +321,7 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (weaponActive(c, 'dagger', round) && c.stance === 'feint') win.push({ source: 'Dagger (Feint)', value: COMBAT.daggerFeintWin });
   if (c.riposteRound === round) win.push({ source: 'Riposte', value: COMBAT.riposteWin });
   if (c.shieldCounterRound === round) win.push({ source: 'Shield Wall', value: COMBAT.shieldCounterWin });
-  const res = slotActive(c, 'class', round) ? CLASS_RESONANCE[c.f.cls] : null;
+  const res = slotActive(c, 'class', round) && !(c.f.cls === 'sagittarius' && blind) ? CLASS_RESONANCE[c.f.cls] : null;
   if (res && c.stance === res.tactic) {
     const rw = (res.win ?? 0) + (opp.netRound === round ? (res.entangledWin ?? 0) : 0);
     if (rw) win.push({ source: CLASSES[c.f.cls].ability, value: rw });
@@ -389,6 +392,23 @@ export function computePhase2(c, opp, round, volley = {}) {
   if (c.stance && COUNTERS[c.stance] && COUNTERS[c.stance] === opp.stance) win.push({ source: `Counter (${t.name} beats ${TACTICS[opp.stance].name})`, value: COUNTER.win });
   if (c.vengeance) win.push({ source: 'Vengeance', value: HOUSES.vengeanceWin });
   if (c.rebels) win.push({ source: 'Voices in the crowd', value: c.rebels });
+  if (c.debt?.win) win.push({ source: `${c.debt.label} (${c.debt.houseName})`, value: c.debt.win });
+  if (c.debt?.injure) enemy.push({ source: `${c.debt.label} (${c.debt.houseName})`, value: c.debt.injure });
+  if (f.personalTrait === 'machineRaised' && round >= 2) win.push({ source: 'Machine-Raised', value: 5000 });
+  if (f.personalTrait === 'cursedIntellect' && round === 1) win.push({ source: 'Elven-Cursed Mind', value: (c.oracle ?? 0) > 0 ? 10000 : 5000 });
+  if (f.personalTrait === 'crackedGovernor') self.push({ source: 'Cracked Pacifist Core', value: -5000, armor: true });
+  if (f.personalTrait === 'fallenHouse' && (c.bossFight || f.vsBoss)) {
+    win.push({ source: "Traitor's Daughter", value: 5000 });
+    enemy.push({ source: "Traitor's Daughter", value: 5000 });
+  }
+  if (c.arena !== 'ironRules') {
+    if (f.keepsake === 'machineCalm' && f.meditatedBoost && round === 1) win.push({ source: 'Enclave Stillness', value: 5000 });
+    if (f.keepsake === 'compassionAnchor') self.push({ source: 'Compassion Sub-Routine', value: -5000 });
+    if (f.keepsake === 'fathersEdge') {
+      if (round === 1) win.push({ source: "General's Whetstone", value: 5000 });
+      if (isBladed(f)) enemy.push({ source: "General's Whetstone", value: 5000 });
+    }
+  }
   for (const sc of activeScars(c, opp)) {
     if (sc.enemy) enemy.push({ source: sc.label, value: sc.enemy });
     if (sc.self) self.push({ source: sc.label, value: sc.self });
@@ -572,7 +592,7 @@ export function injuryCheck(m, X, Y, r, label, counter = false, counterChance = 
 
 const BOTH_SIDES = ['bloodMoon', 'crowdFavorite', 'lions', 'emperorsGaze'];
 
-export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, oracle = 0, fast = false }) {
+export function createMatch({ a, b, rng, debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, summons = false, earlyRound = false, rebels = 0, relics = null, oracle = 0, debt = null, playbook = false, fast = false }) {
   const m = {
     a: makeCombatant(a, 'A', debuff),
     b: makeCombatant(b, 'B', BOTH_SIDES.includes(debuff) ? debuff : null),
@@ -584,15 +604,22 @@ export function createMatch({ a, b, rng, debuff = null, overtrained = false, sco
     m.a.festival = m.b.festival = FESTIVAL_BY_ID[festival];
   }
   if (grudge) m.b.grudge = grudge;
+  if (debt) m.b.debt = debt;
   if (vengeance) m.a.vengeance = true;
   if (rebels) m.a.rebels = rebels;
+  if (boss || summons) m.a.bossFight = true;
   if (relics?.a?.length) m.a.relics = relics.a;
   if (relics?.b?.length) m.b.relics = relics.b;
   m.intentSeed = deriveSeed(rng?.state ?? 0, 42);
   if (oracle > 0) {
     m.oracle = oracle;
+    m.a.oracle = oracle;
     m.tellSeed = deriveSeed(rng?.state ?? 0, 41);
     m.tells = createRng(m.tellSeed);
+  }
+  if (playbook) {
+    m.playbook = true;
+    m.tellSeed ??= deriveSeed(m.intentSeed ?? 0, 41);
   }
   if (scouted) m.b.scouted = scouted;
   if (challenger) m.b.challenger = challenger;
@@ -645,6 +672,8 @@ export function applyRoundEnd(m, r) {
 
 // ---------- Signature moves (level 3+, once per fight, for one round) ----------
 
+const isRangedSignature = (sig) => sig === SIGNATURES.sagittarius || sig === WEAPON_SIGNATURES.ranged;
+
 export const signatureOf = (f) => ((f.level ?? 1) >= SIGNATURE.level ? signatureDef(f) : null);
 
 export function signatureBlocker(m) {
@@ -654,6 +683,7 @@ export function signatureBlocker(m) {
   if (m.a.sigRound) return `${sig.name} has already been used this fight.`;
   if (m.a.disabled.includes('class')) return `${sig.name} needs the class ability, and it's disabled this match.`;
   if (m.a.classDisabledRound === m.round + 1) return `${sig.name} needs the class ability, and they are disarmed next round.`;
+  if (isRangedSignature(sig) && hasInjury(m.a.f, 'blinded')) return 'Blinded: cannot fire ranged signature.';
   return null;
 }
 
@@ -672,7 +702,7 @@ export function useSignature(m) {
 }
 
 export const opponentHasSignature = (f, boss = false, earlyRound = false) => Boolean(signatureDef(f)) && (boss ? (f.level ?? 1) >= SIGNATURE.bossLevel : !earlyRound && (f.level ?? 1) >= SIGNATURE.opponentLevel);
-const opponentUnleashes = (m, round) => opponentHasSignature(m.b.f, m.boss, m.earlyRound) && !m.b.sigRound && slotActive(m.b, 'class', round) && (m.b.roundsWon < m.a.roundsWon || round === 3);
+const opponentUnleashes = (m, round) => opponentHasSignature(m.b.f, m.boss, m.earlyRound) && !m.b.sigRound && slotActive(m.b, 'class', round) && !(isRangedSignature(signatureDef(m.b.f)) && hasInjury(m.b.f, 'blinded')) && (m.b.roundsWon < m.a.roundsWon || round === 3);
 export const opponentUnleashesNext = (m) => !m.over && opponentUnleashes(m, m.round + 1);
 
 export function playRound(m, { stance = 'steady' } = {}) {
@@ -782,7 +812,9 @@ export function deathRisk(m, stance = 'steady', n = 400) {
 export const canThrowTowel = (m) => !m.over && m.round >= 1 && m.debuff !== 'emperorsGaze';
 // Live crowd hype meter (0–100) for side A, clamped per round.
 export function hypeOf(m) {
-  let h = (m.a?.f?.risen ? HYPE.risen : 0) + (m.a?.f?.decor?.wineAmphora > 0 && m.a.arena !== 'ironRules' ? AMPHORA_HYPE : 0);
+  let h = (m.a?.f?.risen ? HYPE.risen : 0)
+    + (m.a?.f?.decor?.wineAmphora > 0 && m.a.arena !== 'ironRules' ? AMPHORA_HYPE : 0)
+    + (m.a?.f?.keepsake === 'fourthSonHonour' && m.a.arena !== 'ironRules' ? 10 : 0);
   for (const r of m.rounds ?? []) {
     if (r.winner === 'A' && r.win?.chance < 40000) h += HYPE.upset;
     for (const c of r.checks ?? []) if (c.attacker === 'A' && c.injury) h += c.injury.tag === 'death' ? HYPE.kill : HYPE.wound;

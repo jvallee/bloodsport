@@ -57,7 +57,7 @@ export function cityHeadlines(run, limit = 3) {
   }
 
   // 5. Recent fallen gladiator mourned by the street.
-  const fallen = [...(run.fallen ?? [])].reverse().find((f) => f.diedWeek !== undefined && run.week - f.diedWeek <= 4);
+  const fallen = [...(run.fallen ?? [])].reverse().find((f) => f.diedWeek !== undefined && run.week - f.diedWeek <= 4 && !f.spy && !run.roster?.some((r) => r.revenantOf === f.id));
   if (fallen) {
     add('fallen', '⚰', `Someone left two copper coins and a sprig of laurel outside your gate for ${fallen.name}.`);
   }
@@ -111,7 +111,7 @@ export function cityHeadlines(run, limit = 3) {
     add('opening1', '📣', 'Emperor Silbannacus\'s heralds are drumming up wagers for the Dirt Pits. Nobody in the stands knows your house\'s name yet.');
   }
   if (items.length < 2) {
-    add('opening2', '🌀', 'A fresh portal cracked open over the harbour at dawn; the slavers are already sorting what fell through for the Market.');
+    add('opening2', '⚓', 'A frontier prison barge docked at the sky-harbour at dawn; the brokers are already sorting its manifests for the Market.');
   }
 
   return items.slice(0, limit);

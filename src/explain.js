@@ -26,6 +26,16 @@ export function fighterWarnings(run, f, tier) {
   if (opts.grudge > 0) out.push({ tone: 'bad', text: `Feud: ${houseOf(run, opp).name} wants revenge (opponent +${opts.grudge} Power)` });
   if (opts.grudge < 0) out.push({ tone: 'info', text: `${houseOf(run, opp).name} owes you a life (opponent ${opts.grudge} Power)` });
   if (opts.vengeance) out.push({ tone: 'info', text: `Vengeance on ${houseOf(run, opp).name}: +${HOUSES.vengeanceWin / 1000}% win chance` });
+  if (opts.debt) {
+    const hName = houseOf(run, opp)?.name ?? 'Creditor house';
+    const dBits = [
+      opts.debt.power ? `opponent +${opts.debt.power} Power` : '',
+      opts.debt.win ? `opponent +${Math.round(opts.debt.win / 1000)}% win` : '',
+      opts.debt.injure ? `opponent +${Math.round(opts.debt.injure / 1000)}% injure` : '',
+      opts.debt.garnish ? `${Math.round(opts.debt.garnish * 100)}% purse garnish` : '',
+    ].filter(Boolean).join(', ');
+    out.push({ tone: 'bad', text: `${opts.debt.label ?? 'House debt'} (${hName}): ${dBits}` });
+  }
   if (opts.challenger) out.push({ tone: 'warn', text: `Challenger: opponent +${opts.challenger} Power (famous fighters draw tougher opponents)` });
   return out;
 }

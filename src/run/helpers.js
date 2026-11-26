@@ -9,8 +9,27 @@ import { relicSum } from '../fortune.js';
 import { Refused } from '../errors.js';
 import { formatDate, dateOf } from '../calendar.js';
 import { prestigeLevelFor, stressRelief } from '../ludus.js';
+import {
+  CORE_COMPANIONS, PERSONAL_TRAITS, LORE_KEEPSAKES, CORE_WANTS, CORE_BOND_TREES, ESTATE_STAFF,
+  createDialogueState, ensureDialogueState, enqueueMilestone, pruneStaleDialogue, resolveDialogueTree,
+  applyDialogueChoice as rawApplyDialogueChoice, evaluateKeepsake, normalizeSceneId,
+} from '../dialogueTrees.js';
 
-export const SAVE_VERSION = 7; // 5 (7.1): Temperament decor, f.humourDrift; 6 (7.3): run.unrest; 7 (7.4): run.espionage, f.mole
+export {
+  CORE_COMPANIONS, PERSONAL_TRAITS, LORE_KEEPSAKES, CORE_WANTS, CORE_BOND_TREES, ESTATE_STAFF,
+  createDialogueState, ensureDialogueState, enqueueMilestone, pruneStaleDialogue, resolveDialogueTree, evaluateKeepsake,
+};
+
+export function applyDialogueChoice(run, f, sceneId, choiceId, extraHooks = {}) {
+  return rawApplyDialogueChoice(run, f, sceneId, choiceId, {
+    onGainXp: (target, n) => { if (run && target && n > 0) gainXp(run, target, n); },
+    onChangeFavor: (n, why) => { if (run && n) changeFavor(run, n, why || 'conversation'); },
+    RefusedClass: Refused,
+    ...extraHooks,
+  });
+}
+
+export const SAVE_VERSION = 8; // 5 (7.1): Temperament decor, f.humourDrift; 6 (7.3): run.unrest; 7 (7.4): run.espionage, f.mole; 8 (8.0): Palatina companions, dialogue, Hades, debt
 export const GRAND_TIER = CIRCUITS.length + 1;
 export const JOBS = ['rest', 'trainPower', 'trainSpeed', 'medbay'];
 export const NAME_MEMORY = 90;
@@ -102,15 +121,64 @@ export function releaseTalk(run) {
   for (const t of later) talk(run, t.key, t.beats);
 }
 
+export function queueMilestone(run, f, entry) {
+  if (!f || (!f.companion && !f.coreId && !f.dialogue)) return;
+  const item = typeof entry === 'string' ? { id: entry, week: run?.week ?? 0 } : { week: run?.week ?? 0, ...entry };
+  if (f.kind === 'revenant' && normalizeSceneId(item.id) !== 'vulcan_revenant_shock') return;
+  ensureDialogueState(f);
+  enqueueMilestone(run, f, item);
+}
+
+export function pruneFighterDialogue(run, f) {
+  if (!f?.dialogue) return;
+  pruneStaleDialogue(run, f);
+}
+
 export function assertOk(reason) {
   if (reason) throw new Refused(reason);
 }
 
 // ---------- Stat and economy queries ----------
 
-export const decorComfortOf = (f) => Object.entries(f.decor ?? {}).reduce((n, [k, c]) => n + (DECOR[k] ? decorComfort(DECOR[k]) * c : 0), 0);
+const KEEPSAKE_COMFORT = {
+  machineCalm: 8,
+  tidalMemory: 6,
+  fourthSonHonour: 6,
+  compassionAnchor: 6,
+  fathersEdge: 6,
+};
+
+export function dislikedDecorItems(f) {
+  if (!f?.coreId || !f?.decor) return [];
+  const byCore = {
+    unit91: ['wineAmphora', 'skullRack'],
+    basa: ['lionCage'],
+    orc: ['spikyBed'],
+    android: ['whetstone', 'skullRack'],
+    elf: ['wineAmphora', 'lionCage'],
+  }[f.coreId] ?? [];
+  return byCore.filter((k) => (f.decor[k] ?? 0) > 0);
+}
+
+export function dislikedDecorPenaltyOf(f) {
+  const items = dislikedDecorItems(f);
+  if (!items.length) return 0;
+  if (f.coreId === 'basa') return -10;
+  if (f.coreId === 'elf') return (items.includes('lionCage') ? -10 : 0) + (items.includes('wineAmphora') ? -5 : 0);
+  if (f.coreId === 'orc') return -5;
+  return -8;
+}
+
+export const keepsakeComfortOf = (f) => (f?.keepsake ? (KEEPSAKE_COMFORT[f.keepsake] ?? 6) : 0);
+
+export const decorComfortOf = (f) => Object.entries(f.decor ?? {}).reduce((n, [k, c]) => n + (DECOR[k] ? decorComfort(DECOR[k]) * c : 0), 0)
+  + keepsakeComfortOf(f) + dislikedDecorPenaltyOf(f);
 // `calmIf` (7.2): the piece only calms the fighters it names (the Viper Terrarium).
-export const decorCalm = (f) => Math.min(STRESS.decorCalm, Object.entries(f.decor ?? {}).reduce((n, [k, count]) => n + (DECOR[k] && (!DECOR[k].calmIf || DECOR[k].calmIf(f)) ? DECOR[k].calm ?? 0 : 0) * count, 0));
+export const decorCalm = (f) => {
+  const base = Math.min(STRESS.decorCalm, Object.entries(f.decor ?? {}).reduce((n, [k, count]) => n + (DECOR[k] && (!DECOR[k].calmIf || DECOR[k].calmIf(f)) ? DECOR[k].calm ?? 0 : 0) * count, 0));
+  const keepsakeBonus = f?.keepsake === 'tidalMemory' ? 10 : (f?.keepsake === 'machineCalm' || f?.keepsake === 'compassionAnchor') ? 5 : 0;
+  return base + keepsakeBonus;
+};
 export const decorCount = (f) => Object.values(f.decor ?? {}).reduce((s, n) => s + n, 0);
 
 export const trainStress = (run, f) => Math.max(0, STRESS.train - (f.perks.includes('ironConstitution') ? 10 : 0) - relicSum(run, 'trainStress'));
@@ -135,7 +203,9 @@ export function powerParts(f) {
   if (titles) parts.push({ label: titles === 1 ? 'Title' : 'Titles', value: titles, base: true });
   for (const k of [f.gear?.weapon, f.gear?.armor]) if (k && GEAR[k].power) parts.push({ label: GEAR[k].name, value: GEAR[k].power });
   if (f.kindTrait === 'firebug' && f.decor?.fireBrazier) parts.push({ label: 'Firebug', value: f.decor.fireBrazier });
-  if (f.kind === 'basa' && f.decor?.lionCage) parts.push({ label: 'Lion Cage', value: 1 });
+  if (f.kind === 'basa' && f.coreId !== 'basa' && f.decor?.lionCage) parts.push({ label: 'Lion Cage', value: 1 });
+  if (f.keepsake === 'tidalMemory') parts.push({ label: 'Sound of the Tide', value: 1 });
+  if (f.personalTrait === 'crackedGovernor' && f.jailbreakBoost > 0) parts.push({ label: 'Crucible Override', value: 1 });
   for (const k of f.augments ?? []) if (AUGMENTS[k]?.power) parts.push({ label: AUGMENTS[k].name, value: AUGMENTS[k].power });
   return parts;
 }
@@ -197,6 +267,15 @@ export function xpFor(won, boss, upset) {
 export function perkOffer(run, f) {
   const pool = Object.keys(PERKS).filter((p) => (PERKS[p].repeatable || !f.perks.includes(p)) && (!PERKS[p].req || PERKS[p].req(f)));
   const offer = [];
+  const focus = f?.perkFocus && f.perkFocus !== 'any' ? f.perkFocus : null;
+  if (focus) {
+    const focused = pool.filter((p) => PERKS[p].tags?.includes(focus));
+    while (offer.length < 2 && focused.length) {
+      const picked = focused.splice(int(run.rng.growth, 0, focused.length - 1), 1)[0];
+      pool.splice(pool.indexOf(picked), 1);
+      offer.push(picked);
+    }
+  }
   while (offer.length < 3 && pool.length) offer.push(pool.splice(int(run.rng.growth, 0, pool.length - 1), 1)[0]);
   return offer;
 }
@@ -265,6 +344,7 @@ export function removeFighter(run, fighterOrId, { returnDecor = true, returnGear
       if (f.decor) f.decor[k] = 0;
     }
     delete f.roomLayout;
+    delete f.keepsake;
   }
   if (returnGear) {
     for (const slot of ['weapon', 'armor']) {
@@ -274,6 +354,7 @@ export function removeFighter(run, fighterOrId, { returnDecor = true, returnGear
   }
   run.roster = run.roster.filter((x) => x !== f);
   if (run.plot?.champion === f.id) {
+    f.wasPlotChampion = true;
     run.plot.champion = null;
     if (run.plot.stage === 'ready') run.plot.stage = 'cause';
     if (run.plot.coup && !run.plot.ended) {

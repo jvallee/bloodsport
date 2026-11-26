@@ -2,7 +2,7 @@
 
 import { MAX_CAREERS } from '../careers.js';
 import { WANTS, REBEL_QUESTS, GALLERY_INTRO } from '../quests.js';
-import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, CLASSES, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR, HUMORS, HUMOUR_DRIFT, UNREST, ESPIONAGE } from '../data.js';
+import { FORTUNE, REANIMATE, LOUNGE, DEMAND, DEMANDS, RENOWN, decorComfort, PRESTIGE_LEVELS, BOSS_DEBUFFS, DECOR, ECONOMY, CIRCUITS, STRESS, FAVOR, PERKS, GEAR, XP, MORALE, CONSUMABLES, FESTIVAL_BY_ID, KINDS, TRAITS, CLASSES, WEAPONS, PATRONS, DECREES, AUGMENTS, RETIRE, RENAME, INJURY_BY_TAG, BRACKET, HOUSES, MERCY, SUMMONS, FEAR, HUMORS, HUMOUR_DRIFT, UNREST, ESPIONAGE, COMPANIONS, FORTUNE_RETUNE, FAVOR_DEBT, HADES } from '../data.js';
 import { ACHIEVEMENTS, careerScore, bestFighter, unlockedPatrons, unlockedClasses, unlockText, levelFor, nextUnlock, unlocksAt, heatUnlocked, houseColours, dailyStreak, returningFor, LEGACY_LEVELS, HEAT, HOUSE_COLOURS } from '../legacy.js';
 import { formatDate, weeksUntilTournament, isWinter, weeksUntilWinter, nextFestival, dateOf } from '../calendar.js';
 import * as runApi from '../run.js';
@@ -12,6 +12,12 @@ import {
   buyGearBlocker, equipBlocker, unequipBlocker, unequipAllBlocker, sellGearBlocker, sellPrice, decorCount, eventNames, eventChoiceBlocker, standings, houseOf, augmentBlocker, augmentPrice, retireBlocker, upcomingBouts, hasBracket, bracketOf, bracketRound, withdrawBlocker, opponentFor, tributeDue, tributePaid, payTributeBlocker, moraleTarget, GRAND_TIER, bossLossFavor, effectivePower, effectiveSpeed, fightPowers, recruitPrice, decorComfortOf, demandMet, activePolicies, hostPrice, hostBlocker, enactBlocker, prayPrice, prayBlocker, exhibitionBlocker, summonsBlocker, refuseSummonsBlocker, ritePrice, riteBlocker, stewardPlanBlocker, fortuneBlocker, rerollBlocker, rerollPrice,
   buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
   trainGain, renameBlocker, dominantTemperament, espState, canNarrow, investigateBlocker, opTarget, opChance, covertOpBlocker,
+  recruitedCompanionIds, getCompanionPool, companionPrice, companionBlocker,
+  retunePrice, retuneBlocker, respecPrice, respecPerkBlocker, matchOptions,
+  hadesPrice, reviveHadesPrice, hadesKeepWeeks, hadesRaisable, reviveHadesBlocker, restoreRevenantPrice, restoreRevenantBlocker, vulcanKeepWeeks,
+  debtPenaltyFor, favorWritGold, favorLoanPrincipal, borrowFavorBlocker, payFavorDebtBlocker,
+  activeHouseDebts, houseLoanPrincipal, borrowHouseBlocker, payHouseDebtBlocker,
+  wantGoal, resolveDialogueTree, CORE_COMPANIONS, PERSONAL_TRAITS, LORE_KEEPSAKES,
 } from '../run.js';
 import { stepText, INTRO } from '../tutorial.js';
 import {
@@ -23,7 +29,7 @@ import { gearText, slotLabel } from '../codex.js';
 import { esc, safeColor, safeTone, button, buttonWhy, fighterCard, ICON, mercyChoices } from './components.js';
 import { renderEstatePanel } from './estateView.js';
 import { portrait, npcPortrait } from './portrait.js';
-import { SPEAKERS, tipSpeaker } from '../dialogue.js';
+import { SPEAKERS, tipSpeaker, isStaffId, getStaffActor } from '../dialogue.js';
 import { cityHeadlines } from '../gazette.js';
 import { PREFECT } from '../plot.js';
 import { EVENT_BY_ID, MOOD_WEEKS, choiceLabel, stakesText } from '../events.js';
@@ -442,7 +448,7 @@ export function introModal(page, pages) {
 function questsPanel(run) {
   const task = stewardTask(run);
   const weeksLeft = (until) => (until === null || until === undefined ? '' : ` <small>· ${Math.max(0, until - run.week)} wk left</small>`);
-  const wants = run.roster.filter((f) => f.want).map((f) => `<li>💬 <b>${esc(f.name)}</b> wants: ${esc(WANTS[f.want.id].goal(f.want))}${weeksLeft(f.want.until)}</li>`);
+  const wants = run.roster.filter((f) => f.want).map((f) => `<li>💬 <b>${esc(f.name)}</b> wants: ${esc(wantGoal(f.want))}${weeksLeft(f.want.until)}</li>`);
   const cause = (run.quests?.rebel ?? []).map((q) => `<li>⛓ <b>The cause</b> asks: ${esc(REBEL_QUESTS[q.id].goal(q))}${weeksLeft(q.until)}</li>`);
   const rising = risingProgress(run);
   const gallery = rising ? `<div class="gallery-readout" title="${esc(GALLERY_INTRO)}">👁 <b>Whispering Gallery</b> · the palace's suspicion <b>${rising.suspicion}</b>/100 <small>(watched at ${rising.watch}, informers at ${rising.informer}, a raid at ${rising.raid})</small>
@@ -469,6 +475,45 @@ function relicStrip(run) {
   if (!run.relics?.length) return '';
   const chips = run.relics.map((id) => `<span class="relic-chip rarity-${RELICS[id].rarity}" tabindex="0">🏺 ${esc(RELICS[id].name)}<small>${esc(RELICS[id].desc)}</small></span>`).join('');
   return `<div class="relics"><span class="label">Relics ${run.relics.length}/${FORTUNE.maxRelics}</span>${chips}</div>`;
+}
+
+// v8.0 Treasury & Credit: Imperial Favour Debt (Legate Cassian Vane & Censor Numerius Gallo) + Rival House Credit.
+function treasuryDebtPanel(run) {
+  const fDebt = run.favorDebt;
+  const hDebts = activeHouseDebts(run);
+  const writGold = favorWritGold(run);
+  const loanPrincipal = favorLoanPrincipal(run);
+  const loanOwed = Math.round(loanPrincipal * FAVOR_DEBT.loanVigourish);
+  const activeCount = (fDebt?.owed > 0 ? 1 : 0) + hDebts.length;
+  const houseRows = (run.houses ?? []).map((h) => {
+    const pen = debtPenaltyFor(h);
+    const principal = houseLoanPrincipal(run, h);
+    const owed = Math.round(principal * ((h.owed ?? 0) > 0 ? 1 : 1.2));
+    return `<div class="shop-row">
+      <div><span class="house-dot" style="background:${safeColor(h.color)}"></span><b>${esc(h.name)}</b> ${pen ? `<span class="chip small bad">${esc(pen.label)} · ${h.debt.owed}g owed</span>` : `<small>Advance +${principal}g (${owed}g owed)</small>`}<br>
+      <small>${pen ? `Their fighters gain +${pen.power} Power, +${pen.win / 1000}% win${pen.injure ? `, +${pen.injure / 1000}% injure` : ''}${pen.garnish ? ` and garnish ${Math.round(pen.garnish * 100)}% of win purses` : ''} against you.` : 'While indebted, their fighters fight harder against you (+3% win immediately, escalating each unpaid month).'}</small></div>
+      <div class="row tight">
+        ${pen
+          ? button(`Repay (${Math.min(run.gold, h.debt.owed)}g)`, 'pay-house-debt', { id: h.id }, payHouseDebtBlocker(run, h.id), 'btn small primary')
+          : button(`Borrow +${principal}g`, 'borrow-house', { id: h.id }, borrowHouseBlocker(run, h.id), 'btn small')}
+      </div>
+    </div>`;
+  }).join('');
+  return `<details class="more debt-panel" data-key="debt-panel"${activeCount ? ' open' : ''}>
+    <summary>⚖ Palatine &amp; Rival House Credit${activeCount ? ` <span class="chip small warn">${activeCount} active loan${activeCount === 1 ? '' : 's'}</span>` : ''}</summary>
+    <div class="debt-box">
+      <div class="label">Legate Cassian Vane &amp; Censor Numerius Gallo · Imperial Favour Credit</div>
+      ${fDebt?.owed > 0
+        ? `<div class="shop-row"><div><b>Active Palatine Loan: ${fDebt.owed} Gold owed</b> <small>(Month ${fDebt.monthsElapsed ?? 0}/${FAVOR_DEBT.termMonths}${fDebt.monthsElapsed > FAVOR_DEBT.termMonths ? ' · OVERDUE' : ''})</small><br><small>Censor Gallo deducts ${fDebt.monthsElapsed >= FAVOR_DEBT.termMonths ? -FAVOR_DEBT.overdueFavorInterest : -FAVOR_DEBT.monthlyFavorInterest} Favour at the start of each month until settled. Repaying on time restores +${FAVOR_DEBT.onTimeRepayFavor} Favour.</small></div>
+          ${button(`Repay (${Math.min(run.gold, fDebt.owed)}g)`, 'pay-favor-debt', {}, payFavorDebtBlocker(run), 'btn small primary')}</div>`
+        : `<div class="shop-row"><div><b>Palatine Loan</b> · +${loanPrincipal} Gold now (${loanOwed} Gold owed, ${FAVOR_DEBT.loanSealFavor} Favour seal fee)<br><small>${FAVOR_DEBT.termMonths}-month term (${FAVOR_DEBT.monthlyFavorInterest} Favour/mo; ${FAVOR_DEBT.overdueFavorInterest} Favour/mo and arrears if overdue).</small></div>
+          ${button(`Borrow +${loanPrincipal}g`, 'borrow-favor', { kind: 'loan' }, borrowFavorBlocker(run, 'loan'), 'btn small')}</div>`}
+      <div class="shop-row"><div><b>Sell a Palatine Writ</b> · +${writGold} Gold now for −${FAVOR_DEBT.writFavorCost} Imperial Favour<br><small>Immediate coin with no recurring debt (once a month, requires ${FAVOR_DEBT.writMinFavor}+ Favour).</small></div>
+        ${button(`Sell Writ (+${writGold}g)`, 'borrow-favor', { kind: 'writ' }, borrowFavorBlocker(run, 'writ'), 'btn small')}</div>
+      <div class="label">Rival House Credit (up to 2 active loans)</div>
+      ${houseRows}
+    </div>
+  </details>`;
 }
 
 function weekPanel(run) {
@@ -505,6 +550,7 @@ function weekPanel(run) {
         ${tributePaid(run) ? '<span class="good">✔ Tribute already paid for this year.</span> The next one is due next winter.' : `Tribute of <b>${tributeDue(run)} Gold</b> is due in ${toTribute} week${toTribute === 1 ? '' : 's'}. ${buttonWhy('Pay now', 'pay-tribute', {}, payTributeBlocker(run), 'btn small')}`}</p>
       ${questsPanel(run)}
       ${standingsTable(run)}
+      ${treasuryDebtPanel(run)}
       ${friendsOutside(run)}
       ${gazettePanel(run)}
       <h3 class="mini">House log</h3>
@@ -543,7 +589,9 @@ export function houseTag(run, f) {
   const left = (n) => `${n} month${n === 1 ? '' : 's'} left`;
   const grudge = h.feud ? ` · ⚔ feud: +1 Power against you, ${left(h.feud)}` : h.owed ? ` · owes you a life: −1 Power against you, ${left(h.owed)}` : '';
   const vengeance = h.vengeance ? ` · vengeance: +5% win chance for you, ${left(h.vengeance)}` : '';
-  return `Opponent · <span style="color:${safeColor(h.color)}">${esc(h.name)}</span>${grudge}${vengeance}`;
+  const pen = debtPenaltyFor(h);
+  const debtNote = pen ? ` · 📜 ${esc(pen.label)}: +${pen.power} Power, +${pen.win / 1000}% win (${h.debt.owed}g owed)` : '';
+  return `Opponent · <span style="color:${safeColor(h.color)}">${esc(h.name)}</span>${grudge}${vengeance}${debtNote}`;
 }
 
 // The rival houses and your place among them.
@@ -557,9 +605,11 @@ function friendsOutside(run) {
 export function standingsTable(run) {
   if (!run.houses) return '';
   const rows = standings(run).map((h, i) => {
+    const pen = !h.you ? debtPenaltyFor(h) : null;
     const notes = [h.feud ? `<span class="feud" title="You killed one of theirs: their fighters get +1 Power against you">⚔ feud · ${h.feud} month${h.feud === 1 ? '' : 's'} left</span>` : '',
       h.owed && !h.feud ? `<span class="vengeance" title="You spared one of theirs when the crowd wanted blood: their fighters get −1 Power against you">owes you a life · ${h.owed} month${h.owed === 1 ? '' : 's'} left</span>` : '',
-      h.vengeance ? `<span class="vengeance" title="They killed one of yours: your fighters get +5% win chance against them">vengeance · ${h.vengeance} month${h.vengeance === 1 ? '' : 's'} left</span>` : ''].join('');
+      h.vengeance ? `<span class="vengeance" title="They killed one of yours: your fighters get +5% win chance against them">vengeance · ${h.vengeance} month${h.vengeance === 1 ? '' : 's'} left</span>` : '',
+      pen ? `<span class="feud" title="${esc(pen.label)}: their fighters gain +${pen.power} Power and +${pen.win / 1000}% win against you until repaid">📜 ${h.debt.owed}g debt (${pen.months} mo)</span>` : ''].join('');
     return `<tr class="${h.you ? 'you' : ''}"><td>${i + 1}</td><td><span class="house-dot" style="background:${safeColor(h.color)}"></span>${esc(h.name)}${h.motto ? `<small title="${esc(h.motto)}"> ❝</small>` : ''} ${notes}</td><td>${esc(arenaName(h.tier).replace('The ', ''))}</td><td><b>${h.glory}</b></td></tr>`;
   }).join('');
   return `<h3 class="mini" title="Glory: a win is worth its arena tier (three times that for a Boss); rivals fight their own bouts every tournament week">The houses</h3>
@@ -645,7 +695,7 @@ function roomPanel(run, f) {
   }).join('');
   const room = revenant ? `<div class="label">A Revenant feels nothing: Morale settles at <b>${target}</b> whatever the room. Decor here does nothing for them, except what it does in a fight.</div>` : `<div class="label">Morale is heading to <b>${target}</b>: comfort ${comfort} vs expectations ${expects} (Renown ${f.renown})${f.mood ? `, mood ${f.mood.n > 0 ? '+' : ''}${f.mood.n} for ${f.mood.weeks} more week${f.mood.weeks === 1 ? '' : 's'}` : ''}.</div>
     <ul class="room-facts"><li>Quarters level ${maxLevel(run, 'quarters')}: +${MORALE.perQuartersLevel * maxLevel(run, 'quarters')} comfort; fits ${maxLevel(run, 'quarters')} of each decor item.</li>
-    <li>Decor in the room: ${decorCount(f)} item${decorCount(f) === 1 ? '' : 's'} (+${decorComfortOf(f)} comfort).</li>
+    <li>Decor in the room: ${decorCount(f)} item${decorCount(f) === 1 ? '' : 's'} (${decorComfortOf(f) >= 0 ? `+${decorComfortOf(f)}` : `−${-decorComfortOf(f)}`} comfort).</li>
     ${maxLevel(run, 'entertainment') ? `<li>Entertainment Room: +${MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment')} comfort.</li>` : ''}
     <li>Fame: Renown ${f.renown} sets expectations at ${expects}.</li></ul>`;
   // Two tabs: the room (Morale) and its decor. Gear has its own fold-out (gearPanel).
@@ -659,6 +709,37 @@ function roomPanel(run, f) {
 // Which tab each fighter's room panel shows (page state only; set by src/main.js).
 export const roomTabs = {};
 
+function retuneDrawer(run, f) {
+  if (f.kind === 'revenant') return '';
+  const lv = maxLevel(run, 'temple');
+  const price = retunePrice(run);
+  const priceText = price === 0 ? 'Free' : `${price} Gold`;
+  const why = retuneBlocker(run, f.id);
+  const def = f.coreId ? CORE_COMPANIONS?.[f.coreId] : null;
+  const allowedCls = (def?.allowedClasses && lv < 1) ? def.allowedClasses : Object.keys(CLASSES).filter((c) => !CLASSES[c].legacy || (run.setup?.classes ?? []).includes(c));
+  const clsBtns = allowedCls.filter((c) => c !== f.cls).map((c) => button(CLASSES[c].name, 'retune-class', { id: f.id, cls: c }, why, 'btn small')).join('');
+  const wpnBtns = f.cls === 'fighter'
+    ? Object.keys(WEAPONS).filter((w) => w !== f.weapon).map((w) => button(WEAPONS[w].name, 'retune-class', { id: f.id, cls: 'fighter', weapon: w }, why, 'btn small')).join('')
+    : '';
+  const traitBtns = (KINDS[f.kind]?.traits ?? []).filter((t) => t !== f.kindTrait).map((t) => button(TRAITS[t].name, 'retune-trait', { id: f.id, trait: t }, why, 'btn small')).join('');
+  const humorBtns = Object.keys(HUMORS).filter((h) => h !== f.humor).map((h) => button(HUMORS[h].name, 'retune-humor', { id: f.id, humor: h }, why, 'btn small')).join('');
+  const focusBtns = FORTUNE_RETUNE.focusTags.map((tag) => `<button class="seg${(f.perkFocus ?? 'any') === tag ? ' on' : ''}" data-action="perk-focus" data-id="${esc(f.id)}" data-focus="${tag}">${tag}</button>`).join('');
+  const respecBtns = (f.perks ?? []).map((p) => button(`Unbind ${PERKS[p].name} (${respecPrice(run)}g)`, 'respec-perk', { id: f.id, drop: p }, respecPerkBlocker(run, f.id, p), 'btn small')).join('');
+  return `<details class="more" data-key="shrine-${esc(f.id)}">
+    <summary>🏛 Shrine of Fortuna: Build &amp; discipline <small>(${priceText})</small></summary>
+    <div class="label">Class (${priceText})${lv < 1 ? ' <small>· build Temple of Fortuna for all classes &amp; 2g/Free fee</small>' : ''}</div>
+    <div class="row tight">${clsBtns}</div>
+    ${wpnBtns ? `<div class="label">Weapon Specialty (${priceText})</div><div class="row tight">${wpnBtns}</div>` : ''}
+    <div class="label">Kind Trait (${priceText})</div>
+    <div class="row tight">${traitBtns}</div>
+    <div class="label">Temperament (${priceText})</div>
+    <div class="row tight">${humorBtns}</div>
+    <div class="label">Level-up Perk Focus (Free)</div>
+    <div class="segs">${focusBtns}</div>
+    ${respecBtns ? `<div class="label">Respec a learned perk</div><div class="row tight">${respecBtns}</div>` : ''}
+  </details>`;
+}
+
 // Your fighters side by side, so you needn't scroll card to card (a phone playtester's note, 5.4.0). A name jumps to its card.
 function compareTable(run) {
   if (run.roster.length < 2) return '';
@@ -666,7 +747,7 @@ function compareTable(run) {
     const wounds = f.injuries.length ? `<span class="bad" title="${esc(f.injuries.map((i) => INJURY_BY_TAG[i.tag].name).join(', '))}">${f.injuries.length}</span>` : '–';
     const stressCls = f.stress >= STRESS.overtrained ? ' class="bad"' : '';
     const moraleCls = f.morale < MORALE.restless ? ' class="bad"' : f.morale >= MORALE.inspired ? ' class="good"' : '';
-    return `<tr><td><a href="#card-${esc(f.id)}">${esc(f.name)}</a>${f.want ? ` <span title="${esc(WANTS[f.want.id].goal(f.want))}">💬</span>` : ''}<small>Lv ${f.level ?? 1}</small></td><td>${effectivePower(f)}</td><td>${effectiveSpeed(f)}</td><td${stressCls}>${f.stress}</td><td${moraleCls}>${f.morale}</td><td>${wounds}</td><td>${f.trained}/${trainCap(run)}</td><td>${jobLabel(run, f.job)}</td></tr>`;
+    return `<tr><td><a href="#card-${esc(f.id)}">${esc(f.name)}</a>${f.want ? ` <span title="${esc(wantGoal(f.want))}">💬</span>` : ''}<small>Lv ${f.level ?? 1}</small></td><td>${effectivePower(f)}</td><td>${effectiveSpeed(f)}</td><td${stressCls}>${f.stress}</td><td${moraleCls}>${f.morale}</td><td>${wounds}</td><td>${f.trained}/${trainCap(run)}</td><td>${jobLabel(run, f.job)}</td></tr>`;
   }).join('');
   return `<details class="more compare" data-key="compare" open><summary>📊 Compare</summary>
     <div class="compare-wrap"><table class="compare-table"><thead><tr><th>Gladiator</th><th title="Power, with gear and Titles">Pow</th><th title="Speed, with gear">Spd</th><th title="Stress (50+: Overtrained)">Str</th><th title="Morale (under ${MORALE.restless}: won't train)">Mor</th><th title="Injuries">Inj</th><th title="Training weeks used of the Trainer cap">Trn</th><th>Job</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
@@ -687,14 +768,20 @@ function rosterPanel(run) {
     }).join('');
     const surgeon = f.injuries.map((inj, i) => button(`Surgeon: ${esc(INJURY_BY_TAG[inj.tag]?.name ?? inj.tag)} (${surgeonPrice(run)} Gold)`, 'surgeon', { id: f.id, index: i }, surgeonBlocker(run, f.id, i))).join('');
     const augments = f.injuries.map((inj, i) => (['maimed', 'blinded'].includes(inj.tag) ? buttonWhy(`Replace the ${inj.tag === 'maimed' ? 'Maimed limb' : 'Blinded eye'}: ${AUGMENTS[inj.tag === 'maimed' ? 'arm' : 'eye'].name}`, 'augment', { id: f.id, index: i }, augmentBlocker(run, f.id, i)) : '')).join('');
+    const queuedTalks = f.dialogue?.queue ?? [];
+    const speakBtn = f.kind !== 'revenant' || f.hollowedCompanion
+      ? `<div class="row tight talk-row"><button class="btn small${queuedTalks.length ? ' primary has-queue' : ''} talk-btn" data-action="talk-open" data-id="${fid}">💬 Speak${queuedTalks.length ? `: ${esc(queuedTalks[0].title ?? 'New word')} (${queuedTalks.length})` : ''}</button></div>`
+      : '';
     const actions = `${perkChooser(run, f)}<div class="actions">
+      ${speakBtn}
       <div class="label">This week's job <small>· trained ${f.trained}/${trainCap(run)}, ${trainCost(run)} Gold per training week${maxLevel(run, 'trainer') > trainCost(run) ? ` (${maxLevel(run, 'trainer')} from the Silver Coliseum)` : ''}</small></div>
       <div class="segs">${jobs}</div>
       ${spareGearPrompt(run, f)}
       ${f.injuries.length > 1 ? `<div class="treat"><span class="label">Medbay treats first:</span> <select class="treat-select" data-change="treat-first" data-id="${fid}" aria-label="Which injury the Medbay treats first">${f.injuries.map((inj, i) => `<option value="${i}" ${i === 0 ? 'selected' : ''}>${esc(INJURY_BY_TAG[inj.tag].name)} (${inj.weeksLeft} week${inj.weeksLeft === 1 ? '' : 's'})</option>`).join('')}</select></div>` : ''}
       ${noTrainReason && !shared.includes(noTrainReason) ? `<div class="why-not">Can't train this week: ${esc(noTrainReason)}</div>` : ''}
-      <details class="more" data-key="room-${fid}"><summary>Room &amp; decor${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) ? ' ✦' : ''}</summary>${rp.room}</details>
+      <details class="more" data-key="room-${fid}"><summary>Room &amp; decor${Object.keys(DECOR).some((k) => DECOR[k].helps(f)) || f.keepsake ? ' ✦' : ''}</summary>${rp.room}</details>
       <details class="more" data-key="gear-${fid}"><summary>Gear${f.gear.weapon || f.gear.armor ? ` <small>(${[f.gear.weapon, f.gear.armor].filter(Boolean).map((k) => esc(GEAR[k].name)).join(', ')})</small>` : run.inventory.gear.length ? ' <small>(spare gear in the storeroom)</small>' : ''}</summary>${rp.gear}</details>
+      ${retuneDrawer(run, f)}
       ${f.story?.length ? `<details class="more" data-key="story-${fid}"><summary>Story</summary><ul class="story">${f.story.map((e) => `<li><small>${esc(formatDate(e.week))}</small> ${esc(e.text)}</li>`).join('')}</ul></details>` : ''}
       <details class="more" data-key="surgeon-${fid}"><summary>Surgeon, cyborg surgery, ${(f.scars ?? []).some((x) => x.id === 'afeared') ? 'fear, ' : ''}rename, retire, release</summary>
         ${surgeon ? `<div class="label">Emergency Surgeon: heals instantly</div><div class="row">${surgeon}</div>` : '<small class="sub">No injuries.</small>'}
@@ -739,6 +826,21 @@ function oddsRow(run, f, tier, oddsFor) {
   </div>`;
 }
 
+function bracketLegOptions(run, f, tier, opp, isFinal) {
+  const base = matchOptions(run, f, tier, opp);
+  const oppHouse = run.arenas[tier] ? houseOf(run, opp) : null;
+  const debt = debtPenaltyFor(oppHouse);
+  const opts = {
+    ...base,
+    earlyRound: !isFinal,
+    grudge: !run.arenas[tier] ? 0 : oppHouse?.feud > 0 ? 1 : oppHouse?.owed > 0 ? -1 : 0,
+    vengeance: Boolean(run.arenas[tier]) && oppHouse?.vengeance > 0,
+  };
+  if (debt) opts.debt = debt;
+  else delete opts.debt;
+  return opts;
+}
+
 // Odds of winning every match left in a bracket: the product of each match's odds (injuries carried over aren't
 // counted, so it's optimistic).
 function bracketOdds(run, f, tier, oddsFor, pct) {
@@ -746,7 +848,7 @@ function bracketOdds(run, f, tier, oddsFor, pct) {
   if (!b) return '';
   const left = [...b.foes.slice(b.round), run.arenas[tier].opponent];
   if (left.length < 2) return '';
-  const p = left.reduce((acc, o) => acc * oddsFor(f, tier, o).win, 1);
+  const p = left.reduce((acc, o, i) => acc * oddsFor(f, tier, o, bracketLegOptions(run, f, tier, o, i === left.length - 1)).win, 1);
   const d = describeOdds({ win: p, injury: 0, death: 0 }, oracleLevel(run));
   return `<div class="o ${p >= 0.55 ? 'good' : p < 0.45 ? 'bad' : ''}" title="Chance to win all ${left.length} remaining matches, multiplied (injuries that carry over aren't counted, so it's optimistic)">Whole tournament: ${d.win}${pct(d.winPct)}</div>`;
 }
@@ -879,6 +981,42 @@ function loungePanel(run) {
 // A Market section that folds away; the fold state is remembered by data-key (playtest #7).
 const fold = (key, title, body, note = '') => `<details class="panel fold" data-key="market-${key}" open><summary><h2>${title}${note ? ` <small>${note}</small>` : ''}</h2></summary>${body}</details>`;
 
+function companionMarketFold(run) {
+  const pool = getCompanionPool(run);
+  if (!pool.length) return '';
+  const draftedCount = recruitedCompanionIds(run).length;
+  const freeLeft = Math.max(0, COMPANIONS.startPicks - draftedCount);
+  const cards = pool.map((f) => {
+    const def = CORE_COMPANIONS[f.coreId];
+    const kDef = LORE_KEEPSAKES[def?.keepsake];
+    const isFree = freeLeft > 0;
+    const price = companionPrice(run, f.coreId, { draft: isFree });
+    const why = companionBlocker(run, f.coreId, { draft: isFree });
+    const action = isFree ? 'draft-companion' : 'recruit-companion';
+    const label = isFree ? '✦ Draft Companion · Free (0 Gold)' : `Recruit Companion · ${price} Gold`;
+    const classQuick = (def?.allowedClasses ?? []).map((c) => button(
+      `${isFree ? 'Draft' : 'Recruit'} as ${CLASSES[c].name}`,
+      action,
+      { id: f.coreId, cls: c },
+      why,
+      `btn small${c === f.cls ? ' primary' : ''}`,
+    )).join('');
+    return fighterCard(f, {
+      stress: false,
+      tag: `✦ Core Companion · ${esc(f.handle ?? '')}${f.coreId === 'elf' && maxLevel(run, 'liaison') ? ' · Liaison discount' : ''}`,
+      notes: `<div class="record"><div class="label">Chronicle &amp; Keepsake</div><div>${esc(def?.bio ?? '')}</div>${kDef ? `<div class="sub">🏺 <b>${esc(kDef.name)}:</b> ${esc(kDef.desc)}</div>` : ''}</div>`,
+      actions: `<div class="actions">
+        ${buttonWhy(label, action, { id: f.coreId }, why, 'btn primary btn-block')}
+        <div class="row tight">${classQuick}</div>
+      </div>`,
+    });
+  }).join('');
+  const sub = freeLeft > 0
+    ? `<p class="sub"><b>Founding Companion Draft:</b> Pick up to <b>${freeLeft}</b> more Core Companion${freeLeft === 1 ? '' : 's'} for <b>0 Gold</b> to anchor your starting Ludus. Remaining companions stay pinned here all career to recruit for Gold.</p>`
+    : '<p class="sub">Core Companions never expire when the monthly Market refreshes. Recruit them whenever your quarters have room; their builds can be re-tuned at the Shrine or Temple of Fortuna.</p>';
+  return fold('companions', 'Core Companions of Palatina', `${sub}<div class="cards two">${cards}</div>`, freeLeft > 0 ? `${freeLeft} free pick${freeLeft === 1 ? '' : 's'}` : `${pool.length} waiting`);
+}
+
 export function marketTab(run) {
   const price = marketPrice(run);
   const recruitCard = (f, tag) => fighterCard(f, {
@@ -887,13 +1025,39 @@ export function marketTab(run) {
     actions: `<div class="actions"><button class="btn primary btn-block" data-action="recruit" data-id="${esc(f.id)}" ${recruitBlocker(run, f.id) ? `disabled title="${esc(recruitBlocker(run, f.id))}"` : ''}>Recruit · ${recruitPrice(run, f)} Gold</button></div>`,
   });
   const cards = run.market.map((f) => recruitCard(f)).join('');
+  // v8.0 Temple of Hades: true revival within 4 weeks (Lv 1) / 6 weeks (Lv 2).
+  const hadesLv = maxLevel(run, 'hades');
+  const hadesSouls = hadesLv ? hadesRaisable(run) : [];
+  const hollowedRevenants = hadesLv ? run.roster.filter((f) => f.kind === 'revenant' && f.hollowedCompanion) : [];
+  const rGold = restoreRevenantPrice(run);
+  const rFavor = HADES.restoreFavor ?? 4;
+  const hades = !hadesLv
+    ? '<p class="sub">Build the <b>Temple of Hades</b> in the Estate (available from House level 1 via the Subterranean Crypt Sanctum) to ransom fallen fighters back whole within 4 weeks of death—keeping their soul, personality, and dialogue.</p>'
+    : `<p class="sub">The priests of Hades hold the threshold open for <b>${hadesKeepWeeks(run)} weeks</b> after an arena death (base ${hadesPrice(run)} Gold; +50% tithe per prior revival). Unlike Vulcan's hollow brass forge, a fighter revived at Hades returns <b>whole, living, and themselves</b>${hadesLv >= 2 ? ' (uninjured and +15 Morale)' : ' (with a 2-week Concussion)'}. Take a Palatine or Rival House loan in the Ludus tab if your coffers are short before the window closes.</p>
+      ${hadesSouls.length ? `<div class="cards two">${hadesSouls.map((f) => {
+        const left = hadesKeepWeeks(run) - (run.week - f.diedWeek);
+        const returned = f.hadesReturned ?? 0;
+        const soulPrice = reviveHadesPrice(run, f);
+        const titheTag = returned > 0 ? ` · <span class="chip small warn">Revived ×${returned} · +${returned * 50}% tithe</span>` : '';
+        return fighterCard(f, {
+          stress: false,
+          tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · ${left} week${left === 1 ? '' : 's'} left at the threshold${titheTag}`,
+          actions: `<div class="actions">${buttonWhy(`⚱ Revive Whole · ${soulPrice} Gold`, 'revive-hades', { id: f.id }, reviveHadesBlocker(run, f.id), 'btn primary btn-block')}</div>`,
+        });
+      }).join('')}</div>` : '<p class="sub">No fallen souls await within the threshold window.</p>'}
+      ${hollowedRevenants.length ? `<div class="label">Rite of the Whole Soul (${rGold} Gold &amp; ${rFavor} Favour)</div><div class="cards two">${hollowedRevenants.map((f) => fighterCard(f, {
+        stress: false,
+        tag: 'Hollowed Revenant · restores living kind & dialogue',
+        actions: `<div class="actions">${buttonWhy(`⚱ Restore Whole · ${rGold}g, ${rFavor} Favour`, 'restore-revenant', { id: f.id }, restoreRevenantBlocker(run, f.id), 'btn primary btn-block')}</div>`,
+      })).join('')}</div>` : ''}`;
   // The Unnatural Temple of Vulcan (5.3.0): raise a fighter killed in the arena as a Revenant.
   const vulcanLv = maxLevel(run, 'vulcan');
   const bodies = vulcanLv ? raisable(run) : [];
+  const vulcanBonus = vulcanLv >= 2 ? (COMPANIONS.vulcanLv2BonusWeeks ?? COMPANIONS.vulcanBonusWeeks) : COMPANIONS.vulcanBonusWeeks;
   const vulcan = !vulcanLv
-    ? `<p class="sub">Build the Unnatural Temple of Vulcan${run.prestigeLevel >= 2 ? ' in the Estate' : ' (Prestige level 2)'} to raise fighters killed in the arena as Revenants.</p>`
-    : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death, for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p>
-      ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${effectAt('vulcan', vulcanLv) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary btn-block')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`;
+    ? `<p class="sub">Build the Unnatural Temple of Vulcan${run.prestigeLevel >= 2 ? ' in the Estate' : ' (House level 2)'} to raise fighters killed in the arena as Revenants.</p>`
+    : `<p class="sub">The priests can raise a fighter killed in the arena up to ${effectAt('vulcan', vulcanLv)} weeks after their death (up to ${effectAt('vulcan', vulcanLv) + vulcanBonus} weeks for Core Companions), for ${reanimatePrice(run)} Gold. A Revenant keeps their class, level, perks and titles${vulcanLv >= 2 ? '' : ', but comes back with 1 less Power'}. They feel nothing: their Morale settles at ${REANIMATE.morale}, never Inspired and never Discontented.</p>
+      ${bodies.length ? `<div class="cards two">${bodies.map((f) => fighterCard(f, { stress: false, tag: `Fell ${run.week - f.diedWeek} week${run.week - f.diedWeek === 1 ? '' : 's'} ago · keeps ${vulcanKeepWeeks(run, f) - (run.week - f.diedWeek)} more`, actions: `<div class="actions">${button(`Raise as a Revenant · ${reanimatePrice(run)} Gold`, 'reanimate', { id: f.id }, reanimateBlocker(run, f.id), 'btn primary btn-block')}</div>` })).join('')}</div>` : '<p class="sub">No bodies to raise. The Temple waits.</p>'}`;
   const offers = run.liaisonOffers ?? [];
   const liaison = offers.length
     ? `<div class="cards two">${offers.map((offer) => fighterCard(offer, { tag: offer.id === run.cousin?.f && !run.cousin.done ? `${offer.cousinOf ? `${esc(offer.cousinOf)}'s cousin` : 'The cousin from the gate'} · executed in ${run.cousin.until - run.week} week${run.cousin.until - run.week === 1 ? '' : 's'}` : `Liaison · ${esc(offer.origin)}`, notes: offer.record?.length ? `<div class="record"><div class="label">Prison record</div>${offer.record.map((c) => `<div>“${esc(c)}”</div>`).join('')}</div>` : '', actions: `<div class="actions">${button(`Recruit · ${offer.price} Gold`, 'recruit', { id: offer.id }, recruitBlocker(run, offer.id), 'btn primary btn-block')}</div>` })).join('')}</div>`
@@ -914,8 +1078,10 @@ export function marketTab(run) {
   return `
     <div class="grid market">
       <div class="stack">
+        ${companionMarketFold(run)}
         ${fold('fighters', 'Market', `<p class="sub">From ${price} Gold (seasoned fighters cost more). New fighters arrive at the start of every month, stronger and more experienced as you climb the tiers. Roster: ${run.roster.length}/${rosterCap(run)}.</p>
           <div class="cards two">${cards || '<div class="empty">Sold out until next month.</div>'}</div>`, circuitInfo(run).name)}
+        ${fold('hades', 'The Temple of Hades', hades)}
         ${fold('vulcan', 'The Unnatural Temple of Vulcan', vulcan)}
         ${fold('liaison', 'The Liaison', liaison)}
       </div>
@@ -951,14 +1117,14 @@ export function helpModal(tab = 'play') {
     <div class="segs help-tabs" role="tablist">${tabs}</div>
     <h2>How to play</h2>
     <ol>
-      <li><b>Recruit</b> gladiators in the Market.</li>
+      <li><b>Recruit</b> gladiators in the Market (and draft up to two Core Companions for free).</li>
       <li><b>Give each a weekly job</b>: train Power or Speed, rest, or heal in the Medbay. Training builds Stress; at 50+ Stress a fighter is overtrained.</li>
       <li><b>End the week.</b> The last week of each month is a tournament. Every arena you've reached holds a bout; send one fighter to each, after checking the odds.</li>
       <li><b>Fight</b> best-of-3 rounds. Between rounds you can capitulate to save a badly hurt fighter.</li>
       <li><b>Grow your fighters.</b> Matches give XP; each level lets you pick a perk. Wins bring Renown, and famous fighters want better rooms: keep their Morale up with decor, Quarters and entertainment.</li>
       <li><b>Equip them</b> from the storeroom: decor and gear belong to the house and pass on when a fighter falls.</li>
       <li><b>Climb</b> four arenas (Tournament → Boss in a season, or Tournament 1 → Tournament 2 → Boss on the Long Road), then win the Grand Tournament. Keep the Emperor's <b>Favour</b> above 0, and pay his tribute each winter. Opponents <b>scout</b> fighters who fight in your top arena two months running (+1 Power against them), so rotate your stars.</li>
-      <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings.</li>
+      <li><b>Grow the Estate</b>: Prestige levels add room plots and new buildings. Re-tune builds at the Shrine or Temple of Fortuna, and revive fallen fighters whole at the Temple of Hades within 4–6 weeks.</li>
       <li><b>Keep the barracks calm.</b> A <b>Mutinous</b> fighter (Morale under 20) refuses to fight and stirs <b>unrest</b>; at 8 the chains break. Rival houses also plant <b>moles</b>: when clues appear, investigate a fighter from their card. With a Liaison or the Whispering Gallery you can run a <b>covert op</b> on your next opponent before fight day (see the Estate).</li>
       <li><b>Take Fortune's card.</b> Each month offers three: a <b>relic</b> the house keeps (up to 6, and some count a perk's tag, like Brute or Swift), a boon, gear, a fighter, or a wager. Spin again for Gold if none suit.</li>
       <li><b>Every career counts.</b> Win or lose, a career earns <b>Legacy XP</b>, and each Legacy level unlocks something for the careers after it: relics, a patron, house colours, legends who return. Win a career to unlock <b>Heat</b>: harder rules, a higher score, more XP.</li>
@@ -976,7 +1142,7 @@ export function helpModal(tab = 'play') {
 // entries start open; the player's own opening and closing is remembered (data-key). Locked entries collapse into one line.
 const CODEX_INTRO = {
   basics: 'How the game works: start here.',
-  kind: 'The peoples of Battleworld, and what each is good at.',
+  kind: 'The peoples of Palatina, and what each is good at.',
   trait: 'Every fighter has one trait from their kind.',
   class: 'Fighting styles, each with an ability and a signature move.',
   weapon: 'What a Fighter-class gladiator\'s weapon of choice does.',
@@ -987,7 +1153,10 @@ const CODEX_INTRO = {
   gear: 'Weapons and armour from the Armourer and the arena.',
   rebellion: 'What you have learned of the rising.',
 };
-export function codexTab(codex, entries, sections, fresh, prog, isUnlocked, hasLore) {
+const LORE_STUDY_KEYS = new Set(['kind:android', 'kind:orc', 'kind:elf', 'rebellion:mark']);
+
+export function codexTab(codex, entries, sections, fresh, prog, isUnlocked, hasLore, loreRead = []) {
+  const noted = Array.isArray(loreRead) ? loreRead : [];
   const groups = Object.entries(sections).map(([cat, title]) => {
     const list = entries.filter((e) => e.cat === cat);
     const open = list.filter((e) => isUnlocked(codex, e));
@@ -998,7 +1167,13 @@ export function codexTab(codex, entries, sections, fresh, prog, isUnlocked, hasL
       const lore = e.lore
         ? loreUnlocked ? `<p class="lore">${esc(e.lore)}</p>` : '<p class="lore locked">🔒 Lore: defeat one in the arena to learn its story.</p>'
         : '';
-      return `<article class="entry${fresh.includes(e.key) ? ' fresh' : ''}" data-search="${esc(`${e.name} ${e.rules} ${loreUnlocked ? e.lore : ''}`.toLowerCase())}"><h4>${esc(e.name)}${fresh.includes(e.key) ? ' <span class="new">new</span>' : ''}</h4><p>${esc(e.rules)}</p>${lore}</article>`;
+      const studyEntryUnlocked = cat === 'rebellion' ? isUnlocked(codex, e) : loreUnlocked;
+      const canStudy = LORE_STUDY_KEYS.has(e.key) && studyEntryUnlocked;
+      const isNoted = noted.includes(e.key);
+      const studyRow = canStudy
+        ? `<div class="lore-study-row">${isNoted ? '<span class="lore-noted">✓ Studied for dialogue</span>' : `<button class="link small lore-study-btn" data-action="mark-lore" data-key="${esc(e.key)}">📖 Study lore (unlocks dialogue reply)</button>`}</div>`
+        : '';
+      return `<article class="entry${fresh.includes(e.key) ? ' fresh' : ''}" data-search="${esc(`${e.name} ${e.rules} ${loreUnlocked ? e.lore : ''}`.toLowerCase())}"><h4>${esc(e.name)}${fresh.includes(e.key) ? ' <span class="new">new</span>' : ''}</h4><p>${esc(e.rules)}</p>${lore}${studyRow}</article>`;
     }).join('');
     const locked = list.length - open.length;
     const count = cat === 'basics' ? '' : `<small>${open.length}/${list.length}</small>`;
@@ -1022,10 +1197,10 @@ export { XP };
 // step's tab already? If not, a button takes them there.
 const TAB_NAMES = { ludus: 'Ludus', estate: 'Estate', market: 'Market', codex: 'Codex' };
 // One line of the steward's news, as a notice.
-export const stewardNote = (text) => `<div class="tip steward-note" role="status">${npcPortrait('steward', 36)}<div><span class="guide-name">Your steward:</span> ${esc(text)}</div></div>`;
+export const stewardNote = (text) => `<div class="tip steward-note" role="status">${npcPortrait('steward', 36)}<div><span class="guide-name">Galen-VII:</span> ${esc(text)}</div></div>`;
 
 export function guideBar(step, onTab, run = null) {
-  return `<div class="guide" role="status">${npcPortrait('steward', 44)}<div class="guide-body"><div class="guide-name">Your steward</div><div>${stepText(step, run)}</div></div>
+  return `<div class="guide" role="status">${npcPortrait('steward', 44)}<div class="guide-body"><div class="guide-name">Galen-VII</div><div>${stepText(step, run)}</div></div>
     <div class="guide-actions">${onTab ? '' : `<button class="btn small primary" data-action="tab" data-tab="${step.tab}">Go to the ${TAB_NAMES[step.tab]}</button>`}<button class="link small" data-action="tutorial-skip">Skip tutorial</button></div></div>`;
 }
 
@@ -1171,3 +1346,176 @@ export const otherTabBanner = () => `<div class="banner save-failed" role="alert
 // 7.7: an event's or Fortune's result as a dismissible notice (not a pop-up to click through).
 export const resultNotice = ({ title, lines }, index = 0) => `<div class="banner result-note" role="status"><button class="close" data-action="dismiss-result" data-index="${index}" aria-label="Dismiss">×</button>
   <b>${esc(title)}</b><ul class="result-lines">${lines.map((l) => `<li class="${esc(['good', 'bad', 'warn', 'event'].includes(l.tone) ? l.tone : '')}">${esc(l.text)}</li>`).join('')}</ul></div>`;
+
+// ---------- v8.0 Interactive Branching Companion & Staff Dialogue Modal (talkModal) ----------
+
+const signedDelta = (n) => `${n > 0 ? '+' : '−'}${Math.abs(n)}`;
+
+export function isStageNarrationReply(text, actorName = '') {
+  const s = String(text ?? '').trim();
+  if (!s) return false;
+  if (/^["«“']/.test(s)) return false;
+  if (/^\[.*\]/.test(s)) return true;
+  const nonAux = /^(?!(?:is|was|were|are|will|won't|can|can't|has|had|would|could|should)\b)[a-z]/;
+  if (actorName && s.startsWith(`${actorName} `) && nonAux.test(s.slice(actorName.length + 1))) return true;
+  if (/^(?:Unit-non-machine-91|Unit-91|Nona|Tarek|Varok|Solace-4|Vaelen|Galen-VII|Drillmaster Kaeso|Kaeso|Physician Lyra|Lyra)\s+(?!(?:is|was|were|are|will|won't|can|can't|has|had|would|could|should)\b)[a-z]/.test(s)) return true;
+  if (/^(?:He|She|They|His|Her|Their)\s+(?!(?:is|was|were|are|will|won't|can|can't|has|had|would|could|should)\b)[a-z]/.test(s)) return true;
+  if (/^(?:The old drillmaster|The crimson flicker|From the doorway|For the first evening)\b/.test(s)) return true;
+  return false;
+}
+
+function resolveReplySpeakerName(replySpeaker, fallbackName) {
+  if (!replySpeaker || replySpeaker === 'narrator') return '';
+  if (replySpeaker === 'fighter') return fallbackName;
+  if (Object.hasOwn(SPEAKERS, replySpeaker)) return SPEAKERS[replySpeaker].name || fallbackName;
+  return String(replySpeaker);
+}
+
+function formatChoiceEffects(eff = {}) {
+  const tags = [];
+  if (typeof eff.morale === 'number' && eff.morale !== 0) tags.push(`${signedDelta(eff.morale)} Morale`);
+  if (typeof eff.stress === 'number' && eff.stress !== 0) tags.push(`${signedDelta(eff.stress)} Stress`);
+  if (typeof eff.trust === 'number' && eff.trust !== 0) tags.push(`${signedDelta(eff.trust)} Trust`);
+  if (typeof eff.xp === 'number' && eff.xp !== 0) tags.push(`${signedDelta(eff.xp)} XP`);
+  if (typeof eff.renown === 'number' && eff.renown !== 0) tags.push(`${signedDelta(eff.renown)} Renown`);
+  if (typeof eff.gold === 'number' && eff.gold !== 0) tags.push(`${signedDelta(eff.gold)} Gold`);
+  if (typeof eff.favor === 'number' && eff.favor !== 0) tags.push(`${signedDelta(eff.favor)} Favour`);
+  if (typeof eff.plotTrust === 'number' && eff.plotTrust !== 0) tags.push(`${signedDelta(eff.plotTrust)} Cause Trust`);
+  if (typeof eff.suspicion === 'number' && eff.suspicion !== 0) tags.push(`${signedDelta(eff.suspicion)} Suspicion`);
+  if (typeof eff.staffTraineeMorale === 'number' && eff.staffTraineeMorale !== 0) tags.push(`Trainees ${signedDelta(eff.staffTraineeMorale)} Morale`);
+  if (typeof eff.staffTraineeStress === 'number' && eff.staffTraineeStress !== 0) tags.push(`Trainees ${signedDelta(eff.staffTraineeStress)} Stress`);
+  if (typeof eff.staffMedbayMorale === 'number' && eff.staffMedbayMorale !== 0) tags.push(`Patients ${signedDelta(eff.staffMedbayMorale)} Morale`);
+  if (typeof eff.staffMedbayStress === 'number' && eff.staffMedbayStress !== 0) tags.push(`Patients ${signedDelta(eff.staffMedbayStress)} Stress`);
+  if (typeof eff.staffRosterMorale === 'number' && eff.staffRosterMorale !== 0) tags.push(`Roster ${signedDelta(eff.staffRosterMorale)} Morale`);
+  if (eff.byCoreId && typeof eff.byCoreId === 'object') {
+    for (const [cid, delta] of Object.entries(eff.byCoreId)) {
+      if (!delta || typeof delta !== 'object') continue;
+      const cName = CORE_COMPANIONS?.[cid]?.name ?? cid;
+      const parts = [];
+      if (typeof delta.morale === 'number' && delta.morale !== 0) parts.push(`${signedDelta(delta.morale)} Morale`);
+      if (typeof delta.stress === 'number' && delta.stress !== 0) parts.push(`${signedDelta(delta.stress)} Stress`);
+      if (typeof delta.trust === 'number' && delta.trust !== 0) parts.push(`${signedDelta(delta.trust)} Trust`);
+      if (parts.length) tags.push(`${cName}: ${parts.join(' ')}`);
+    }
+  }
+  if (eff.acceptWant) tags.push('Accepts request');
+  if (eff.refuseWant) tags.push('Declines request');
+  const order = eff.summonsOrder ?? eff.summonsOrderHint;
+  if (order) {
+    const orderLabel = order === 'yield' ? 'Order: Yield' : order === 'death' ? 'Order: Fight to the death' : `Order: ${order}`;
+    tags.push(orderLabel);
+  }
+  const dismissWks = typeof eff.dismissTrainerWeeks === 'number' && eff.dismissTrainerWeeks > 0
+    ? eff.dismissTrainerWeeks
+    : (typeof eff.dismissTrainer === 'number' && eff.dismissTrainer > 0 ? eff.dismissTrainer : (eff.dismissTrainer ? 4 : 0));
+  if (dismissWks > 0) tags.push(`⚠ Trainer away ${dismissWks} wk`);
+  if (eff.setSpyFound || eff.turnTrainer || eff.loreFlag === 'trainer_turned_ally') tags.push('Clears informer threat');
+  if (eff.loreFlag === 'orc_barracks_truce') tags.push('Reconciles Barracks Truce');
+  if (eff.endPlot) tags.push('⚠ Ends the rebel rising');
+  return tags.length ? ` <small class="choice-eff">(${esc(tags.join(', '))})</small>` : '';
+}
+
+export function talkModal(run, talkUi = null, sceneOverride = null) {
+  if (!run || !talkUi) return '';
+  const fighterId = typeof talkUi === 'string' ? talkUi : (talkUi.fighterId ?? talkUi.id ?? null);
+  const staffActor = isStaffId(fighterId) ? getStaffActor(fighterId) : null;
+  const f = staffActor
+    ? staffActor
+    : ((typeof talkUi === 'object' && talkUi.kind)
+      ? talkUi
+      : (run.roster?.find((x) => x.id === fighterId || x.coreId === fighterId) ?? null));
+  if (!f) return '';
+  const response = typeof talkUi === 'object' ? talkUi.response : null;
+  const trainerDismissed = Boolean(
+    staffActor?.staffKey === 'trainer'
+    && (run.week ?? 0) < (run.staffDialogue?.trainer?.dismissedUntilWeek ?? 0)
+  );
+  if (trainerDismissed && !response) return '';
+  // Pure view: never mutates run or f.dialogue.queue while rendering.
+  const requestedScene = sceneOverride ?? (typeof talkUi === 'object' ? talkUi.sceneId ?? null : null);
+  const snap = typeof talkUi === 'object' ? talkUi.treeSnapshot : null;
+  const liveTree = resolveDialogueTree(run, f, requestedScene);
+  const tree = snap ?? liveTree;
+  const pTrait = !staffActor && f.personalTrait ? PERSONAL_TRAITS?.[f.personalTrait] : null;
+  const keepsake = !staffActor && f.keepsake ? LORE_KEEPSAKES?.[f.keepsake] : null;
+  const trust = staffActor ? (run.staffDialogue?.[staffActor.staffKey]?.trust ?? 0) : (f.dialogue?.trust ?? 0);
+
+  const choices = tree.choices ?? [];
+  const firstUnlockedIdx = choices.findIndex((c) => !c.locked);
+  const focusFirstTopic = !response && firstUnlockedIdx < 0;
+
+  const topicPills = (liveTree.topics ?? []).map((t, idx) => `<button class="chip talk-topic${t.scene === tree.id ? ' on' : ''}${t.queued ? ' queued' : ''}" data-action="talk-topic" data-id="${esc(f.id)}" data-scene="${esc(t.scene)}"${focusFirstTopic && idx === 0 ? ' autofocus' : ''}>${esc(t.label)}</button>`).join('');
+
+  const beatLines = (tree.beats ?? []).map((b) => {
+    const isNarrator = b.speaker === 'narrator';
+    const whoName = isNarrator ? '' : (b.speakerName || SPEAKERS[b.speaker]?.name || f.name);
+    return `<div class="talk-beat ${esc(b.speaker)}">
+      ${whoName ? `<div class="dialogue-who">${esc(whoName)}</div>` : ''}
+      <p class="dialogue-text">${esc(b.text)}</p>
+    </div>`;
+  }).join('');
+
+  let replyBlock = '';
+  if (response) {
+    const rawSpeaker = response.replySpeaker ?? response.speaker ?? null;
+    const isDefaultActor = !rawSpeaker || rawSpeaker === 'fighter' || rawSpeaker === f.coreId || rawSpeaker === f.staffKey || rawSpeaker === f.name;
+    const isNarratorReply = rawSpeaker === 'narrator' || (isDefaultActor && isStageNarrationReply(response.text, f.name));
+    const replyWhoName = isNarratorReply
+      ? ''
+      : (rawSpeaker ? resolveReplySpeakerName(rawSpeaker, response.speakerName || f.name) : (response.speakerName || f.name));
+    const replyActions = trainerDismissed
+      ? '<button class="btn primary talk-continue" data-action="talk-close" autofocus>Return to the Ludus</button>'
+      : `<button class="btn primary talk-continue" data-action="talk-topic" data-id="${esc(f.id)}" data-scene="" autofocus>Continue speaking</button>
+          <button class="btn" data-action="talk-close">Return to the Ludus</button>`;
+    replyBlock = `<div class="talk-response${isNarratorReply ? ' narrator' : ''}">
+        ${replyWhoName ? `<div class="dialogue-who">${esc(replyWhoName)}</div>` : ''}
+        <p class="dialogue-text">${esc(response.text)}</p>
+        ${response.effectsHtml ? `<div class="sub">${response.effectsHtml}</div>` : ''}
+        <div class="row">
+          ${replyActions}
+        </div>
+      </div>`;
+  } else {
+    replyBlock = `<div class="dialogue-replies talk-choices">
+        ${choices.map((c, idx) => {
+          if (c.locked) {
+            const reason = c.lockReason || 'Study Codex to unlock';
+            return `<button class="btn talk-choice talk-choice-btn talk-choice--locked" disabled title="${esc(reason)}">${esc(c.label)} <small class="choice-lock">🔒 ${esc(reason)}</small></button>`;
+          }
+          const auto = idx === firstUnlockedIdx ? ' autofocus' : '';
+          return `<button class="btn talk-choice talk-choice-btn" data-action="talk-choice" data-id="${esc(f.id)}" data-scene="${esc(tree.id)}" data-choice="${esc(c.id)}"${auto}>${esc(c.label)}${formatChoiceEffects(c.effects)}</button>`;
+        }).join('')}
+      </div>`;
+  }
+
+  const faceHtml = staffActor ? npcPortrait(staffActor.speaker, 72) : portrait(f, 72);
+  const staffLocation = staffActor
+    ? (staffActor.location || (staffActor.staffKey === 'trainer' ? 'Trainer Room' : staffActor.staffKey === 'doctor' ? 'Medbay' : "Steward's Quarters"))
+    : '';
+  const subMeta = staffActor
+    ? `${esc(staffActor.role)} · ${esc(staffLocation)} · Trust <b>${trust >= 0 ? `+${trust}` : trust}</b>`
+    : `${esc(KINDS[f.kind]?.name ?? f.kind)} · ${esc(CLASSES[f.cls]?.name ?? f.cls)} · Morale <b>${f.morale}</b> · Stress <b>${f.stress}</b> · Trust <b>${trust >= 0 ? `+${trust}` : trust}</b>`;
+
+  return `<div class="modal dialogue talk-modal" role="dialog" aria-modal="true" aria-label="Conversation with ${esc(f.name)}">
+    <div class="modal-body dialogue-box talk-box">
+      <button class="close" data-action="talk-close" aria-label="Close">×</button>
+      <div class="talk-head">
+        <div class="dialogue-face">${faceHtml}</div>
+        <div class="talk-meta">
+          <div class="dialogue-who">${esc(f.name)}${f.handle ? ` <small>· ${esc(f.handle)}</small>` : ''}</div>
+          <div class="sub">${subMeta}</div>
+          <div class="chips">
+            ${staffActor ? '<span class="chip personal-trait">House Staff</span>' : ''}
+            ${pTrait ? `<span class="chip trait personal-trait">${esc(pTrait.name)}</span>` : ''}
+            ${keepsake ? `<span class="chip keepsake">🏺 ${esc(keepsake.name)}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      ${topicPills ? `<div class="talk-topics" aria-label="Conversation topics">${topicPills}</div>` : ''}
+      <div class="talk-scene-title">${tree.isQueued ? '<span class="new"> Milestone</span> ' : ''}<b>${esc(tree.title)}</b></div>
+      <div class="talk-transcript">${beatLines}</div>
+      ${replyBlock}
+    </div>
+  </div>`;
+}
+

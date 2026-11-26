@@ -3,7 +3,7 @@
 import { createRng, deriveSeed, int, next, pick } from '../rng.js';
 import {
   ECONOMY, STRESS, CIRCUITS, GRAND, STAGES, PERKS, GEAR, HOUSES, BRACKET, NEMESIS, SHORT, DEMAND, DEMANDS,
-  BOND, LOUNGE, RIVAL, SUMMONS, DECREES,
+  BOND, LOUNGE, RIVAL, SUMMONS, DECREES, FAVOR_DEBT, HOUSE_DEBT,
 } from '../data.js';
 import { relicFight } from '../fortune.js';
 import { coupBonus } from '../plot.js';
@@ -15,7 +15,7 @@ import { maxLevel, effectAt, oracleLevel } from '../ludus.js';
 import {
   GRAND_TIER, DEBUFF_IDS, COMBAT_PERKS, createFighter, newId, remember, takenNames, log, chronicle,
   monthOf, talk, assertOk, effectivePower, unlockedTiers, arenaName, isShort, hasDecree, lionsPower,
-  hasPolicy, idleBlocker, nextStage, changeFavor, gainXp,
+  hasPolicy, idleBlocker, nextStage, changeFavor, gainXp, queueMilestone,
 } from './helpers.js';
 import { plotActive, changeSuspicion } from './plotEngine.js';
 
@@ -50,12 +50,28 @@ export function standings(run) {
   return rows.sort((a, b) => b.glory - a.glory || (a.you ? -1 : 1));
 }
 
+export function debtPenaltyFor(house) {
+  if (!house?.debt || !(house.debt.owed > 0)) return null;
+  const months = Math.max(0, house.debt.monthsUnpaid ?? 0);
+  const idx = Math.min(HOUSE_DEBT.tiers.length - 1, months);
+  return { ...HOUSE_DEBT.tiers[idx], months, owed: house.debt.owed, houseName: house.name };
+}
+
 export function rivalsCompete(run) {
   const r = run.rng.houses;
   const arch = archrival(run);
   for (const h of run.houses) {
     if (next(r) < 0.5) h.glory += HOUSES.glory.win * h.tier;
     if (h === arch) h.glory += RIVAL.monthGlory * h.tier;
+    if (h.debt && h.debt.owed > 0 && run.week - (h.debt.sinceWeek ?? 0) >= 4) {
+      h.debt.monthsUnpaid = (h.debt.monthsUnpaid ?? 0) + 1;
+      const cap = Math.round(h.debt.principal * HOUSE_DEBT.maxOwedMultiplier);
+      const interest = HOUSE_DEBT.monthlyInterestPerTier * Math.min(run.topTier, CIRCUITS.length);
+      h.debt.owed = Math.min(cap, h.debt.owed + interest);
+      h.glory += HOUSE_DEBT.monthlyGlory;
+      const pen = debtPenaltyFor(h);
+      log(run, `Unpaid debt to ${h.name} (${h.debt.monthsUnpaid} mo, ${h.debt.owed} Gold owed): their fighters now get +${pen.power} Power and +${pen.win / 1000}% win chance against you.`, 'warn');
+    }
     h.tier = h === arch ? Math.max(houseTier(h), Math.min(run.topTier, CIRCUITS.length)) : houseTier(h);
     if (h.since === run.week - 1) continue;
     h.feud = Math.max(0, h.feud - 1);
@@ -273,6 +289,8 @@ export function fightPowers(run, f, tier = run.topTier) {
 }
 
 export function matchOptions(run, f, tier = run.topTier) {
+  const oppHouse = run.arenas[tier] ? houseOf(run, opponentFor(run, tier)) : null;
+  const debt = debtPenaltyFor(oppHouse);
   return {
     debuff: boutFor(run, tier).debuff,
     boss: boutFor(run, tier).boss,
@@ -281,11 +299,12 @@ export function matchOptions(run, f, tier = run.topTier) {
     overtrained: f.stress >= STRESS.overtrained,
     scouted: tier === run.topTier ? Math.min(ECONOMY.scoutedMax, f.topStreak ?? 0) : 0,
     challenger: tier === run.topTier && tier >= ECONOMY.challengerFromTier ? Math.min(ECONOMY.challengerMax, Math.floor((f.renown ?? 0) / ECONOMY.challengerRenown)) : 0,
-    grudge: !run.arenas[tier] ? 0 : houseOf(run, opponentFor(run, tier))?.feud > 0 ? 1 : houseOf(run, opponentFor(run, tier))?.owed > 0 ? -1 : 0,
-    vengeance: Boolean(run.arenas[tier]) && houseOf(run, opponentFor(run, tier))?.vengeance > 0,
+    grudge: !run.arenas[tier] ? 0 : oppHouse?.feud > 0 ? 1 : oppHouse?.owed > 0 ? -1 : 0,
+    vengeance: Boolean(run.arenas[tier]) && oppHouse?.vengeance > 0,
     rebels: tier === GRAND_TIER && run.plot?.coup && !run.plot.ended && f.id === run.plot.champion ? coupBonus(run) : 0,
     relics: relicFight(run, f, { boss: boutFor(run, tier).boss }),
     oracle: oracleLevel(run),
+    ...(debt ? { debt } : {}),
   };
 }
 
@@ -433,6 +452,9 @@ export function formBond(run, a, b, how = 'fightDay') {
   b.bond = { id: a.id, name: a.name, since: run.week };
   for (const [x, y] of [[a, b], [b, a]]) chronicle(run, x, `Bonded with ${y.name}.`);
   log(run, `${a.name} and ${b.name} have become fast friends: each is happier while the other is in the house.`, 'good');
+  const pairKey = (a.coreId && b.coreId) ? [a.coreId, b.coreId].sort().join('_') : (a.coreId || b.coreId || 'ally');
+  queueMilestone(run, a, { id: `bond_formed_${pairKey}`, priority: 68, ctx: { mateId: b.id, mateName: b.name, mateCoreId: b.coreId ?? null, partnerName: b.name, partnerCoreId: b.coreId ?? null, pairKey, how } });
+  queueMilestone(run, b, { id: `bond_formed_${pairKey}`, priority: 68, ctx: { mateId: a.id, mateName: a.name, mateCoreId: a.coreId ?? null, partnerName: a.name, partnerCoreId: a.coreId ?? null, pairKey, how } });
   const v = (a.id + b.id).split('').reduce((n, ch) => n + ch.charCodeAt(0), 0);
   const [first, second] = BOND_LINES.pairs[v % BOND_LINES.pairs.length];
   talk(run, `bond-${a.id}-${b.id}`, [
@@ -460,6 +482,9 @@ export function tendBonds(run) {
     }
     const dead = run.fallen.some((x) => x.id === f.bond.id);
     if (dead) {
+      const deadFighter = run.fallen.find((x) => x.id === f.bond.id);
+      const pairKey = (f.coreId && deadFighter?.coreId) ? [f.coreId, deadFighter.coreId].sort().join('_') : (f.coreId || 'ally');
+      queueMilestone(run, f, { id: `bond_grief_${pairKey}`, priority: 100, ctx: { mateId: f.bond.id, mateName: f.bond.name, mateCoreId: deadFighter?.coreId ?? null, partnerName: f.bond.name, partnerCoreId: deadFighter?.coreId ?? null, pairKey } });
       f.mood = { n: (f.mood?.n ?? 0) + BOND.grief, weeks: MOOD_WEEKS };
       chronicle(run, f, `Grieved for ${f.bond.name}.`);
       log(run, `${f.name} grieves for ${f.bond.name}.`, 'bad');
@@ -484,7 +509,8 @@ export function hostBlocker(run) {
 export function host(run) {
   assertOk(hostBlocker(run));
   const star = [...run.roster].sort((a, b) => b.renown - a.renown)[0];
-  const gain = Math.min(LOUNGE.maxInfluence, 1 + Math.floor((star?.renown ?? 0) / LOUNGE.renownPer));
+  const fourthSonBonus = run.roster.some((f) => f.keepsake === 'fourthSonHonour') ? 1 : 0;
+  const gain = Math.min(LOUNGE.maxInfluence + fourthSonBonus, 1 + Math.floor((star?.renown ?? 0) / LOUNGE.renownPer) + fourthSonBonus);
   run.gold -= hostPrice(run);
   run.influence = (run.influence ?? 0) + gain;
   run.hostedMonth = monthOf(run.week);
@@ -551,3 +577,167 @@ export function judgeDemand(run) {
   run.demandResult = { id: run.demand.id, issued: run.demand.week, met, gold: met ? DEMAND.goldPerTier * tier : 0, favor: met ? DEMAND.favor : DEMAND.missFavor };
   run.demand = null;
 }
+
+// ---------- v8.0 Favour Debt (Legate Cassian Vane & Censor Numerius Gallo) & Rival House Debt ----------
+
+export const favorWritGold = (run) => FAVOR_DEBT.writGoldBase + FAVOR_DEBT.writGoldPerTier * Math.min(run.topTier, CIRCUITS.length);
+export const favorLoanPrincipal = (run) => FAVOR_DEBT.loanBase + FAVOR_DEBT.loanPerTier * Math.min(run.topTier, CIRCUITS.length);
+
+export function borrowFavorBlocker(run, kind = 'loan') {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!['writ', 'loan'].includes(kind)) return 'Choose a Palatine Writ or a Palatine Loan.';
+  if (kind === 'writ') {
+    if (run.writMonth === monthOf(run.week)) return 'You have already sold a Writ of Favour this month.';
+    if (run.favor <= FAVOR_DEBT.writFavorCost || run.favor < FAVOR_DEBT.writMinFavor) {
+      return `Needs at least ${Math.max(FAVOR_DEBT.writMinFavor, FAVOR_DEBT.writFavorCost + 1)} Imperial Favour to sell a Writ.`;
+    }
+    return null;
+  }
+  if (run.favorDebt?.owed > 0) return 'Repay your existing Palatine loan first.';
+  if (run.favor < FAVOR_DEBT.loanMinFavor) return `Needs at least ${FAVOR_DEBT.loanMinFavor} Imperial Favour for Legate Vane to underwrite a loan.`;
+  return null;
+}
+
+export function borrowFavor(run, kind = 'loan') {
+  assertOk(borrowFavorBlocker(run, kind));
+  if (kind === 'writ') {
+    const gold = favorWritGold(run);
+    run.gold += gold;
+    run.writMonth = monthOf(run.week);
+    changeFavor(run, -FAVOR_DEBT.writFavorCost, 'sold a Writ of Favour to Legate Vane');
+    log(run, `Legate Cassian Vane countersigns your Writ: +${gold} Gold for −${FAVOR_DEBT.writFavorCost} Imperial Favour.`, 'warn');
+    return { kind: 'writ', gold, favor: -FAVOR_DEBT.writFavorCost };
+  }
+  const principal = favorLoanPrincipal(run);
+  const owed = Math.round(principal * FAVOR_DEBT.loanVigourish);
+  run.gold += principal;
+  run.favorDebt = { principal, owed, sinceWeek: run.week, monthsElapsed: 0 };
+  changeFavor(run, FAVOR_DEBT.loanSealFavor, 'seal fee on a Palatine loan from Legate Vane');
+  log(run, `Legate Cassian Vane advances you +${principal} Gold from the Palatine chest (${owed} Gold owed; Censor Gallo collects ${-FAVOR_DEBT.monthlyFavorInterest} Favour/month until repaid).`, 'warn');
+  return run.favorDebt;
+}
+
+export function payFavorDebtBlocker(run, amount = null) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!run.favorDebt || !(run.favorDebt.owed > 0)) return 'You owe no Palatine debt.';
+  if ((amount == null || amount === '') && run.gold <= 0) return `Needs ${run.favorDebt.owed} Gold.`;
+  const raw = amount == null || amount === '' ? Math.min(run.gold, run.favorDebt.owed) : Number(amount);
+  if (!Number.isFinite(raw) || !Number.isInteger(raw) || raw < 1) return 'Enter a whole Gold amount to repay.';
+  const pay = Math.min(raw, run.favorDebt.owed);
+  if (run.gold < pay) return `Needs ${pay} Gold.`;
+  return null;
+}
+
+export function payFavorDebt(run, amount = null) {
+  assertOk(payFavorDebtBlocker(run, amount));
+  const d = run.favorDebt;
+  const raw = amount == null || amount === '' ? Math.min(run.gold, d.owed) : Number(amount);
+  const pay = Math.min(raw, d.owed);
+  run.gold -= pay;
+  d.owed -= pay;
+  if (d.owed <= 0) {
+    const onTime = (d.monthsElapsed ?? 0) <= FAVOR_DEBT.termMonths;
+    delete run.favorDebt;
+    if (onTime) changeFavor(run, FAVOR_DEBT.onTimeRepayFavor, 'settled the Palatine loan on time');
+    log(run, `You pay ${pay} Gold to Censor Gallo and clear your Palatine loan in full${onTime ? ` (+${FAVOR_DEBT.onTimeRepayFavor} Favour)` : ''}.`, 'good');
+  } else {
+    log(run, `You pay ${pay} Gold toward your Palatine loan (${d.owed} Gold still owed).`, 'good');
+  }
+  return pay;
+}
+
+export function favorDebtMonth(run) {
+  const d = run.favorDebt;
+  if (!d || !(d.owed > 0)) return;
+  if (run.week - (d.sinceWeek ?? 0) < 4) return;
+  d.monthsElapsed = (d.monthsElapsed ?? 0) + 1;
+  if (d.monthsElapsed >= FAVOR_DEBT.termMonths && run.gold >= d.owed) {
+    const paid = d.owed;
+    const onTime = d.monthsElapsed <= FAVOR_DEBT.termMonths;
+    run.gold -= paid;
+    delete run.favorDebt;
+    if (onTime) changeFavor(run, FAVOR_DEBT.onTimeRepayFavor, 'settled the Palatine loan on time');
+    log(run, `Censor Numerius Gallo collects ${paid} Gold from your strongbox and clears your Palatine loan in full${onTime ? ` (+${FAVOR_DEBT.onTimeRepayFavor} Favour)` : ''}.`, 'good');
+    return;
+  }
+  const tier = Math.min(run.topTier, CIRCUITS.length);
+  const overdue = d.monthsElapsed > FAVOR_DEBT.termMonths;
+  const rawFavorCost = overdue ? FAVOR_DEBT.overdueFavorInterest : FAVOR_DEBT.monthlyFavorInterest;
+  const safeFavorCost = (run.favor + rawFavorCost <= 0) ? -Math.max(0, run.favor - 1) : rawFavorCost;
+  if (safeFavorCost !== 0) {
+    changeFavor(run, safeFavorCost, overdue ? 'overdue Palatine debt audit by Censor Gallo' : 'monthly interest on Palatine loan');
+  }
+  if (overdue) {
+    const cap = Math.ceil((d.principal ?? d.owed) * (FAVOR_DEBT.maxOwedMultiplier ?? 2.5));
+    const fine = Math.max(0, Math.min(FAVOR_DEBT.overdueGoldStep * tier, cap - d.owed));
+    d.owed += fine;
+    log(run, `Censor Numerius Gallo audits your overdue Palatine loan: ${fine ? `+${fine} Gold in arrears (now ${d.owed} Gold owed)` : `${d.owed} Gold owed (at maximum arrears)`}.`, 'bad');
+    if (plotActive(run)) changeSuspicion(run, FAVOR_DEBT.overdueSuspicion);
+  }
+}
+
+export const activeHouseDebts = (run) => (run.houses ?? []).filter((h) => h.debt?.owed > 0);
+
+export function houseLoanPrincipal(run, houseOrId) {
+  const h = typeof houseOrId === 'string' ? run.houses?.find((x) => x.id === houseOrId) : houseOrId;
+  const tier = Math.min(CIRCUITS.length, Math.max(run.topTier ?? 1, h?.tier ?? 1));
+  return HOUSE_DEBT.loanBase + HOUSE_DEBT.loanPerTier * tier;
+}
+
+export function borrowHouseBlocker(run, houseId) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const h = run.houses?.find((x) => x.id === houseId);
+  if (!h) return 'No such rival house.';
+  if (h.debt?.owed > 0) return `You already owe ${h.name} ${h.debt.owed} Gold.`;
+  if (h.lastLoanMonth === monthOf(run.week)) return `${h.name} has already extended you credit this month.`;
+  if (h.feud > 0) return `${h.name} is in a blood feud with your house and refuses to lend you a copper.`;
+  if (activeHouseDebts(run).length >= HOUSE_DEBT.maxActive) return `At most ${HOUSE_DEBT.maxActive} rival houses will extend you credit at once.`;
+  return null;
+}
+
+export function borrowHouse(run, houseId) {
+  assertOk(borrowHouseBlocker(run, houseId));
+  const h = run.houses.find((x) => x.id === houseId);
+  const principal = houseLoanPrincipal(run, h);
+  const rate = (h.owed ?? 0) > 0 ? 1 : HOUSE_DEBT.usury;
+  const owed = Math.round(principal * rate);
+  run.gold += principal;
+  h.lastLoanMonth = monthOf(run.week);
+  h.debt = { principal, owed, sinceWeek: run.week, monthsUnpaid: 0 };
+  log(run, `You borrow +${principal} Gold from ${h.name} (${owed} Gold owed${rate === 1 ? ', usury waived for the life-debt they owe you' : ''}). Until repaid, their fighters fight harder against you.`, 'warn');
+  return h.debt;
+}
+
+export function payHouseDebtBlocker(run, houseId, amount = null) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const h = run.houses?.find((x) => x.id === houseId);
+  if (!h) return 'No such rival house.';
+  if (!h.debt || !(h.debt.owed > 0)) return `You owe ${h.name} nothing.`;
+  if ((amount == null || amount === '') && run.gold <= 0) return `Needs ${h.debt.owed} Gold.`;
+  const raw = amount == null || amount === '' ? Math.min(run.gold, h.debt.owed) : Number(amount);
+  if (!Number.isFinite(raw) || !Number.isInteger(raw) || raw < 1) return 'Enter a whole Gold amount to repay.';
+  const pay = Math.min(raw, h.debt.owed);
+  if (run.gold < pay) return `Needs ${pay} Gold.`;
+  return null;
+}
+
+export function payHouseDebt(run, houseId, amount = null) {
+  assertOk(payHouseDebtBlocker(run, houseId, amount));
+  const h = run.houses.find((x) => x.id === houseId);
+  const raw = amount == null || amount === '' ? Math.min(run.gold, h.debt.owed) : Number(amount);
+  const pay = Math.min(raw, h.debt.owed);
+  run.gold -= pay;
+  h.debt.owed -= pay;
+  if (h.debt.owed <= 0) {
+    delete h.debt;
+    log(run, `You pay ${pay} Gold to ${h.name} and clear your debt in full.`, 'good');
+  } else {
+    log(run, `You pay ${pay} Gold toward your debt to ${h.name} (${h.debt.owed} Gold still owed).`, 'good');
+  }
+  return pay;
+}
+

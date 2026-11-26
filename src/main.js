@@ -1,13 +1,14 @@
 // App state, saving, coach tips and event wiring. Game rules live in run.js / fight.js; markup in src/ui/.
 
 import { mortalDanger, canThrowTowel, suggestTactic, hypeOf } from './fight.js';
-import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betQuote, spareFavorWhy, owedLeft, keepsBuyIn, overtrainedByWeek, demandMet, espionageOdds, freeFightDay } from './run.js';
+import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betQuote, spareFavorWhy, owedLeft, keepsBuyIn, overtrainedByWeek, demandMet, espionageOdds, freeFightDay, resolveDialogueTree, houseOf, debtPenaltyFor } from './run.js';
+import { VILLA_PLOTS, CRYPT_HADES_SLOT, plotById, isPlotUnlocked, resolveEstateSlots, maxLevel, plotsFree } from './ludus.js';
 import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
 import { VERSION } from './version.js';
 import { exportSave, importSave } from './savefile.js';
 import { EVENT_BY_ID } from './events.js';
-import { saveFailedBanner, loadFailedModal, summaryKey, otherTabBanner, resultNotice } from './ui/views.js';
+import { saveFailedBanner, loadFailedModal, summaryKey, otherTabBanner, resultNotice, talkModal, isStageNarrationReply } from './ui/views.js';
 import { fightKey } from './ui/keys.js';
 import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom, careerKey } from './careers.js';
 import { estimateOdds, oddsKey } from './odds.js';
@@ -16,7 +17,7 @@ import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, 
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
 import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
-import { SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene, endingScene, returnScene } from './dialogue.js';
+import { SPEAKERS, SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene, endingScene, returnScene, isStaffId, getStaffActor } from './dialogue.js';
 import { DEMANDS, DEMAND, CIRCUITS, SUMMONS } from './data.js';
 import { snapshot, monthDigest } from './digest.js';
 import { fightView, diceTime, setFightPace, roundTiming, roundEndTime, sideCardHtml } from './ui/fightView.js';
@@ -42,6 +43,7 @@ let tab = 'ludus';
 let mobilePane = 'roster'; // mobile Ludus pane: 'roster' | 'bout' | 'week'
 const defaultEstateUi = () => ({ mode: 'villa', slot: 'ground-0', fighterId: null, roomSlot: null, movingItem: null, mobileFloor: 'ground' });
 let estateUi = defaultEstateUi();
+let talkUi = null;
 let showHelp = false;
 let autoTimer = null;
 let revealTimer = null;
@@ -120,14 +122,33 @@ const save = () => {
 // ---------- Odds cache (simulating is cheap but not free) ----------
 
 const oddsCache = new Map();
-function oddsFor(f, tier = run.topTier, opp = opponentFor(run, tier)) {
-  const opts = matchOptions(run, f, tier);
+function oddsFor(f, tier = run.topTier, opp = opponentFor(run, tier), legOpts = null) {
+  const base = matchOptions(run, f, tier, opp);
+  const arenaOpp = run.arenas[tier]?.opponent;
+  const isFinalOpp = Boolean(arenaOpp && (opp === arenaOpp || (opp?.id && opp.id === arenaOpp.id)));
+  const oppHouse = run.arenas[tier] ? houseOf(run, opp) : null;
+  const debt = debtPenaltyFor(oppHouse);
+  const opts = {
+    ...base,
+    earlyRound: isFinalOpp ? false : base.earlyRound,
+    grudge: !run.arenas[tier] ? 0 : oppHouse?.feud > 0 ? 1 : oppHouse?.owed > 0 ? -1 : 0,
+    vengeance: Boolean(run.arenas[tier]) && oppHouse?.vengeance > 0,
+    ...(legOpts ?? {}),
+  };
+  if (legOpts && Object.hasOwn(legOpts, 'debt')) {
+    if (legOpts.debt) opts.debt = legOpts.debt;
+    else delete opts.debt;
+  } else if (debt) {
+    opts.debt = debt;
+  } else {
+    delete opts.debt;
+  }
   // 7.4: stolen plans, a double agent and this month's covert op change the real fight, so the odds include them.
   const spy = espionageOdds(run, opp);
   const key = JSON.stringify([oddsKey(f), spy, opts]); // 7.7: only what a fight reads (a job click keeps the odds)
   if (!oddsCache.has(key)) {
     if (oddsCache.size > 200) oddsCache.clear();
-    oddsCache.set(key, estimateOdds(f, spy.opp, { ...opts, boostsA: spy.boostsA, boostsB: spy.boostsB, vengeanceB: spy.vengeanceB, n: 400 }));
+    oddsCache.set(key, estimateOdds(f, spy.opp, { ...opts, boostsA: spy.boostsA, boostsB: spy.boostsB, vengeanceB: spy.vengeanceB, playbook: Boolean(spy.playbook), n: 400 }));
   }
   return oddsCache.get(key);
 }
@@ -179,13 +200,27 @@ function checkScene() {
   // The Emperor's demand met, the moment it is; and missed, when its fight day ends (the designer, 5.4.0).
   if (run.demand && demandMet(run) && !scenesSeen().includes(`demand-met-${run.demand.week}`)) {
     markSceneSeen(`demand-met-${run.demand.week}`);
-    scene = { id: 'demand-met', beat: 0, beats: demandMetScene(DEMANDS[run.demand.id].goal, DEMAND.favor, DEMAND.goldPerTier * Math.min(run.topTier, CIRCUITS.length)) };
+    const isEmperor = (run.demand.tier ?? run.topTier) >= 4;
+    const rawBeats = demandMetScene(DEMANDS[run.demand.id].goal, DEMAND.favor, DEMAND.goldPerTier * Math.min(run.topTier, CIRCUITS.length));
+    const beats = isEmperor
+      ? rawBeats.map((b, i) => (i === 0 && b.speaker === 'rightHand'
+        ? { ...b, speaker: 'emperor', text: 'Good. That is what I asked for, and you gave it to me. The throne remembers those who deliver.' }
+        : b))
+      : rawBeats;
+    scene = { id: 'demand-met', beat: 0, beats };
     return;
   }
   const judged = run.demandResult;
   if (judged && !judged.met && !scenesSeen().includes(`demand-missed-${judged.issued}`)) {
     markSceneSeen(`demand-missed-${judged.issued}`);
-    scene = { id: 'demand-missed', beat: 0, beats: demandMissedScene(DEMANDS[judged.id].goal, judged.favor) };
+    const isEmperor = (judged.tier ?? run.topTier) >= 4;
+    const rawBeats = demandMissedScene(DEMANDS[judged.id].goal, judged.favor);
+    const beats = isEmperor
+      ? rawBeats.map((b, i) => (i === 0 && b.speaker === 'rightHand'
+        ? { ...b, speaker: 'emperor', text: 'I asked you for one thing, Lanista. One. The month is over, and my box is still waiting.' }
+        : b))
+      : rawBeats;
+    scene = { id: 'demand-missed', beat: 0, beats };
     return;
   }
   // Quests and rivals (5.4.0): what the rules said someone says (run.talk), each once per career.
@@ -195,11 +230,15 @@ function checkScene() {
     scene = { id: 'talk', beat: 0, beats: said.beats.map(talkBeat) };
     return;
   }
-  // A new demand from the Emperor (fun idea #4): he says it himself.
+  // A new demand from the Palatine: Legate Cassian Vane delivers Tiers 1-3; Emperor Silbannacus delivers Tier 4+.
   const demandKey = run.demand ? `demand-${run.demand.week}` : null;
   if (demandKey && !scenesSeen().includes(demandKey)) {
     markSceneSeen(demandKey);
-    scene = { id: 'demand', beat: 0, beats: [{ speaker: 'emperor', text: DEMANDS[run.demand.id].say }, { speaker: 'steward', text: `The Emperor's demand: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day. Meet it and he pays in Favour and Gold; miss it and he remembers.` }] };
+    const isEmperor = run.topTier >= 4;
+    const demandSpeaker = isEmperor ? 'emperor' : 'rightHand';
+    const demandText = isEmperor ? DEMANDS[run.demand.id].say : (DEMANDS[run.demand.id].sayRightHand ?? DEMANDS[run.demand.id].say);
+    const sender = isEmperor ? 'The Emperor\'s demand' : 'Legate Vane\'s Palatine docket';
+    scene = { id: 'demand', beat: 0, beats: [{ speaker: demandSpeaker, text: demandText }, { speaker: 'steward', text: `${sender}: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day. Meet it and the Palatine pays in Favour and Gold; miss it and they remember.` }] };
     return;
   }
   // The first political prisoner tells you about the rising, coloured by your record (src/dialogue.js).
@@ -245,6 +284,22 @@ for (const type of ['click', 'change']) {
     setTimeout(() => { clickAnchor = null; }); // only for the render this event causes, never a later one
   }, true);
 }
+function isTrainerDismissed(currentRun) {
+  const dismissedUntil = currentRun?.staffDialogue?.trainer?.dismissedUntilWeek ?? 0;
+  return (currentRun?.week ?? 0) < dismissedUntil;
+}
+function isTalkUiValid(currentRun, uiState) {
+  if (!currentRun || !uiState) return false;
+  const fighterId = typeof uiState === 'string' ? uiState : (uiState.fighterId ?? uiState.id ?? null);
+  if (isStaffId(fighterId)) {
+    const staff = getStaffActor(fighterId);
+    if (!staff) return false;
+    if (staff.staffKey === 'trainer' && isTrainerDismissed(currentRun) && !(typeof uiState === 'object' && uiState.response)) return false;
+    return true;
+  }
+  if (typeof uiState === 'object' && uiState.kind) return true;
+  return Boolean(currentRun.roster?.some((x) => x.id === fighterId || x.coreId === fighterId));
+}
 function activeModal() {
   if (bug) return 'bug';
   if (loadFailed) return 'loadFailed';
@@ -252,6 +307,7 @@ function activeModal() {
   if (freeFightWarn) return 'freefight';
   if (overtrainWarn) return 'overtrain';
   if (setupChoice) return 'setup';
+  if (talkUi && isTalkUiValid(run, talkUi)) return 'talk';
   if (scene) return 'scene';
   if (eventResult) return 'result';
   if (showHelp) return 'help';
@@ -271,6 +327,7 @@ function resetCareerUiState() {
   resultNotes = [];
   achieved = [];
   scene = null;
+  talkUi = null;
   eventResult = null;
   overtrainWarn = null;
   freeFightWarn = null;
@@ -289,6 +346,7 @@ function resetCareerUiState() {
 
 function render() {
   if (discover(codex, run).length) saveCodex();
+  if (talkUi && !isTalkUiValid(run, talkUi)) talkUi = null;
   // Legacy: achievements as they happen, and the career once it ends.
   const fresh = checkAchievements(legacy, run);
   if (fresh.length) {
@@ -299,11 +357,11 @@ function render() {
   let body;
   if (tab === 'estate') body = estateTab(run, estateUi);
   else if (tab === 'market') body = marketTab(run);
-  else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore) + legacyPanel(legacy);
+  else if (tab === 'codex') body = codexTab(codex, ENTRIES, SECTIONS, codexShownNew, progress(codex), isUnlocked, hasLore, run.loreRead ?? []) + legacyPanel(legacy);
   else body = ludusTab(run, oddsFor, mobilePane);
   checkScene();
   const guide = guideStep();
-  const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : freeFightWarn ? freeFightModal(freeFightWarn) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal(helpTab) : tutorialCard(tutorialStep());
+  const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : freeFightWarn ? freeFightModal(freeFightWarn) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : talkUi ? talkModal(run, talkUi) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal(helpTab) : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...resultNotes.map((r, i) => resultNotice(r, i)), ...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
@@ -317,6 +375,9 @@ function render() {
     });
   };
   const scrolled = renderedTab === tab ? Object.fromEntries(scrollKeys().map(([k, el]) => [k, el.scrollTop])) : {};
+  const estBaysScroll = renderedTab === tab ? [...app.querySelectorAll('.est-bays')].map((el) => el.scrollLeft) : [];
+  const estStripScroll = renderedTab === tab ? (app.querySelector('.est-fighter-strip')?.scrollLeft ?? 0) : 0;
+  const estInspScroll = renderedTab === tab ? (app.querySelector('.est-inspector')?.scrollTop ?? 0) : 0;
   renderedTab = tab;
   const fortune = fortunePanel(run, { animate: fortuneDealKey(run) !== dealtHand });
   if (fortune) dealtHand = fortuneDealKey(run);
@@ -326,6 +387,11 @@ function render() {
   if (stickyHead) document.documentElement.style.setProperty('--head-h', `${stickyHead.offsetHeight + 8}px`);
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
   for (const [k, el] of scrollKeys()) if (scrolled[k]) el.scrollTop = scrolled[k];
+  app.querySelectorAll('.est-bays').forEach((el, i) => { if (estBaysScroll[i]) el.scrollLeft = estBaysScroll[i]; });
+  const estStrip = app.querySelector('.est-fighter-strip');
+  if (estStrip && estStripScroll) estStrip.scrollLeft = estStripScroll;
+  const estInsp = app.querySelector('.est-inspector');
+  if (estInsp && estInspScroll) estInsp.scrollTop = estInspScroll;
   if (clickAnchor && renderedTab === clickAnchor.tab) {
     const el = document.getElementById(clickAnchor.id);
     const shift = el ? el.getBoundingClientRect().top - clickAnchor.top : 0;
@@ -341,22 +407,32 @@ function render() {
     scrollAfterRender = null;
   }
   if (guide?.focus && tab === guide.tab) for (const el of app.querySelectorAll(guide.focus)) if (!el.disabled) el.classList.add('tut-focus');
-  if (modal) app.querySelector('.modal [autofocus], .modal button')?.focus?.();
+  if (modal) {
+    const focusTarget = app.querySelector('.modal [autofocus]:not([disabled])')
+      ?? app.querySelector('.modal .talk-choice:not([disabled])')
+      ?? app.querySelector('.modal .talk-continue:not([disabled])')
+      ?? app.querySelector('.modal .talk-topic:not([disabled])')
+      ?? app.querySelector('.modal button:not(.close):not([disabled])')
+      ?? app.querySelector('.modal button:not([disabled])');
+    focusTarget?.focus?.();
+  }
   renderFight();
 }
 
 // Run a game action (recorded for bug reports; see src/game.js) and do the page's bookkeeping.
 function act(name, data = {}) {
-  const state = { run, match };
+  const state = { run, match, codex };
   const before = match;
   try {
-    const summary = applyGameAction(state, name, data);
-    if (summary) {
+    const res = applyGameAction(state, name, data);
+    const isDialogueRes = Boolean(res && typeof res === 'object' && ('replySpeaker' in res || 'choiceId' in res));
+    if (res && !isDialogueRes) {
       const fought = before ?? state.match; // a withdrawal settles a bracket with no match on screen
       if (fought && discoverMatch(codex, fought).length) saveCodex();
-      summaries.push(summary);
+      summaries.push(res);
       noticePage = 0;
     }
+    return isDialogueRes ? res : (state.dialogueResult ?? state.lastDialogueResult ?? null);
   } finally {
     run = state.run;
     match = state.match;
@@ -615,11 +691,32 @@ const actions = {
     estateUi.movingItem = null;
   },
   'estate-mobile-floor': (d) => {
-    if (['upper', 'ground', 'catacomb'].includes(d.floor)) estateUi.mobileFloor = d.floor;
+    if (!['upper', 'ground', 'catacomb'].includes(d.floor)) return;
+    estateUi.mobileFloor = d.floor;
+    const curFloor = estateUi.slot === CRYPT_HADES_SLOT ? 'catacomb' : plotById(estateUi.slot)?.floor;
+    if (curFloor !== d.floor) {
+      const bySlot = resolveEstateSlots(run);
+      const floorPlots = VILLA_PLOTS.filter((p) => p.floor === d.floor);
+      const nextSlot = (d.floor === 'catacomb' && bySlot.has(CRYPT_HADES_SLOT) ? CRYPT_HADES_SLOT : null)
+        ?? floorPlots.find((p) => bySlot.has(p.id))?.id
+        ?? floorPlots.find((p) => isPlotUnlocked(run, p))?.id
+        ?? (d.floor === 'catacomb' && !maxLevel(run, 'hades') && plotsFree(run) <= 0 ? CRYPT_HADES_SLOT : null)
+        ?? floorPlots[0]?.id;
+      if (nextSlot) estateUi.slot = nextSlot;
+    }
   },
   'estate-room-slot': (d) => { estateUi.roomSlot = d.slot; },
   'estate-move-start': (d) => { estateUi.movingItem = d.item; },
   'estate-move-cancel': () => { estateUi.movingItem = null; },
+  'talk-open': (d) => {
+    const next = { fighterId: d.id, sceneId: d.scene || null, response: null };
+    talkUi = isTalkUiValid(run, next) ? next : null;
+  },
+  'talk-topic': (d) => {
+    const next = { fighterId: d.id || talkUi?.fighterId, sceneId: d.scene || null, response: null };
+    talkUi = isTalkUiValid(run, next) ? next : null;
+  },
+  'talk-close': () => { talkUi = null; },
   'export-save': () => {
     const blob = new Blob([exportSave({ run, codex, legacy, version: VERSION })], { type: 'application/json' });
     const a = document.createElement('a');
@@ -679,14 +776,55 @@ const actions = {
 // A game action with the page's bookkeeping around it (the `after` hook and the steward's news).
 function gameAction(name, data = {}) {
   lastAction = [name, data];
+  let talkReply = null;
+  if (name === 'talk-choice') {
+    const actor = isStaffId(data.id)
+      ? getStaffActor(data.id)
+      : run.roster.find((x) => x.id === data.id || x.coreId === data.id);
+    const tree = actor ? resolveDialogueTree(run, actor, data.scene) : null;
+    const c = tree?.choices?.find((x) => x.id === data.choice);
+    if (c && !c.locked) {
+      talkReply = {
+        fighterId: actor.id,
+        actorName: actor.name,
+        actorKey: actor.coreId ?? actor.staffKey ?? null,
+        choiceReplySpeaker: c.replySpeaker ?? null,
+        sceneId: tree.id,
+        treeSnapshot: { id: tree.id, title: tree.title, isQueued: Boolean(tree.isQueued), beats: tree.beats },
+        text: c.responseText,
+      };
+    }
+  }
   const snap = newsSnapshot(run);
-  act(name, data);
+  const dialogueRes = act(name, data);
+  if (talkReply) {
+    const replyText = dialogueRes?.responseText ?? talkReply.text;
+    const rawSpeaker = dialogueRes?.replySpeaker ?? talkReply.choiceReplySpeaker ?? null;
+    const isDefaultActor = !rawSpeaker || rawSpeaker === 'fighter' || rawSpeaker === talkReply.actorKey || rawSpeaker === talkReply.actorName;
+    const replySpeaker = rawSpeaker === 'narrator' || (isDefaultActor && isStageNarrationReply(replyText, talkReply.actorName))
+      ? 'narrator'
+      : rawSpeaker;
+    let speakerName = talkReply.actorName;
+    if (replySpeaker === 'narrator') speakerName = '';
+    else if (replySpeaker && replySpeaker !== 'fighter') {
+      speakerName = Object.hasOwn(SPEAKERS, replySpeaker) ? (SPEAKERS[replySpeaker].name || talkReply.actorName) : String(replySpeaker);
+    }
+    talkUi = {
+      fighterId: talkReply.fighterId,
+      sceneId: talkReply.sceneId,
+      treeSnapshot: talkReply.treeSnapshot,
+      response: { text: replyText, ...(replySpeaker ? { replySpeaker } : {}), speakerName },
+    };
+  }
   after[name]?.();
   for (const n of stewardNews(snap, newsSnapshot(run), run)) if (!stewardNotes.includes(n)) stewardNotes.push(n);
 }
 
 // Game actions: the page's extras around each one (confirmations, animation, tabs).
 const before = {
+  'talk-choice': (data) => (data.choice === 'side_with_varok_crush_plot'
+    ? confirm('Side with Varok and crush the rising? This permanently ends the rebel plot.')
+    : true),
   'event-choice': (data) => {
     logMark = run.log.length;
     const choice = EVENT_BY_ID[run.event?.id]?.choices[Number(data?.index)];
@@ -791,8 +929,12 @@ const after = {
   },
   build: () => {
     const built = run.buildings[run.buildings.length - 1];
-    if (lastAction?.[1]?.slot) estateUi.slot = lastAction[1].slot;
-    else if (built?.slot) estateUi.slot = built.slot;
+    const slot = lastAction?.[1]?.slot || built?.slot;
+    if (slot) {
+      estateUi.slot = slot;
+      const floor = slot === CRYPT_HADES_SLOT ? 'catacomb' : plotById(slot)?.floor;
+      if (floor) estateUi.mobileFloor = floor;
+    }
   },
   'assign-decor': () => {
     estateUi.movingItem = null;
@@ -818,12 +960,14 @@ const SKIP_SAVE_ACTIONS = new Set([
   'bug-copy', 'bug-download', 'export-save', 'import-save', 'mobile-pane',
   'estate-select-slot', 'estate-mode', 'estate-open-room', 'estate-mobile-floor',
   'estate-room-slot', 'estate-move-start', 'estate-move-cancel',
+  'talk-open', 'talk-topic', 'talk-close',
 ]);
 
 document.addEventListener('click', (e) => {
   // Clicking the dimmed backdrop outside a non-critical modal dismisses it cleanly.
   if (e.target.classList?.contains('modal')) {
     const topModal = activeModal();
+    if (topModal === 'talk') { talkUi = null; render(); return; }
     if (topModal === 'help') { showHelp = false; render(); return; }
     if (topModal === 'careers') { careersOpen = false; render(); return; }
     if (topModal === 'result') { eventResult = null; render(); return; }
@@ -855,7 +999,7 @@ document.addEventListener('click', (e) => {
     }
   });
   if (SKIP_SAVE_ACTIONS.has(name)) {
-    if (name === 'mobile-pane' || name.startsWith('estate-')) guard('render', () => render());
+    if (name === 'mobile-pane' || name.startsWith('estate-') || name.startsWith('talk-')) guard('render', () => render());
     return;
   }
   if (cancelled) {
@@ -1000,6 +1144,10 @@ document.addEventListener('keydown', (e) => {
     }
     if (topModal === 'setup') {
       if (e.key === 'Escape') { setupChoice = null; render(); }
+      return;
+    }
+    if (topModal === 'talk') {
+      if (e.key === 'Escape') { talkUi = null; render(); }
       return;
     }
     if (topModal === 'scene') {

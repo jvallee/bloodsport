@@ -1,13 +1,18 @@
 // Every player choice that changes the career, as one table shared by the web UI and scripts/replay.js.
 // Each action is recorded in run.actions before it runs, so a career replays exactly from its seed. Pure: no DOM.
 
+import { Refused } from './errors.js';
 import { playRound, throwTowel, useSignature } from './fight.js';
 import {
   boutFor, recruit, release, setJob, advanceWeek, advanceToTournament, buyDecor, surgeon, choosePerk, buildRoom, upgradeRoom, pray, reanimate, exhibition, host, enact, investigate, covertOp,
   assignDecor, buyAndAssignDecor, moveDecorAnchor, removeDecor, buyGear, equip, unequip, unequipAll, startMatch, finishMatch, skipBout, forfeitBout,
   recordMatchProgress, buyItem, useItem, placeBet, payTribute, sellGear, chooseEvent, houseOf, augment, retire, treatFirst, withdraw, resolveMercy, checkQuests,
   answerSummons, refuseSummons, rite, stewardPlan, chooseFortune, rerollFortune, passFortune, rename,
+  draftCompanion, recruitCompanion, retuneClass, retuneTrait, retuneHumor, setPerkFocus, respecPerk,
+  reviveHades, restoreRevenant, borrowFavor, payFavorDebt, borrowHouse, payHouseDebt, applyDialogueChoice,
 } from './run.js';
+
+export const LORE_GATE_KEYS = new Set(['kind:android', 'kind:orc', 'kind:elf', 'rebellion:mark']);
 
 // A finished match is settled at once (the fight screen shows the full report). Returns the summary when it settles.
 export function settleMatch(state) {
@@ -24,6 +29,8 @@ export function settleMatch(state) {
 // state = { run, match }. Each returns a match summary when a match settles, otherwise nothing.
 export const GAME_ACTIONS = {
   recruit: ({ run }, d) => { recruit(run, d.id); },
+  'draft-companion': ({ run }, d) => { draftCompanion(run, d.id, { cls: d.cls, weapon: d.weapon, kindTrait: d.trait || d.kindTrait, humor: d.humor }); },
+  'recruit-companion': ({ run }, d) => { recruitCompanion(run, d.id, { cls: d.cls, weapon: d.weapon, kindTrait: d.trait || d.kindTrait, humor: d.humor }); },
   release: ({ run }, d) => { release(run, d.id); },
   job: ({ run }, d) => { setJob(run, d.id, d.job); },
   'buy-decor': ({ run }, d) => { buyDecor(run, d.item); },
@@ -44,7 +51,33 @@ export const GAME_ACTIONS = {
   'unequip-all': ({ run }) => { unequipAll(run); },
   perk: ({ run }, d) => { choosePerk(run, d.id, d.perk); },
   pray: ({ run }, d) => { pray(run, d.id); },
+  'retune-class': ({ run }, d) => { retuneClass(run, d.id, d.cls, d.weapon || null); },
+  'retune-trait': ({ run }, d) => { retuneTrait(run, d.id, d.trait); },
+  'retune-humor': ({ run }, d) => { retuneHumor(run, d.id, d.humor); },
+  'perk-focus': ({ run }, d) => { setPerkFocus(run, d.id, d.focus); },
+  'set-focus': ({ run }, d) => { setPerkFocus(run, d.id, d.focus); },
+  'respec-perk': ({ run }, d) => { respecPerk(run, d.id, d.drop); },
   reanimate: ({ run }, d) => { reanimate(run, d.id); },
+  'revive-hades': ({ run }, d) => { reviveHades(run, d.id); },
+  'restore-revenant': ({ run }, d) => { restoreRevenant(run, d.id); },
+  'borrow-favor': ({ run }, d) => { borrowFavor(run, d.kind || 'loan'); },
+  'pay-favor-debt': ({ run }, d) => { payFavorDebt(run, d.amount ? Number(d.amount) : null); },
+  'borrow-house': ({ run }, d) => { borrowHouse(run, d.id); },
+  'pay-house-debt': ({ run }, d) => { payHouseDebt(run, d.id, d.amount ? Number(d.amount) : null); },
+  'talk-choice': ({ run }, d) => { applyDialogueChoice(run, d.id, d.scene, d.choice); },
+  'mark-lore': ({ run, codex }, d) => {
+    const key = d.key ?? d.entry;
+    if (typeof key !== 'string' || !LORE_GATE_KEYS.has(key)) {
+      throw new Refused(`Cannot note lore key "${key ?? ''}" for conversations.`);
+    }
+    if (codex) {
+      const unlocked = key.startsWith('rebellion:')
+        ? Boolean(codex.seen?.includes(key))
+        : Boolean(codex.lore?.includes(key));
+      if (!unlocked) throw new Refused(`Lore entry "${key}" is not unlocked in the Codex yet.`);
+    }
+    if (!(run.loreRead ?? []).includes(key)) run.loreRead = [...(run.loreRead ?? []), key];
+  },
   host: ({ run }) => { host(run); },
   enact: ({ run }, d) => { enact(run, d.policy); },
   investigate: ({ run }, d) => { investigate(run, d.id); },
@@ -101,6 +134,7 @@ export const isGameAction = (name) => Object.hasOwn(GAME_ACTIONS, name);
 
 // Record, then run. Data is copied down to plain strings (what a button's dataset holds).
 export function applyGameAction(state, name, data = {}) {
+  if (!isGameAction(name)) throw new Refused(`Unknown action: ${name}`);
   const d = Object.fromEntries(Object.entries(data).filter(([k, v]) => k !== 'action' && v !== undefined).map(([k, v]) => [k, String(v)]));
   state.run.actions?.push(Object.keys(d).length ? [name, d] : [name]);
   const result = GAME_ACTIONS[name](state, d);

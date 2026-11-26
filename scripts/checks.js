@@ -183,5 +183,21 @@ export function gatesFrom({ careful, reckless, rebel, loyalist, long, legacy, he
     ...(heat1.length ? [{ name: 'Heat 1 bites: Full Legacy at Heat 1 wins 5+ points less often than at Heat 0 (same seeds)', value: rate(legacy) - rate(heat1), pass: rate(legacy) - rate(heat1) >= 0.05 && rate(heat1) >= 0.15, fmt: 'pctDiff' }] : []),
     ...(heat3.length ? [{ name: 'Heat 3 climbs further yet stays winnable: tougher than Heat 1 and at least 8% win rate', value: rate(heat3), pass: rate(heat3) < rate(heat1) && rate(heat3) >= 0.08, fmt: 'pct' }] : []),
   ];
-  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, long, legacy, heat1, heat3, brawler, usageTable, SYSTEMS, meanXp, wonMonths, dead };
+  // 8.0: share of careers that exercised each v8.0.0 system (returned alongside usageTable without altering the 24 balance gates).
+  const V8_SYSTEMS = {
+    companionsDrafted: 'Week-0 draft',
+    companionsRecruited: 'Core recruits',
+    fortunaRetunes: 'Fortuna re-tune',
+    hadesRevivals: 'Hades revival',
+    favorLoans: 'Favour loan',
+    favorRepaid: 'Favour repaid',
+    houseLoans: 'House loan',
+    houseRepaid: 'House repaid',
+  };
+  const v8UsageTable = Object.fromEntries(
+    Object.entries(usageGroups)
+      .filter(([, rs]) => rs.length)
+      .map(([g, rs]) => [g, Object.fromEntries(Object.keys(V8_SYSTEMS).map((k) => [k, rs.filter((r) => (r.usage?.[k] ?? 0) > 0).length / rs.length]))]),
+  );
+  return { gates, careful, reckless, split, curve, tactics, rebel, loyalist, long, legacy, heat1, heat3, brawler, usageTable, SYSTEMS, v8UsageTable, V8_SYSTEMS, meanXp, wonMonths, dead };
 }

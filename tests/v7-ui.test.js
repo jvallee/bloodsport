@@ -180,7 +180,7 @@ test('portrait: renaming preserves face, Basa has no human ears, unlockable clas
   }
 
   assert.match(npcPortrait('emperor'), /aria-label="Portrait of Emperor Silbannacus"/);
-  assert.match(npcPortrait('steward'), /aria-label="Portrait of your steward"/);
+  assert.match(npcPortrait('steward'), /aria-label="Portrait of Galen-VII"/);
 });
 
 test('views/codex/hints/tutorial: summonsPower, standings tier 5, Surgeon display names, Codex locked lore hiding, mercy/fight-day hints', () => {

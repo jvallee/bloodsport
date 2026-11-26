@@ -9,7 +9,8 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup, ALL_UNLOCKS, careerXp, levelFor, LEGACY_LEVELS } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURE, CLASS_RESONANCE, signatureDef, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort, ESPIONAGE, UNREST } from '../src/data.js';
+import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURE, CLASS_RESONANCE, signatureDef, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort, ESPIONAGE, UNREST, HADES, FAVOR_DEBT } from '../src/data.js';
+import { applyGameAction } from '../src/game.js';
 import { PREFECT } from '../src/plot.js';
 import { cityHeadlines } from '../src/gazette.js';
 import { fighterWarnings, arenaStakes, roundStats } from '../src/explain.js';
@@ -24,14 +25,16 @@ import {
   startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed, chooseFortune, fortuneBlocker, rerollFortune, rerollPrice, passFortune,
   matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
   bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardRewardText, risingProgress, archrival, checkQuests, answerSummons, refuseSummons, rite,
+  wantGoal, draftCompanion, retuneClass, retuneTrait, retuneHumor, reviveHades, restoreRevenant, restoreRevenantPrice,
+  borrowFavor, payFavorDebt, borrowHouse, payHouseDebt, activeHouseDebts, resolveDialogueTree, applyDialogueChoice, espionageOdds,
 } from '../src/run.js';
 const getSummonsPower = (run) => (typeof runApi.summonsPower === 'function' ? runApi.summonsPower(run) : arenaPower(run, SUMMONS.tier, 0));
 import { build, upgrade, buildBlocker, buildingKnown, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
-import { estimateOdds, describeOdds } from '../src/odds.js';
+import { estimateOdds, describeOdds, oddsKey } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
 import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep, stepText } from '../src/tutorial.js';
-import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene, dueRebelStage, demandMetScene, demandMissedScene } from '../src/dialogue.js';
+import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene, dueRebelStage, demandMetScene, demandMissedScene, isStaffId, getStaffActor } from '../src/dialogue.js';
 import { WANTS, REBEL_QUESTS } from '../src/quests.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText, slotLabel } from '../src/codex.js';
 
@@ -57,8 +60,18 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   skip-tutorial                 stop the steward's tutorial (the tutorial month and the tips)
   ok                            dismiss the current tutorial card
   recruit <id> | release <id>
+  draft <coreId>                draft a Core Companion (unit91|basa|orc|android|elf) in Week 0
+  talk <id|staff:trainer|staff:doctor|staff:steward> [scene] [choice] [--confirm]  speak with a fighter or house staff
+  retune <id> <class|trait|humor> <value> [weapon]  Shrine/Temple of Fortuna re-tuning
+  hades <id>                    Temple of Hades: revive a fallen fighter whole
+  restore-revenant <id>         Temple of Hades: restore a hollowed Core Companion Revenant
+  debt                          inspect Favour Debt and Rival House Debt
+  borrow-favor <writ|loan> | pay-favor <gold>
+  borrow-house <houseId> | pay-house <houseId> <gold>
+  mark-lore <key>               note an unlocked Codex lore key for conversations
   job <id> <rest|trainPower|trainSpeed|medbay>
   perk <id> <perk>              choose a level-up perk
+  respec <fighterId> <perkId>   Temple of Fortuna: unbind a learned perk for Gold and choose a new one
   pray <id>                     Temple of Fortuna: pay Gold for three new perk choices
   rite <id>                     Temple of Fortuna: lift a fighter's Afeared scar for Gold (or win twice against what they fear)
   raise <id>                    Unnatural Temple of Vulcan: raise a fighter killed in the arena as a Revenant (see \`market\`)
@@ -103,7 +116,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   // (The intro's pages already print at the start, so the opening's narrator page is skipped here.)
   // Replies (your answers) play the first answer, and list the others.
   const withReplies = (beats) => beats.flatMap((b) => (b.replies ? [b, { speaker: 'narrator', text: `(You could answer: ${b.replies.map((r) => `"${r.label}"`).join(' / ')}. You say: "${b.replies[0].label}")` }, ...b.replies[0].then] : [b]));
-  const sceneText = (id, beats = SCENES[id]) => `\n${withReplies(beats).filter((b) => b.speaker !== 'narrator' || !b.title).map((b) => `${(b.fighter?.name ?? SPEAKERS[b.speaker].name) ? `${b.fighter?.name ?? SPEAKERS[b.speaker].name}: ` : ''}${b.title ? `[${b.title}] ` : ''}${(b.text ?? b.html).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}`).join('\n')}`;
+  const sceneText = (id, beats = SCENES[id]) => `\n${withReplies(beats).filter((b) => b.speaker !== 'narrator' || !b.title).map((b) => { const who = b.fighter?.name ?? b.speakerName ?? SPEAKERS[b.speaker]?.name ?? ''; return `${who ? `${who}: ` : ''}${b.title ? `[${b.title}] ` : ''}${(b.text ?? b.html).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}`; }).join('\n')}`;
   const done = []; // dismissed tutorial steps
   const oddsCache = new Map();
   let match = null;
@@ -131,12 +144,12 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   // ---------- Views ----------
 
   function oddsFor(f, tier, opp = opponentFor(run, tier)) {
-    const bout = boutFor(run, tier);
     const opts = matchOptions(run, f, tier);
-    const key = JSON.stringify([f, opp, opts]);
+    const spy = espionageOdds(run, opp);
+    const key = JSON.stringify([oddsKey(f, { playbook: spy.playbook }), spy, opts]);
     if (!oddsCache.has(key)) {
       if (oddsCache.size > 400) oddsCache.clear();
-      oddsCache.set(key, estimateOdds(f, opp, { ...opts, n: oddsSamples }));
+      oddsCache.set(key, estimateOdds(f, spy.opp, { ...opts, boostsA: spy.boostsA, boostsB: spy.boostsB, vengeanceB: spy.vengeanceB, playbook: spy.playbook, n: oddsSamples }));
     }
     return oddsCache.get(key);
   }
@@ -636,6 +649,14 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       choosePerk(run, id, perk);
       return run.log.at(-1).text;
     },
+    respec: ([id, drop]) => {
+      need([id, drop].filter(Boolean), 2, 'respec <fighterId> <perkId>');
+      idle();
+      applyGameAction({ run }, 'respec-perk', { id, drop });
+      const f = run.roster.find((x) => x.id === id);
+      const choices = f?.pendingPerks?.at(-1)?.map((p) => `${p} (${PERKS[p].name})`).join(', ') ?? '';
+      return `${run.log.at(-1)?.text ?? 'Perk unbound.'}${choices ? ` New choices: ${choices}.` : ''}`;
+    },
     story: ([id]) => {
       need([id].filter(Boolean), 1, 'story <id>');
       const f = run.roster.find((x) => x.id === id) ?? run.fallen.find((x) => x.id === id);
@@ -802,7 +823,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       const task = stewardTask(run);
       const lines = ['-- Quests --'];
       if (task) lines.push(`  The steward asks: ${task.goal}${stewardRewardText(task) ? ` (${stewardRewardText(task)})` : ''}.`);
-      for (const f of run.roster.filter((x) => x.want)) lines.push(`  ${f.name} [${f.id}] wants: ${WANTS[f.want.id].goal(f.want)}${f.want.until != null ? ` (${Math.max(0, f.want.until - run.week)} weeks left)` : ''}.`);
+      for (const f of run.roster.filter((x) => x.want)) lines.push(`  ${f.name} [${f.id}] wants: ${wantGoal(f.want)}${f.want.until != null ? ` (${Math.max(0, f.want.until - run.week)} weeks left)` : ''}.`);
       for (const q of run.quests?.rebel ?? []) lines.push(`  The cause asks: ${REBEL_QUESTS[q.id].goal(q)} (${Math.max(0, q.until - run.week)} weeks left).`);
       const rising = risingProgress(run);
       if (rising) lines.push(`  Whispering Gallery: suspicion ${rising.suspicion}/100 (watched at ${rising.watch}, informers at ${rising.informer}, raid at ${rising.raid}); ${PREFECT}: ${rising.prefect}; the rising: ${rising.label}${rising.needs.length ? `, still needs ${rising.needs.join(', ')}` : ''}${rising.waiting ? `; ${rising.waiting}` : ''}.`);
@@ -810,6 +831,125 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       const arch = archrival(run);
       if (arch) lines.push(`  Your rival house: ${arch.name} (Glory ${arch.glory})${c ? `, champion ${c.f.name} (${c.wins} wins and ${c.losses} losses against you)` : ''}.`);
       return lines.length > 1 ? lines.join('\n') : '-- Quests --\n  Nothing asked of you yet.';
+    },
+    draft: ([coreId]) => {
+      need([coreId].filter(Boolean), 1, 'draft <unit91|basa|orc|android|elf>');
+      idle();
+      const f = draftCompanion(run, coreId);
+      return `Drafted ${f.name} [${f.id}].\n\n${look()}`;
+    },
+    talk: (args) => {
+      const confirmed = args.includes('--confirm');
+      const [id, scene, choice] = args.filter((a) => a !== '--confirm');
+      need([id].filter(Boolean), 1, 'talk <fighterId|staff:trainer|staff:doctor|staff:steward> [scene] [choice] [--confirm]');
+      idle();
+      const actor = isStaffId(id) ? getStaffActor(id) : run.roster.find((x) => x.id === id || x.coreId === id);
+      if (!actor) throw new Error(`No fighter or staff "${id}" found.`);
+      if (scene && choice) {
+        const tree = resolveDialogueTree(run, actor, scene);
+        const picked = (tree.choices ?? []).find((c) => c.id === choice || c.choice === choice);
+        if (picked?.locked) {
+          throw new Error(`Choice "${choice}" is locked${picked.lockReason ? `: ${picked.lockReason}` : '.'}`);
+        }
+        if (choice === 'side_with_varok_crush_plot' && !confirmed) {
+          return `WARNING: Siding with Varok and crushing the rising permanently ends the rebel plot.\nRe-run \`talk ${id} ${scene} ${choice} --confirm\` to confirm.`;
+        }
+        const res = applyDialogueChoice(run, actor.id, scene, choice);
+        const reply = res?.responseText ?? 'Spoken.';
+        const speakerLine = res?.replySpeaker === 'narrator' ? reply : `${actor.name}: ${reply}`;
+        return `${speakerLine}\n\n${look()}`;
+      }
+      const tree = resolveDialogueTree(run, actor, scene || null);
+      const lines = [`-- ${actor.name}: ${tree.title} [${tree.id}] --`];
+      for (const b of tree.beats ?? []) {
+        const who = b.speaker === 'narrator' ? '' : `${b.speakerName || SPEAKERS[b.speaker]?.name || actor.name}: `;
+        lines.push(`  ${who}${b.text}`);
+      }
+      if (tree.choices?.length) {
+        lines.push('Choices:');
+        for (const c of tree.choices) {
+          const lockTag = c.locked ? ` [LOCKED: ${c.lockReason || 'requirements not met'}]` : '';
+          lines.push(`  [${c.id}] ${c.label}${lockTag}`);
+        }
+      }
+      if (tree.topics?.length) {
+        lines.push(`Topics: ${tree.topics.map((t) => `${t.scene}${t.queued ? '*' : ''}`).join(', ')}`);
+      }
+      return lines.join('\n');
+    },
+    retune: ([id, kind, val, weapon]) => {
+      need([id, kind, val].filter(Boolean), 3, 'retune <id> <class|trait|humor> <value> [weapon]');
+      idle();
+      if (kind === 'class') retuneClass(run, id, val, weapon);
+      else if (kind === 'trait') retuneTrait(run, id, val);
+      else if (kind === 'humor') retuneHumor(run, id, val);
+      else throw new Error('retune kind must be class, trait, or humor.');
+      return `${run.log.at(-1)?.text ?? 'Re-tuned.'}\n\n${look()}`;
+    },
+    hades: ([id]) => {
+      need([id].filter(Boolean), 1, 'hades <fallenId>');
+      idle();
+      const f = reviveHades(run, id);
+      return `Revived ${f.name} [${f.id}] whole at the Temple of Hades.\n\n${look()}`;
+    },
+    'restore-revenant': ([id]) => {
+      need([id].filter(Boolean), 1, 'restore-revenant <fighterId>');
+      idle();
+      const f = restoreRevenant(run, id);
+      const rGold = restoreRevenantPrice(run);
+      const rFavor = HADES.restoreFavor ?? 4;
+      return `Restored ${f.name} [${f.id}] whole (${rGold} Gold, ${rFavor} Favour).\n\n${look()}`;
+    },
+    debt: () => {
+      const lines = ['-- Debt & Liens --'];
+      if (run.favorDebt?.owed > 0) {
+        const elapsed = run.favorDebt.monthsElapsed ?? 0;
+        const term = FAVOR_DEBT.termMonths;
+        const status = elapsed > term
+          ? `overdue by ${plural(elapsed - term, 'month')}`
+          : elapsed === term
+            ? 'due at term (0 months left)'
+            : `${plural(term - elapsed, 'month')} left`;
+        const grace = run.week - (run.favorDebt.sinceWeek ?? 0) < 4 && elapsed === 0 ? ', grace period active' : '';
+        lines.push(`  Palatine Loan: ${run.favorDebt.owed} Gold owed (${status}${grace}).`);
+      } else lines.push('  Palatine Loan: none.');
+      const hd = activeHouseDebts(run);
+      if (hd.length) {
+        for (const h of hd) lines.push(`  Rival House [${h.id}] ${h.name}: ${h.debt.owed} Gold owed (${h.debt.monthsUnpaid ?? 0} mo).`);
+      } else {
+        lines.push('  Rival House Debt: none.');
+      }
+      return lines.join('\n');
+    },
+    'borrow-favor': ([mode]) => {
+      need([mode].filter(Boolean), 1, 'borrow-favor <writ|loan>');
+      idle();
+      borrowFavor(run, mode);
+      return `${run.log.at(-1)?.text ?? 'Favour Debt recorded.'}\n\n${look()}`;
+    },
+    'pay-favor': ([gold]) => {
+      need([gold].filter(Boolean), 1, 'pay-favor <gold>');
+      idle();
+      payFavorDebt(run, Number(gold));
+      return `${run.log.at(-1)?.text ?? 'Favour Debt paid.'}\n\n${look()}`;
+    },
+    'borrow-house': ([houseId]) => {
+      need([houseId].filter(Boolean), 1, 'borrow-house <houseId>');
+      idle();
+      borrowHouse(run, houseId);
+      return `${run.log.at(-1)?.text ?? 'House Debt recorded.'}\n\n${look()}`;
+    },
+    'pay-house': ([houseId, gold]) => {
+      need([houseId, gold].filter(Boolean), 2, 'pay-house <houseId> <gold>');
+      idle();
+      payHouseDebt(run, houseId, Number(gold));
+      return `${run.log.at(-1)?.text ?? 'House Debt paid.'}\n\n${look()}`;
+    },
+    'mark-lore': ([key]) => {
+      need([key].filter(Boolean), 1, 'mark-lore <codexKey>');
+      discover(codex, run);
+      applyGameAction({ run, codex }, 'mark-lore', { key });
+      return `Noted lore "${key}" for conversations.`;
     },
     houses: () => [`-- The houses (Glory: a win is worth its arena tier, ×3 for a Boss; year-end purse ${HOUSES.yearPurse.map((g) => g * dateOf(run.week).year).join('/')} Gold by place) --`, ...standings(run).map((h, i) => `  ${i + 1}. ${h.name}${h.you ? ' (you)' : ''} · ${arenaName(Math.min(h.tier, 4))} · Glory ${h.glory}${h.feud ? ` · feud ${h.feud} months` : ''}${h.vengeance ? ` · vengeance ${h.vengeance} months` : ''}`)].join('\n'),
     withdraw: ([tier]) => {

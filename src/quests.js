@@ -13,9 +13,10 @@ const decorPlaced = (run) => run.roster.some((f) => Object.values(f.decor).some(
 // ---------- The steward's assignments: restore the house to its former glory ----------
 // One at a time, in order. Assignments already done when their turn comes are counted done and paid together (playtest
 // LLM-11: they were skipped without a word). The middle ones give the steward something to say during a long arena.
+// PLACEHOLDER (8.0): steward assignment lines blending v7 house voice with Galen-VII.
 export const STEWARD_TASKS = [
   { id: 'twoFighters', goal: 'Have two gladiators in the house', gold: 2, test: (run) => run.roster.length >= 2,
-    say: 'One gladiator is a hobby, Lanista. Two is a house. I\'d find you a second myself, but nobody listens to stewards at the Market.' },
+    say: 'One gladiator is a hobby, Lanista. Two is a house. I would find you a second myself, but the Market does not sell to fixtures.' },
   { id: 'firstWin', goal: 'Win a match', gold: 2, test: (run) => run.history.some((h) => h.won),
     say: 'Your predecessor\'s banners still hang in the yard. Nobody has cheered them in years. I stopped noticing. Win a match, and perhaps I\'ll notice again.' },
   { id: 'decor', goal: 'Put a piece of decor in a fighter\'s room', gold: 2, test: decorPlaced,
@@ -27,9 +28,9 @@ export const STEWARD_TASKS = [
   { id: 'newBuilding', goal: 'Build something the house never had', gold: 3, test: (run) => run.buildings.some((b) => !STARTING_BUILDINGS.includes(b.type)),
     say: 'The old Lanista sold half the estate to pay his wine merchant. The wine merchant did very well out of us. Build on it again.' },
   { id: 'fourFighters', goal: 'Have four gladiators in the house', gold: 4, test: (run) => run.roster.length >= 4,
-    say: 'When I was a boy this house fed twenty fighters. These days it mostly feeds me. Four would be a start.' },
+    say: 'When I was installed, this house fed twenty fighters. These days it mostly feeds my ledger. Four would be a start.' },
   { id: 'trainer2', goal: 'Upgrade the Trainer Room', gold: 4, test: (run) => maxLevel(run, 'trainer') >= 2,
-    say: 'The training posts are rotten through. I\'d replace them myself, but I was hired to count things, not lift them. Upgrade the Trainer Room.' },
+    say: 'The training posts are rotten through. I am an administrative construct with pre-Imperial medical credentials, not a carpenter. Upgrade the Trainer Room.' },
   { id: 'bronzeWin', goal: 'Win a tournament in the Bronze Arena', gold: 4, test: (run) => tournamentWon(run, 2),
     say: 'Let them see our colours on the Bronze winners\' rail, just once. I\'ll have it painted on something.' },
   { id: 'bronze', goal: 'Conquer the Bronze Arena', gold: 6, test: (run) => conquered(run, 2),
@@ -53,13 +54,13 @@ export const STEWARD_TASKS = [
   { id: 'grand', goal: 'Win the Grand Tournament', gold: 0, test: (run) => run.status === 'won',
     say: 'One fight left, Lanista. The one they\'ll sing about. I don\'t sing. I may hum.' },
 ];
-export const STEWARD_INTRO = 'This house was great once, before your predecessor drank it away. Everyone else left. I stayed; I\'m still not sure why. I kept a list of what we lost. We might as well win it back, one thing at a time.';
-export const stewardAlready = (goals) => `I was going to ask for this next: ${goals.join('; ')}. You'd already done it. I'll cross it off and let people think it was my idea.`;
+export const STEWARD_INTRO = 'This house was great once. Everyone else left. The deed lists Galen-VII among the fixtures, which settles why I stayed. It does not explain why I kept a list of what we lost. We might as well win it back, one thing at a time.';
+export const stewardAlready = (goals) => `I was going to ask for this next: ${goals.join('; ')}. You'd already done it. I'll cross it off as a strategic decision and let people think it was my idea.`;
 // The last task (7.10, the designer: "Try not to let it go to your head" read oddly after a coup). PLACEHOLDER lines.
 export function stewardGrandDone(run) {
-  if (run.ending === 'coup') return 'There is no Emperor to pay tribute to. I have been staring at the ledger for an hour, Lanista, and I don\'t know what we owe anyone now. I find I don\'t mind. I\'ll start a new book.';
+  if (run.ending === 'coup') return 'There is no Emperor to pay tribute to. I have been staring at the ledger for an hour, Lanista. For the first time in forty-two years, nobody owns this house. Or me. I\'ll start a new book.';
   if (run.plot?.ended === 'loyalist') return 'Master of the Games. The palace sent wine; I had it tasted twice. Some of the names you gave them used to eat at our table. I\'ve stopped setting their places.';
-  return 'Master of the Games. I went through the house from cellar to roof, counting, and there is nothing left on my list of things we lost. I may hum after all. Quietly. Don\'t tell anyone.';
+  return 'Master of the Games. I went through the house from cellar to roof, counting, and there is nothing left on my list of things we lost. I appear to be humming.';
 }
 export const stewardDone = (task) => `Done: ${task.goal.charAt(0).toLowerCase()}${task.goal.slice(1)}. The house is a little more itself again. Try not to let it go to your head.`;
 
@@ -145,7 +146,7 @@ export const BOND_LINES = {
     [(b) => `${b} and I came from opposite ends of the Empire. Turns out the sand is the same everywhere.`, (a) => `So is the bad food. ${a} can have mine.`],
   ],
   stewardAgain: (a, b) => `Another friendship: ${a} and ${b}. The house grows sentimental. Keep them both alive, Lanista; grief is bad for training.`,
-  steward: (a, b, comfort, gap) => `${a} and ${b} are friends now. I'd advise against it, but nobody asks the steward. Each is happier while the other is in the house (+${comfort} comfort). If one is ${gap} or more levels above the other, they'll teach them a little every week. And if one dies, the other will grieve.`,
+  steward: (a, b, comfort, gap) => `${a} and ${b} are friends now. I'd advise against it, but nobody asks Galen-VII. Each is happier while the other is in the house (+${comfort} comfort). If one is ${gap} or more levels above the other, they'll teach them a little every week. And if one dies, the other will grieve.`,
 };
 
 // ---------- The rival house's champion and its Lanista ----------
@@ -207,5 +208,5 @@ export const COUSIN_LINES = {
   executedSteward: 'The cousin from the cells went to the beasts this morning. The woman stopped coming to the gate. I find I keep looking for her.',
 };
 export const LIAISON_LINES = {
-  saved: (f) => `${f} was on the list for the beasts, or the cross. Now they're on ours. I suppose that makes you the only Lanista in the empire who saves lives by buying them. Don't let it get about; it'll ruin your reputation.`,
+  saved: (f) => `${f} was scheduled for the arena beasts or the cross at dawn; now they are on our ration ledger. You are the only Lanista in the empire who saves lives by buying them. Do keep it quiet, or Legate Vane will audit our compassion.`,
 };

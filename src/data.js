@@ -502,6 +502,7 @@ export const BUILDINGS = {
   exhibition: { unique: true, name: 'Exhibition Ring', dept: 'training', icon: 'swords', cost: [10], req: [2], per: [1], effect: () => 'On tournament day, two fighters who aren\'t competing can fight an exhibition bout: XP for both, Renown and Gold for the winner, and no risk of death' },
   // 5.3.0: replaces the Stables (a save with Stables gets this at the same level). Name and words are PLACEHOLDER for the designer.
   vulcan: { unique: true, name: 'Unnatural Temple of Vulcan', dept: 'medical', icon: 'forge', cost: [10, 16], req: [2, 3], per: [4, 12], effect: (n) => `Raises a fighter killed in the arena as a Revenant, up to ${n} weeks after their death`, extra: (lv) => (lv >= 2 ? 'Revenants come back with all their strength' : 'Revenants come back with 1 less Power') },
+  hades: { unique: true, name: 'Temple of Hades', dept: 'medical', icon: 'shrine', cost: [12, 18], req: [1, 3], per: [4, 6], effect: (n) => `Revives a fallen fighter whole (keeping soul, temper and story), up to ${n} weeks after death`, extra: (lv) => (lv >= 2 ? 'Fighters return uninjured and +15 Morale (−4 Gold cost)' : 'Fighters return with a 2-week Concussion') },
   liaison: { unique: true, name: 'Liaison', dept: 'scouting', icon: 'chain', cost: [6, 10], req: [2, 4], per: [1, 2], effect: (n) => (n >= 2 ? 'Monthly elite prisoner of war' : 'Monthly cheap condemned convict'), note: () => 'Read their prison records: not every prisoner is what the guards say.' },
 };
 
@@ -680,11 +681,31 @@ export const INTENT = { accuracy: [0, 0.7, 0.85] };
 export const BOND = { comfort: 8, mentorGap: 3, mentorXp: 1, grief: -20 };
 export const DEMAND = { bloodiedKills: true, chance: 0.5, fromWeek: 8, favor: 2, goldPerTier: 2, missFavor: -4 };
 export const DEMANDS = {
-  topWin: { goal: 'Win a match in your top arena', say: 'My guests are bored, Lanista. Give them a victory in your top arena this month.' },
-  bloodied: { goal: 'Win a Bloodied Victory (a win with 2+ injuries, or one where your opponent dies)', say: 'I want to see blood on a winner. Win me a bloody victory this month.' },
-  kill: { goal: 'Finish a beaten opponent (thumbs down)', say: 'The crowd grows soft. Give them a death this month.' },
-  spare: { goal: 'Spare a beaten opponent (thumbs up)', say: 'The Senate calls me cruel. Show them my clemency: spare someone in the arena this month.' },
-  twoArenas: { goal: 'Win in two different arenas on fight day', say: 'Show me the depth of your house. Win in two of my arenas this month.' },
+  topWin: {
+    goal: 'Win a match in your top arena',
+    say: 'My guests are bored, Lanista. Give them a victory in your top arena this month.',
+    sayRightHand: 'The Palatine docket is thin this month, Lanista. Legate Vane expects a victory in your top arena on fight day.',
+  },
+  bloodied: {
+    goal: 'Win a Bloodied Victory (a win with 2+ injuries, or one where your opponent dies)',
+    say: 'I want to see blood on a winner. Win me a bloody victory this month.',
+    sayRightHand: 'The senators in the lower tribunalia are yawning, Lanista. Give the court a Bloodied Victory this month.',
+  },
+  kill: {
+    goal: 'Finish a beaten opponent (thumbs down)',
+    say: 'The crowd grows soft. Give them a death this month.',
+    sayRightHand: 'The Palatine office notes too much clemency on the sand. Turn your thumb down and finish a beaten opponent this month.',
+  },
+  spare: {
+    goal: 'Spare a beaten opponent (thumbs up)',
+    say: 'The Senate calls me cruel. Show them my clemency: spare someone in the arena this month.',
+    sayRightHand: 'The Princeps wishes the plebs to praise Imperial clemency this month. Spare a beaten opponent on fight day.',
+  },
+  twoArenas: {
+    goal: 'Win in two different arenas on fight day',
+    say: 'Show me the depth of your house. Win in two of my arenas this month.',
+    sayRightHand: 'Legate Vane is auditing house depth across the circuits. Win in two different arenas on this month\'s fight day.',
+  },
 };
 export const BET = { cut: 0.9, maxOdds: 5, perTier: 10, stakes: [2, 5, 10, 20] };
 
@@ -742,3 +763,73 @@ export const PLOT = {
   // armedWin: the coup Final's armed barracks rising with your champion; contactWin: each contact's voice in the crowd.
   armedWin: 10000, contactWin: 5000, contactMax: 20000, freeCost: 8, passCost: 8, bribe: 15, searchBribe: 6, clemencyFavor: 8, betrayFavor: 30, betrayGold: 30, betrayRelic: 'eagle', // betrayGold: the Emperor's purse for the names, × tier
 };
+
+// ---- v8.0: Core 5 Companions, Shrine/Temple of Fortuna Build Customization, Temple of Hades, and Favour/House Debt ----
+
+export const COMPANIONS = {
+  startPicks: 2,
+  prices: [4, 6, 8],
+  elfLiaisonPrice: 5,
+  vulcanBonusWeeks: 8,
+  vulcanLv2BonusWeeks: 12,
+  vulcanShockMorale: -15,
+  vulcanBondShockMorale: -25,
+};
+
+export const FORTUNE_RETUNE = {
+  costByLevel: [4, 2, 0], // Lv 0 (Starter Rooftop Shrine): 4g, Lv 1 Temple: 2g, Lv 2 Temple: 0g (1st each month free, 2g thereafter)
+  riteLv2Discount: 0.5,
+  respecCostByLevel: [4, 4, 2],
+  focusTags: ['any', 'brute', 'swift', 'guarded', 'showman'],
+};
+
+export const HADES = {
+  price: 14,
+  perTier: 6,
+  lv2Discount: 4,
+  lv2Morale: 15,
+  stressLv1: 20,
+  restoreGold: 28,
+  restoreFavor: 4,
+};
+
+export const FAVOR_DEBT = {
+  writFavorCost: 10,
+  writMinFavor: 20,
+  writGoldBase: 8,
+  writGoldPerTier: 2,
+  loanBase: 12,
+  loanPerTier: 4,
+  loanSealFavor: -5,
+  loanMinFavor: 25,
+  loanVigourish: 1.25,
+  termMonths: 2,
+  monthlyFavorInterest: -3,
+  overdueFavorInterest: -6,
+  overdueGoldStep: 2,
+  maxOwedMultiplier: 2.5,
+  overdueSuspicion: 5,
+  onTimeRepayFavor: 3,
+  winterDefaultExtraFavor: -10,
+};
+
+export const HOUSE_DEBT = {
+  maxActive: 2,
+  loanBase: 10,
+  loanPerTier: 4,
+  usury: 1.2,
+  monthlyInterestPerTier: 2,
+  maxOwedMultiplier: 2.5,
+  monthlyGlory: 1,
+  bossWinRebate: 2,
+  spareForgiveBase: 5,
+  spareForgivePerTier: 2,
+  tiers: [
+    { power: 0, win: 3000,  injure: 0,     garnish: 0,    label: "Creditor's Lien" },
+    { power: 1, win: 5000,  injure: 0,     garnish: 0.25, label: 'In Arrears (1 mo)' },
+    { power: 2, win: 5000,  injure: 5000,  garnish: 0.5,  label: 'Defaulting (2 mo)' },
+    { power: 3, win: 10000, injure: 10000, garnish: 0.5,  label: 'Blood-Debt Foreclosure (3+ mo)', forceKillCrowd: true },
+  ],
+};
+
+

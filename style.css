@@ -2115,6 +2115,11 @@ main { padding-bottom: 96px; }
 .est-room-svg { width: 100%; height: auto; display: block; }
 
 .est-slot { cursor: pointer; outline: none; }
+.est-touch-pad {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
 .est-slot:hover .est-slot-pad,
 .est-slot:focus-visible .est-slot-pad {
   stroke: var(--gold-bright);
@@ -2318,6 +2323,254 @@ main { padding-bottom: 96px; }
   .estate-flame, .estate-bob { animation: none; }
 }
 
+/* ---------- v8.0 Companions, Branching Dialogue, Keepsakes, and Credit ---------- */
+.card.companion {
+  border-color: rgba(217, 180, 90, 0.55);
+  box-shadow: 0 0 0 1px rgba(217, 180, 90, 0.2), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.who h3 .handle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gold-bright, #ecd082);
+  opacity: 0.9;
+}
+.chip.personal-trait {
+  background: rgba(140, 104, 219, 0.18);
+  border-color: rgba(169, 136, 240, 0.5);
+  color: #decfff;
+}
+.chip.keepsake {
+  background: rgba(217, 180, 90, 0.2);
+  border-color: rgba(236, 208, 130, 0.58);
+  color: #f6e09e;
+}
+.talk-row { margin-bottom: 6px; }
+.talk-btn.has-queue {
+  box-shadow: 0 0 12px rgba(217, 180, 90, 0.45);
+}
+.dialogue-box {
+  border-color: var(--line-gold);
+  box-shadow: var(--shadow-modal);
+}
+.dialogue-face {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line-gold);
+  background: var(--bg-deep);
+}
+.dialogue-face .portrait {
+  display: block;
+}
+.dialogue-who {
+  font-family: var(--display);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gold-bright, #ecd082);
+  margin-bottom: 2px;
+}
+.talk-head .dialogue-who {
+  font-size: 17px;
+}
+.dialogue-who small {
+  font-family: var(--body);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.dialogue-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 2px;
+}
+.talk-box {
+  max-width: 680px;
+  width: 94vw;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.talk-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.talk-meta { flex: 1; min-width: 0; }
+.talk-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.talk-topic {
+  cursor: pointer;
+}
+.talk-topic.on {
+  border-color: var(--gold-bright, #ecd082);
+  background: rgba(217, 180, 90, 0.24);
+  color: #fff;
+}
+.talk-topic.queued {
+  border-color: rgba(235, 168, 72, 0.7);
+}
+.talk-scene-title {
+  font-size: 14px;
+  color: var(--gold-bright, #ecd082);
+}
+.talk-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 38vh;
+  overflow-y: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.26);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.talk-beat.narrator .dialogue-text,
+.talk-response.narrator .dialogue-text {
+  font-style: italic;
+  color: var(--muted, #bfb2a3);
+}
+.talk-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.talk-choice,
+.talk-choice-btn {
+  text-align: left;
+  justify-content: flex-start;
+  white-space: normal;
+  line-height: 1.35;
+  padding: 9px 12px;
+}
+.talk-choice--locked,
+.talk-choice--locked:disabled {
+  color: var(--muted);
+  background: rgba(14, 11, 9, 0.56);
+  border: 1px dashed rgba(169, 154, 138, 0.45);
+  opacity: 0.64;
+  cursor: not-allowed;
+}
+.choice-lock {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--muted);
+  font-style: italic;
+  font-weight: 500;
+}
+.talk-continue {
+  font-weight: 600;
+}
+.choice-eff {
+  color: var(--gold-bright, #ecd082);
+  font-weight: 600;
+}
+.est-shrine-bay {
+  right: auto;
+  left: 14px;
+}
+.est-steward-bay {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.est-staff-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(217, 180, 90, 0.08);
+  border: 1px solid rgba(217, 180, 90, 0.34);
+}
+.est-staff-card.est-staff-vacant {
+  background: rgba(185, 45, 36, 0.08);
+  border-style: dashed;
+  border-color: rgba(185, 45, 36, 0.48);
+}
+.est-staff-card .portrait { flex: 0 0 auto; border-radius: 7px; }
+.est-staff-card .est-row-main { flex: 1; min-width: 0; }
+.est-steward-svg {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+  display: block;
+}
+.talk-response {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(217, 180, 90, 0.08);
+  border: 1px solid rgba(217, 180, 90, 0.32);
+}
+.companion-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+}
+.lore-study-row {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lore-noted {
+  font-size: 11.5px;
+  color: var(--good, #72b66d);
+  font-weight: 600;
+}
+.est-keepsake-bar {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(217, 180, 90, 0.28);
+}
+.est-keepsake-bar.unlocked {
+  background: rgba(217, 180, 90, 0.14);
+  border-color: rgba(236, 208, 130, 0.65);
+  color: #f8e5ac;
+}
+.debt-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+}
+
 /* 7.14: the Estate's two-way view switch (it inherited a four-column grid and overflowed phones) */
 .est-mode-segs { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; max-width: 440px; }
-@media (max-width: 760px) { .est-mode-segs .seg { white-space: normal; padding: 6px 8px; } }
+@media (max-width: 760px) {
+  .est-mode-segs .seg { white-space: normal; padding: 6px 8px; }
+  .est-steward-bay { left: auto; transform: none; }
+  .talk-modal .modal-body.talk-box {
+    width: 96vw;
+    max-width: 96vw;
+    max-height: 92vh;
+    padding: 12px;
+    gap: 8px;
+  }
+  .talk-head { gap: 10px; }
+  .talk-head .portrait { width: 52px; height: 52px; }
+  .talk-head .dialogue-who { font-size: 15.5px; }
+  .talk-transcript { max-height: 34vh; padding: 6px 8px; }
+  .talk-choice,
+  .talk-choice-btn { padding: 8px 10px; font-size: 13px; }
+  .est-speech-bubble { transform: translate(14px, -38px) scale(1.35); }
+}
+

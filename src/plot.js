@@ -151,8 +151,9 @@ export const PLOT_EVENTS = [
   {
     id: 'freeMe', plot: true, stages: ['favours', 'cause'], title: 'Free me',
     // Only with two political prisoners in the house (the designer, 5.4.0): the last one never asks to leave.
-    when: (run) => (run.plot?.trust ?? 0) >= 3 && political(run).length >= 2,
-    target: asker(political),
+    // v8.0: Core Companions (e.g. Vaelen) never vanish silently via freeMe with no revivable body.
+    when: (run) => (run.plot?.trust ?? 0) >= 3 && political(run).length >= 2 && political(run).some((f) => !f.companion),
+    target: asker((run) => political(run).filter((f) => !f.companion)),
     text: ({ f }) => `${f} asks to speak to you alone. "Free me. I can do more for the cause outside these walls than inside your arena."`,
     choices: [
       { label: 'Refuse', refuse: true, effects: { morale: { to: 'f', n: -15 }, askedFree: true } },
@@ -311,7 +312,9 @@ export const PLOT_EVENTS = [
     when: (run) => run.plot.suspicion >= PLOT.suspicion.raid,
     target: (run, rng) => {
       const p = political(run);
-      return p.length ? { f: pick(rng, p).id } : run.roster.length ? { f: pick(rng, run.roster).id } : null;
+      const nonComp = p.filter((x) => !x.companion);
+      const pool = nonComp.length ? nonComp : p;
+      return pool.length ? { f: pick(rng, pool).id } : run.roster.length ? { f: pick(rng, run.roster).id } : null;
     },
     text: () => `The Praetorians come at dawn and fill the yard. ${PREFECT} stands in the middle of it, finishing an apple. He wants a traitor, or a reason to leave without one.`,
     choices: [

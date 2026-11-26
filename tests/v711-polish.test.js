@@ -208,7 +208,7 @@ test('Level-3 fighter backstories fire once per fighter, skip Revenants and repe
   const t1 = run.talk.find((t) => t.key === 'backstory-fb1');
   assert.ok(t1, 'talk scene queued');
   assert.equal(t1.beats.at(-1).replies.length, 2, 'backstory ends with 2 player replies');
-  assert.ok(f1.story.some((e) => /Earth before the portal/i.test(e.text)), 'logs 1-line memory to fighter Story');
+  assert.ok(f1.story.some((e) => /lower aqueduct wards of Palatina/i.test(e.text)), 'logs 1-line memory to fighter Story');
   checkBackstories(run);
   assert.deepEqual(run.backstories, ['fb1', 'fb2'], 'skips second Human and triggers Android instead');
   checkBackstories(run);
