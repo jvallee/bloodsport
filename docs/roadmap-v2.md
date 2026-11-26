@@ -347,3 +347,10 @@ rest of 7.10 (endings, the prefect, replies, the tutorial) is words only.
 First career 28% ±5, reckless 4%, brawler 25%, full Legacy 37% (Heat 1 18%, Heat 3 11%), Long Road 25%, rebel careers: coup
 8%, treason 2%; loyalist +6 over careful. Boss win per attempt 89 · 59 · 35 · 36 · 19. The sweep that chose the numbers is in
 `docs/fight-rules.md` "7.14.0".
+
+### v8.0.0 (Palatina, Core Companions, dialogue trees, staff, Hades and debt)
+
+Built by the designer (bloodsport-v8.0.0-narrative.patch) with its design spec in `docs/design-v8.md`. The designer ran the
+balance gates (`npm run check`) on their own machine and reported that they pass; the patch's handoff quoted a `--quick` run
+of 23/24 with careful at 23% (300 careers). Tests: 851 pass. The 24 gates themselves are unchanged; `checks.js` adds a v8
+system-usage report.
