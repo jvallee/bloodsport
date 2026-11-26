@@ -1,2 +1,2 @@
 // The game version shown in bug reports. Keep it equal to package.json's "version" (a test checks).
-export const VERSION = '7.14.0';
+export const VERSION = '8.0.0';

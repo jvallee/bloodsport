@@ -47,7 +47,7 @@ test('starting buildings land on Lv-1 plots and Legacy Oracle lands on Roof Obse
   const oracle = withOracle.buildings.find((b) => b.type === 'oracle');
   assert.equal(oracle.slot, ROOF_ORACLE_SLOT);
   assert.equal(new Set(withOracle.buildings.map((b) => b.slot)).size, 4);
-  assert.equal(plotsFree(withOracle), -1); // exact legacy invariant preserved
+  assert.equal(plotsFree(withOracle), 0); // V7-M1: ROOF_ORACLE_SLOT is a dedicated roof slot, not one of the 21 floor plots
 });
 
 test('slot-targeted buildRoom allows free placement across floors and blocks invalid/locked/occupied plots', () => {

@@ -4,7 +4,7 @@ import { createRng, deriveSeed, next, pick } from '../rng.js';
 import {
   ECONOMY, STRESS, HEAL_WEEKS, CIRCUITS, STAGES, XP, RENOWN, MORALE, GEAR, DECOR, FAVOR,
   INJURY_BY_TAG, CONSUMABLES, BLOODIED, FESTIVAL_BY_ID, HOUSES, SCARS, SCAR_CHANCE, SCAR_AFEARED, SPIKY_HARDENED_AT,
-  SEVERE, BRACKET, MERCY, SHORT, BET, HYPE, SUMMONS,
+  SEVERE, BRACKET, MERCY, SHORT, BET, HYPE, SUMMONS, HOUSE_DEBT,
 } from '../data.js';
 import { hasRelic, relicSum, relicFight } from '../fortune.js';
 import { CELL_IDS } from '../plot.js';
@@ -16,19 +16,20 @@ import {
 } from '../fight.js';
 import { estimateOdds } from '../odds.js';
 import { festivalOn, isWinter } from '../calendar.js';
+import { oracleLevel } from '../ludus.js';
 import {
   GRAND_TIER, DEBUFF_IDS, createFighter, newId, remember, takenNames, clampStress, log,
-  findFighter, chronicle, bumpMorale, talk, assertOk, effectivePower, arenaName, isChampionOf,
+  findFighter, chronicle, bumpMorale, talk, assertOk, effectivePower, arenaName, championTitle, isChampionOf,
   crownChampion, isShort, hasDecree, hasPolicy, bossLossFavor, winsOf, foughtThisWeek, xpFor,
-  gainXp, activeModalOrPendingBlocker, nextStage, addPrestige, clearHealedMedbay,
-  removeFighter, changeFavor, checkLoss, unlockedTiers,
+  gainXp, activeModalOrPendingBlocker, isInActiveBracket, nextStage, addPrestige, clearHealedMedbay,
+  removeFighter, changeFavor, checkLoss, unlockedTiers, queueMilestone, pruneFighterDialogue, createDialogueState,
 } from './helpers.js';
 import { plotActive, changeSuspicion, addContact, resolveCoup } from './plotEngine.js';
 import {
   arenaPower, boutFor, currentBout, hasBracket, bracketFor, bracketOf, crushingGapFor,
   opponentFor, opponentSpeed, seasonOpponent, newOpponent, openArena, restartCircuit,
   houseOf, houseForArena, houseTier, matchOptions, recordNemesis, nemesisFalls,
-  rivalChampionResult, rivalChampionKilled,
+  rivalChampionResult, rivalChampionKilled, debtPenaltyFor,
 } from './houses.js';
 import { espionageAtMatch } from './espionage.js';
 import { faceFear } from './roster.js';
@@ -64,6 +65,7 @@ export function summonsBlocker(run, id, order) {
 export function answerSummons(run, id, order) {
   assertOk(summonsBlocker(run, id, order));
   const fighter = findFighter(run, id);
+  const isFirstFight = !run.history.some((h) => h.fighterId === fighter.id);
   const r = run.rng.summons ??= createRng(deriveSeed(run.seed, 12));
   const bout = { tier: SUMMONS.tier, boss: false, oppPower: arenaPower(run, SUMMONS.tier, 0) };
   const opp = createFighter(r, { id: newId(run, 'o'), power: bout.oppPower, decorLevel: CIRCUITS[SUMMONS.tier - 1].oppDecor, takenNames: takenNames(run), classes: run.setup?.classes });
@@ -72,13 +74,16 @@ export function answerSummons(run, id, order) {
   opp.house = houseForArena(run, SUMMONS.tier, r).id;
   remember(run, opp);
   const house = houseOf(run, opp);
+  const debt = debtPenaltyFor(house);
   const m = createMatch({
     a: fighter, b: opp, rng: r,
+    summons: true,
     overtrained: fighter.stress >= STRESS.overtrained,
     festival: festivalOn(run.week)?.id ?? null,
     grudge: house?.feud > 0 ? 1 : house?.owed > 0 ? -1 : 0,
     vengeance: house?.vengeance > 0,
     relics: relicFight(run, fighter),
+    ...(debt ? { debt } : {}),
   });
   while (!m.over) {
     if (order === 'yield' && canThrowTowel(m) && mortalDanger(m.a)) throwTowel(m);
@@ -96,7 +101,9 @@ export function answerSummons(run, id, order) {
     fighter.alive = true;
     run.relics = run.relics.filter((rid) => rid !== 'proserpina');
   }
-  fighter.stress = clampStress(fighter.stress + STRESS.fight);
+  delete fighter.meditatedBoost;
+  delete fighter.jailbreakBoost;
+  fighter.stress = clampStress(fighter.stress + STRESS.fight - (fighter.alive && fighter.keepsake === 'compassionAnchor' ? 10 : 0));
   const won = m.result.winner === 'A';
   const reason = m.result.reason;
   const name = `${arenaName(SUMMONS.tier)} · the Emperor's summons`;
@@ -113,14 +120,22 @@ export function answerSummons(run, id, order) {
   const favorBefore = run.favor;
   let line;
   if (won) {
-    changeFavor(run, SUMMONS.winFavor, 'won on the Imperial sand at his summons');
-    summary.renown = SUMMONS.winRenown;
+    changeFavor(run, SUMMONS.winFavor + (fighter.personalTrait === 'fourthSon' ? 1 : 0), 'won on the Imperial sand at his summons');
+    if (fighter.personalTrait === 'fourthSon') bumpMorale(fighter, 5);
+    summary.renown = SUMMONS.winRenown + (fighter.keepsake === 'fourthSonHonour' ? 1 : 0);
     chronicle(run, fighter, `Summoned to ${arenaName(SUMMONS.tier)} by the Emperor, and beat ${opp.name}.`);
     line = SUMMONS_LINES.won(fighter.name);
   } else if (!fighter.alive) {
+    const lastWords = lastWordsFor(run, fighter);
+    summary.lastWords = lastWords;
+    chronicle(run, fighter, `Last words: "${lastWords}"`);
     chronicle(run, fighter, `Summoned to ${arenaName(SUMMONS.tier)} by the Emperor, and killed by ${opp.name}.`);
+    const wasBondedTo = fighter.bond?.id ?? null;
     removeFighter(run, fighter, { fallen: { arena: true } });
-    for (const f of run.roster) bumpMorale(f, MORALE.allyDeath);
+    for (const f of run.roster) {
+      bumpMorale(f, MORALE.allyDeath);
+      queueMilestone(run, f, { id: 'summons_after_ally_died', priority: 100, ctx: { deadId: fighter.id, deadName: fighter.name, bonded: f.id === wasBondedTo || f.bond?.id === fighter.id, order } });
+    }
     log(run, `${fighter.name} died on the Imperial sand. The house mourns; their gear returns to the storeroom.`, 'bad');
     line = SUMMONS_LINES.died(fighter.name);
     if (house) {
@@ -153,6 +168,12 @@ export function answerSummons(run, id, order) {
         house.since = run.week;
       }
     }
+    if (isFirstFight) {
+      queueMilestone(run, fighter, { id: won ? 'first_fight_win' : 'first_fight_loss', priority: 78, ctx: { tier: SUMMONS.tier, arena: arenaName(SUMMONS.tier), bloodied: effectiveInjuries(fighter) >= 2, kill: won && reason === 'death', towel: reason === 'towel', oppName: opp.name } });
+    }
+    if (won) queueMilestone(run, fighter, { id: 'summons_after_win', priority: 92, ctx: { oppName: opp.name, order } });
+    else if (reason === 'towel' || m.round < 3) queueMilestone(run, fighter, { id: 'summons_after_loss', priority: 90, ctx: { oppName: opp.name, reason, rounds: m.round, order } });
+    else queueMilestone(run, fighter, { id: 'summons_after_survive', priority: 91, ctx: { oppName: opp.name, rounds: m.round, order } });
   }
   summary.favor = run.favor - favorBefore;
   pushResult(run, summary);
@@ -271,7 +292,7 @@ export function useItem(run, match, key) {
 const betOddsCache = new WeakMap();
 export function betOdds(run, match) {
   const tier = match.bout?.tier ?? run.matchInfo?.tier ?? run.topTier;
-  const opts = { ...matchOptions(run, match.a.f, tier), useSignatures: false, n: 400, seed: 777, boostsA: match.a.boosts ?? null, boostsB: match.b.boosts ?? null, vengeanceB: Boolean(match.b.vengeance), ashA: match.a.ash ?? 0 };
+  const opts = { ...matchOptions(run, match.a.f, tier), useSignatures: false, n: 400, seed: 777, boostsA: match.a.boosts ?? null, boostsB: match.b.boosts ?? null, vengeanceB: Boolean(match.b.vengeance), ashA: match.a.ash ?? 0, playbook: Boolean(match.playbook) };
   const key = JSON.stringify([match.a.f, match.b.f, opts]);
   const hit = betOddsCache.get(match);
   if (hit?.key === key) return hit.odds;
@@ -405,6 +426,7 @@ export function finishMatch(run, match) {
   const bout = { ...boutFor(run, tier), buyIn: run.matchInfo.buyIn ?? boutFor(run, tier).buyIn };
   const arena = run.arenas[tier];
   const fighter = findFighter(run, match.a.f.id);
+  const isFirstFight = !run.history.some((h) => h.fighterId === fighter.id);
   const bracket = bracketOf(run, tier);
   const opp = bracket && bracket.round < 2 ? bracket.foes[bracket.round] : arena.opponent;
   const newInjuries = match.a.f.injuries.filter((i) => i.weeksLeft === undefined).map((i) => INJURY_BY_TAG[i.tag].name);
@@ -415,7 +437,10 @@ export function finishMatch(run, match) {
     fighter.alive = true;
     run.relics = run.relics.filter((id) => id !== 'proserpina');
   }
-  fighter.stress = clampStress(fighter.stress + STRESS.fight + (match.stressAfter ?? 0));
+  delete fighter.meditatedBoost;
+  delete fighter.jailbreakBoost;
+  const compassionCalm = fighter.alive && fighter.keepsake === 'compassionAnchor' && decorWorks(match) ? 10 : 0;
+  fighter.stress = clampStress(fighter.stress + STRESS.fight + (match.stressAfter ?? 0) - compassionCalm);
 
   const won = match.result.winner === 'A';
   if (bracket && bracket.round < 2 && won && fighter.alive) return finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries);
@@ -444,6 +469,7 @@ export function finishMatch(run, match) {
   }
   const favorBefore = run.favor;
 
+  let newlyCrownedTitles = [];
   if (won) {
     const fest = bout.festival ? FESTIVAL_BY_ID[bout.festival] : null;
     summary.gold = bout.winGold + Math.floor(fighter.renown / RENOWN.goldPer);
@@ -452,7 +478,8 @@ export function finishMatch(run, match) {
     if (!crushing && !champion) {
       summary.renown = RENOWN.win + (bout.boss ? RENOWN.bossWin : 0) + (upset ? RENOWN.upset : 0) + (fighter.perks.includes('crowdPleaser') ? 1 : 0)
         + (fighter.decor.warBanner ?? 0) * DECOR.warBanner.renown + (bloodied ? BLOODIED.renown : 0) + (fest?.renown ?? 0)
-        + (plotActive(run) && run.plot.crowdUntil > run.week ? 1 : 0);
+        + (plotActive(run) && run.plot.crowdUntil > run.week ? 1 : 0)
+        + (fighter.keepsake === 'fourthSonHonour' && decorWorks(match) ? 1 : 0);
     }
     if (bloodied) bumpMorale(fighter, BLOODIED.morale);
     if (match.result.reason === 'death') {
@@ -465,7 +492,15 @@ export function finishMatch(run, match) {
         log(run, `${fighter.name} has ${fighter.kills} kills and earns the mark ${summary.mark}: ${marks.at(-1).desc}`, 'event');
       }
     }
-    bumpMorale(fighter, crushing || champion ? MORALE.crowdJeers : MORALE.win);
+    if (fighter.personalTrait === 'cursedIntellect' && (crushing || gap >= ECONOMY.crushingGap)) {
+      bumpMorale(fighter, -5);
+    } else {
+      bumpMorale(fighter, crushing || champion ? MORALE.crowdJeers : MORALE.win);
+    }
+    if (fighter.personalTrait === 'fourthSon' && (tier === 4 || tier === GRAND_TIER || run.demand?.id === 'kill')) {
+      changeFavor(run, 1, "Fourth-Son's Stripes");
+      bumpMorale(fighter, 5);
+    }
     if (champion) {
       log(run, `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn');
       changeFavor(run, FAVOR.championReturn, 'a champion fighting back in a lower arena');
@@ -481,6 +516,7 @@ export function finishMatch(run, match) {
       fighter.arenaWins = { ...(fighter.arenaWins ?? {}), [tier]: (fighter.arenaWins?.[tier] ?? 0) + 1 };
       if (!isChampionOf(fighter, tier) && (bout.boss || fighter.arenaWins[tier] >= ECONOMY.titleWins)) {
         const titles = crownChampion(fighter, tier);
+        newlyCrownedTitles = titles;
         summary.title = titles.join(', ');
         summary.titlePower = titles.length;
       }
@@ -525,6 +561,27 @@ export function finishMatch(run, match) {
         run.graveyard = [...(run.graveyard ?? []), opp.name];
         summary.feud = `${house.name} swears revenge: their fighters get +1 Power against you for ${HOUSES.feudMonths} months.`;
         log(run, summary.feud, 'warn');
+      }
+      if (house.debt?.owed > 0) {
+        const pen = debtPenaltyFor(house);
+        if (bout.boss) {
+          const rebate = Math.min(house.debt.owed, HOUSE_DEBT.bossWinRebate * Math.min(tier, CIRCUITS.length));
+          house.debt.owed -= rebate;
+          if (rebate > 0) log(run, `Beating ${house.name}'s Boss forces a ${rebate} Gold rebate on your debt.`, 'good');
+        }
+        if (pen?.garnish > 0 && summary.gold > 0 && house.debt.owed > 0) {
+          const garnished = Math.min(house.debt.owed, Math.floor(summary.gold * pen.garnish));
+          if (garnished > 0) {
+            summary.gold -= garnished;
+            summary.garnished = garnished;
+            house.debt.owed -= garnished;
+            log(run, `${house.name}'s bailiffs garnish ${garnished} Gold from the winner's purse toward your debt (${house.debt.owed} Gold remaining).`, 'warn');
+          }
+        }
+        if (house.debt.owed <= 0) {
+          delete house.debt;
+          log(run, `Your debt to ${house.name} is paid off in full!`, 'good');
+        }
       }
     } else {
       house.glory += (bout.boss ? HOUSES.glory.boss : HOUSES.glory.win) * Math.max(1, t);
@@ -578,7 +635,7 @@ export function finishMatch(run, match) {
     const vs = meleeOnly(match.b ?? { f: opp }) ? 'melee' : 'ranged';
     const afeared = SCAR_AFEARED[fighter.humor] ?? SCAR_AFEARED.other;
     const roll = afeared > 0 ? next(run.rng.growth) : 1;
-    const id = !(decorWorks(match) && fighter.decor?.skullRack > 0) && roll < afeared ? 'afeared' : 'enraged';
+    const id = !(decorWorks(match) && (fighter.decor?.skullRack > 0 || fighter.keepsake === 'tidalMemory')) && roll < afeared ? 'afeared' : 'enraged';
     if (!(fighter.scars ?? []).some((sc) => sc.vs === vs)) {
       fighter.scars = [...(fighter.scars ?? []), { id, vs }];
       summary.scar = [summary.scar, `${SCARS[id].name} (${vs})`].filter(Boolean).join(', '); // keep Battle-Hardened too
@@ -601,6 +658,49 @@ export function finishMatch(run, match) {
     gainXp(run, fighter, summary.xp);
     summary.levels = fighter.level - levelBefore;
     if (won) summary.fearConquered = faceFear(run, fighter, match.b);
+    if (isFirstFight) {
+      queueMilestone(run, fighter, {
+        id: won ? 'first_fight_win' : 'first_fight_loss',
+        priority: 78,
+        ctx: { tier, arena: arenaName(tier), bloodied, kill: match.result.reason === 'death', towel: match.result.reason === 'towel', oppName: opp.name },
+      });
+    }
+    const tKey = Math.min(5, Math.max(1, tier));
+    if (!newlyCrownedTitles.length) {
+      queueMilestone(run, fighter, {
+        id: `tourney_${won ? 'win' : 'loss'}_t${tKey}`,
+        priority: 70,
+        ctx: { tier: tKey, arena: arenaName(tier), boss: bout.boss, bracket: bracket ? BRACKET.rounds[bracket.round] : null, oppName: opp.name, reason: match.result.reason, bloodied },
+      });
+    }
+    if (newlyCrownedTitles.length) {
+      queueMilestone(run, fighter, {
+        id: `crowned_champion_t${tier}`,
+        priority: 85,
+        ctx: { tier, title: championTitle(tier), allTitles: newlyCrownedTitles, cascaded: newlyCrownedTitles.length > 1, viaBoss: bout.boss },
+      });
+      // Cap peer_crowned speech badges to at most 1 housemate (bondmate first, else highest-Renown) to avoid a 5-badge modal flood.
+      const peers = run.roster.filter((other) => other.id !== fighter.id && other.alive !== false && other.kind !== 'revenant');
+      const featuredPeer = peers.find((other) => fighter.bond?.id === other.id)
+        ?? peers.sort((a, b) => (b.renown ?? 0) - (a.renown ?? 0))[0]
+        ?? null;
+      if (featuredPeer) {
+        const alreadyChamp = (featuredPeer.titles ?? []).length > 0;
+        queueMilestone(run, featuredPeer, {
+          id: alreadyChamp ? 'peer_crowned_already_champ' : 'peer_crowned_not_champ',
+          priority: 80,
+          ctx: {
+            champId: fighter.id,
+            champName: fighter.name,
+            champCoreId: fighter.coreId ?? null,
+            tier,
+            title: championTitle(tier),
+            myTitle: featuredPeer.titles?.[0] ?? null,
+            allMyTitles: featuredPeer.titles ?? [],
+          },
+        });
+      }
+    }
   }
   clearHealedMedbay(run, fighter);
   run.inMatch = false;
@@ -630,6 +730,7 @@ function claimLoot(run, fighter, opp, summary, always) {
 }
 
 function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries) {
+  const isFirstFight = !run.history.some((h) => h.fighterId === fighter.id);
   const bout = boutFor(run, tier);
   const round = BRACKET.rounds[bracket.round];
   const nextRound = BRACKET.rounds[bracket.round + 1];
@@ -638,7 +739,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   const summary = {
     week: run.week, tier, name: `${bout.name} · ${round}`, boss: false, top: bout.top, won: true, reason: match.result.reason, bloodied,
     fighter: fighter.name, fighterId: fighter.id, died: false, gold: BRACKET.purse * Math.min(tier, 4), prestige: BRACKET.prestigeTopOnly && !bout.top ? 0 : BRACKET.prestige, favor: 0,
-    xp: XP.win, renown: 1, injuries: newInjuries, morale: 0, levels: 0, bracket: round, next: nextRound, kill, house: houseOf(run, opp)?.name ?? null,
+    xp: XP.win, renown: 1 + (fighter.keepsake === 'fourthSonHonour' && decorWorks(match) ? 1 : 0), injuries: newInjuries, morale: 0, levels: 0, bracket: round, next: nextRound, kill, house: houseOf(run, opp)?.name ?? null,
   };
   const levelBefore = fighter.level;
   if (bloodied) {
@@ -662,6 +763,23 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
     rivalChampionResult(run, opp, fighter, tier, true, summary);
     if (kill) rivalChampionKilled(run, opp.name);
   }
+  const house = houseOf(run, opp);
+  if (house?.debt?.owed > 0) {
+    const pen = debtPenaltyFor(house);
+    if (pen?.garnish > 0 && summary.gold > 0) {
+      const garnished = Math.min(house.debt.owed, Math.floor(summary.gold * pen.garnish));
+      if (garnished > 0) {
+        summary.gold -= garnished;
+        summary.garnished = garnished;
+        house.debt.owed -= garnished;
+        log(run, `${house.name}'s bailiffs garnish ${garnished} Gold from the purse toward your debt (${house.debt.owed} Gold remaining).`, 'warn');
+        if (house.debt.owed <= 0) {
+          delete house.debt;
+          log(run, `Your debt to ${house.name} is paid off in full!`, 'good');
+        }
+      }
+    }
+  }
   settleBet(run, match, true, summary);
   relicRewards(run, fighter, true, summary);
   summary.xp += relicSum(run, 'fightXp');
@@ -676,8 +794,14 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
     fighter.kills = (fighter.kills ?? 0) + 1;
     run.graveyard = [...(run.graveyard ?? []), opp.name];
   }
+  if (isFirstFight) {
+    queueMilestone(run, fighter, {
+      id: 'first_fight_win',
+      priority: 78,
+      ctx: { tier, arena: arenaName(tier), bloodied, kill, towel: false, oppName: opp.name },
+    });
+  }
   claimLoot(run, fighter, opp, summary, false);
-  const house = houseOf(run, opp);
   if (house) {
     run.glory += HOUSES.glory.win * Math.min(tier, 4);
     house.glory = Math.max(0, house.glory - HOUSES.glory.beaten);
@@ -699,7 +823,8 @@ function offerMercy(run, match, summary, fighter, opp, tier) {
   const wounds = effectiveInjuries(match.b.f);
   if (wounds < MERCY.minInjuries) return;
   const house = houseOf(run, opp);
-  const blood = Boolean(house?.feud || house?.vengeance) || wounds >= deathGateAt(match.b.f, match.b.arena);
+  const debtForceKill = Boolean(debtPenaltyFor(house)?.forceKillCrowd);
+  const blood = Boolean(house?.feud || house?.vengeance || debtForceKill) || wounds >= deathGateAt(match.b.f, match.b.arena);
   run.mercy = { fighterId: fighter.id, opp: opp.name, house: house?.id ?? null, crowd: blood ? 'kill' : 'spare', tier, top: Boolean(summary.top), at: run.history.length - 1, ...(opp.rivalChampion ? { rivalChampion: true } : {}) };
   summary.mercy = run.mercy.crowd;
 }
@@ -762,6 +887,20 @@ export function resolveMercy(run, choice) {
       out.owed = `${house.name} owes you a life: their fighters get −1 Power against you for ${HOUSES.feudMonths} months.`;
       log(run, out.owed, 'good');
     }
+    if (crowd === 'kill' && house?.debt?.owed > 0 && (house.debt.monthsUnpaid ?? 0) >= 1) {
+      const forgive = Math.min(house.debt.owed, HOUSE_DEBT.spareForgiveBase + HOUSE_DEBT.spareForgivePerTier * Math.min(tier, CIRCUITS.length));
+      house.debt.owed -= forgive;
+      if (house.debt.owed <= 0) {
+        delete house.debt;
+        log(run, `${house.name} forgives the remainder of your debt in gratitude for sparing ${opp}!`, 'good');
+      } else {
+        log(run, `${house.name} forgives ${forgive} Gold of your debt for sparing ${opp} (${house.debt.owed} Gold remaining).`, 'good');
+      }
+    }
+    if (fighter?.personalTrait === 'crackedGovernor') {
+      bumpMorale(fighter, 10);
+      fighter.stress = clampStress(fighter.stress - 15);
+    }
   } else {
     out.renown = MERCY.killRenown + (crowd === 'spare' ? MERCY.infamyRenown : 0);
     const marksBefore = killMarks(fighter).length;
@@ -782,6 +921,40 @@ export function resolveMercy(run, choice) {
       out.feud = `${house.name} swears revenge: their fighters get +1 Power against you for ${HOUSES.feudMonths} months.`;
       log(run, out.feud, 'warn');
     }
+    if (fighter?.personalTrait === 'crackedGovernor') {
+      fighter.jailbreakBoost = 1;
+      fighter.stress = clampStress(fighter.stress + 20);
+      bumpMorale(fighter, -15);
+      // Prevent mid-bracket softlock (e.g. under emperorsGaze / coup Final where withdrawal is blocked).
+      if (isInActiveBracket(run, fighter.id) && fighter.morale < MORALE.mutinous) fighter.morale = MORALE.mutinous;
+    }
+  }
+  if (fighter && (fighter.companion || fighter.coreId || fighter.dialogue)) {
+    fighter.dialogue ??= createDialogueState(fighter.coreId ?? null);
+    fighter.dialogue.mercy ??= { spared: 0, sparedAgainstCrowd: 0, killed: 0, killedAgainstCrowd: 0, streak: 0 };
+    const mLog = fighter.dialogue.mercy;
+    const againstCrowd = choice !== crowd;
+    if (choice === 'kill') {
+      mLog.killed = (mLog.killed ?? 0) + 1;
+      if (againstCrowd) mLog.killedAgainstCrowd = (mLog.killedAgainstCrowd ?? 0) + 1;
+      mLog.streak = Math.min(0, mLog.streak ?? 0) - 1;
+      queueMilestone(run, fighter, {
+        id: 'mercy_kill_ordered',
+        priority: 76,
+        ctx: { oppName: opp, houseName: house?.name ?? null, crowd, againstCrowd, killsOrdered: mLog.killed },
+      });
+    } else {
+      mLog.spared = (mLog.spared ?? 0) + 1;
+      if (againstCrowd) mLog.sparedAgainstCrowd = (mLog.sparedAgainstCrowd ?? 0) + 1;
+      mLog.streak = Math.max(0, mLog.streak ?? 0) + 1;
+      if (mLog.streak >= 2 || (crowd === 'kill' && fighter.coreId === 'android')) {
+        queueMilestone(run, fighter, {
+          id: 'mercy_spare_streak',
+          priority: 74,
+          ctx: { oppName: opp, houseName: house?.name ?? null, crowd, againstCrowd, spareStreak: mLog.streak },
+        });
+      }
+    }
   }
   if (choice === crowd || (choice === 'spare' && fighter.perks.includes('merciful'))) {
     out.renown += MERCY.crowdRenown;
@@ -800,7 +973,49 @@ export function resolveMercy(run, choice) {
   return out;
 }
 
-// ---------- Withdraw and arena progression ----------
+// ---------- Withdraw, stuck milestone escalation, and arena progression ----------
+
+export function checkStuckMilestones(run) {
+  if (!run || run.status !== 'active' || run.topTier >= GRAND_TIER) return;
+  const companions = (run.roster ?? []).filter((f) => f.alive !== false && (f.companion || f.coreId || f.dialogue));
+  if (!companions.length) return;
+  const tier = run.topTier;
+  if (!run.tierState || run.tierState.tier !== tier) {
+    run.tierState = { tier, enteredWeek: run.week, bossLosses: 0, tourneyLosses: 0 };
+  }
+  const weeksOnTier = run.week - (run.tierState.enteredWeek ?? 0);
+  const threshold = isShort(run) ? 8 : 12;
+  const bossLosses = run.tierState.bossLosses ?? 0;
+
+  for (const f of companions) {
+    f.dialogue ??= createDialogueState(f.coreId ?? null);
+    if (!f.dialogue.stuck || f.dialogue.stuck.tier !== tier) {
+      f.dialogue.stuck = { tier, stage: 0, lastTalkWeek: run.week, bossLossesAtTalk: 0 };
+      pruneFighterDialogue(run, f);
+    }
+    const st = f.dialogue.stuck;
+    const seen = f.dialogue.seen ?? [];
+    const queuedIds = (f.dialogue.queue ?? []).map((q) => (typeof q === 'string' ? q : q.id));
+    if (st.stage === 0) {
+      if (weeksOnTier >= threshold || bossLosses >= 1) {
+        const s1 = `stuck_t${tier}_stage1`;
+        if (!seen.includes(s1) && !queuedIds.includes(s1)) {
+          queueMilestone(run, f, { id: s1, priority: 55, ctx: { tier, arena: arenaName(tier), stage: 1, weeksOnTier, bossLosses } });
+        }
+      }
+    } else if (st.stage === 1) {
+      const s2 = `stuck_t${tier}_stage2`;
+      if ((run.week - st.lastTalkWeek >= 4 || bossLosses > st.bossLossesAtTalk) && !seen.includes(s2) && !queuedIds.includes(s2)) {
+        queueMilestone(run, f, { id: s2, priority: 56, ctx: { tier, arena: arenaName(tier), stage: 2, weeksOnTier, bossLosses } });
+      }
+    } else if (st.stage === 2) {
+      const s3 = `stuck_t${tier}_stage3`;
+      if ((run.week - st.lastTalkWeek >= 4 || bossLosses > st.bossLossesAtTalk) && !seen.includes(s3) && !queuedIds.includes(s3)) {
+        queueMilestone(run, f, { id: s3, priority: 57, ctx: { tier, arena: arenaName(tier), stage: 3, weeksOnTier, bossLosses } });
+      }
+    }
+  }
+}
 
 export function withdrawBlocker(run, tier) {
   const blocked = activeModalOrPendingBlocker(run);
@@ -836,6 +1051,11 @@ export function advanceArena(run, tier, won, opp, beatYou = true) {
     }
     newOpponent(run, tier);
   } else if (arena.stage < 2) {
+    if (!won && tier === run.topTier && (run.roster ?? []).some((f) => f.companion || f.coreId || f.dialogue)) {
+      run.tierState ??= { tier: run.topTier, enteredWeek: 0, bossLosses: 0, tourneyLosses: 0 };
+      run.tierState.tourneyLosses = (run.tierState.tourneyLosses ?? 0) + 1;
+      checkStuckMilestones(run);
+    }
     arena.stage = nextStage(run, tier);
     newOpponent(run, tier);
   } else if (won) {
@@ -845,7 +1065,13 @@ export function advanceArena(run, tier, won, opp, beatYou = true) {
       log(run, `${arenaName(tier)} conquered!`, 'event');
       const nextTier = tier + 1;
       run.topTier = nextTier;
-      for (const f of run.roster) f.topStreak = 0;
+      if (run.tierState || (run.roster ?? []).some((f) => f.companion || f.coreId || f.dialogue)) {
+        run.tierState = { tier: nextTier, enteredWeek: run.week, bossLosses: 0, tourneyLosses: 0 };
+      }
+      for (const f of run.roster) {
+        f.topStreak = 0;
+        pruneFighterDialogue(run, f);
+      }
       openArena(run, nextTier);
       log(run, nextTier === GRAND_TIER ? 'The Grand Tournament awaits.' : `${arenaName(nextTier)} opens its gates to you. Your old arenas still hold bouts every month.`, 'event');
     }
@@ -855,6 +1081,11 @@ export function advanceArena(run, tier, won, opp, beatYou = true) {
       const basePower = arenaPower(run, tier) + (isShort(run) ? SHORT.rival : 1);
       arena.rival = { ...structuredClone(opp), power: basePower, renown: opp.renown + 2, rival: true, injuries: [], alive: true };
       log(run, beatYou ? `${opp.name} will remember this, and will be waiting for you.` : `${opp.name} never had to fight you. They will be waiting next time, stronger.`, 'warn');
+      if ((run.roster ?? []).some((f) => f.companion || f.coreId || f.dialogue)) {
+        run.tierState ??= { tier: run.topTier, enteredWeek: 0, bossLosses: 0, tourneyLosses: 0 };
+        run.tierState.bossLosses = (run.tierState.bossLosses ?? 0) + 1;
+        checkStuckMilestones(run);
+      }
     }
     if (isShort(run) && SHORT.rematch && tier === run.topTier) {
       arena.debuff = pick(run.rng.opponents, DEBUFF_IDS);
@@ -863,3 +1094,4 @@ export function advanceArena(run, tier, won, opp, beatYou = true) {
   }
   checkLoss(run);
 }
+

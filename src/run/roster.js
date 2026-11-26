@@ -2,10 +2,12 @@
 
 import { createRng, deriveSeed, int, next, pick } from '../rng.js';
 import {
-  ECONOMY, STRESS, HEAL_WEEKS, KINDS, TRAITS, BUILDINGS, CIRCUITS, XP, PERKS, MORALE, GEAR, DECOR,
+  ECONOMY, STRESS, HEAL_WEEKS, KINDS, TRAITS, CLASSES, WEAPONS, BUILDINGS, CIRCUITS, XP, PERKS, MORALE, GEAR, DECOR,
   CONSUMABLES, AUGMENTS, SURGERY, RETIRE, RENAME, LIAISON, RECRUIT, EXHIBITION, BOND, REANIMATE, FEAR, deltaRow,
-  HUMORS, HUMOUR_DRIFT, MEDITATION, COUSIN,
+  HUMORS, HUMOUR_DRIFT, MEDITATION, COUSIN, COMPANIONS, FORTUNE_RETUNE, HADES,
 } from '../data.js';
+import { relicSum } from '../fortune.js';
+import { Refused } from '../errors.js';
 import { WANTS, LIAISON_LINES, COUSIN_LINES } from '../quests.js';
 import { meleeOnly } from '../fight.js';
 import { MOOD_WEEKS } from '../events.js';
@@ -14,11 +16,11 @@ import {
   ensureRoomLayout, roomSlotById, decorZoneOf,
 } from '../ludus.js';
 import {
-  JOBS, createFighter, newId, remember, takenNames, clamp, log, findFighter, chronicle, bumpMorale,
-  isTraining, jobCount, talk, assertOk, decorComfortOf, trainStress, netTrainStress, effectivePower,
+  JOBS, emptyDecor, createFighter, newId, remember, takenNames, clamp, log, findFighter, chronicle, bumpMorale,
+  isTraining, jobCount, monthOf, talk, assertOk, decorComfortOf, dislikedDecorItems, trainStress, netTrainStress, effectivePower,
   arenaName, trainGain, hasPolicy, tierMarketPower, liaisonOffer, recruitPrice, cleanName, winsOf,
   foughtThisWeek, perkOffer, gainXp, idleBlocker, isInActiveBracket, addPrestige, clearHealedMedbay,
-  removeFighter,
+  removeFighter, changeFavor, queueMilestone, CORE_COMPANIONS, LORE_KEEPSAKES, createDialogueState, ensureDialogueState, evaluateKeepsake,
 } from './helpers.js';
 import { markPolitical, joinPlot } from './plotEngine.js';
 import { currentBout, bondmate, formBond } from './houses.js';
@@ -158,11 +160,198 @@ export function buildRoom(run, type, slot = null) {
   const b = build(run, type, slot);
   if (type === 'armourer') refreshArmourer(run);
   if (type === 'liaison') refreshLiaison(run);
+  for (const f of run.roster ?? []) {
+    queueMilestone(run, f, { id: `building_built_${type}`, priority: 52, ctx: { type, name: BUILDINGS[type]?.name } });
+  }
   return b;
 }
 
 export function upgradeRoom(run, id) {
   return upgrade(run, id);
+}
+
+// ---------- v8.0 Core 5 Companions (Week 0 Draft & Pinned Pool Recruitment) ----------
+
+export function recruitedCompanionIds(run) {
+  const seen = new Set(run?.recruitedCompanions ?? []);
+  for (const f of [...(run?.roster ?? []), ...(run?.fallen ?? []), ...(run?.retired ?? [])]) {
+    if (f?.coreId) seen.add(f.coreId);
+    if (f?.hollowedCompanion) seen.add(f.hollowedCompanion);
+  }
+  return [...seen];
+}
+
+export function createCompanion(run, coreId, overrides = {}) {
+  const def = Object.hasOwn(CORE_COMPANIONS ?? {}, coreId) ? CORE_COMPANIONS[coreId] : null;
+  if (!def) throw new Refused('Unknown core companion.');
+  if (overrides.cls) {
+    if (!Object.hasOwn(CLASSES, overrides.cls)) throw new Refused('Unknown class.');
+    const templeLv = run ? maxLevel(run, 'temple') : 0;
+    const allowed = def.allowedClasses ?? [];
+    if (!allowed.includes(overrides.cls)) {
+      if (templeLv < 1) throw new Refused(`${def.name} cannot train as a ${CLASSES[overrides.cls].name} without building the Temple of Fortuna.`);
+      if (CLASSES[overrides.cls].legacy && !(run?.setup?.classes ?? []).includes(overrides.cls)) {
+        throw new Refused(`${CLASSES[overrides.cls].name} is a Legacy class not unlocked in this career.`);
+      }
+    }
+  }
+  const cls = (overrides.cls && Object.hasOwn(CLASSES, overrides.cls)) ? overrides.cls : def.cls;
+  if (cls === 'fighter' && overrides.weapon && !Object.hasOwn(WEAPONS, overrides.weapon)) {
+    throw new Refused('Unknown weapon specialty.');
+  }
+  const weapon = cls === 'fighter' ? ((overrides.weapon && Object.hasOwn(WEAPONS, overrides.weapon)) ? overrides.weapon : (def.weapon || 'spear')) : null;
+  if (overrides.kindTrait && !KINDS[def.kind]?.traits.includes(overrides.kindTrait)) {
+    throw new Refused(`${KINDS[def.kind]?.name ?? def.kind} fighters cannot take that trait.`);
+  }
+  const kindTrait = (overrides.kindTrait && KINDS[def.kind]?.traits.includes(overrides.kindTrait)) ? overrides.kindTrait : def.kindTrait;
+  if (overrides.humor && !Object.hasOwn(HUMORS, overrides.humor)) {
+    throw new Refused('Unknown temperament.');
+  }
+  const humor = (overrides.humor && Object.hasOwn(HUMORS, overrides.humor)) ? overrides.humor : def.humor;
+  const decor = emptyDecor();
+  const f = {
+    id: overrides.id ?? (run ? newId(run, 'f') : `core_${coreId}`),
+    coreId,
+    companion: true,
+    name: def.name,
+    handle: def.handle ?? null,
+    kind: def.kind,
+    kindTrait,
+    personalTrait: def.personalTrait,
+    cls,
+    weapon,
+    humor,
+    power: def.power ?? KINDS[def.kind].basePower,
+    speed: def.speed ?? ECONOMY.startSpeed,
+    trained: 0,
+    trainedPower: 0,
+    decor,
+    injuries: [],
+    alive: true,
+    stress: def.stress ?? 0,
+    job: 'rest',
+    titles: [],
+    xp: 0,
+    level: 1,
+    perks: [],
+    pendingPerks: [],
+    renown: def.renown ?? 0,
+    morale: def.morale ?? MORALE.start,
+    gear: { weapon: null, armor: null },
+    topStreak: 0,
+    dialogue: createDialogueState(coreId),
+  };
+  if (def.political) {
+    f.political = { cell: typeof def.political === 'object' ? def.political.cell : (def.cell || 'officer') };
+  }
+  return f;
+}
+
+export function getCompanionPool(run) {
+  const taken = new Set(recruitedCompanionIds(run));
+  return Object.keys(CORE_COMPANIONS ?? {})
+    .filter((coreId) => !taken.has(coreId))
+    .map((coreId) => createCompanion(null, coreId, { id: coreId }));
+}
+
+export function seasonCompanion(run, f) {
+  const rawBonus = tierMarketPower(run);
+  const basePow = CORE_COMPANIONS?.[f.coreId]?.power ?? KINDS[f.kind].basePower;
+  if (rawBonus > 0) {
+    const gain = trainGain(run, 'power');
+    const maxBonus = trainCap(run) * gain;
+    const bonus = Math.min(rawBonus, maxBonus);
+    const trainedWeeks = Math.min(trainCap(run), Math.ceil(bonus / gain));
+    f.power = basePow + bonus;
+    f.trained = trainedWeeks;
+    f.trainedPower = bonus;
+  }
+  const targetLevel = Math.min(3, Math.max(1, Math.min(run.topTier ?? 1, CIRCUITS.length)));
+  if (targetLevel > (f.level ?? 1)) {
+    f.xp = Math.max(f.xp ?? 0, XP.levels[targetLevel - 2]);
+    while (f.level < targetLevel) {
+      f.level += 1;
+      f.pendingPerks.push(perkOffer(run, f));
+    }
+  }
+  return f;
+}
+
+export function companionPrice(run, coreId, { draft = false } = {}) {
+  const count = recruitedCompanionIds(run).length;
+  if (draft && (run?.week ?? 0) === 0 && count < COMPANIONS.startPicks) return 0;
+  if (coreId === 'elf' && liaisonLevel(run) >= 1) {
+    return Math.max(1, COMPANIONS.elfLiaisonPrice - relicSum(run, 'recruitDiscount'));
+  }
+  const idx = Math.max(0, Math.min(COMPANIONS.prices.length - 1, count - COMPANIONS.startPicks));
+  return Math.max(1, COMPANIONS.prices[idx] - relicSum(run, 'recruitDiscount'));
+}
+
+export function companionBlocker(run, coreId, { draft = false } = {}) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!Object.hasOwn(CORE_COMPANIONS ?? {}, coreId)) return 'No such companion.';
+  const taken = recruitedCompanionIds(run);
+  if (taken.includes(coreId)) return `${CORE_COMPANIONS[coreId].name} has already joined your house.`;
+  if (draft && (run.week ?? 0) > 0) {
+    return 'Starter companion draft is only available in Week 0 before your first week ends. Recruit remaining companions for Gold.';
+  }
+  if (draft && taken.length >= COMPANIONS.startPicks) {
+    return `You have already drafted your ${COMPANIONS.startPicks} free starting companions. Recruit the rest for Gold.`;
+  }
+  const isFreeDraft = draft && (run.week ?? 0) === 0 && taken.length < COMPANIONS.startPicks;
+  const hasPatronFighter = ['veteran', 'defector', 'liberator'].includes(run.setup?.patron);
+  const canUsePatronBunk = isFreeDraft && hasPatronFighter && (run.patronBunk ?? 0) < 1;
+  if (!canUsePatronBunk && run.roster.length >= rosterCap(run)) {
+    return `Your quarters are full (${rosterCap(run)} fighters). Build or upgrade Fighter Quarters.`;
+  }
+  const price = companionPrice(run, coreId, { draft: isFreeDraft });
+  if (run.gold < price) return `Needs ${price} Gold.`;
+  return null;
+}
+
+export function draftCompanion(run, coreId, optsOrCls = {}, weapon = null, kindTrait = null, humor = null) {
+  const opts = (optsOrCls && typeof optsOrCls === 'object')
+    ? optsOrCls
+    : { cls: optsOrCls || null, weapon, kindTrait, humor };
+  assertOk(companionBlocker(run, coreId, { draft: true }));
+  const f = createCompanion(run, coreId, {
+    cls: opts.cls,
+    weapon: opts.weapon,
+    kindTrait: opts.kindTrait || opts.trait,
+    humor: opts.humor,
+  });
+  if (run.roster.length >= rosterCap(run)) {
+    run.patronBunk = (run.patronBunk ?? 0) + 1;
+  }
+  run.recruitedCompanions = [...new Set([...(run.recruitedCompanions ?? []), coreId])];
+  run.roster.push(f);
+  remember(run, f);
+  chronicle(run, f, 'Joined the Ludus at the founding draft.');
+  log(run, `${f.name}${f.handle ? ` (${f.handle})` : ''} joins your starting roster.`, 'good');
+  joinPlot(run, f);
+  return f;
+}
+
+export function recruitCompanion(run, coreId, opts = {}) {
+  assertOk(companionBlocker(run, coreId, { draft: false }));
+  const price = companionPrice(run, coreId, { draft: false });
+  run.gold -= price;
+  const f = createCompanion(run, coreId, {
+    cls: opts.cls,
+    weapon: opts.weapon,
+    kindTrait: opts.kindTrait || opts.trait,
+    humor: opts.humor,
+  });
+  seasonCompanion(run, f);
+  run.recruitedCompanions = [...new Set([...(run.recruitedCompanions ?? []), coreId])];
+  run.roster.push(f);
+  remember(run, f);
+  const viaLiaison = coreId === 'elf' && liaisonLevel(run) >= 1;
+  chronicle(run, f, viaLiaison ? 'Bought out of the city cells via the Liaison.' : 'Recruited into the Ludus.');
+  log(run, `${f.name}${f.handle ? ` (${f.handle})` : ''} joins the Ludus${viaLiaison ? ' from the city cells' : ''}.`, 'good');
+  joinPlot(run, f);
+  return f;
 }
 
 // ---------- Recruiting and release ----------
@@ -204,6 +393,7 @@ export function releaseBlocker(run, id) {
   if (idle) return idle;
   const f = findFighter(run, id);
   if (!f) return 'No such fighter.';
+  if (f.companion) return `${f.name} is one of your core companions and cannot be dismissed.`;
   const inBracket = isInActiveBracket(run, id);
   if (inBracket) return `${f.name} is mid-bracket in ${arenaName(inBracket.tier)}: finish the bracket or withdraw first.`;
   return null;
@@ -219,6 +409,10 @@ export function release(run, id) {
 // ---------- Weekly jobs ----------
 
 export function trainBlocker(run, f, { checkGold = true } = {}) {
+  if ((run.week ?? 0) < (run.staffDialogue?.trainer?.dismissedUntilWeek ?? 0)) {
+    const left = run.staffDialogue.trainer.dismissedUntilWeek - (run.week ?? 0);
+    return `Drillmaster post vacant (${left} week${left === 1 ? '' : 's'} remaining) — training paused.`;
+  }
   if (f.trained >= trainCap(run)) return `Trainer cap reached (${trainCap(run)} training weeks). Upgrade a Trainer Room.`;
   if (f.morale < MORALE.restless) return `Discontented (Morale ${f.morale}): won't train. Raise their comfort.`;
   if (f.stress >= STRESS.overtrained) return `Stress ${f.stress}: must rest first.`;
@@ -301,7 +495,15 @@ export function resumeTraining(run, f) {
 
 export function moraleTarget(run, f) {
   if (f.kind === 'revenant') return { target: REANIMATE.morale, comfort: 0, expects: 0, mood: 0, revenant: true };
-  const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + decorComfortOf(f) + (bondmate(run, f) ? BOND.comfort : 0) + (hasPolicy(run, 'grainToLudus') ? 5 : 0) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
+  let traitComfort = 0;
+  if (f.personalTrait === 'machineRaised') {
+    if ((run.roster ?? []).some((x) => x.id !== f.id && x.kind === 'android') || f.job === 'medbay') traitComfort += 10;
+    if ((run.roster ?? []).filter((x) => x.id !== f.id && x.kind === 'human').length >= 2 && !(f.decor?.rockGarden > 0)) traitComfort -= 5;
+  }
+  if (f.personalTrait === 'fourthSon' && run.plot && !run.plot.ended && ['cause', 'ready'].includes(run.plot.stage) && !f.dialogue?.loreFlags?.includes('orc_barracks_truce')) {
+    traitComfort -= 15;
+  }
+  const comfort = MORALE.perQuartersLevel * maxLevel(run, 'quarters') + decorComfortOf(f) + traitComfort + (bondmate(run, f) ? BOND.comfort : 0) + (hasPolicy(run, 'grainToLudus') ? 5 : 0) + MORALE.perEntertainmentLevel * maxLevel(run, 'entertainment');
   const expects = Math.min(MORALE.maxExpectation, MORALE.expectationPerRenown * f.renown);
   const mood = f.mood?.n ?? 0;
   return { target: clamp(MORALE.base + comfort - expects + mood, 0, 100), comfort, expects, mood };
@@ -415,15 +617,20 @@ export function driftHumour(run, f) {
 // A Rest week with a Rock Garden: extra Stress relief, a little XP, and half a step toward conquering each fear.
 export function meditate(run, f) {
   if (f.job !== 'rest' || !(f.decor?.rockGarden > 0) || f.kind === 'revenant') return;
+  const bonusXp = f.keepsake === 'machineCalm' ? 1 : 0;
+  if (f.keepsake === 'machineCalm') f.meditatedBoost = true;
   f.stress = clamp(f.stress - MEDITATION.stress, 0, STRESS.max);
-  gainXp(run, f, MEDITATION.xp);
-  log(run, `${f.name} spends the rest day raking the Rock Garden, and comes back quieter.`, 'good');
+  gainXp(run, f, MEDITATION.xp + bonusXp);
+  log(run, `${f.name} spends the rest day raking the Rock Garden, and comes back quieter${bonusXp ? ' (Enclave Stillness: +2 XP and Round-1 focus)' : ''}.`, 'good');
   for (const sc of (f.scars ?? []).filter((x) => x.id === 'afeared')) {
     fearStep(run, f, sc, MEDITATION.fear, `${f.name} sits with their fear of ${sc.vs} fighters`, `Meditated on their fear of ${sc.vs} fighters, and let it go.`);
   }
 }
 
-export const ritePrice = (run) => FEAR.ritePrice + FEAR.ritePerTier * Math.min(run.topTier, CIRCUITS.length);
+export const ritePrice = (run) => {
+  const base = FEAR.ritePrice + FEAR.ritePerTier * Math.min(run.topTier, CIRCUITS.length);
+  return maxLevel(run, 'temple') >= 2 ? Math.round(base * FORTUNE_RETUNE.riteLv2Discount) : base;
+};
 
 export function riteBlocker(run, id) {
   const idle = idleBlocker(run);
@@ -446,10 +653,283 @@ export function rite(run, id) {
   log(run, `The priests of Fortuna lift ${f.name}'s fear: no longer Afeared of ${sc.vs} fighters.`, 'good');
 }
 
-// ---------- Unnatural Temple of Vulcan ----------
+// ---------- v8.0 Customizable Builds via Starter Shrine / Temple of Fortuna ----------
 
+export function retunePrice(run) {
+  const lv = Math.min(maxLevel(run, 'temple'), FORTUNE_RETUNE.costByLevel.length - 1);
+  if (lv >= 2 && run?.freeRetuneMonth === monthOf(run?.week ?? 0)) {
+    return FORTUNE_RETUNE.costByLevel[1] ?? 2;
+  }
+  return FORTUNE_RETUNE.costByLevel[lv] ?? 4;
+}
+
+export function retuneBlocker(run, id) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (f.kind === 'revenant') return 'A Revenant is forged in brass; Fortuna cannot reshape the dead.';
+  const inBracket = isInActiveBracket(run, id);
+  if (inBracket) return `${f.name} is mid-bracket in ${arenaName(inBracket.tier)}: finish the bracket first.`;
+  const price = retunePrice(run);
+  if (run.gold < price) return `Needs ${price} Gold.`;
+  return null;
+}
+
+function consumeRetuneCost(run) {
+  const price = retunePrice(run);
+  run.gold -= price;
+  if (maxLevel(run, 'temple') >= 2 && price === 0) {
+    run.freeRetuneMonth = monthOf(run.week);
+  }
+  return price;
+}
+
+export function retuneClass(run, id, cls, weapon = null) {
+  assertOk(retuneBlocker(run, id));
+  const f = findFighter(run, id);
+  if (!Object.hasOwn(CLASSES, cls)) throw new Refused('Unknown class.');
+  const def = f.coreId ? CORE_COMPANIONS?.[f.coreId] : null;
+  if (def?.allowedClasses && maxLevel(run, 'temple') < 1 && !def.allowedClasses.includes(cls)) {
+    throw new Refused(`${f.name} cannot train as a ${CLASSES[cls].name} without building the Temple of Fortuna.`);
+  }
+  if (CLASSES[cls].legacy && !(run.setup?.classes ?? []).includes(cls) && !def?.allowedClasses?.includes(cls)) {
+    throw new Refused(`${CLASSES[cls].name} is a Legacy class not unlocked in this career.`);
+  }
+  if (cls === 'fighter' && weapon && !Object.hasOwn(WEAPONS, weapon)) throw new Refused('Unknown weapon specialty.');
+  const nextWeapon = cls === 'fighter' ? (weapon && Object.hasOwn(WEAPONS, weapon) ? weapon : (f.weapon && Object.hasOwn(WEAPONS, f.weapon) ? f.weapon : 'sword')) : null;
+  if (f.cls === cls && f.weapon === nextWeapon) {
+    throw new Refused(`${f.name} already fights as ${CLASSES[cls].name}${nextWeapon ? ` (${WEAPONS[nextWeapon].name})` : ''}.`);
+  }
+  const price = consumeRetuneCost(run);
+  f.cls = cls;
+  f.weapon = nextWeapon;
+  const label = `${CLASSES[cls].name}${nextWeapon ? ` (${WEAPONS[nextWeapon].name})` : ''}`;
+  chronicle(run, f, `Re-tuned at Fortuna's shrine to fight as a ${label}.`);
+  log(run, `Fortuna reshapes ${f.name}'s discipline: now ${label}${price ? ` (−${price} Gold)` : ' (free monthly rite at Temple Lv 2)'}.`, 'event');
+  return f;
+}
+
+export function retuneTrait(run, id, trait) {
+  assertOk(retuneBlocker(run, id));
+  const f = findFighter(run, id);
+  const allowed = KINDS[f.kind]?.traits ?? [];
+  if (!Object.hasOwn(TRAITS, trait) || !allowed.includes(trait)) throw new Refused(`${KINDS[f.kind]?.name ?? f.kind} fighters cannot take that trait.`);
+  if (f.kindTrait === trait) throw new Refused(`${f.name} already has ${TRAITS[trait].name}.`);
+  const price = consumeRetuneCost(run);
+  f.kindTrait = trait;
+  chronicle(run, f, `Re-tuned at Fortuna's shrine: ${TRAITS[trait].name}.`);
+  log(run, `Fortuna awakens a new aspect in ${f.name}: ${TRAITS[trait].name}${price ? ` (−${price} Gold)` : ' (free monthly rite at Temple Lv 2)'}.`, 'event');
+  return f;
+}
+
+export function retuneHumor(run, id, humor) {
+  assertOk(retuneBlocker(run, id));
+  const f = findFighter(run, id);
+  if (!Object.hasOwn(HUMORS, humor)) throw new Refused('Unknown temperament.');
+  if (f.humor === humor && !f.humourDrift) throw new Refused(`${f.name} is already ${HUMORS[humor].name}.`);
+  const price = consumeRetuneCost(run);
+  f.humor = humor;
+  delete f.humourDrift;
+  chronicle(run, f, `Fortuna's incense settled their temper: now ${HUMORS[humor].name}.`);
+  log(run, `Fortuna attunes ${f.name}'s temperament to ${HUMORS[humor].name}${price ? ` (−${price} Gold)` : ' (free monthly rite at Temple Lv 2)'}.`, 'event');
+  return f;
+}
+
+export function setPerkFocus(run, id, focus) {
+  assertOk(idleBlocker(run));
+  const f = findFighter(run, id);
+  if (!f) throw new Refused('No such fighter.');
+  if (!FORTUNE_RETUNE.focusTags.includes(focus)) throw new Refused('Unknown perk focus.');
+  if (focus === 'any') delete f.perkFocus;
+  else f.perkFocus = focus;
+  log(run, `${f.name}'s training focus is set to ${focus === 'any' ? 'balanced (any perk)' : focus}.`, 'info');
+  return f;
+}
+
+export const respecPrice = (run) => FORTUNE_RETUNE.respecCostByLevel[Math.min(maxLevel(run, 'temple'), FORTUNE_RETUNE.respecCostByLevel.length - 1)] ?? 4;
+
+export function respecPerkBlocker(run, id, dropPerk) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (maxLevel(run, 'temple') < 1) return 'Build the Temple of Fortuna to unbind and respec a perk.';
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (!Object.hasOwn(PERKS, dropPerk) || !f.perks.includes(dropPerk)) return `${f.name} does not have that perk.`;
+  if (f.pendingPerks.length) return `Choose ${f.name}'s pending perk first.`;
+  const cost = respecPrice(run);
+  if (run.gold < cost) return `Needs ${cost} Gold.`;
+  return null;
+}
+
+export function respecPerk(run, id, dropPerk) {
+  assertOk(respecPerkBlocker(run, id, dropPerk));
+  const f = findFighter(run, id);
+  const cost = respecPrice(run);
+  run.gold -= cost;
+  const idx = f.perks.indexOf(dropPerk);
+  f.perks.splice(idx, 1);
+  for (const [stat, n] of Object.entries(PERKS[dropPerk].stat ?? {})) f[stat] -= n;
+  if (PERKS[dropPerk].stat?.power) f.perkPower = Math.max(0, (f.perkPower ?? 0) - PERKS[dropPerk].stat.power);
+  f.pendingPerks.push(perkOffer(run, f));
+  log(run, `Fortuna's priests unbind ${PERKS[dropPerk].name} from ${f.name}. Choose a new perk.`, 'event');
+  return f;
+}
+
+// ---------- Temple of Hades (True Revival Within the Month) & Unnatural Temple of Vulcan ----------
+
+export const hadesPrice = (run, tier = run.topTier) => HADES.price + HADES.perTier * Math.min(tier, CIRCUITS.length) - (maxLevel(run, 'hades') >= 2 ? HADES.lv2Discount : 0);
+export function reviveHadesPrice(run, body = null) {
+  const base = hadesPrice(run);
+  const soul = typeof body === 'string'
+    ? (run.fallen?.find((x) => x.id === body) ?? findFighter(run, body) ?? null)
+    : body;
+  const prior = Math.max(0, Number(soul?.hadesReturned) || 0);
+  return Math.round(base * (1 + 0.5 * prior));
+}
+export const hadesKeepWeeks = (run) => effectAt('hades', maxLevel(run, 'hades'));
+export const hadesRaisable = (run) => (!maxLevel(run, 'hades')
+  ? []
+  : run.fallen.filter((f) => (f.arena || f.body) && !f.raised && !f.revived && f.kind !== 'revenant' && run.week - f.diedWeek <= hadesKeepWeeks(run)));
+
+export function reviveHadesBlocker(run, id) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!maxLevel(run, 'hades')) return 'Build the Temple of Hades first.';
+  const f = run.fallen.find((x) => x.id === id);
+  if (!f) return 'No such fallen fighter.';
+  if (!f.arena && !f.body) return `${f.name} was executed; the Praetorians burned the body.`;
+  if (f.raised || f.revived || f.kind === 'revenant') return `${f.name}'s soul has already been claimed.`;
+  const keeps = hadesKeepWeeks(run);
+  if (run.week - f.diedWeek > keeps) {
+    return `${f.name} has been dead too long for Hades (${run.week - f.diedWeek} weeks; the threshold holds for ${keeps} weeks — only the Unnatural Temple of Vulcan can raise the body now).`;
+  }
+  if (run.roster.length >= rosterCap(run)) return `Your quarters are full (${rosterCap(run)} fighters).`;
+  const price = reviveHadesPrice(run, f);
+  if (run.gold < price) return `Needs ${price} Gold (take a Favour or Rival House loan if your coffers are short).`;
+  return null;
+}
+
+export function reviveHades(run, id) {
+  assertOk(reviveHadesBlocker(run, id));
+  const idx = run.fallen.findIndex((x) => x.id === id);
+  const [f] = run.fallen.splice(idx, 1);
+  const lv = maxLevel(run, 'hades');
+  const weeksDead = run.week - f.diedWeek;
+  run.gold -= reviveHadesPrice(run, f);
+  delete f.diedWeek;
+  delete f.arena;
+  delete f.body;
+  f.alive = true;
+  f.job = 'rest';
+  f.stress = lv >= 2 ? 0 : HADES.stressLv1;
+  f.injuries = lv >= 2 ? [] : [{ tag: 'concussed', weight: 1, weeksLeft: HEAL_WEEKS.concussed }];
+  f.hadesReturned = (f.hadesReturned ?? 0) + 1;
+  if (lv >= 2) bumpMorale(f, HADES.lv2Morale);
+  if (f.bond?.id) {
+    const mate = findFighter(run, f.bond.id);
+    if (mate && !mate.bond) {
+      mate.bond = { id: f.id, name: f.name, since: run.week };
+      bumpMorale(mate, 10);
+    } else if (!mate || mate.bond?.id !== f.id) {
+      delete f.bond;
+    }
+  }
+  if (f.wasPlotChampion) {
+    delete f.wasPlotChampion;
+    if (run.plot && !run.plot.ended && !run.plot.champion) {
+      run.plot.champion = f.id;
+    }
+  }
+  checkKeepsakes(run, f);
+  run.roster.push(f);
+  queueMilestone(run, f, { id: 'hades_revived', priority: 100, ctx: { weeksDead, level: lv } });
+  chronicle(run, f, `Ransomed back from the threshold in the Temple of Hades, ${weeksDead} week${weeksDead === 1 ? '' : 's'} after falling.`);
+  log(run, `Gold coins are laid on the black altar. ${f.name} draws breath in the Temple of Hades — whole, living, and themselves${lv < 2 ? ' (Concussed from the crossing)' : ' (+15 Morale)'}.`, 'good');
+  return f;
+}
+
+export const restoreRevenantPrice = (run) => Math.max(10, (HADES.restoreGold ?? 28) - (maxLevel(run, 'hades') >= 2 ? HADES.lv2Discount : 0));
+
+export function restoreRevenantBlocker(run, id) {
+  const idle = idleBlocker(run);
+  if (idle) return idle;
+  if (!maxLevel(run, 'hades')) return 'Build the Temple of Hades first.';
+  const f = findFighter(run, id);
+  if (!f) return 'No such fighter.';
+  if (f.kind !== 'revenant' || !f.hollowedCompanion) return 'Only a hollowed Core Companion raised at Vulcan can undergo the Rite of the Whole Soul.';
+  const price = restoreRevenantPrice(run);
+  if (run.gold < price) return `Needs ${price} Gold.`;
+  const favCost = HADES.restoreFavor ?? 4;
+  if (run.favor <= favCost) return `Needs more than ${favCost} Imperial Favour.`;
+  return null;
+}
+
+export function restoreRevenant(run, id) {
+  assertOk(restoreRevenantBlocker(run, id));
+  const f = findFighter(run, id);
+  const coreId = f.hollowedCompanion;
+  const def = CORE_COMPANIONS?.[coreId];
+  const price = restoreRevenantPrice(run);
+  const favCost = HADES.restoreFavor ?? 4;
+  run.gold -= price;
+  changeFavor(run, -favCost, `Rite of the Whole Soul for ${f.name} at the Temple of Hades`);
+  const fallenList = run.fallen ?? [];
+  let fallenIdx = f.revenantOf ? fallenList.findIndex((x) => x.id === f.revenantOf) : -1;
+  if (fallenIdx < 0) fallenIdx = fallenList.findIndex((x) => x.coreId === coreId);
+  const fallen = fallenIdx >= 0 ? fallenList[fallenIdx] : null;
+  if (fallen) {
+    if (fallen.dialogue) f.dialogue = structuredClone(fallen.dialogue);
+    if (fallen.political) f.political = structuredClone(fallen.political);
+    else if (def?.political) f.political = { cell: def.cell ?? 'officer' };
+    if (fallen.record) f.record = structuredClone(fallen.record);
+    if (fallen.bond?.id) {
+      const mate = findFighter(run, fallen.bond.id);
+      if (mate && mate.alive !== false && mate.kind !== 'revenant' && !mate.bond) {
+        f.bond = { id: mate.id, name: mate.name, since: fallen.bond.since ?? run.week };
+        mate.bond = { id: f.id, name: f.name, since: fallen.bond.since ?? run.week };
+        bumpMorale(mate, 10);
+      } else if (mate && mate.bond?.id === f.id) {
+        f.bond = structuredClone(fallen.bond);
+      }
+    }
+    if (fallen.wasPlotChampion && run.plot && !run.plot.ended && !run.plot.champion) {
+      run.plot.champion = f.id;
+    }
+    f.power = Math.max(f.power, fallen.power ?? f.power);
+    fallenList.splice(fallenIdx, 1);
+  } else if (def?.political && !f.political) {
+    f.political = { cell: def.cell ?? 'officer' };
+  }
+  delete f.hollowedCompanion;
+  delete f.revenantOf;
+  f.coreId = coreId;
+  f.companion = true;
+  f.kind = def.kind;
+  f.kindTrait = f.preVulcanTrait && KINDS[def.kind]?.traits.includes(f.preVulcanTrait) ? f.preVulcanTrait : def.kindTrait;
+  f.personalTrait = def.personalTrait;
+  f.humor = f.preVulcanHumor ?? def.humor;
+  delete f.preVulcanTrait;
+  delete f.preVulcanHumor;
+  f.morale = Math.max(f.morale ?? 50, def.morale ?? 55);
+  f.hadesReturned = (f.hadesReturned ?? 0) + 1;
+  ensureDialogueState(f);
+  f.dialogue.queue = f.dialogue.queue.filter((q) => q.id !== 'vulcan_revenant_shock');
+  checkKeepsakes(run, f);
+  queueMilestone(run, f, { id: 'hades_revived', priority: 100, ctx: { restoredFromRevenant: true, level: maxLevel(run, 'hades') } });
+  chronicle(run, f, 'Underwent the Rite of the Whole Soul in the Temple of Hades: brass shed and living soul restored.');
+  log(run, `The priests of Hades unbind Vulcan's brass stitches from ${f.name}: their living soul and voice return whole!`, 'good');
+  return f;
+}
+
+export function vulcanKeepWeeks(run, body = null) {
+  const lv = maxLevel(run, 'vulcan');
+  const base = effectAt('vulcan', lv);
+  if (!lv || !(body?.companion || body?.coreId)) return base;
+  return base + (lv >= 2 ? (COMPANIONS.vulcanLv2BonusWeeks ?? 12) : COMPANIONS.vulcanBonusWeeks);
+}
 export const reanimatePrice = (run) => REANIMATE.price + REANIMATE.perTier * Math.min(run.topTier, CIRCUITS.length);
-export const raisable = (run) => (!maxLevel(run, 'vulcan') ? [] : run.fallen.filter((f) => (f.arena || f.body) && !f.raised && f.kind !== 'revenant' && run.week - f.diedWeek <= effectAt('vulcan', maxLevel(run, 'vulcan'))));
+export const raisable = (run) => (!maxLevel(run, 'vulcan') ? [] : run.fallen.filter((f) => (f.arena || f.body) && !f.raised && !f.revived && f.kind !== 'revenant' && run.week - f.diedWeek <= vulcanKeepWeeks(run, f)));
 
 export function reanimateBlocker(run, id) {
   const idle = idleBlocker(run);
@@ -458,8 +938,8 @@ export function reanimateBlocker(run, id) {
   const f = run.fallen.find((x) => x.id === id);
   if (!f) return 'No such fallen fighter.';
   if (!f.arena && !f.body) return `${f.name} was executed; the Praetorians burned the body.`;
-  if (f.raised || f.kind === 'revenant') return 'Vulcan cannot kindle the same body twice.';
-  const keeps = effectAt('vulcan', maxLevel(run, 'vulcan'));
+  if (f.raised || f.revived || f.kind === 'revenant') return 'Vulcan cannot kindle the same body twice.';
+  const keeps = vulcanKeepWeeks(run, f);
   if (run.week - f.diedWeek > keeps) return `${f.name} has been dead too long (a body keeps ${keeps} weeks${maxLevel(run, 'vulcan') < BUILDINGS.vulcan.per.length ? '; a bigger Temple keeps them longer' : ''}).`;
   if (run.roster.length >= rosterCap(run)) return `Your quarters are full (${rosterCap(run)} fighters).`;
   if (run.gold < reanimatePrice(run)) return `Needs ${reanimatePrice(run)} Gold.`;
@@ -469,18 +949,34 @@ export function reanimateBlocker(run, id) {
 export function reanimate(run, id) {
   assertOk(reanimateBlocker(run, id));
   const body = run.fallen.find((x) => x.id === id);
+  const wasCompanion = Boolean(body.companion || body.coreId);
+  const coreId = body.coreId ?? null;
+  const oldBondId = body.bond?.id ?? null;
+  const oldTrait = body.kindTrait ?? null;
+  const oldHumor = body.humor ?? null;
   body.raised = true;
   run.gold -= reanimatePrice(run);
   const f = structuredClone(body);
-  for (const key of ['diedWeek', 'arena', 'raised', 'bond', 'political', 'record', 'mood', 'nemesisOf', 'spy', 'body', 'want', 'resume', 'notice', 'mole', 'humourDrift']) delete f[key]; // 7.4.1: a raised mole or mid-drift death starts clean
+  for (const key of ['diedWeek', 'arena', 'raised', 'bond', 'political', 'record', 'mood', 'nemesisOf', 'spy', 'body', 'want', 'resume', 'notice', 'mole', 'humourDrift', 'companion', 'coreId', 'personalTrait', 'keepsake', 'dialogue', 'wasPlotChampion']) delete f[key]; // 7.4.1: a raised mole or mid-drift death starts clean
   const lost = maxLevel(run, 'vulcan') >= 2 ? 0 : REANIMATE.power;
   Object.assign(f, {
     id: newId(run, 'f'), kind: 'revenant', kindTrait: pick(run.rng.growth, KINDS.revenant.traits), alive: true, injuries: [],
     stress: 0, job: 'rest', morale: REANIMATE.morale, topStreak: 0, pendingPerks: [], revenantOf: body.id, power: body.power + lost, risen: true,
   });
+  if (wasCompanion) {
+    f.hollowedCompanion = coreId;
+    f.preVulcanTrait = oldTrait;
+    f.preVulcanHumor = oldHumor;
+    f.dialogue = createDialogueState(coreId);
+    queueMilestone(run, f, { id: 'vulcan_revenant_shock', priority: 100, ctx: { coreId, name: f.name } });
+    for (const mate of run.roster) {
+      bumpMorale(mate, mate.id === oldBondId ? COMPANIONS.vulcanBondShockMorale : COMPANIONS.vulcanShockMorale);
+      queueMilestone(run, mate, { id: 'vulcan_revenant_shock', priority: 100, ctx: { coreId, name: f.name } });
+    }
+  }
   run.roster.push(f);
   chronicle(run, f, `Raised from the dead in the Unnatural Temple of Vulcan, ${run.week - body.diedWeek} week${run.week - body.diedWeek === 1 ? '' : 's'} after falling. ${TRAITS[f.kindTrait].name}.`);
-  log(run, `The priests of Vulcan work through the night. ${f.name} walks out of the forge: a Revenant, brass where the wounds were${lost ? `, and a little weaker (${lost} Power)` : ''}.`, 'event');
+  log(run, `The priests of Vulcan work through the night. ${f.name} walks out of the forge: a Revenant, brass where the wounds were${lost ? `, and a little weaker (${lost} Power)` : ''}${wasCompanion ? ' — the living companions recoil in horror' : ''}.`, 'event');
   return f;
 }
 
@@ -521,7 +1017,42 @@ export function exhibition(run, id, otherId) {
   return { winner: winner.name, loser: loser.name, gold, wound };
 }
 
-// ---------- Inventory: decor, gear, items ----------
+// ---------- Inventory: decor, gear, items & 3/4 Room Lore Keepsakes ----------
+
+export function checkKeepsakes(run, f, placedItem = null) {
+  if (!f?.coreId) return null;
+  const prev = f.keepsake ?? null;
+  const evaluated = evaluateKeepsake(f);
+  const nextId = typeof evaluated === 'string' ? evaluated : evaluated?.id ?? null;
+  let firstUnlock = false;
+  if (nextId) {
+    f.keepsake = nextId;
+    ensureDialogueState(f);
+    const flag = `keepsake_unlocked_${nextId}`;
+    if (prev !== nextId && !f.dialogue.loreFlags.includes(flag)) {
+      firstUnlock = true;
+      f.dialogue.loreFlags.push(flag);
+      const kDef = LORE_KEEPSAKES?.[nextId];
+      const kName = kDef?.name ?? nextId;
+      if (nextId === 'fathersEdge' && run.plot && !run.plot.ended) {
+        run.plot.trust = clamp((run.plot.trust ?? 0) + 1, 0, 10);
+      }
+      chronicle(run, f, `Found peace in their quarters: unlocked ${kName}.`);
+      log(run, `✦ Lore Keepsake unlocked in ${f.name}'s quarters: ${kName}!`, 'good');
+      queueMilestone(run, f, { id: `room_decor_placed_${placedItem || nextId}`, priority: 65, ctx: { item: placedItem, keepsake: nextId, keepsakeUnlocked: true } });
+    }
+  } else if (f.keepsake) {
+    delete f.keepsake;
+  }
+  if (placedItem && !firstUnlock) {
+    const disliked = dislikedDecorItems(f).includes(placedItem);
+    if (disliked) {
+      log(run, `${f.name} resents having a ${DECOR[placedItem].name} in their quarters.`, 'warn');
+    }
+    queueMilestone(run, f, { id: `room_decor_placed_${placedItem}`, priority: disliked ? 64 : 54, ctx: { item: placedItem, disliked, keepsake: null, keepsakeUnlocked: false } });
+  }
+  return f.keepsake ?? null;
+}
 
 export function buyDecorBlocker(run, item) {
   const idle = idleBlocker(run);
@@ -576,6 +1107,7 @@ export function assignDecor(run, id, item, slot = null) {
   f.decor[item] += 1;
   placeInRoomLayout(f, item, slot);
   syncDrift(f);
+  checkKeepsakes(run, f, item);
 }
 
 export function buyAndAssignDecorBlocker(run, id, item, slot = null) {
@@ -621,6 +1153,7 @@ export function moveDecorAnchor(run, id, item, slot) {
   if (occupant && oldSlot) layout[occupant] = oldSlot;
   layout[item] = slot;
   f.roomLayout = layout;
+  checkKeepsakes(run, f);
 }
 
 export function removeDecorBlocker(run, id, item) {
@@ -642,6 +1175,7 @@ export function removeDecor(run, id, item) {
     if (!Object.keys(f.roomLayout).length) delete f.roomLayout;
   }
   syncDrift(f);
+  checkKeepsakes(run, f);
 }
 
 export function buyGearBlocker(run, index) {
@@ -812,6 +1346,7 @@ export function retireBlocker(run, id) {
   if (idle) return idle;
   const f = findFighter(run, id);
   if (!f) return 'No such fighter.';
+  if (f.companion || f.coreId) return `${f.name} is one of your core companions and stays with the house until the Grand Tournament.`;
   const inBracket = isInActiveBracket(run, id);
   if (inBracket) return `${f.name} is mid-bracket in ${arenaName(inBracket.tier)}: finish the bracket or withdraw first.`;
   if (f.returned && winsOf(run, f) < 1) return 'A returning legend must win at least one bout before retiring again.';
@@ -840,6 +1375,7 @@ export function renameBlocker(run, id, name) {
   if (idle) return idle;
   const f = findFighter(run, id);
   if (!f) return 'No such fighter.';
+  if (f.companion && f.coreId) return `${f.name} refuses to answer to another name.`;
   if (name === undefined) return null;
   const n = cleanName(name);
   if (!n) return "A name can't be empty.";
@@ -853,10 +1389,15 @@ export function rename(run, id, name) {
   assertOk(renameBlocker(run, id, name ?? ''));
   const f = findFighter(run, id);
   const old = f.name;
-  f.name = cleanName(name);
+  const clean = cleanName(name);
+  f.name = clean;
+  for (const partner of [...run.roster, ...(run.fallen ?? [])]) {
+    if (partner.bond?.id === f.id) partner.bond.name = clean;
+  }
   chronicle(run, f, `Renamed: once called ${old}.`);
   const resents = next(renameRng(run)) < RENAME.chance;
   if (resents) f.mood = { n: (f.mood?.n ?? 0) + RENAME.morale, weeks: MOOD_WEEKS };
   log(run, resents ? `${old} is now ${f.name}, and resents it: −${-RENAME.morale} Morale for ${MOOD_WEEKS} weeks.` : `${old} is now ${f.name}, and takes it well.`, resents ? 'bad' : 'good');
   return resents;
 }
+

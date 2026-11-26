@@ -152,7 +152,7 @@ test('unrest has its own dice: a house with no Mutinous fighter never touches th
 });
 
 test('save version 6: a version-5 career loads with no unrest', () => {
-  assert.equal(SAVE_VERSION, 7);
+  assert.equal(SAVE_VERSION, 8);
   const { run } = house(10, 1);
   const old = JSON.parse(serialize(run));
   old.version = 5;

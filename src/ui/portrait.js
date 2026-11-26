@@ -109,16 +109,40 @@ const NPC = {
     <circle cx="25" cy="32" r="1.5" fill="#2a1d16"/><circle cx="39" cy="32" r="1.5" fill="#2a1d16"/>
     <path d="M32 34 L30 41 L33 41" stroke="rgba(0,0,0,0.3)" stroke-width="1.3" fill="none"/>
     <path d="M26 46 Q32 44 38 46" stroke="#5a2a22" stroke-width="2" fill="none" stroke-linecap="round"/>`,
-  steward: `<rect width="64" height="64" rx="10" fill="#2b2a24"/>
-    <path d="M8 64 Q12 52 32 54 Q52 52 56 64Z" fill="#5a5446"/>
-    <path d="M24 47 L24 55 Q32 59 40 55 L40 47Z" fill="#c9a07c"/>
-    <path d="M16 30 Q16 12 32 12 Q48 12 48 30 Q48 49 32 52 Q16 49 16 30Z" fill="#c9a07c"/>
-    <path d="M16 31 Q15 22 19 19 M48 31 Q49 22 45 19" stroke="#9a9a92" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <circle cx="25" cy="32" r="5" fill="none" stroke="#3b3a33" stroke-width="1.5"/><circle cx="39" cy="32" r="5" fill="none" stroke="#3b3a33" stroke-width="1.5"/>
-    <path d="M30 32 L34 32" stroke="#3b3a33" stroke-width="1.5"/>
-    <circle cx="25" cy="32" r="1.4" fill="#2a1d16"/><circle cx="39" cy="32" r="1.4" fill="#2a1d16"/>
-    <path d="M20 25 L29 25 M35 25 L44 25" stroke="#7a7a72" stroke-width="2" stroke-linecap="round"/>
-    <path d="M27 45 L37 45" stroke="#5a2a22" stroke-width="2" stroke-linecap="round"/>`,
+  steward: `<rect width="64" height="64" rx="10" fill="#1e2634"/>
+    <path d="M8 64 Q12 52 32 54 Q52 52 56 64Z" fill="#3a4a5e"/><path d="M24 55 L32 62 L40 55" stroke="#d9b45a" stroke-width="1.8" fill="none"/>
+    <path d="M24 47 L24 55 Q32 59 40 55 L40 47Z" fill="#9aa6b2"/>
+    <rect x="15" y="12" width="34" height="39" rx="9" fill="#b4bec8" stroke="#6b7682" stroke-width="1.2"/>
+    <path d="M20 18 L44 18 M32 12 L32 18" stroke="#5b6672" stroke-width="1.2"/>
+    <rect x="18" y="27" width="28" height="8" rx="4" fill="#0d1520"/>
+    <rect x="21" y="29.5" width="22" height="3" rx="1.5" fill="#6fd3ff" opacity="0.95"/>
+    <circle cx="25" cy="31" r="5.5" fill="none" stroke="#d9b45a" stroke-width="1.3"/><circle cx="39" cy="31" r="5.5" fill="none" stroke="#d9b45a" stroke-width="1.3"/>
+    <path d="M30.5 31 L33.5 31" stroke="#d9b45a" stroke-width="1.3"/>
+    <path d="M26 44 L38 44" stroke="#3b4652" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="44" cy="58" r="2.2" fill="#6fd3ff"/>`,
+  rightHand: `<rect width="64" height="64" rx="10" fill="#2e1618"/>
+    <path d="M8 64 Q12 50 32 52 Q52 50 56 64Z" fill="#8f2420"/><path d="M18 53 L32 62 L46 53" stroke="#d9b45a" stroke-width="2.2" fill="none"/>
+    <path d="M24 46 L24 54 Q32 58 40 54 L40 46Z" fill="#d9a47c"/>
+    <path d="M16 30 Q16 12 32 12 Q48 12 48 30 Q48 48 32 51 Q16 48 16 30Z" fill="#d9a47c"/>
+    <path d="M16 24 Q19 11 32 10 Q45 11 48 24 Q43 16 32 16 Q21 16 16 24Z" fill="#4a3e38"/>
+    <path d="M16 26 L19 19 M48 26 L45 19" stroke="#cfcfcf" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M20 26 L28 28 M44 26 L36 28" stroke="#2a1d16" stroke-width="2.2" stroke-linecap="round"/>
+    <ellipse cx="25" cy="32" rx="3" ry="2.2" fill="#fff"/><circle cx="25" cy="32" r="1.5" fill="#2a1d16"/>
+    <circle cx="39" cy="32" r="4.8" fill="#141a24" stroke="#d9b45a" stroke-width="1.8"/><circle cx="39" cy="32" r="2.1" fill="#6fd3ff"/>
+    <path d="M43.5 32 L49 29" stroke="#d9b45a" stroke-width="1.4"/>
+    <path d="M32 34 L30 41 L33 41" stroke="rgba(0,0,0,0.3)" stroke-width="1.3" fill="none"/>
+    <path d="M26 46 Q32 44 38 46" stroke="#5a2a22" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+  taxCollector: `<rect width="64" height="64" rx="10" fill="#222428"/>
+    <path d="M8 64 Q12 51 32 53 Q52 51 56 64Z" fill="#52565e"/><path d="M24 54 L24 64 M40 54 L40 64" stroke="#c9a640" stroke-width="1.8"/>
+    <path d="M24 46 L24 54 Q32 58 40 54 L40 46Z" fill="#d8c2a8"/>
+    <path d="M17 30 Q17 13 32 13 Q47 13 47 30 Q47 49 32 52 Q17 49 17 30Z" fill="#d8c2a8"/>
+    <path d="M18 22 Q22 14 32 14 Q42 14 46 22" stroke="#8a8a84" stroke-width="2" fill="none"/>
+    <path d="M20 27 L28 27 M36 27 L44 27" stroke="#3a3530" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="25" cy="32" rx="2.8" ry="2" fill="#fff"/><ellipse cx="39" cy="32" rx="2.8" ry="2" fill="#fff"/>
+    <circle cx="25" cy="32" r="1.4" fill="#2c3e50"/><circle cx="39" cy="32" r="1.4" fill="#2c3e50"/>
+    <path d="M32 33 L30 41 L33 41" stroke="rgba(0,0,0,0.3)" stroke-width="1.3" fill="none"/>
+    <path d="M27 46 L37 46" stroke="#4a2c26" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M28 57 L36 57 M32 55 L32 61" stroke="#d9b45a" stroke-width="1.6"/>`,
   prefect: `<rect width="64" height="64" rx="10" fill="#2a1a1a"/>
     <path d="M8 64 Q12 50 32 52 Q52 50 56 64Z" fill="#7a2a22"/><path d="M14 58 L50 58" stroke="#b8b8b0" stroke-width="3"/>
     <path d="M24 46 L24 54 Q32 58 40 54 L40 46Z" fill="#c99a74"/>
@@ -130,20 +154,57 @@ const NPC = {
     <circle cx="25" cy="32" r="1.6" fill="#2a1d16"/><circle cx="39" cy="32" r="1.6" fill="#2a1d16"/>
     <path d="M32 34 L30 41 L33 41" stroke="rgba(0,0,0,0.3)" stroke-width="1.3" fill="none"/>
     <path d="M27 45 Q32 47 37 45" stroke="#5a2a22" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+  trainer: `<rect width="64" height="64" rx="10" fill="#2b1e14"/>
+    <path d="M8 64 Q12 50 32 52 Q52 50 56 64Z" fill="#7a4c28"/><path d="M18 53 L32 61 L46 53" stroke="#d8b25c" stroke-width="2" fill="none"/>
+    <path d="M24 46 L24 54 Q32 58 40 54 L40 46Z" fill="#c7956d"/>
+    <path d="M16 30 Q16 12 32 12 Q48 12 48 30 Q48 48 32 51 Q16 48 16 30Z" fill="#c7956d"/>
+    <path d="M16 25 Q18 11 32 10 Q46 11 48 25 Q42 17 32 17 Q22 17 16 25Z" fill="#5b4a3f"/>
+    <path d="M19 25 L28 28 M45 25 L36 28" stroke="#2a1d16" stroke-width="2.4" stroke-linecap="round"/>
+    <ellipse cx="25" cy="32" rx="3" ry="2.2" fill="#fff"/><ellipse cx="39" cy="32" rx="3" ry="2.2" fill="#fff"/>
+    <circle cx="25" cy="32" r="1.5" fill="#2a1d16"/><circle cx="39" cy="32" r="1.5" fill="#2a1d16"/>
+    <path d="M37 22 L42 39" stroke="#8f362c" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M32 34 L30 41 L33 41" stroke="rgba(0,0,0,0.3)" stroke-width="1.3" fill="none"/>
+    <path d="M26 46 Q32 43 38 46" stroke="#4a261e" stroke-width="2.1" fill="none" stroke-linecap="round"/>
+    <line x1="51" y1="62" x2="57" y2="34" stroke="#b98a4a" stroke-width="3" stroke-linecap="round"/>`,
+  doctor: `<rect width="64" height="64" rx="10" fill="#18261e"/>
+    <path d="M8 64 Q12 51 32 53 Q52 51 56 64Z" fill="#3a5c47"/><path d="M24 54 L32 62 L40 54" stroke="#c9d6be" stroke-width="1.8" fill="none"/>
+    <path d="M24 46 L24 54 Q32 58 40 54 L40 46Z" fill="#e0b996"/>
+    <path d="M16 30 Q16 12 32 12 Q48 12 48 30 Q48 48 32 51 Q16 48 16 30Z" fill="#e0b996"/>
+    <path d="M14 34 Q13 11 32 10 Q51 11 50 34 Q46 19 32 17 Q18 19 14 34Z" fill="#3e2c22"/>
+    <circle cx="32" cy="9" r="4.5" fill="#3e2c22"/>
+    <path d="M19 26 Q24 24 28 26 M36 26 Q40 24 45 26" stroke="#2a1d16" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+    <ellipse cx="25" cy="32" rx="3" ry="2.3" fill="#fff"/><ellipse cx="39" cy="32" rx="3" ry="2.3" fill="#fff"/>
+    <circle cx="25" cy="32" r="1.5" fill="#2e5240"/><circle cx="39" cy="32" r="1.5" fill="#2e5240"/>
+    <path d="M32 34 L30.5 40.5 L33.5 40.5" stroke="rgba(0,0,0,0.25)" stroke-width="1.2" fill="none"/>
+    <path d="M27 45 Q32 48 37 45" stroke="#6c3930" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M48 54 V62 M44 58 H52" stroke="#72b66d" stroke-width="2.2" stroke-linecap="round"/>`,
   narrator: `<rect width="64" height="64" rx="10" fill="#141a2e"/>
     <circle cx="32" cy="32" r="20" fill="none" stroke="#6fd3ff" stroke-width="2" opacity="0.8"/>
     <circle cx="32" cy="32" r="13" fill="none" stroke="#a98bff" stroke-width="2" opacity="0.8"/>
     <circle cx="32" cy="32" r="6" fill="#e9f6ff" opacity="0.9"/>`,
 };
 
+const COMPANION_SPEAKER_STUB = {
+  unit91: { id: 'core-unit91', name: 'Unit-non-machine-91', kind: 'human', cls: 'fighter', humor: 'phlegmatic', alive: true },
+  basa: { id: 'core-basa', name: 'Tarek', kind: 'basa', cls: 'cestus', humor: 'sanguine', alive: true },
+  orc: { id: 'core-orc', name: 'Varok', kind: 'orc', cls: 'samnite', humor: 'choleric', alive: true },
+  android: { id: 'core-android', name: 'Solace-4', kind: 'android', cls: 'retiarius', humor: 'melancholic', alive: true },
+  elf: { id: 'core-elf', name: 'Vaelen', kind: 'elf', cls: 'thornBlade', humor: 'melancholic', alive: true },
+};
+
 const NPC_LABEL = {
   emperor: 'Portrait of Emperor Silbannacus',
-  steward: 'Portrait of your steward',
+  rightHand: 'Portrait of Legate Cassian Vane',
+  taxCollector: 'Portrait of Censor Numerius Gallo',
+  steward: 'Portrait of Galen-VII',
+  trainer: 'Portrait of Drillmaster Kaeso',
+  doctor: 'Portrait of Physician Lyra',
   prefect: 'Portrait of the Praetorian prefect',
   narrator: 'Portrait of the narrator',
 };
 
 export function npcPortrait(id, size = 64) {
+  if (COMPANION_SPEAKER_STUB[id]) return portrait(COMPANION_SPEAKER_STUB[id], size);
   const label = NPC_LABEL[id] ?? `Portrait of ${String(id ?? 'narrator').replace(/[<>&"]/g, '')}`;
   return `<svg class="portrait" viewBox="0 0 64 64" width="${size}" height="${size}" role="img" aria-label="${label}">${NPC[id] ?? NPC.narrator}</svg>`;
 }

@@ -1,10 +1,10 @@
 // L6 save serialization, deserialization, structural validation, and v2 → v3 → v4 migrations.
 
 import { createRng, deriveSeed } from '../rng.js';
-import { MORALE, FAVOR } from '../data.js';
+import { MORALE, FAVOR, HUMORS } from '../data.js';
 import {
   SAVE_VERSION, GRAND_TIER, LOG_CAP, emptyDecor, emptyItems, humorFor, allOpponents,
-  clamp, findFighter, unlockedTiers,
+  clamp, findFighter, unlockedTiers, createDialogueState, ensureDialogueState,
 } from './helpers.js';
 import { makeHouses, openArena } from './houses.js';
 import { finishMatch } from './tournaments.js';
@@ -142,6 +142,13 @@ export function migrateV6ToV7(run) {
   return run;
 }
 
+// v7 → v8 (8.0): Palatina companions, dialogue trees, Hades, and debt (all new fields are lazy-attached on demand).
+export function migrateV7ToV8(run) {
+  validateRun(run);
+  run.version = 8;
+  return run;
+}
+
 function backfillFighters(run) {
   const fighters = [
     ...run.roster,
@@ -152,10 +159,14 @@ function backfillFighters(run) {
     ...(run.nemeses ?? []),
     ...(run.rivalChampion?.f ? [run.rivalChampion.f] : []),
   ];
+  const rosterSet = new Set(run.roster);
   for (const f of fighters) {
     f.decor = { ...emptyDecor(), ...(f.decor ?? {}) };
-    f.humor ??= humorFor(f);
-    ensureRoomLayout(f);
+    if (typeof f.humor !== 'string' || !Object.hasOwn(HUMORS, f.humor)) f.humor = humorFor(f);
+    if (rosterSet.has(f)) ensureRoomLayout(f);
+    if (f.companion || f.coreId || f.hollowedCompanion || f.dialogue) {
+      ensureDialogueState(f);
+    }
   }
 }
 
@@ -180,6 +191,7 @@ export function deserialize(text) {
   if (run.version === 4) run = migrateV4ToV5(run);
   if (run.version === 5) run = migrateV5ToV6(run);
   if (run.version === 6) run = migrateV6ToV7(run);
+  if (run.version === 7) run = migrateV7ToV8(run);
   validateRun(run);
   normalizeRun(run);
   backfillFighters(run);

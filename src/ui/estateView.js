@@ -2,18 +2,25 @@
 
 import {
   BUILDINGS, DEPARTMENTS, PRESTIGE_LEVELS, DECOR, HUMORS, UNREST, MORALE, STRESS, HUMOUR_DRIFT,
-  CLASSES, WEAPONS, KINDS,
+  CLASSES, WEAPONS, KINDS, TRAITS, PERKS, FORTUNE_RETUNE, HADES,
 } from '../data.js';
 import {
-  VILLA_PLOTS, ROOF_ORACLE_SLOT, ROOM_SLOTS, plotById, roomSlotById, decorZoneOf, isPlotUnlocked,
+  VILLA_PLOTS, ROOF_ORACLE_SLOT, ROOF_TEMPLE_SLOT, ROOF_STEWARD_SLOT, CRYPT_HADES_SLOT, ROOM_SLOTS, plotById, roomSlotById, decorZoneOf, isPlotUnlocked,
   resolveEstateSlots, plotCount, plotsFree, levelInfo, rosterCap, decorCap, maxLevel, buildingKnown,
   buildBlocker, upgradeBlocker,
 } from '../ludus.js';
 import {
-  moraleTarget, decorComfortOf, decorCalm, dominantTemperament, effectivePower, effectiveSpeed,
+  moraleTarget, decorComfortOf, decorCalm, dislikedDecorItems, dominantTemperament, effectivePower, effectiveSpeed,
   buyAndAssignDecorBlocker, removeDecorBlocker, hostPrice, hostBlocker,
+  retunePrice, retuneBlocker, respecPrice, respecPerkBlocker,
+  hadesPrice, reviveHadesPrice, hadesKeepWeeks, hadesRaisable, reviveHadesBlocker,
+  restoreRevenantPrice, restoreRevenantBlocker,
+  vulcanKeepWeeks, reanimatePrice, raisable, reanimateBlocker,
+  CORE_COMPANIONS, ESTATE_STAFF, LORE_KEEPSAKES,
 } from '../run.js';
 import { esc, button, BUILDING_ICON } from './components.js';
+import { getHubTopics } from '../dialogue.js';
+import { npcPortrait } from './portrait.js';
 
 const DEPT_COLORS = {
   housing: '#d4a259',
@@ -32,7 +39,7 @@ const HUMOR_TINT = {
 const FLOORS = [
   { id: 'upper', title: 'Upper Colonnade', depth: 'Sunlit arches · Quarters, Lounge & Entertainment' },
   { id: 'ground', title: 'Courtyard & Ground Floor', depth: 'Arena sand · Barracks, Trainer, Medbay & Forge' },
-  { id: 'catacomb', title: 'Subterranean Catacombs', depth: 'Excavated vaults · Vulcan, Liaison & Secrets' },
+  { id: 'catacomb', title: 'Subterranean Catacombs', depth: 'Excavated vaults · Hades, Vulcan, Liaison & Secrets' },
 ];
 
 // Non-mutating room layout resolution for 3/4 cutaway rendering.
@@ -85,6 +92,25 @@ function fighterSilhouetteSvg(x, y, f, pose = 'stand', unrest = false) {
   </g>`;
 }
 
+function buildingOccupants(run, b) {
+  const same = (run.buildings ?? []).filter((x) => x.type === b.type);
+  const idx = Math.max(0, same.findIndex((x) => x === b || (b.id && x.id === b.id)));
+  if (b.type === 'trainer') {
+    const all = (run.roster ?? []).filter((f) => f.job === 'trainPower' || f.job === 'trainSpeed');
+    return { idx, list: all.slice(idx, idx + 1), stranger: false };
+  }
+  if (b.type === 'medbay') {
+    const all = (run.roster ?? []).filter((f) => f.job === 'medbay');
+    const hidden = Boolean(run.plot?.hidden);
+    const capOf = (x, i) => Math.max(0, (BUILDINGS.medbay.per[(x.level ?? 1) - 1] ?? 1) - (i === 0 && hidden ? 1 : 0));
+    const start = same.slice(0, idx).reduce((s, x, i) => s + capOf(x, i), 0);
+    const cap = capOf(b, idx);
+    const list = idx === same.length - 1 ? all.slice(start) : all.slice(start, start + cap);
+    return { idx, list, stranger: idx === 0 && hidden };
+  }
+  return { idx, list: [], stranger: false };
+}
+
 function buildingInteriorSvg(run, b, floorId, isSelected, unrest) {
   const def = BUILDINGS[b.type];
   const lv = b.level;
@@ -118,9 +144,12 @@ function buildingInteriorSvg(run, b, floorId, isSelected, unrest) {
       ${resting.map((f, i) => fighterSilhouetteSvg(i === 0 ? 52 : 88, 60, f, 'stand', unrest)).join('')}
     `;
   } else if (b.type === 'trainer') {
-    const tList = (run.buildings ?? []).filter((x) => x.type === 'trainer');
-    const tIdx = Math.max(0, tList.indexOf(b));
-    const training = (run.roster ?? []).filter((f) => f.job === 'trainPower' || f.job === 'trainSpeed').slice(tIdx, tIdx + 1);
+    const { idx: tIdx, list: training } = buildingOccupants(run, b);
+    const dismissedUntil = run.staffDialogue?.trainer?.dismissedUntilWeek ?? 0;
+    const trainerVacant = (run.week ?? 0) < dismissedUntil;
+    const kaesoSvg = tIdx === 0 && !trainerVacant
+      ? `<g class="estate-bob"><ellipse cx="52" cy="62" rx="6.5" ry="2.2" fill="rgba(0,0,0,0.45)"/><path d="M47 61 L49 49 L55 49 L57 61 Z" fill="#7a4c28" stroke="#d8b25c" stroke-width="0.7"/><circle cx="52" cy="45" r="3.8" fill="#c7956d" stroke="#1b120c" stroke-width="0.7"/><line x1="56" y1="53" x2="62" y2="43" stroke="#d8b25c" stroke-width="1.6" stroke-linecap="round"/><circle cx="52" cy="36" r="3.4" fill="#d9b45a"/><text x="52" y="38.2" text-anchor="middle" font-size="4.6" fill="#120c08" font-weight="700">✦</text></g>`
+      : '';
     art += `
       <rect x="0" y="56" width="140" height="20" fill="#4a3824"/>
       <rect x="96" y="28" width="8" height="34" fill="#6b4e33" stroke="#2a1e13"/>
@@ -131,19 +160,22 @@ function buildingInteriorSvg(run, b, floorId, isSelected, unrest) {
       <line x1="27" y1="30" x2="27" y2="58" stroke="#d8b25c" stroke-width="1.6"/>
       <line x1="34" y1="30" x2="34" y2="58" stroke="#b9c2c9" stroke-width="1.6"/>
       ${lv >= 2 ? '<circle cx="62" cy="18" r="3" fill="#e59a3e" class="estate-flame"/>' : ''}
-      ${training.map((f) => fighterSilhouetteSvg(74, 60, f, 'train', unrest)).join('')}
+      ${kaesoSvg}
+      ${training.map((f) => fighterSilhouetteSvg(78, 60, f, 'train', unrest)).join('')}
     `;
   } else if (b.type === 'medbay') {
-    const mList = (run.buildings ?? []).filter((x) => x.type === 'medbay');
-    const mIdx = Math.max(0, mList.indexOf(b));
-    const healing = (run.roster ?? []).filter((f) => f.job === 'medbay').slice(mIdx, mIdx + 1);
-    const stranger = mIdx === 0 && Boolean(run.plot?.hidden);
+    const { idx: mIdx, list, stranger } = buildingOccupants(run, b);
+    const healing = list.slice(0, 1);
+    const lyraSvg = mIdx === 0
+      ? `<g class="estate-bob"><ellipse cx="38" cy="62" rx="6.5" ry="2.2" fill="rgba(0,0,0,0.45)"/><path d="M33 61 L35 49 L41 49 L43 61 Z" fill="#3a5c47" stroke="#c9d6be" stroke-width="0.7"/><circle cx="38" cy="45" r="3.8" fill="#e0b996" stroke="#1b120c" stroke-width="0.7"/><circle cx="38" cy="36" r="3.4" fill="#72b66d"/><text x="38" y="38.2" text-anchor="middle" font-size="4.8" fill="#0d1a11" font-weight="700">+</text></g>`
+      : '';
     art += `
       <rect x="16" y="16" width="24" height="24" rx="2" fill="#27211b" stroke="#475c43"/>
       <path d="M28 21 V35 M21 28 H35" stroke="#72b66d" stroke-width="2.5" stroke-linecap="round"/>
       <rect x="52" y="18" width="28" height="16" fill="#2b211a" stroke="#463628"/>
       <circle cx="59" cy="26" r="2.5" fill="#72b66d"/><circle cx="67" cy="26" r="2.5" fill="#d8b25c"/><circle cx="74" cy="26" r="2.5" fill="#b85838"/>
-      ${healing.map((f) => fighterSilhouetteSvg(64, 59, f, 'bed', unrest)).join('')}
+      ${lyraSvg}
+      ${healing.map((f) => fighterSilhouetteSvg(68, 59, f, 'bed', unrest)).join('')}
       ${stranger ? '<g opacity="0.92"><rect x="98" y="54" width="28" height="7" rx="2" fill="#46382c"/><path d="M100 54 Q112 41 124 54 Z" fill="#323b44" stroke="#7fb7d9" stroke-width="0.8"/><circle cx="118" cy="48" r="3.4" fill="#242c33" stroke="#7fb7d9" stroke-width="0.7"/></g>' : '<rect x="98" y="52" width="28" height="9" rx="2" fill="#49392b" stroke="#241b13"/>'}
     `;
   } else if (b.type === 'armourer') {
@@ -176,6 +208,17 @@ function buildingInteriorSvg(run, b, floorId, isSelected, unrest) {
       <path d="M60 46 Q70 29 80 46 Z" fill="#f2b857" class="estate-flame"/>
       <circle cx="24" cy="24" r="6" fill="none" stroke="#856956" stroke-width="1.2"/>
       <circle cx="116" cy="24" r="6" fill="none" stroke="#856956" stroke-width="1.2"/>
+    `;
+  } else if (b.type === 'hades') {
+    const bodies = hadesRaisable(run).length;
+    art += `
+      <radialGradient id="hglow-${sid}" cx="50%" cy="56%" r="54%"><stop offset="0%" stop-color="#8b6fe8" stop-opacity="${lv >= 2 ? 0.48 : 0.32}"/><stop offset="100%" stop-color="#8b6fe8" stop-opacity="0"/></radialGradient>
+      <rect x="0" y="0" width="140" height="76" fill="url(#hglow-${sid})"/>
+      <path d="M40 62 L40 24 Q70 8 100 24 L100 62 Z" fill="#130f1c" stroke="#9b84e8" stroke-width="1.4"/>
+      <rect x="46" y="48" width="48" height="14" fill="#221c2e" stroke="#d8b25c" stroke-width="1"/>
+      <circle cx="62" cy="46" r="3" fill="#ecd082"/><circle cx="70" cy="45" r="3.5" fill="#f5de93"/><circle cx="78" cy="46" r="3" fill="#ecd082"/>
+      <path d="M63 45 Q70 24 77 45 Z" fill="#a58cf5" opacity="0.82" class="estate-flame"/>
+      ${bodies ? '<circle cx="114" cy="22" r="5" fill="#d8b25c"/><text x="114" y="25" text-anchor="middle" font-size="7" fill="#120d0a" font-weight="700">⚱</text>' : ''}
     `;
   } else if (b.type === 'lounge') {
     art += `
@@ -297,12 +340,28 @@ function renderVillaBay(run, plot, bySlot, selectedSlot, unrest) {
     const pips = def.cost.map((_, i) => `<i class="${i < b.level ? 'on' : ''}"></i>`).join('');
     let meta = `Lv ${b.level}/${def.cost.length}`;
     if (b.type === 'quarters') meta = `${(run.roster ?? []).filter((f) => f.job === 'rest').length} resting · ${(run.roster ?? []).length} housed`;
-    else if (b.type === 'trainer') meta = `${(run.roster ?? []).filter((f) => f.job === 'trainPower' || f.job === 'trainSpeed').length} training`;
-    else if (b.type === 'medbay') meta = `${(run.roster ?? []).filter((f) => f.job === 'medbay').length}${run.plot?.hidden ? '+1' : ''} beds`;
+    else if (b.type === 'trainer') {
+      const { list } = buildingOccupants(run, b);
+      const dismissedUntil = run.staffDialogue?.trainer?.dismissedUntilWeek ?? 0;
+      const vacantWks = Math.max(0, dismissedUntil - (run.week ?? 0));
+      meta = vacantWks > 0
+        ? `Post vacant (${vacantWks} wk left)`
+        : `${list.length} training`;
+    }
+    else if (b.type === 'medbay') {
+      const { list, stranger } = buildingOccupants(run, b);
+      meta = `${list.length}${stranger ? '+1' : ''} beds`;
+    }
+    else if (b.type === 'hades') meta = `${hadesRaisable(run).length} at threshold · ${hadesKeepWeeks(run)}w window`;
+    else if (b.type === 'vulcan') meta = `${raisable(run).length} bodies · forge`;
+    const staffForBay = b.type === 'trainer' && !((run.week ?? 0) < (run.staffDialogue?.trainer?.dismissedUntilWeek ?? 0))
+      ? ESTATE_STAFF['staff:trainer']
+      : b.type === 'medbay' ? ESTATE_STAFF['staff:doctor'] : null;
+    const staffQueued = Boolean(staffForBay && getHubTopics(run, staffForBay).some((t) => t.queued));
     return `<button class="est-bay built${selected ? ' selected' : ''}" data-action="estate-select-slot" data-slot="${plot.id}">
       ${buildingInteriorSvg(run, b, plot.floor, selected, unrest)}
       <div class="est-bay-foot">
-        <div class="est-bay-head"><span class="est-bay-name">${esc(def.name)}</span><span class="est-pips">${pips}</span></div>
+        <div class="est-bay-head"><span class="est-bay-name">${esc(def.name)}${staffQueued ? ' <span class="est-tag gold" title="Urgent conversation">💬!</span>' : ''}</span><span class="est-pips">${pips}</span></div>
         <div class="est-bay-meta">${esc(meta)}</div>
       </div>
     </button>`;
@@ -337,7 +396,144 @@ function renderVillaBay(run, plot, bySlot, selectedSlot, unrest) {
   </button>`;
 }
 
+function renderFortunaRetuneInspector(run) {
+  const lv = maxLevel(run, 'temple');
+  const price = retunePrice(run);
+  const priceText = price === 0 ? 'Free (1st this month, Temple Lv 2)' : `${price} Gold`;
+  const living = (run.roster ?? []).filter((f) => f.kind !== 'revenant');
+  if (!living.length) {
+    return `<div class="est-insp-sec">
+      <div class="est-kicker">Shrine of Fortuna · Re-Tuning (${priceText})</div>
+      <p class="sub">Recruit a living gladiator to re-tune their Class, Kind Trait, Temperament, or Perk Focus.</p>
+    </div>`;
+  }
+  const rows = living.map((f) => {
+    const why = retuneBlocker(run, f.id);
+    const def = f.coreId ? CORE_COMPANIONS?.[f.coreId] : null;
+    const allowedCls = (def?.allowedClasses && lv < 1) ? def.allowedClasses : Object.keys(CLASSES).filter((c) => !CLASSES[c].legacy || (run.setup?.classes ?? []).includes(c));
+    const clsBtns = allowedCls.filter((c) => c !== f.cls).map((c) => button(CLASSES[c].name, 'retune-class', { id: f.id, cls: c }, why, 'btn small')).join('');
+    const wpnBtns = f.cls === 'fighter'
+      ? Object.keys(WEAPONS).filter((w) => w !== f.weapon).map((w) => button(WEAPONS[w].name, 'retune-class', { id: f.id, cls: 'fighter', weapon: w }, why, 'btn small')).join('')
+      : '';
+    const traitBtns = (KINDS[f.kind]?.traits ?? []).filter((t) => t !== f.kindTrait).map((t) => button(TRAITS[t].name, 'retune-trait', { id: f.id, trait: t }, why, 'btn small')).join('');
+    const humorBtns = Object.keys(HUMORS).filter((h) => h !== f.humor).map((h) => button(HUMORS[h].name, 'retune-humor', { id: f.id, humor: h }, why, 'btn small')).join('');
+    const focusBtns = FORTUNE_RETUNE.focusTags.map((tag) => `<button class="seg${(f.perkFocus ?? 'any') === tag ? ' on' : ''}" data-action="perk-focus" data-id="${esc(f.id)}" data-focus="${tag}">${tag}</button>`).join('');
+    const respecBtns = (f.perks ?? []).filter((p) => PERKS[p]).map((p) => button(`Unbind ${esc(PERKS[p].name)} (${respecPrice(run)}g)`, 'respec-perk', { id: f.id, drop: p }, respecPerkBlocker(run, f.id, p), 'btn small')).join('');
+    return `<details class="more" data-key="retune-${esc(f.id)}">
+      <summary><b>${esc(f.name)}</b> <small>· ${esc(clsLabel(f))} · ${esc(TRAITS[f.kindTrait]?.name ?? '')} · ${esc(HUMORS[f.humor]?.name ?? '')}</small></summary>
+      <div class="est-insp-sec">
+        <div class="est-row-sub">Re-tune Class (${priceText}):</div>
+        <div class="row tight">${clsBtns || '<small class="sub">No other classes</small>'}</div>
+        ${wpnBtns ? `<div class="est-row-sub">Weapon Specialty (${priceText}):</div><div class="row tight">${wpnBtns}</div>` : ''}
+        <div class="est-row-sub">Kind Trait (${priceText}):</div>
+        <div class="row tight">${traitBtns}</div>
+        <div class="est-row-sub">Temperament (${priceText}):</div>
+        <div class="row tight">${humorBtns}</div>
+        <div class="est-row-sub">Level-Up Perk Focus (Free):</div>
+        <div class="segs">${focusBtns}</div>
+        ${respecBtns ? `<div class="est-row-sub">Respec Learned Perk (${lv < 1 ? 'needs Temple Lv 1+' : `${respecPrice(run)} Gold`}):</div><div class="row tight">${respecBtns}</div>` : ''}
+      </div>
+    </details>`;
+  }).join('');
+  return `<div class="est-insp-sec">
+    <div class="est-kicker">Shrine &amp; Temple of Fortuna · Re-Tuning (${priceText})</div>
+    <p class="sub">${lv === 0 ? 'Starter Rooftop Shrine (4g per re-tune). Build the Temple of Fortuna on a floor plot to cut fees to 2g (Lv 1) or 1st free each month (Lv 2) and unlock all classes.' : lv === 1 ? 'Temple of Fortuna Lv 1 (2g per re-tune). Upgrade to Lv 2 for 1 free re-tune per month (2g thereafter) and half-price Fear rites.' : 'Temple of Fortuna Lv 2: first build re-tune each month is free (2g thereafter), plus half-price Fear rites.'}</p>
+    ${rows}
+  </div>`;
+}
+
+function renderStewardQuartersSvg() {
+  return `<svg class="est-steward-svg" viewBox="0 0 280 112" role="img" aria-label="Galen-VII's Steward's Quarters and Ledger Study">
+    <rect width="280" height="112" fill="#171d27"/>
+    <rect x="0" y="88" width="280" height="24" fill="#12161e"/>
+    <line x1="0" y1="88" x2="280" y2="88" stroke="#364254" stroke-width="1.2"/>
+    <rect x="18" y="16" width="56" height="72" rx="6" fill="#0f151f" stroke="#5b6f8a" stroke-width="1.4"/>
+    <rect x="26" y="24" width="40" height="10" rx="3" fill="#102536"/>
+    <rect x="30" y="27.5" width="32" height="3" rx="1.5" fill="#6fd3ff" opacity="0.9"/>
+    <circle cx="46" cy="54" r="10" fill="none" stroke="#6fd3ff" stroke-width="1.2" opacity="0.45"/>
+    <rect x="194" y="18" width="68" height="54" rx="2" fill="#231c17" stroke="#5c4a38" stroke-width="1.2"/>
+    <line x1="194" y1="36" x2="262" y2="36" stroke="#5c4a38" stroke-width="1.2"/>
+    <line x1="194" y1="54" x2="262" y2="54" stroke="#5c4a38" stroke-width="1.2"/>
+    ${[202, 212, 222, 232, 244].map((x, i) => `<rect x="${x}" y="22" width="6" height="12" fill="${i % 2 ? '#8f362a' : '#b89146'}"/>`).join('')}
+    ${[200, 214, 228, 242].map((x) => `<rect x="${x}" y="40" width="9" height="12" fill="#c9baa5"/>`).join('')}
+    <rect x="100" y="64" width="80" height="24" rx="2" fill="#463425" stroke="#261b12"/>
+    <rect x="114" y="59" width="26" height="5" rx="1" fill="#e6dcc9"/>
+    <circle cx="164" cy="59" r="3.5" fill="#e59a3e" class="estate-flame"/>
+    <g class="estate-bob" transform="translate(140, 62)">
+      <path d="M-9 2 L-6 -14 L6 -14 L9 2 Z" fill="#3a4a5e" stroke="#d8b25c" stroke-width="0.9"/>
+      <rect x="-7" y="-28" width="14" height="13" rx="4" fill="#b4bec8" stroke="#5b6672" stroke-width="0.9"/>
+      <rect x="-5" y="-23" width="10" height="3.2" rx="1.5" fill="#6fd3ff"/>
+    </g>
+  </svg>`;
+}
+
+function renderStaffCard(run, staffKey) {
+  const s = ESTATE_STAFF?.[`staff:${staffKey}`] ?? ESTATE_STAFF?.[staffKey];
+  if (!s) return '';
+  if (s.staffKey === 'trainer') {
+    const dismissedUntil = run.staffDialogue?.trainer?.dismissedUntilWeek ?? 0;
+    const week = run.week ?? 0;
+    if (week < dismissedUntil) {
+      const remaining = dismissedUntil - week;
+      return `<div class="est-insp-sec">
+        <div class="est-kicker">House Staff · Post Vacant</div>
+        <div class="est-staff-card est-staff-vacant" role="status">
+          <div class="est-row-main">
+            <div class="est-row-title">⚠ Trainer Room Vacant <span class="est-tag">${remaining} wk left</span></div>
+            <div class="est-row-sub">Drillmaster post vacant (${remaining} wk remaining) — training paused.</div>
+          </div>
+        </div>
+      </div>`;
+    }
+  }
+  const trust = run.staffDialogue?.[s.staffKey]?.trust ?? 0;
+  const hasQueued = getHubTopics(run, s).some((t) => t.queued);
+  return `<div class="est-insp-sec">
+    <div class="est-kicker">House Staff · Interactive${hasQueued ? ' · Urgent' : ''}</div>
+    <div class="est-staff-card">
+      ${npcPortrait(s.speaker, 46)}
+      <div class="est-row-main">
+        <div class="est-row-title">${esc(s.name)} <span class="est-tag gold">Trust ${trust >= 0 ? `+${trust}` : trust}</span></div>
+        <div class="est-row-sub">${esc(s.role)}</div>
+      </div>
+      <button class="btn small primary" data-action="talk-open" data-id="${esc(s.id)}">${hasQueued ? '💬! Speak' : '💬 Speak'}</button>
+    </div>
+  </div>`;
+}
+
 function renderEstateInspector(run, bySlot, selectedSlot) {
+  if (selectedSlot === ROOF_STEWARD_SLOT) {
+    const s = ESTATE_STAFF['staff:steward'];
+    const trust = run.staffDialogue?.[s.staffKey]?.trust ?? 0;
+    return `<div class="est-insp-sec">
+      <div class="est-kicker" style="color:${DEPT_COLORS.scouting}">Administrative Wing · Steward's Quarters</div>
+      <h3 class="est-insp-title">🤖 ${esc(s.name)}'s Quarters <span class="est-tag gold">Trust ${trust >= 0 ? `+${trust}` : trust}</span></h3>
+      ${renderStewardQuartersSvg()}
+      <p class="sub">${esc(s.bio)}</p>
+      <div class="est-insp-act"><button class="btn small primary btn-block" data-action="talk-open" data-id="${esc(s.id)}">💬 Speak with ${esc(s.name)}</button></div>
+    </div>`;
+  }
+
+  if (selectedSlot === ROOF_TEMPLE_SLOT) {
+    const builtTemple = (run.buildings ?? []).find((x) => x.type === 'temple');
+    return `${builtTemple ? '' : `<div class="est-insp-sec">
+      <div class="est-kicker" style="color:${DEPT_COLORS.training}">Rooftop Sanctum</div>
+      <h3 class="est-insp-title">🏛 Starter Shrine of Fortuna <span class="est-tag gold">Shrine Lv 0</span></h3>
+      <p class="sub">Reshape any living gladiator's Class, Weapon, Kind Trait, Temperament, or Perk Focus. Build a full Temple of Fortuna on an Estate plot at House level 2 to lower fees from 4g to 2g (or 1 free per month at Lv 2).</p>
+    </div>`}${renderFortunaRetuneInspector(run)}`;
+  }
+
+  if (selectedSlot === CRYPT_HADES_SLOT && !bySlot.get(CRYPT_HADES_SLOT)) {
+    const why = buildBlocker(run, 'hades', CRYPT_HADES_SLOT);
+    return `<div class="est-insp-sec">
+      <div class="est-kicker" style="color:${DEPT_COLORS.medical}">Subterranean Threshold</div>
+      <h3 class="est-insp-title">⚱ Crypt Sanctum · Temple of Hades</h3>
+      <p class="sub">An ancient threshold altar beneath the catacombs. Available from House level 1 even when your 3 ground-floor plots are full. Revives a fallen fighter whole (keeping soul, temper, and story) within 4 weeks of death.</p>
+      <div class="est-insp-act">${button(`Build Temple of Hades · ${BUILDINGS.hades.cost[0]} Gold`, 'build', { type: 'hades', slot: CRYPT_HADES_SLOT }, why, 'btn small primary btn-block')}</div>
+      ${why ? `<div class="why-not">${esc(why)}</div>` : ''}
+    </div>`;
+  }
+
   const b = bySlot.get(selectedSlot) ?? null;
   const plot = plotById(selectedSlot);
 
@@ -359,7 +555,7 @@ function renderEstateInspector(run, bySlot, selectedSlot) {
             const where = f.job === 'rest' ? 'Resting in cell' : f.job === 'medbay' ? 'In Medbay' : 'In Trainer Room';
             return `<div class="est-row">
               <div class="est-row-main">
-                <div class="est-row-title">${esc(f.name)} <span class="est-tag">${esc(clsLabel(f))}</span></div>
+                <div class="est-row-title">${esc(f.name)} <span class="est-tag">${esc(clsLabel(f))}</span>${f.keepsake ? ` <span class="est-tag gold">🏺 ${esc(LORE_KEEPSAKES[f.keepsake]?.name ?? f.keepsake)}</span>` : ''}</div>
                 <div class="est-row-sub">${where} · ${cnt} decor${f.humor ? ` · ${HUMORS[f.humor].name}` : ''}</div>
               </div>
               <button class="btn small primary" data-action="estate-open-room" data-id="${esc(f.id)}">Decorate</button>
@@ -368,8 +564,9 @@ function renderEstateInspector(run, bySlot, selectedSlot) {
           : '<p class="sub">Recruit gladiators in the Market to house and decorate their cells here.</p>'}
       </div>`;
     } else if (b.type === 'trainer' || b.type === 'medbay') {
-      const list = (run.roster ?? []).filter((f) => (b.type === 'trainer' ? (f.job === 'trainPower' || f.job === 'trainSpeed') : f.job === 'medbay'));
-      extras = `<div class="est-insp-sec">
+      const staffHtml = renderStaffCard(run, b.type === 'trainer' ? 'trainer' : 'doctor');
+      const { list, stranger } = buildingOccupants(run, b);
+      extras = `${staffHtml}<div class="est-insp-sec">
         <div class="est-kicker">Current Occupants</div>
         <div class="est-list">
           ${list.length ? list.map((f) => `<div class="est-row">
@@ -379,7 +576,7 @@ function renderEstateInspector(run, bySlot, selectedSlot) {
             </div>
             <button class="btn small" data-action="estate-open-room" data-id="${esc(f.id)}">Cell →</button>
           </div>`).join('') : '<p class="sub">No fighters assigned here this week.</p>'}
-          ${b.type === 'medbay' && run.plot?.hidden ? '<div class="est-row"><div class="est-row-main"><div class="est-row-title">Shrouded Stranger <span class="est-tag gold">Hidden</span></div><div class="est-row-sub">Occupies 1 Medbay cot until the rising moves.</div></div></div>' : ''}
+          ${stranger ? '<div class="est-row"><div class="est-row-main"><div class="est-row-title">Shrouded Stranger <span class="est-tag gold">Hidden</span></div><div class="est-row-sub">Occupies 1 Medbay cot until the rising moves.</div></div></div>' : ''}
         </div>
       </div>`;
     } else if (b.type === 'lounge') {
@@ -389,9 +586,64 @@ function renderEstateInspector(run, bySlot, selectedSlot) {
         ${button(`🍷 Host the Senate (${hostPrice(run)} Gold)`, 'host', {}, why, 'btn small primary btn-block')}
         ${why ? `<div class="why-not">${esc(why)}</div>` : ''}
       </div>`;
+    } else if (b.type === 'temple') {
+      extras = renderFortunaRetuneInspector(run);
+    } else if (b.type === 'hades') {
+      const souls = hadesRaisable(run);
+      const basePrice = hadesPrice(run);
+      const keeps = hadesKeepWeeks(run);
+      const hollowed = (run.roster ?? []).filter((f) => f.kind === 'revenant' && f.hollowedCompanion);
+      const rGold = restoreRevenantPrice(run);
+      const rFavor = HADES.restoreFavor ?? 4;
+      extras = `<div class="est-insp-sec">
+        <div class="est-kicker">Souls at the Threshold (${keeps}-Week Window · from ${basePrice} Gold)</div>
+        ${souls.length ? `<div class="est-list">${souls.map((f) => {
+          const left = keeps - (run.week - f.diedWeek);
+          const returned = f.hadesReturned ?? 0;
+          const soulPrice = reviveHadesPrice(run, f);
+          const titheTag = returned > 0 ? ` <span class="est-tag gold">Revived ×${returned} · +${returned * 50}% tithe</span>` : '';
+          const why = reviveHadesBlocker(run, f.id);
+          return `<div class="est-row">
+            <div class="est-row-main">
+              <div class="est-row-title">${esc(f.name)} <span class="est-tag">${left} wk${left === 1 ? '' : 's'} left</span>${titheTag}</div>
+              <div class="est-row-sub">Returns whole, keeping soul, temper &amp; story</div>
+            </div>
+            ${button(`⚱ Revive (${soulPrice}g)`, 'revive-hades', { id: f.id }, why, 'btn small primary')}
+          </div>`;
+        }).join('')}</div>` : '<p class="sub">No fallen souls await within the threshold window.</p>'}
+      </div>${hollowed.length ? `<div class="est-insp-sec">
+        <div class="est-kicker">Rite of the Whole Soul (${rGold}g &amp; ${rFavor} Favour)</div>
+        <div class="est-list">${hollowed.map((f) => {
+          const why = restoreRevenantBlocker(run, f.id);
+          return `<div class="est-row">
+            <div class="est-row-main">
+              <div class="est-row-title">${esc(f.name)} <span class="est-tag">Hollowed Revenant</span></div>
+              <div class="est-row-sub">Restores living kind, trait, Humour, and dialogue</div>
+            </div>
+            ${button(`⚱ Restore (${rGold}g)`, 'restore-revenant', { id: f.id }, why, 'btn small primary')}
+          </div>`;
+        }).join('')}</div>
+      </div>` : ''}`;
+    } else if (b.type === 'vulcan') {
+      const bodies = raisable(run);
+      const price = reanimatePrice(run);
+      extras = `<div class="est-insp-sec">
+        <div class="est-kicker">Bodies for the Forge (${price} Gold)</div>
+        ${bodies.length ? `<div class="est-list">${bodies.map((f) => {
+          const left = vulcanKeepWeeks(run, f) - (run.week - f.diedWeek);
+          const why = reanimateBlocker(run, f.id);
+          return `<div class="est-row">
+            <div class="est-row-main">
+              <div class="est-row-title">${esc(f.name)} <span class="est-tag">${left} wk${left === 1 ? '' : 's'} left</span></div>
+              <div class="est-row-sub">Raises as a hollow brass Revenant${f.companion ? ' (horrifies living companions)' : ''}</div>
+            </div>
+            ${button(`🔥 Raise (${price}g)`, 'reanimate', { id: f.id }, why, 'btn small primary')}
+          </div>`;
+        }).join('')}</div>` : '<p class="sub">No bodies await in the forge.</p>'}
+      </div>`;
     }
 
-    const slotTag = selectedSlot === ROOF_ORACLE_SLOT ? 'Roof Observatory' : (plot?.hint ?? selectedSlot);
+    const slotTag = selectedSlot === ROOF_ORACLE_SLOT ? 'Roof Observatory' : selectedSlot === CRYPT_HADES_SLOT ? 'Crypt Sanctum' : (plot?.hint ?? selectedSlot);
     return `
       <div class="est-insp-sec">
         <div class="est-kicker" style="color:${deptColor}">${esc(deptName)} · ${esc(slotTag)}</div>
@@ -464,6 +716,10 @@ function renderRoomSvg(f, layout, selectedRoomSlot, movingItem) {
       ? `data-action="move-decor" data-id="${esc(f.id)}" data-item="${esc(movingItem)}" data-slot="${slot.id}"`
       : `data-action="estate-room-slot" data-slot="${slot.id}"`;
 
+    const touchPad = slot.zone === 'wall'
+      ? '<rect class="est-touch-pad" x="-50" y="-44" width="100" height="88" rx="8" fill="transparent" stroke="none"/>'
+      : '<rect class="est-touch-pad" x="-54" y="-28" width="108" height="72" rx="10" fill="transparent" stroke="none"/>';
+
     const pad = slot.zone === 'wall'
       ? `<rect class="est-slot-pad" x="-30" y="-22" width="60" height="44" rx="5" fill="${itemKey ? 'rgba(217,180,90,0.06)' : 'rgba(255,236,206,0.03)'}" stroke="${itemKey ? 'rgba(217,180,90,0.28)' : 'rgba(255,236,206,0.14)'}" stroke-dasharray="${itemKey ? 'none' : '3 3'}"/>`
       : `<ellipse class="est-slot-pad" cx="0" cy="8" rx="34" ry="16" fill="${itemKey ? 'rgba(217,180,90,0.07)' : 'rgba(255,236,206,0.03)'}" stroke="${itemKey ? 'rgba(217,180,90,0.28)' : 'rgba(255,236,206,0.14)'}" stroke-dasharray="${itemKey ? 'none' : '3 3'}"/>`;
@@ -477,7 +733,7 @@ function renderRoomSvg(f, layout, selectedRoomSlot, movingItem) {
       : '';
 
     return `<g class="est-slot${isSel ? ' selected' : ''}${isMoveTarget ? ' valid-target' : ''}" ${actAttrs} transform="translate(${slot.x},${slot.y})" role="button" tabindex="0" aria-label="${esc(itemKey ? `${DECOR[itemKey].name} ×${count} at ${slot.label}` : `Empty ${slot.label}`)}">
-      ${pad}${content}${label}
+      ${touchPad}${pad}${content}${label}
     </g>`;
   }).join('');
 
@@ -514,7 +770,12 @@ function renderRoomSvg(f, layout, selectedRoomSlot, movingItem) {
     <line x1="360" y1="72" x2="360" y2="94" stroke="#4f4944" stroke-width="1.8"/>
     <line x1="373" y1="72" x2="373" y2="94" stroke="#4f4944" stroke-width="1.8"/>
     ${slotsSvg}
-    <g transform="translate(66, 332)" opacity="0.92">${fighterSilhouetteSvg(0, 0, f, 'stand', false)}<text x="0" y="14" text-anchor="middle" font-size="9.5" fill="#d9b45a">${esc(f.name)}</text></g>
+    <g class="est-slot est-room-talk" data-action="talk-open" data-id="${esc(f.id)}" transform="translate(66, 332)" opacity="0.95" role="button" tabindex="0" aria-label="Speak with ${esc(f.name)}">
+      <rect class="est-touch-pad" x="-32" y="-46" width="64" height="68" rx="8" fill="transparent" stroke="none"/>
+      ${fighterSilhouetteSvg(0, 0, f, 'stand', false)}
+      ${(f.dialogue?.queue?.length ?? 0) > 0 ? `<g class="est-speech-bubble" transform="translate(14, -36)"><rect x="-13" y="-10" width="26" height="16" rx="7" fill="#d9b45a" stroke="#18100c" stroke-width="1.2"/><text x="0" y="1" text-anchor="middle" font-size="8.5" fill="#18100c" font-weight="700">💬${f.dialogue.queue.length}</text></g>` : ''}
+      <text x="0" y="14" text-anchor="middle" font-size="9.5" fill="#d9b45a">${esc(f.name)}</text>
+    </g>
   </svg>`;
 }
 
@@ -615,10 +876,63 @@ function renderRoomView(run, estateUi) {
   const activeSynergies = Object.entries(f.decor ?? {})
     .filter(([k, n]) => n > 0 && DECOR[k]?.helps(f))
     .map(([k, n]) => `${DECOR[k].name}${n > 1 ? ` ×${n}` : ''}`);
+  const keepsakeDef = f.coreId ? LORE_KEEPSAKES?.[CORE_COMPANIONS?.[f.coreId]?.keepsake] : null;
+  const activeKeepsake = f.keepsake ? LORE_KEEPSAKES?.[f.keepsake] : null;
+  const dislikedNow = dislikedDecorItems(f).map((k) => DECOR[k]?.name).filter(Boolean);
+  const queuedTalks = f.dialogue?.queue?.length ?? 0;
 
   const hint = movingItem
     ? `Moving <b>${esc(DECOR[movingItem].name)}</b> — click any highlighted ${decorZoneOf(movingItem)} anchor to place or swap. <button class="btn small" data-action="estate-move-cancel">Cancel</button>`
     : 'Click any placed piece to stack, move or return it, or pick decor from the palette.';
+
+  const KEEPSAKE_HINTS = {
+    unit91: {
+      low: 'Something still and quiet—ordered stone, never open flame or trophies of death.',
+      high: 'Raked stone in a calm corner, with no crackling fire, skulls, or wine jars nearby.',
+    },
+    basa: {
+      low: 'Warm water and quiet stone that recall the tide—never an iron beast-cage.',
+      high: 'Steaming bathwater beside raked coastal stone; keep every barred cage out of his sight.',
+    },
+    orc: {
+      low: "Honour for the gods and the legions' colours—never crude iron spikes.",
+      high: 'An altar to swear by and a standard from the field; keep crude spiked bedding out.',
+    },
+    android: {
+      low: 'Still stone or a quiet altar beside something alive that sings—never grinding steel or trophies of death.',
+      high: 'Quiet raked stone or a small altar and a living songbird beside the cot; keep sharpening-wheels and skulls away.',
+    },
+    elf: {
+      low: 'A sharp edge and warm firelight, far from banquet wine jars or barred pens.',
+      high: 'A sharpening stone and hearth-flame like a frontier command tent; keep Palatine wine jars and beast-cages out.',
+    },
+  };
+  const companionTrust = f.dialogue?.trust ?? 0;
+  const hintEntry = f.coreId ? KEEPSAKE_HINTS[f.coreId] : null;
+  const keepsakeHint = (hintEntry ? (companionTrust >= 8 ? hintEntry.high : hintEntry.low) : null)
+    || 'Speak with them about their quarters to learn what brings them peace.';
+  const flaggedKeys = keepsakeDef
+    ? [...new Set([...dislikedDecorItems(f), ...(keepsakeDef.blockingItems ?? []).filter((k) => (f.decor?.[k] ?? 0) > 0)])]
+    : [];
+  const describeFlagged = (k) => {
+    const label = DECOR[k]?.name ?? k;
+    const notes = [];
+    if ((keepsakeDef?.blockingItems ?? []).includes(k)) notes.push('blocks keepsake');
+    if (f.coreId === 'unit91' && k === 'wineAmphora') notes.push('−7 comfort each');
+    else if (f.coreId === 'basa' && k === 'lionCage') notes.push('−10 comfort, −1 Power');
+    else if (f.coreId === 'elf' && (k === 'wineAmphora' || k === 'lionCage')) notes.push('−5 comfort');
+    else if (f.coreId === 'android' && (k === 'whetstone' || k === 'skullRack')) notes.push('+5 weekly Stress');
+    else if (!notes.length) notes.push('disliked');
+    return `${label} (${notes.join(', ')})`;
+  };
+  const flaggedBanner = flaggedKeys.length
+    ? `⚠ <b>Disliked / blocking in cell:</b> ${esc(flaggedKeys.map(describeFlagged).join('; '))}. `
+    : '';
+  const keepsakeBanner = activeKeepsake
+    ? `<div class="est-keepsake-bar unlocked">${flaggedBanner}🏺 <b>Lore Keepsake Awakened: ${esc(activeKeepsake.name)}</b> — ${esc(activeKeepsake.desc)}</div>`
+    : keepsakeDef
+      ? `<div class="est-keepsake-bar">${flaggedBanner}🏺 <b>Unawakened Keepsake:</b> <i>${esc(keepsakeHint)}</i> <small>(Speak with ${esc(f.name)} to learn more.)</small></div>`
+      : '';
 
   return `
     <div class="est-workspace">
@@ -628,28 +942,31 @@ function renderRoomView(run, estateUi) {
             <button class="btn small" data-action="estate-mode" data-mode="villa">← Villa Cross-Section</button>
             <h3>${esc(f.name)}'s Quarters <small>${esc(KINDS[f.kind]?.name ?? f.kind)} ${esc(clsLabel(f))} · Pow ${effectivePower(f)} · Spd ${effectiveSpeed(f)}</small></h3>
           </div>
-          <span class="est-tag gold">3/4 Cutaway · Cap ×${decorCap(run)}</span>
+          <div class="row tight">
+            <button class="btn small${queuedTalks ? ' primary' : ''}" data-action="talk-open" data-id="${esc(f.id)}">💬 Speak${queuedTalks ? ` (${queuedTalks})` : ''}</button>
+            <span class="est-tag gold">3/4 Cutaway · Cap ×${decorCap(run)}</span>
+          </div>
         </div>
 
         <div class="est-fighter-strip" aria-label="Switch gladiator quarters">
           ${roster.map((x) => `<button class="est-fpill${x.id === f.id ? ' on' : ''}" data-action="estate-open-room" data-id="${esc(x.id)}">
-            <b>${esc(x.name)}</b> <small>${esc(clsLabel(x))}</small>
+            <b>${esc(x.name)}</b> <small>${esc(clsLabel(x))}${x.keepsake ? ' · 🏺' : ''}</small>
           </button>`).join('')}
         </div>
 
         <div class="est-room-stage">
-          <div class="est-room-head"><div class="sub">${hint}</div></div>
+          <div class="est-room-head"><div class="sub">${hint}</div>${keepsakeBanner}</div>
           <div class="est-room-svg-wrap">${renderRoomSvg(f, layout, selectedRoomSlot, movingItem)}</div>
           <div class="est-room-metrics">
             <div class="est-mcell">
               <div class="est-mk">Morale Target</div>
-              <div class="est-mv">${target} <small>(+${decorComfortOf(f)} decor)</small></div>
+              <div class="est-mv">${target} <small>(${decorComfortOf(f) >= 0 ? `+${decorComfortOf(f)}` : `−${-decorComfortOf(f)}`} decor)</small></div>
               <div class="est-ms">${revenant ? 'Revenant feels nothing' : `Comfort ${comfort} vs Renown −${expects}`}</div>
             </div>
             <div class="est-mcell">
               <div class="est-mk">Weekly Calm</div>
               <div class="est-mv">−${calm} Stress</div>
-              <div class="est-ms">Capped at −${STRESS.decorCalm}/wk</div>
+              <div class="est-ms">Capped at −${STRESS.decorCalm}/wk${activeKeepsake?.stressRelief ? ` (+${activeKeepsake.stressRelief} keepsake)` : ''}</div>
             </div>
             <div class="est-mcell">
               <div class="est-mk">Humour &amp; Drift</div>
@@ -658,8 +975,8 @@ function renderRoomView(run, estateUi) {
             </div>
             <div class="est-mcell">
               <div class="est-mk">Build Synergies</div>
-              <div class="est-mv">${activeSynergies.length ? activeSynergies.length : 'None'}</div>
-              <div class="est-ms">${esc(activeSynergies.join(', ') || 'Add ✦ Arena Craft pieces')}</div>
+              <div class="est-mv">${activeKeepsake ? esc(activeKeepsake.name) : activeSynergies.length ? activeSynergies.length : 'None'}</div>
+              <div class="est-ms">${esc(activeSynergies.join(', ') || (keepsakeDef ? `Awaken ${keepsakeDef.name}` : 'Add ✦ Arena Craft pieces'))}</div>
             </div>
           </div>
         </div>
@@ -677,8 +994,10 @@ export function renderEstatePanel(run, estateUi = {}) {
   const unrest = isUnrestHot(run);
   const mobileFloor = ['upper', 'ground', 'catacomb'].includes(estateUi.mobileFloor) ? estateUi.mobileFloor : 'ground';
   const defaultSlot = bySlot.has('ground-0') ? 'ground-0' : ([...bySlot.keys()][0] ?? 'ground-0');
-  const selectedSlot = (estateUi.slot && (plotById(estateUi.slot) || estateUi.slot === ROOF_ORACLE_SLOT)) ? estateUi.slot : defaultSlot;
+  const validSpecial = [ROOF_ORACLE_SLOT, ROOF_TEMPLE_SLOT, ROOF_STEWARD_SLOT, CRYPT_HADES_SLOT];
+  const selectedSlot = (estateUi.slot && (plotById(estateUi.slot) || validSpecial.includes(estateUi.slot))) ? estateUi.slot : defaultSlot;
   const roofOracle = bySlot.get(ROOF_ORACLE_SLOT) ?? null;
+  const cryptHades = bySlot.get(CRYPT_HADES_SLOT) ?? null;
 
   const modeSwitch = `<div class="segs est-mode-segs" role="tablist" aria-label="Estate view">
     <button class="seg${mode === 'villa' ? ' on' : ''}" role="tab" aria-selected="${mode === 'villa'}" data-action="estate-mode" data-mode="villa">🏛 Villa Cross-Section</button>
@@ -710,6 +1029,9 @@ export function renderEstatePanel(run, estateUi = {}) {
   const roofObs = roofOracle
     ? `<button class="est-obs-bay${selectedSlot === ROOF_ORACLE_SLOT ? ' selected' : ''}" data-action="estate-select-slot" data-slot="${ROOF_ORACLE_SLOT}">👁 Roof Observatory · ${esc(BUILDINGS[roofOracle.type].name)} (Lv ${roofOracle.level})</button>`
     : '';
+  const templeLv = maxLevel(run, 'temple');
+  const roofShrine = `<button class="est-obs-bay est-shrine-bay${selectedSlot === ROOF_TEMPLE_SLOT ? ' selected' : ''}" data-action="estate-select-slot" data-slot="${ROOF_TEMPLE_SLOT}">🏛 Shrine of Fortuna · ${templeLv ? `Temple Lv ${templeLv}` : 'Re-Tune Builds'}</button>`;
+  const roofSteward = `<button class="est-obs-bay est-steward-bay${selectedSlot === ROOF_STEWARD_SLOT ? ' selected' : ''}" data-action="estate-select-slot" data-slot="${ROOF_STEWARD_SLOT}">🤖 Steward's Quarters · Galen-VII</button>`;
 
   const legend = Object.entries(DEPARTMENTS).map(([k, label]) => `<span class="est-dept-dot"><i style="background:${DEPT_COLORS[k]}"></i>${esc(label)}</span>`).join('');
 
@@ -717,7 +1039,7 @@ export function renderEstatePanel(run, estateUi = {}) {
     <div class="est-top-head">
       <div>
         <h2>The Estate <small>${run.buildings.length}/${plotCount(run)} plots · House level ${run.prestigeLevel} · up to ${levelInfo(run.prestigeLevel).maxFighters} fighters</small></h2>
-        <p class="sub">Click any built room to inspect or upgrade, any excavated bay to build, or open Fighter Quarters to decorate your gladiators' rooms in 3/4 view.</p>
+        <p class="sub">Click any built room to inspect or upgrade, speak with your house staff, or open Fighter Quarters to decorate your gladiators' rooms in 3/4 view.</p>
       </div>
       ${modeSwitch}
     </div>
@@ -726,7 +1048,7 @@ export function renderEstatePanel(run, estateUi = {}) {
     <div class="est-workspace">
       <div class="est-stage-col">
         <div class="villa est-villa">
-          <div class="est-sky">${roofObs}${skySvg}</div>
+          <div class="est-sky">${roofShrine}${roofSteward}${roofObs}${skySvg}</div>
           <div class="est-roof-bar">
             <span>Ludus Magnus · House Level ${run.prestigeLevel}</span>
             <span>${unrest ? '⚠ Unrest Rising — Chains Strain' : `${Math.max(0, plotsFree(run))} free plot${Math.max(0, plotsFree(run)) === 1 ? '' : 's'}`}</span>
@@ -737,14 +1059,23 @@ export function renderEstatePanel(run, estateUi = {}) {
           <div class="est-floors">
             ${FLOORS.map((fl) => {
               const plots = VILLA_PLOTS.filter((p) => p.floor === fl.id);
-              const builtHere = plots.filter((p) => bySlot.has(p.id)).length;
-              const openHere = plots.filter((p) => isPlotUnlocked(run, p)).length;
+              const builtHere = plots.filter((p) => bySlot.has(p.id)).length + (fl.id === 'catacomb' && cryptHades ? 1 : 0);
+              const openHere = plots.filter((p) => isPlotUnlocked(run, p)).length + (fl.id === 'catacomb' && cryptHades ? 1 : 0);
+              const cryptBay = fl.id === 'catacomb' && (cryptHades || (!maxLevel(run, 'hades') && plotsFree(run) <= 0))
+                ? (cryptHades
+                  ? renderVillaBay(run, { id: CRYPT_HADES_SLOT, floor: 'catacomb', unlockLv: 1, hint: 'Crypt Sanctum' }, bySlot, selectedSlot, unrest)
+                  : `<button class="est-bay empty${selectedSlot === CRYPT_HADES_SLOT ? ' selected' : ''}" data-action="estate-select-slot" data-slot="${CRYPT_HADES_SLOT}">
+                      <span class="est-plus">⚱</span>
+                      <div class="est-empty-label">Crypt Sanctum</div>
+                      <div class="est-lock-label">Build Temple of Hades</div>
+                    </button>`)
+                : '';
               return `<div class="est-floor ${fl.id}${mobileFloor === fl.id ? ' mobile-on' : ''}">
                 <div class="est-floor-head">
                   <span class="est-floor-title">${esc(fl.title)} <small>— ${esc(fl.depth)}</small></span>
                   <small class="sub">${builtHere}/${openHere} built</small>
                 </div>
-                <div class="est-bays">${plots.map((p) => renderVillaBay(run, p, bySlot, selectedSlot, unrest)).join('')}</div>
+                <div class="est-bays">${cryptBay}${plots.map((p) => renderVillaBay(run, p, bySlot, selectedSlot, unrest)).join('')}</div>
               </div>`;
             }).join('')}
           </div>

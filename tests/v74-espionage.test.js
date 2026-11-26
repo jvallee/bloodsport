@@ -211,13 +211,13 @@ test('espionage has its own dice: the Market, Fortune and fight rolls are untouc
 });
 
 test('save version 7: a version-6 career loads with empty espionage', () => {
-  assert.equal(SAVE_VERSION, 7);
+  assert.equal(SAVE_VERSION, 8);
   const { run } = house(16, 1);
   const old = JSON.parse(serialize(run));
   old.version = 6;
   delete old.espionage;
   const loaded = deserialize(JSON.stringify(old));
-  assert.equal(loaded.version, 7);
+  assert.equal(loaded.version, 8);
   assert.deepEqual(loaded.espionage, { clues: [], suspects: null, opMonth: null, op: null, leak: null });
 });
 

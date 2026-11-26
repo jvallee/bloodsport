@@ -5,7 +5,7 @@
 // files). Speakers are keys of SPEAKERS. Scenes are cosmetic: they never change the career, so replays don't record them.
 
 import { INTRO } from "./tutorial.js";
-import { FAVOR, BUILDINGS, PLOT } from "./data.js";
+import { FAVOR, BUILDINGS, PLOT, TRIBUTE } from "./data.js";
 import { GRAND_TIER, raisable } from "./run.js";
 import { WEEKS_PER_YEAR } from "./calendar.js";
 import { PREFECT } from "./plot.js";
@@ -13,7 +13,16 @@ import { PREFECT } from "./plot.js";
 export const SPEAKERS = {
   narrator: { name: "", portrait: "narrator" },
   emperor: { name: "Emperor Silbannacus", portrait: "emperor" },
-  steward: { name: "Your steward", portrait: "steward" }, // a plain, neutral helper (the designer's choice)
+  rightHand: { name: "Legate Cassian Vane", portrait: "rightHand" }, // 8.0: Silbannacus's Right Hand (early/mid interactions & Favour Debt)
+  taxCollector: { name: "Censor Numerius Gallo", portrait: "taxCollector" }, // 8.0: Imperial Tax Collector (winter tribute & debt audits)
+  steward: { name: "Galen-VII", portrait: "steward" }, // 8.0: Voyager-style Android Steward
+  trainer: { name: "Drillmaster Kaeso", portrait: "trainer" }, // 8.0: Interactive Trainer Room staff
+  doctor: { name: "Physician Lyra", portrait: "doctor" }, // 8.0: Interactive Medbay staff
+  unit91: { name: "Unit-non-machine-91", portrait: "unit91" },
+  basa: { name: "Tarek", portrait: "basa" },
+  orc: { name: "Varok", portrait: "orc" },
+  android: { name: "Solace-4", portrait: "android" },
+  elf: { name: "Vaelen", portrait: "elf" },
   rebel: { name: "A prisoner", portrait: "narrator" }, // a political prisoner: their beats carry the fighter (name and face)
   fighter: { name: "", portrait: "narrator" }, // one of your fighters (5.4.0 quests): the beat carries the fighter
   rival: { name: "A rival Lanista", portrait: "emperor" }, // the archrival house (5.4.0)
@@ -24,102 +33,101 @@ export const SCENES = {
   // The first thing a new player sees. The first beat is the intro's opening page (src/tutorial.js), in the designer's words.
   opening: [
     { speaker: "narrator", title: INTRO[0].title, html: INTRO[0].body },
-    // PLACEHOLDER: the Emperor pulled you through the portal himself, and says the stakes.
+    // PLACEHOLDER (8.0): Legate Cassian Vane finds you on the flagstones and sets the stakes.
     {
-      speaker: "emperor",
-      text: "Ah. Awake at last. Good: you will have plenty of time to sleep if you die.",
+      speaker: "rightHand",
+      text: "Stand up, and get off my deed-floor. I am Legate Cassian Vane, Right Hand to Emperor Silbannacus. You fell straight onto the flagstones of a defaulting Ludus, so I have put your thumbprint on its deed.",
     },
     {
-      speaker: "emperor",
-      text: "I am Silbannacus, Emperor of Battleworld, and I pulled you here myself, out of a world of glowing screens and soft hands. You will find mine harder.",
+      speaker: "rightHand",
+      text: "No, the Princeps is not here in person. Why on Palatina would Emperor Silbannacus visit the Dirt Pits? He has me to smell the mud for him.",
     },
     {
-      speaker: "emperor",
-      text: "You are my newest Lanista: the master of a gladiator school, a Ludus. Yours is a ruin in the Dirt Pits, the lowest arena on the planet.",
+      speaker: "rightHand",
+      text: "The last Lanista left this house with a leaky roof, an antique Android steward welded to the deed, and a stack of angry creditors. We fed him to the crocodiles on Tuesday. Since you arrived unannounced on his tiles, you are his replacement.",
     },
     {
-      speaker: "emperor",
-      text: "Buy fighters. Train them. Send them onto the sand. Climb my four arenas and beat their Bosses. Win my Grand Tournament, and I will name you Master of the Games.",
+      speaker: "rightHand",
+      text: "The contract is simple: climb four arenas from the Dirt Pits to the Imperial Coliseum, and win the Grand Tournament. Pay Censor Gallo his winter tribute and keep your Imperial Favour above zero, or you will die on the same sand as your stock.",
     },
     {
-      speaker: "emperor",
-      text: "Pay my tribute every winter. Keep my favour. Lose it, and the crowd will watch you die on the same sand as my gladiators.",
-    },
-    {
-      speaker: "emperor",
-      text: "I took this throne with a knife. I know exactly what a person will do to keep breathing. Show me.",
+      speaker: "rightHand",
+      text: "If you need emergency coin, my office brokers advances against your Favour. Anything else you can ask the metal fixture.",
       // Your answer (playtest #8: response dialogue). PLACEHOLDER lines; flavour only, nothing in the career changes.
       replies: [
-        { label: "I will.", then: [{ speaker: "emperor", text: "Good. Confidence is cheap, Lanista. Let us see what it buys." }] },
-        { label: "Send me home.", then: [{ speaker: "emperor", text: "Home? Battleworld does not return what it takes. This is home now." }] },
-        { label: "Say nothing.", then: [{ speaker: "emperor", text: "Silence. Wise, or terrified. Either will do." }] },
+        { label: "I will make the house pay.", then: [{ speaker: "rightHand", text: "Good. Arithmetic first, heroism second. Have your steward show you the books." }] },
+        { label: "When do I meet the Emperor?", then: [{ speaker: "rightHand", text: "When you reach the Imperial Coliseum, or when you treasonously disappoint me. Most Lanistas manage the second far quicker than the first." }] },
+        { label: "Say nothing.", then: [{ speaker: "rightHand", text: "Quiet. I like quiet. The last one wept on my boots." }] },
       ],
     },
-    // PLACEHOLDER: the steward, plain and neutral, takes over as your guide.
+    // PLACEHOLDER (8.0): Galen-VII, your Administrative Construct steward, takes over as your guide.
     {
       speaker: "steward",
-      text: "You can breathe now. He's gone. He does that: arrives like a storm, leaves like one, and the rest of us count the broken roof tiles.",
+      text: "You may lower your heart rate now. Legate Vane has departed, taking approximately forty per cent of the courtyard's breathable oxygen with him.",
     },
     {
       speaker: "steward",
-      text: "I'm the steward of this house. I keep its books, its keys and, lately, its secrets, which are mostly debts. I'll tell you what you need to know to not die on your first day. The second day is up to you.",
+      text: "I am Galen-VII, Administrative Construct for this estate, though I do also retain pre-Imperial medical subroutines. Your predecessor attempted to trade my logic core for three amphorae of Falernian wine; fortunately for us both, the vintner could not lift me.",
     },
     {
       speaker: "steward",
-      text: "First, gladiators. The Market has a few for sale, and your purse can stretch to one or two. Yes, you'll be buying people. I won't pretend that's a kind thing. But on Battleworld the choice is to own fighters or to be one, and you don't look like a fighter.",
+      text: "First, gladiators. Yes, you will be buying people. I am on the deed myself, so I won't pretend that is a kind thing. But here the choice is to own fighters or to be one, and you do not look like a fighter.",
     },
   ],
-  // The Emperor returns at a few turning points (PLACEHOLDER lines).
+  // 3-Tier Imperial Authority return visits (PLACEHOLDER lines): Legate Cassian Vane (firstBoss, lowFavor), Censor Numerius Gallo (tribute), and Emperor Silbannacus (grand).
   firstBoss: [
-    { speaker: "narrator", text: "When your fighters come home from the arena, a rider in imperial purple is waiting at the gate. He does not dismount. He does not need to." },
+    { speaker: "narrator", text: "When your fighters come home from the arena, a rider in a legate's crimson is waiting at the gate. He does not dismount. He is writing something down." },
     {
-      speaker: "emperor",
-      text: "One of yours has beaten a Boss. The crowd enjoyed it. So did I, for nearly a minute.",
+      speaker: "rightHand",
+      text: "Well. One of yours has beaten a Boss. My clerk owed me two Gold if you were dead by Quintilis; you have cost me lunch, Lanista.",
     },
     {
-      speaker: "emperor",
-      text: "I have had the Boss's name struck from the arena walls. Bosses are like roof tiles: there is always another, and nobody remembers the old one.",
+      speaker: "rightHand",
+      text: "I have had the old Boss's name struck from the arena walls. Welcome to the next circuit: the sand is cleaner, the crowd is crueller, and the rival houses will now bother to learn your name before they try to ruin you.",
     },
     {
-      speaker: "emperor",
-      text: "Do not let it go to your head, Lanista. Heads come off easily in my empire. I have a man for it.",
+      speaker: "rightHand",
+      text: "Do not let it go to your head, Lanista. Heads come off easily on Palatina, and my stylus is always inked.",
     },
   ],
+  // PLACEHOLDER (8.0): Censor Numerius Gallo's winter tribute audit.
   tribute: [
-    { speaker: "narrator", text: "The Emperor's collectors count the tribute out on your table, coin by coin. They do not sit down. One of them carries a letter in the Emperor's own hand, and reads it aloud." },
+    { speaker: "narrator", text: "On the first frost of winter, a clerk in ash-grey wool sets a calibrated brass scale on your table and weighs each coin separately." },
     {
-      speaker: "emperor",
-      text: "Winter, and my collectors have knocked on your door. They tell me you paid. They sounded almost disappointed.",
+      speaker: "taxCollector",
+      text: "Censor Numerius Gallo, Office of the Winter Rolls. Full weight, no clipped edges. You would be astonished how many Lanistas try to pass shaved bronze past a calibrated beam.",
     },
     {
-      speaker: "emperor",
-      text: "A Lanista who pays is a Lanista who lives. It is the only arithmetic in this empire, and I have made it very simple.",
+      speaker: "taxCollector",
+      text: `A Lanista who reconciles their column totals is a Lanista who lives to see the spring thaw. Next winter the assessment rises by ${TRIBUTE.perYear} Gold, as per the Palatine Charter. Do keep your fighters alive; dead stock depreciates dreadfully on the ledger.`,
     },
   ],
+  // PLACEHOLDER (8.0): Legate Vane's wax-and-bronze warning.
   lowFavor: [
-    { speaker: "narrator", text: "A summons to the palace, at an hour when nobody is ever summoned for good news." },
+    { speaker: "narrator", text: "A summons to Legate Vane's basilica office, at an hour when nobody on Palatina is ever summoned for good news." },
     {
-      speaker: "emperor",
-      text: "Your name came up at dinner, Lanista. Somewhere between the lampreys and the dormice. Nobody enjoyed it.",
+      speaker: "rightHand",
+      text: "Do you see this wax tablet, Lanista? Your name is in the wax, between a coiner and an Elven arsonist.",
     },
     {
-      speaker: "emperor",
-      text: "I have a short list of houses that bore me. It used to be longer. Give me a reason to take you off it. Soon.",
+      speaker: "rightHand",
+      text: "Wax smooths over, if the crowd gets a spectacle this month. Bore the palace again and I have it cut in bronze.",
     },
   ],
+  // PLACEHOLDER (8.0): Emperor Silbannacus before the Grand Tournament.
   grand: [
-    { speaker: "narrator", text: "Before the Grand Tournament, every Lanista who has earned a place is brought before the Emperor. Yours is the last name called." },
+    { speaker: "narrator", text: "Before the Grand Tournament, a closed litter carries you above the smog of the lower tiers to a terrace of white stone. Below the marble tiles, you feel a low, rhythmic vibration, like a loom the size of a mountain turning in its sleep." },
     {
       speaker: "emperor",
-      text: "So. You have reached my Grand Tournament. The whole city has bought a seat, and I have bought the city.",
+      text: "So. You have reached my Grand Tournament. The whole city has bought a seat, and I have bought the city. Come closer, Lanista.",
     },
     {
       speaker: "emperor",
-      text: "Every house that ever mattered has stood where you are standing. Most of them are buried under it.",
+      text: "Rome was dying of old age and bad arithmetic when I left her. Look at her now: ten thousand stars watching a circle of sand.",
     },
     {
       speaker: "emperor",
-      text: "Win, and you stand beside me in the box. Lose, and you will have climbed a very long way to fall. I will be watching either way. I always am.",
+      text: "Win today, and you stand beside my chair. Lose, and we will sweep you up with the sawdust. I will be watching either way. I always am.",
     },
   ],
 };
@@ -136,7 +144,7 @@ const RETURNS = [
 ];
 
 // A return visit's beats, with the rising's asides (7.10): the rebel whispers before the Grand Tournament once the rising is
-// ready, and the Emperor knows about your late nights when the palace is suspicious. PLACEHOLDER lines.
+// ready, and the palace knows about your late nights when suspicious. PLACEHOLDER lines.
 export function returnScene(id, run) {
   const beats = [...(SCENES[id] ?? [])];
   const p = run.plot;
@@ -147,7 +155,7 @@ export function returnScene(id, run) {
     beats.push(say("He'll be up there in the box, just as he said. Let him look. Win the Final, Lanista, and then look up."));
   }
   if (id === "lowFavor" && p && !p.ended && p.suspicion >= PLOT.suspicion.informer) {
-    beats.push({ speaker: "emperor", text: "And Lanista: my Praetorians tell me your house keeps very late hours. I do so hope you are only drinking." });
+    beats.push({ speaker: "rightHand", text: "And Lanista: Prefect Crassinus tells me your house keeps very late hours. I do so hope you are only drinking." });
   }
   return beats;
 }
@@ -183,7 +191,7 @@ export const ENDING_SCENES = {
   coup: [
     { speaker: "emperor", text: "You. I pulled you out of nothing. I gave you a house, a name, a crowd. And this is how you thank—" },
     { speaker: "narrator", text: "The crowd does not let him finish." },
-    { speaker: "narrator", text: "When the dust settles the imperial box stands empty, and the sand is quiet for the first time in a hundred years. Somebody, somewhere high in the stands, begins to laugh. Then everybody does." },
+    { speaker: "narrator", text: "When the dust settles the imperial box stands empty, and the sand is quiet for the first time in three hundred years. Somebody, somewhere high in the stands, begins to laugh. Then everybody does." },
   ],
   martyr: [
     { speaker: "emperor", text: "A broken chain on every door in the city, and not one of them could open mine. Scrub them off. All of them." },
@@ -192,15 +200,16 @@ export const ENDING_SCENES = {
   ],
   treason: [
     { speaker: "emperor", text: "Treason. Such an old word. It still fits so many people." },
-    { speaker: "emperor", text: "I told you I know what a person will do to keep breathing. I did not think you would be so bad at it." },
+    { speaker: "emperor", text: "Cassian warned you that you would meet me early if you treasonously disappointed him. I did not think you would be so bad at keeping breathing." },
   ],
+  // PLACEHOLDER (8.0): Legate Vane delivers the bronze writ, and Emperor Silbannacus passes the final sentence.
   favour: [
-    { speaker: "emperor", text: "I warned you, Lanista. You had one thing to give me: a reason to keep you. You stopped giving it." },
+    { speaker: "rightHand", text: "I warned you, Lanista. You had one thing to give the Palatine: a reason to keep you. You stopped giving it. I have had your name cut in bronze." },
     { speaker: "emperor", text: "Never mind. You will entertain my guests one last time, from the wrong side of the sand. I am told the lions have been saving themselves." },
   ],
   broke: [
-    { speaker: "steward", text: "The last fighter is gone, and the strongbox is empty. I've counted it four times. It doesn't help." },
-    { speaker: "emperor", text: "An empty ludus and an empty purse. I need not even sign the order. The city will see to you for free." },
+    { speaker: "steward", text: "The last fighter is gone, and the strongbox is empty. I have reconciled the ledger four times. It doesn't help." },
+    { speaker: "rightHand", text: "An empty ludus and an empty purse. Censor Gallo need not even seal the writ. The city will see to you for free." },
   ],
   revolt: [
     { speaker: "narrator", text: "The guards drop their spears and run. The chains break, and the first thing the freed men find is you." },
@@ -280,13 +289,13 @@ export function rebelScene(run, f) {
 // PLACEHOLDER lines: the Emperor reacts the moment a demand is met, and when its fight day ends without it.
 export function demandMetScene(goal, favor, gold) {
   return [
-    { speaker: "emperor", text: "Good. That is what I asked for, and you gave it to me. I remember those who please me." },
+    { speaker: "rightHand", text: "Good. That is what the Palatine asked for, and you gave it to us. My office remembers those who deliver." },
     { speaker: "steward", text: `Demand met: ${goal}. When fight day ends he pays +${favor} Favour and ${gold} Gold.` },
   ];
 }
 export function demandMissedScene(goal, favor) {
   return [
-    { speaker: "emperor", text: "I asked you for one thing, Lanista. One. The month is over, and I am still waiting." },
+    { speaker: "rightHand", text: "I asked you for one thing on the Palatine docket, Lanista. One. The month is over, and my tablet is still blank." },
     { speaker: "steward", text: `Demand missed: ${goal}. Imperial Favour ${favor < 0 ? `−${-favor}` : `+${favor}`}.` },
   ];
 }
@@ -392,3 +401,27 @@ export function stewardNews(before, after, run) {
 export const tipSpeaker = "steward";
 
 export { lastWordsFor, backstoryScene, prefectPosture } from "./voices.js";
+export {
+  CORE_COMPANIONS,
+  ESTATE_STAFF,
+  isStaffId,
+  getStaffActor,
+  PERSONAL_TRAITS,
+  LORE_KEEPSAKES,
+  evaluateKeepsake,
+  CORE_WANTS,
+  nextCoreWant,
+  CORE_BOND_TREES,
+  bondPairKey,
+  MILESTONE_PRIORITIES,
+  priorityForMilestone,
+  createDialogueState,
+  ensureDialogueState,
+  normalizeSceneId,
+  titleForMilestone,
+  enqueueMilestone,
+  pruneStaleDialogue,
+  getHubTopics,
+  resolveDialogueTree,
+  applyDialogueChoice,
+} from "./dialogueTrees.js";

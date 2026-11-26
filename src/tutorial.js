@@ -10,7 +10,7 @@ export const INTRO = [
   {
     title: "Another Day on Your Computer",
     body: `<p>You are scrolling, cruising, dare I say surfing the web. Suddenly the screen shimmers. A hand reaches out of it, grabs you by the head and pulls you through.</p>
-      <p>You land hard on cold stone, under a sun that isn't yours. This is <b>Battleworld</b>, whose portals pull warriors from every world and century to feed the arenas of <b>Emperor Silbannacus</b>, a Roman usurper who fused magic and technology into an empire of bloodsport.</p>
+      <p>You land hard on cold stone beneath an amber orbital mirror, on the floor of a decaying Roman villa. This is <b>Palatina</b>, capital of the Astral Principate, ruled by <b>Emperor Silbannacus</b>, a 3rd-century Roman usurper granted near-immortality by an ancient machine buried beneath the palace, who built a star-spanning empire of bloodsport.</p>
       <p>Then everything goes dark.</p>`,
   },
   {
@@ -39,11 +39,11 @@ export const INTRO = [
 export const GUIDE = [
   {
     id: "recruit",
-    when: (r) => r.roster.length < 1 && r.week === 0,
-    goal: (r) => r.roster.length >= 1,
+    when: (r) => (r.roster.length < 1 || (r.roster.length === 1 && r.roster[0].companion)) && r.week === 0,
+    goal: (r) => r.roster.length >= (r.roster.some((f) => f.companion) ? 2 : 1),
     tab: "market",
-    focus: '[data-action="recruit"]',
-    text: "Let's start with one gladiator. In the Market, look at each one's <b>Power</b> (the sword: wins rounds) and <b>Speed</b> (the arrow: strikes first). Higher is better, and dearer. Press <b>Recruit</b> on one you can afford; one is enough to start.",
+    focus: '[data-action="draft-companion"], [data-action="recruit"]',
+    text: "Let's start with a gladiator. In the Market, you may <b>draft up to two Core Companions for free</b> in Week 0, or recruit from the general rail. Look at each fighter's <b>Power</b> (the sword: wins rounds) and <b>Speed</b> (the arrow: strikes first). Higher is better, and dearer.",
   },
   {
     id: "jobs",

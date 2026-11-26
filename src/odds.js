@@ -4,14 +4,14 @@
 import { createRng, deriveSeed } from './rng.js';
 import { createMatch, autoPlay, suggestTactic, signatureBlocker, useSignature } from './fight.js';
 
-export function estimateOdds(fighter, opponent, { debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, oracle = 0, useSignatures = true, n = 500, seed = 12345, boostsA = null, boostsB = null, vengeanceB = false, ashA = 0 } = {}) {
+export function estimateOdds(fighter, opponent, { debuff = null, overtrained = false, scouted = 0, challenger = 0, festival = null, grudge = 0, vengeance = false, boss = false, earlyRound = false, rebels = 0, relics = null, oracle = 0, debt = null, summons = false, playbook = false, useSignatures = true, n = 500, seed = 12345, boostsA = null, boostsB = null, vengeanceB = false, ashA = 0 } = {}) {
   const startInjuries = fighter.injuries.filter((i) => i.weight > 0).length;
   let win = 0;
   let hurt = 0;
   let death = 0;
   for (let i = 0; i < n; i++) {
     const rng = createRng(deriveSeed(seed, i));
-    const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger, festival, grudge, vengeance, boss, earlyRound, rebels, relics, oracle, fast: true });
+    const m = createMatch({ a: fighter, b: opponent, rng, debuff, overtrained, scouted, challenger, festival, grudge, vengeance, boss, earlyRound, rebels, relics, oracle, debt, summons, playbook, fast: true });
     // A live match's boosts already in place (items used before Round 1, espionage) so a bet is priced on the real fight.
     if (boostsA) m.a.boosts = [...boostsA];
     if (boostsB) m.b.boosts = [...boostsB];
@@ -65,5 +65,6 @@ export function describeOdds(odds, oracle = 0) {
 // week's Stress (which counts only through matchOptions' overtrained flag) or a story line doesn't redo the simulations.
 // A field the engine starts reading must be added here (oddsKey) (tests/v77-feel.test.js checks the ones left out).
 export const FIGHT_FIELDS = ['id', 'cls', 'alive', 'injuries', 'power', 'level', 'weapon', 'speed', 'kindTrait', 'gear', 'augments', 'titles',
-  'perks', 'legend', 'kills', 'humor', 'decor', 'scars', 'risen', 'renown', 'name', 'morale', 'kind', 'revenantOf', 'house', 'rivalChampion'];
-export const oddsKey = (f) => JSON.stringify(FIGHT_FIELDS.map((k) => f[k]));
+  'perks', 'legend', 'kills', 'humor', 'decor', 'scars', 'risen', 'renown', 'name', 'morale', 'kind', 'revenantOf', 'house', 'rivalChampion',
+  'personalTrait', 'keepsake', 'coreId', 'meditatedBoost', 'jailbreakBoost', 'playbook'];
+export const oddsKey = (f, opts = null) => JSON.stringify(FIGHT_FIELDS.map((k) => (k === 'playbook' ? Boolean(opts?.playbook ?? f[k]) : f[k])));

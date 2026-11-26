@@ -10,7 +10,7 @@ import { dateOf } from '../calendar.js';
 import { medbaySlots, maxLevel, effectAt } from '../ludus.js';
 import {
   GRAND_TIER, clamp, log, findFighter, chronicle, bumpMorale, isShort, hasPolicy,
-  removeFighter, changeFavor, talk,
+  removeFighter, changeFavor, talk, queueMilestone,
 } from './helpers.js';
 
 // Some prisoners are secretly political; their record carries clues and they come cheap.
@@ -35,12 +35,28 @@ export function markPolitical(run, f, { force = false } = {}) {
 
 export const plotActive = (run) => Boolean(run.plot) && !run.plot.ended;
 
+const isConspiracyListener = (f) => Boolean(f && (f.companion || f.coreId || f.political));
+
+function checkOrcElfSchism(run) {
+  if (!plotActive(run)) return;
+  const hasOrc = (run.roster ?? []).some((x) => x.coreId === 'orc' && x.alive !== false && x.kind !== 'revenant');
+  const hasElf = (run.roster ?? []).some((x) => x.coreId === 'elf' && x.alive !== false && x.kind !== 'revenant');
+  if (hasOrc && hasElf && ['favours', 'cause', 'ready'].includes(run.plot.stage)) {
+    for (const f of run.roster ?? []) {
+      if ((f.coreId === 'orc' || f.coreId === 'elf') && f.alive !== false && f.kind !== 'revenant') {
+        queueMilestone(run, f, { id: 'rebel_orc_elf_schism', priority: 82 });
+      }
+    }
+  }
+}
+
 export function joinPlot(run, f) {
   if (!f.political) return;
   if (!run.plot) {
     run.plot = { stage: 'mark', trust: 0, suspicion: 0, refusals: 0, seen: [], cells: [], champion: null, freed: [], nextAt: run.week + int(run.rng.plot, ...PLOT.firstGap), ended: null };
   }
   if (!run.plot.cells.includes(f.political.cell)) run.plot.cells.push(f.political.cell);
+  checkOrcElfSchism(run);
 }
 
 export const changeSuspicion = (run, n) => {
@@ -54,13 +70,20 @@ function suspicionWarnings(run, before) {
   const s = PLOT.suspicion;
   const rebel = run.roster.find((f) => f.political);
   const prefect = (key) => ({ speaker: 'prefect', text: PREFECT_LINES[key] });
-  if (before < s.watch && p.suspicion >= s.watch) talk(run, 'suspicion-watch', [prefect('watch')]);
+  if (before < s.watch && p.suspicion >= s.watch) {
+    talk(run, 'suspicion-watch', [prefect('watch')]);
+    for (const f of run.roster ?? []) queueMilestone(run, f, { id: 'suspicion_watch', priority: 66 });
+  }
   if (before < s.informer && p.suspicion >= s.informer) {
     talk(run, 'suspicion-informer', [prefect('informer'), rebel
       ? { speaker: 'rebel', fighterId: rebel.id, text: SUSPICION_LINES.informer }
       : { speaker: 'steward', text: SUSPICION_LINES.informerSteward }]);
+    for (const f of run.roster ?? []) queueMilestone(run, f, { id: 'suspicion_informer', priority: 72 });
   }
-  if (before < s.cold && p.suspicion >= s.cold) talk(run, 'suspicion-cold', [prefect('cold'), { speaker: 'steward', text: SUSPICION_LINES.cold }]);
+  if (before < s.cold && p.suspicion >= s.cold) {
+    talk(run, 'suspicion-cold', [prefect('cold'), { speaker: 'steward', text: SUSPICION_LINES.cold }]);
+    for (const f of run.roster ?? []) queueMilestone(run, f, { id: 'suspicion_cold', priority: 78 });
+  }
 }
 
 export function addContact(run, name, cell, how) {
@@ -151,18 +174,30 @@ export function advancePlot(run) {
     && run.prestigeLevel >= PLOT.cause.houseLevel) {
     p.stage = 'cause';
     p.causeWeek = run.week;
+    for (const f of run.roster ?? []) if (isConspiracyListener(f)) queueMilestone(run, f, { id: 'rebel_call_accepted', priority: 74 });
+    checkOrcElfSchism(run);
   }
-  if (p.stage === 'cause' && p.trust >= PLOT.ready.trust && isArmed(run) && run.roster.some((f) => f.id === p.champion)) p.stage = 'ready';
+  if (p.stage === 'cause' && p.trust >= PLOT.ready.trust && isArmed(run) && run.roster.some((f) => f.id === p.champion)) {
+    p.stage = 'ready';
+    checkOrcElfSchism(run);
+  }
 }
 
 export function applyPlotEffects(run, eff, ev, out) {
   const p = run.plot;
   const f = findFighter(run, ev.f);
-  if (eff.trust) p.trust = clamp(p.trust + eff.trust, 0, PLOT.maxTrust);
+  if (eff.trust) {
+    p.trust = clamp(p.trust + eff.trust, 0, PLOT.maxTrust);
+    if (eff.trust > 0) for (const x of run.roster ?? []) if (isConspiracyListener(x)) queueMilestone(run, x, { id: 'rebel_call_accepted', priority: 74 });
+  }
   if (eff.suspicion) changeSuspicion(run, eff.suspicion);
   if (eff.stage) {
     p.stage = eff.stage;
-    if (eff.stage === 'favours') p.markWeek = run.week;
+    if (eff.stage === 'favours') {
+      p.markWeek = run.week;
+      for (const x of run.roster ?? []) if (isConspiracyListener(x)) queueMilestone(run, x, { id: 'rebel_call_accepted', priority: 74 });
+    }
+    checkOrcElfSchism(run);
   }
   if (eff.reveal) p.reveal = run.topTier;
   if (eff.hide) {
@@ -209,14 +244,20 @@ export function applyPlotEffects(run, eff, ev, out) {
     removeFighter(run, f, { fallen: {} });
     log(run, `${f.name} is taken by the Praetorians and executed in the arena at noon.`, 'bad');
   }
-  if (eff.cold) endPlot(run, 'cold');
+  if (eff.cold) {
+    for (const x of run.roster ?? []) if (isConspiracyListener(x)) queueMilestone(run, x, { id: 'rebel_call_refused', priority: 74 });
+    endPlot(run, 'cold');
+  }
   if (eff.postpone) log(run, 'Not tonight. The rebels will wait for the next Grand Tournament.', 'event');
   if (eff.coup) {
     p.coup = true;
     p.debuffBefore = run.arenas[run.topTier].debuff;
     run.arenas[run.topTier].debuff = 'emperorsGaze';
   }
-  if (eff.betray) betray(run);
+  if (eff.betray) {
+    for (const x of run.roster ?? []) if (isConspiracyListener(x)) queueMilestone(run, x, { id: 'rebel_call_betrayed', priority: 74 });
+    betray(run);
+  }
   if (eff.treason) {
     endPlot(run, 'treason');
     run.status = 'lost';

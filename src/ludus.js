@@ -5,7 +5,12 @@ import { Refused } from './errors.js';
 
 export const levelInfo = (level) => PRESTIGE_LEVELS[level - 1];
 export const plotCount = (run) => levelInfo(run.prestigeLevel).plots;
-export const plotsFree = (run) => plotCount(run) - run.buildings.length;
+export const CRYPT_HADES_SLOT = 'crypt-hades';
+export const ROOF_ORACLE_SLOT = 'roof-oracle';
+export const ROOF_TEMPLE_SLOT = 'roof-temple';
+export const ROOF_STEWARD_SLOT = 'roof-steward';
+const NON_PLOT_SLOTS = new Set([CRYPT_HADES_SLOT, ROOF_ORACLE_SLOT, ROOF_TEMPLE_SLOT, ROOF_STEWARD_SLOT]);
+export const plotsFree = (run) => plotCount(run) - run.buildings.filter((b) => !NON_PLOT_SLOTS.has(b.slot)).length;
 
 export function prestigeLevelFor(prestige, current = 1) {
   const reached = PRESTIGE_LEVELS.filter((p) => prestige >= p.at).at(-1).level;
@@ -16,8 +21,8 @@ const ofType = (run, type) => run.buildings.filter((b) => b.type === type);
 export const maxLevel = (run, type) => Math.max(0, ...ofType(run, type).map((b) => b.level));
 export const effectAt = (type, level) => (level ? BUILDINGS[type].per[level - 1] : 0);
 
-// Roster capacity: quarters capacity, capped by the Prestige level's fighter limit.
-export const rosterCap = (run) => Math.min(ofType(run, 'quarters').reduce((s, b) => s + effectAt('quarters', b.level), 0), levelInfo(run.prestigeLevel).maxFighters);
+// Roster capacity: quarters capacity (+ any temporary patron/draft bunk), capped by the Prestige level's fighter limit.
+export const rosterCap = (run) => Math.min(ofType(run, 'quarters').reduce((s, b) => s + effectAt('quarters', b.level), 0) + (run.patronBunk ?? 0), levelInfo(run.prestigeLevel).maxFighters);
 export const trainerRooms = (run) => ofType(run, 'trainer').length;
 export const trainCap = (run) => effectAt('trainer', maxLevel(run, 'trainer')) + (run.setup?.short && maxLevel(run, 'trainer') > 0 ? SHORT.trainCap : 0); // a season trains further (SHORT.trainCap)
 export const trainCost = (run) => {
@@ -37,7 +42,6 @@ export const liaisonLevel = (run) => maxLevel(run, 'liaison');
 export const stressRelief = (run) => effectAt('entertainment', maxLevel(run, 'entertainment'));
 
 // 21 Fibonacci villa plots across three architectural tiers (cumulative unlocks: 3 → 5 → 8 → 13 → 21).
-export const ROOF_ORACLE_SLOT = 'roof-oracle';
 export const VILLA_PLOTS = [
   // Upper Colonnade (6 plots)
   { id: 'upper-0', floor: 'upper', unlockLv: 2, hint: 'Sunlit Loggia' },
@@ -105,6 +109,7 @@ const FLOOR_PREF = {
   oracle: ['upper', 'ground', 'catacomb'],
   gallery: ['catacomb', 'ground', 'upper'],
   vulcan: ['catacomb', 'ground', 'upper'],
+  hades: ['catacomb', 'ground', 'upper'],
   liaison: ['catacomb', 'ground', 'upper'],
 };
 
@@ -112,8 +117,17 @@ export function pickDefaultSlot(run, type, used) {
   if (type === 'oracle' && (run.prestigeLevel ?? 1) === 1 && !used.has(ROOF_ORACLE_SLOT) && VILLA_PLOTS.filter((p) => p.unlockLv <= 1 && !used.has(p.id)).length === 0) {
     return ROOF_ORACLE_SLOT;
   }
-  const prefs = FLOOR_PREF[type] ?? ['ground', 'upper', 'catacomb'];
   const lv = run.prestigeLevel ?? 1;
+  if (type === 'hades') {
+    const freeUnlocked = VILLA_PLOTS.filter((p) => p.unlockLv <= lv && !used.has(p.id));
+    if (!freeUnlocked.length || plotsFree(run) <= 0) {
+      if (!used.has(CRYPT_HADES_SLOT)) return CRYPT_HADES_SLOT;
+    } else {
+      const nonGalleryCatacomb = VILLA_PLOTS.find((p) => p.floor === 'catacomb' && !p.sealedGallery && p.unlockLv <= lv && !used.has(p.id));
+      if (nonGalleryCatacomb) return nonGalleryCatacomb.id;
+    }
+  }
+  const prefs = FLOOR_PREF[type] ?? ['ground', 'upper', 'catacomb'];
   // Unlocked plots first (by floor preference), then any open plot as safety fallback for older/migrated saves.
   for (const unlockedOnly of [true, false]) {
     for (const floor of prefs) {
@@ -121,6 +135,7 @@ export function pickDefaultSlot(run, type, used) {
       if (hit) return hit.id;
     }
   }
+  if (type === 'hades' && !used.has(CRYPT_HADES_SLOT)) return CRYPT_HADES_SLOT;
   return !used.has(ROOF_ORACLE_SLOT) ? ROOF_ORACLE_SLOT : null;
 }
 
@@ -130,7 +145,7 @@ export function resolveEstateSlots(run) {
   const used = new Set();
   const unassigned = [];
   for (const b of run?.buildings ?? []) {
-    if (b.slot && (PLOT_BY_ID[b.slot] || b.slot === ROOF_ORACLE_SLOT) && !used.has(b.slot)) {
+    if (b.slot && (PLOT_BY_ID[b.slot] || b.slot === ROOF_ORACLE_SLOT || b.slot === CRYPT_HADES_SLOT) && !used.has(b.slot)) {
       bySlot.set(b.slot, b);
       used.add(b.slot);
     } else {
@@ -193,12 +208,16 @@ export function buildBlocker(run, type, slot = null) {
   if (run.mercy) return "First decide the beaten opponent's fate: thumbs up or down.";
   if (run.prestigeLevel < def.req[0]) return `Unlocks at Prestige level ${def.req[0]}.`;
   if (def.unique && ofType(run, type).length) return 'You already have one. Upgrade it instead.';
-  if (plotsFree(run) <= 0) return 'No free plots. Raise your Prestige level for more.';
-  if (slot) {
+  const canUseCrypt = type === 'hades' && (!slot || slot === CRYPT_HADES_SLOT) && !buildingAtSlot(run, CRYPT_HADES_SLOT);
+  if (plotsFree(run) <= 0 && !canUseCrypt) return 'No free plots. Raise your Prestige level for more.';
+  if (slot && slot !== CRYPT_HADES_SLOT) {
     const p = PLOT_BY_ID[slot];
     if (!p) return 'Unknown plot.';
     if (p.unlockLv > run.prestigeLevel) return `Plot unlocks at Prestige level ${p.unlockLv}.`;
     if (buildingAtSlot(run, slot)) return 'That plot already has a building.';
+  } else if (slot === CRYPT_HADES_SLOT) {
+    if (type !== 'hades') return 'Unknown plot.';
+    if (buildingAtSlot(run, CRYPT_HADES_SLOT)) return 'That plot already has a building.';
   }
   if (run.gold < def.cost[0]) return `Needs ${def.cost[0]} Gold.`;
   return null;

@@ -44,7 +44,7 @@ export function probesOf(text) {
   return out;
 }
 
-const norm = (line) => line.replace(QUOTES, '').replace(/\s+/g, ' ');
+const norm = (line) => line.replace(/<\/?b>/g, '').replace(QUOTES, '').replace(/\s+/g, ' ');
 
 export function refresh(markdown, readFile) {
   const files = new Map();

@@ -3,11 +3,12 @@
 import { createRng, deriveSeed, next, pick } from '../rng.js';
 import { CIRCUITS, DECOR, PLOT, LOUNGE, QUESTS, FIGHTER_WANTS, REBEL_QUEST } from '../data.js';
 import { STEWARD_TASKS, STEWARD_INTRO, stewardDone, stewardGrandDone, stewardAlready, WANTS, REBEL_QUESTS } from '../quests.js';
+import { CORE_WANTS, nextCoreWant, createDialogueState } from '../dialogueTrees.js';
 import { MOOD_WEEKS } from '../events.js';
 import { maxLevel } from '../ludus.js';
 import {
   clamp, log, chronicle, talk, effectivePower, championTitle, isChampionOf, hasPolicy,
-  gainXp, addPrestige, winsOf,
+  gainXp, addPrestige, winsOf, queueMilestone,
 } from './helpers.js';
 import { backstoryScene } from '../voices.js';
 import { plotActive, changeSuspicion, advancePlot } from './plotEngine.js';
@@ -17,6 +18,10 @@ import { retireBlocker } from './roster.js';
 const moodShift = (f, n) => { f.mood = { n: (f.mood?.n ?? 0) + n, weeks: MOOD_WEEKS }; };
 const questState = (run) => (run.quests ??= { steward: null, stewardIndex: 0, rebel: [] });
 const MAX_BACKSTORIES = 2;
+
+export const wantLabel = (w) => (typeof w?.label === 'string' ? w.label : WANTS[w?.id]?.label?.(w) ?? w?.id ?? '');
+export const wantGoal = (w) => (typeof w?.goal === 'string' ? w.goal : WANTS[w?.id]?.goal?.(w) ?? wantLabel(w));
+const coreWantDef = (f, w) => (w?.coreWantId && f?.coreId ? (CORE_WANTS[f.coreId] ?? []).find((x) => x.id === w.coreWantId) : null);
 
 // 7.11: once a living fighter reaches level 3, they tell you where the portal took them from (two a career, one per kind).
 export function checkBackstories(run) {
@@ -130,9 +135,38 @@ export function wantsMonth(run) {
   const r = run.rng.wants;
   if (run.roster.filter((f) => f.want).length >= FIGHTER_WANTS.max || next(r) >= FIGHTER_WANTS.chance) return;
   const options = [];
-  for (const f of run.roster) if (!f.want) for (const id of Object.keys(WANTS)) { const w = wantFor(run, f, id); if (w) options.push({ f, id, w }); }
+  for (const f of run.roster) {
+    if (f.want) continue;
+    if (f.coreId && CORE_WANTS[f.coreId]) {
+      const cw = nextCoreWant(run, f);
+      if (cw && !cw.test(run, f)) options.push({ f, coreWant: cw });
+      continue;
+    }
+    for (const id of Object.keys(WANTS)) {
+      const w = wantFor(run, f, id);
+      if (w) options.push({ f, id, w });
+    }
+  }
   if (!options.length) return;
-  const { f, id, w } = pick(r, options);
+  const picked = pick(r, options);
+  if (picked.coreWant) {
+    const { f, coreWant: cw } = picked;
+    f.want = {
+      id: cw.key ? 'room' : cw.id,
+      coreWantId: cw.id,
+      label: cw.label,
+      goal: cw.goal,
+      key: cw.key ?? null,
+      item: cw.item ?? null,
+      since: run.week,
+      until: cw.weeks ? run.week + cw.weeks : null,
+    };
+    queueMilestone(run, f, { id: `want_asked_${cw.id}`, priority: 65, ctx: { wantId: cw.id, label: cw.label, goal: cw.goal } });
+    log(run, `${f.name} wants something: ${cw.label}.`, 'event');
+    talk(run, `want-${f.id}-${run.week}`, [{ speaker: 'fighter', fighterId: f.id, text: cw.ask }]);
+    return;
+  }
+  const { f, id, w } = picked;
   const def = WANTS[id];
   f.want = { id, ...w, since: run.week, until: def.weeks ? run.week + def.weeks : null };
   log(run, `${f.name} wants something: ${def.label(f.want)}.`, 'event');
@@ -140,6 +174,8 @@ export function wantsMonth(run) {
 }
 
 export function wantMet(run, f, w) {
+  const cw = coreWantDef(f, w);
+  if (cw?.test) return Boolean(cw.test(run, f));
   if (w.id === 'revenge') return run.history.some((h) => h.week >= w.since && h.fighterId === f.id && h.won && h.nemesis === w.name);
   if (w.id === 'title') return isChampionOf(f, w.tier);
   if (w.id === 'room') return f.decor[w.key] > 0;
@@ -148,19 +184,33 @@ export function wantMet(run, f, w) {
 }
 
 export function wantImpossible(run, f, w) {
+  if (w.coreWantId) return false;
   if (w.id === 'revenge') return !(run.nemeses ?? []).some((n) => n.id === w.of);
   if (w.id === 'mentor') return !run.roster.some((x) => x.id === w.of) || (f.bond && f.bond.id !== w.of);
   return false;
 }
 
 export function wantDone(run, f) {
-  const def = WANTS[f.want.id];
+  const w = f.want;
+  const cw = coreWantDef(f, w);
+  const def = WANTS[w.id];
+  const label = cw ? cw.label : def?.label(w) ?? wantLabel(w);
+  const thanks = cw ? cw.thanks : def?.thanks(w) ?? 'Thank you, Lanista.';
   moodShift(f, FIGHTER_WANTS.metMorale);
   f.renown += FIGHTER_WANTS.metRenown;
   gainXp(run, f, FIGHTER_WANTS.metXp);
-  log(run, `${f.name} got what they wanted: ${def.label(f.want)}. +${FIGHTER_WANTS.metRenown} Renown, +${FIGHTER_WANTS.metXp} XP, and their spirits lift.`, 'good');
-  chronicle(run, f, `Got what they wanted: ${def.label(f.want)}.`);
-  talk(run, `want-done-${f.id}-${f.want.since}`, [{ speaker: 'fighter', fighterId: f.id, text: def.thanks(f.want) }]);
+  if (cw) {
+    f.dialogue ??= createDialogueState(f.coreId);
+    f.dialogue.queue = (f.dialogue.queue ?? []).filter((q) => q.id !== `want_asked_${cw.id}`);
+    f.dialogue.wantChain ??= { index: 0, completed: [], refused: [] };
+    if (!f.dialogue.wantChain.completed.includes(cw.id)) f.dialogue.wantChain.completed.push(cw.id);
+    const idx = (CORE_WANTS[f.coreId] ?? []).findIndex((x) => x.id === cw.id);
+    if (idx >= 0 && f.dialogue.wantChain.index <= idx) f.dialogue.wantChain.index = idx + 1;
+    queueMilestone(run, f, { id: `want_fulfilled_${cw.id}`, priority: 72, ctx: { wantId: cw.id, label: cw.label, goal: cw.goal } });
+  }
+  log(run, `${f.name} got what they wanted: ${label}. +${FIGHTER_WANTS.metRenown} Renown, +${FIGHTER_WANTS.metXp} XP, and their spirits lift.`, 'good');
+  chronicle(run, f, `Got what they wanted: ${label}.`);
+  talk(run, `want-done-${f.id}-${w.since}`, [{ speaker: 'fighter', fighterId: f.id, text: thanks }]);
   delete f.want;
 }
 
@@ -171,9 +221,21 @@ export function checkWants(run) {
     if (wantMet(run, f, w)) wantDone(run, f);
     else if (wantImpossible(run, f, w)) delete f.want;
     else if (w.until !== null && run.week > w.until) {
+      const cw = coreWantDef(f, w);
+      const label = cw ? cw.label : WANTS[w.id]?.label(w) ?? wantLabel(w);
+      const sulk = cw ? cw.sulk : WANTS[w.id]?.sulk(w) ?? '';
       moodShift(f, FIGHTER_WANTS.missMorale);
-      log(run, `${f.name} gives up on what they wanted (${WANTS[w.id].label(w)}).`, 'bad');
-      talk(run, `want-lapsed-${f.id}-${w.since}`, [{ speaker: 'fighter', fighterId: f.id, text: WANTS[w.id].sulk(w) }]);
+      if (cw) {
+        f.dialogue ??= createDialogueState(f.coreId);
+        f.dialogue.queue = (f.dialogue.queue ?? []).filter((q) => q.id !== `want_asked_${cw.id}`);
+        f.dialogue.wantChain ??= { index: 0, completed: [], refused: [] };
+        if (!f.dialogue.wantChain.refused.includes(cw.id)) f.dialogue.wantChain.refused.push(cw.id);
+        const idx = (CORE_WANTS[f.coreId] ?? []).findIndex((x) => x.id === cw.id);
+        if (idx >= 0 && f.dialogue.wantChain.index <= idx) f.dialogue.wantChain.index = idx + 1;
+        queueMilestone(run, f, { id: `want_refused_${cw.id}`, priority: 65, ctx: { wantId: cw.id, label: cw.label, goal: cw.goal } });
+      }
+      log(run, `${f.name} gives up on what they wanted (${label}).`, 'bad');
+      if (sulk) talk(run, `want-lapsed-${f.id}-${w.since}`, [{ speaker: 'fighter', fighterId: f.id, text: sulk }]);
       delete f.want;
     }
   }

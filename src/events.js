@@ -172,10 +172,20 @@ export const EVENTS = [
       { label: 'Execute ${f}', effects: { spy: 'execute', morale: { to: 'all', n: -5 } } },
     ],
     // Only once a rebel is in place (the designer, 5.4.0): the hidden plot runs and a political prisoner is in the house.
-    when: (run) => Boolean(run.plot) && !run.plot.ended && run.roster.some((x) => x.political) && !run.spyFound && run.roster.filter((x) => !x.political).length >= 2,
+    // v8.0 one-spy rule: do not fire a duplicate roster spy once Drillmaster Kaeso's informer thread is resolved.
+    when: (run) => {
+      const kaesoResolved = run.staffDialogue?.trainer?.flags?.informerResolved;
+      const hasKaesoFlag = Boolean(kaesoResolved)
+        || ['turned', 'silenced', 'dismissed'].includes(kaesoResolved)
+        || (run.staffDialogue?.trainer?.loreFlags ?? []).includes('trainer_turned_ally');
+      return Boolean(run.plot) && !run.plot.ended && run.roster.some((x) => x.political)
+        && !run.spyFound && !run.plot.spyFound && !hasKaesoFlag
+        && !run.roster.some((x) => x.companion)
+        && run.roster.filter((x) => !x.political && !x.companion).length >= 2;
+    },
     // Not your most famous fighter (playtest LLM-11: executing the house's star made "keep" the only sane choice).
     target: (run) => {
-      const pool = run.roster.filter((x) => !x.political && x.id !== run.plot?.champion);
+      const pool = run.roster.filter((x) => !x.political && !x.companion && x.id !== run.plot?.champion);
       const star = [...pool].sort((a, b) => b.renown - a.renown || b.power - a.power)[0];
       return pool.length > 1 ? pool.filter((x) => x !== star) : pool;
     },

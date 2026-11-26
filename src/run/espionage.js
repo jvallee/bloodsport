@@ -62,12 +62,12 @@ export function espionageWeek(run) {
   }
 }
 
-// A Mutinous fighter may be bought by a feuding house, or by the palace once it is suspicious enough.
+// A Mutinous fighter may be bought by a feuding house, or by the palace once it is suspicious enough. Core 5 companions never flip as moles.
 function flipMutineer(run) {
   const feuding = (run.houses ?? []).filter((h) => h.feud > 0).sort((a, b) => b.feud - a.feud)[0];
   const master = feuding?.id ?? (plotActive(run) && run.plot.suspicion >= ESPIONAGE.palaceSuspicion ? 'palace' : null);
   if (!master) return;
-  for (const f of run.roster.filter((x) => isMutinous(x) && !x.mole && !x.spy)) {
+  for (const f of run.roster.filter((x) => !x.companion && isMutinous(x) && !x.mole && !x.spy)) {
     if (next(espRng(run)) < ESPIONAGE.flip) {
       f.mole = { master, since: run.week, clues: 0 };
       espState(run).clues = [];
@@ -79,10 +79,11 @@ function flipMutineer(run) {
 
 // Monthly (after the Market refresh): some months one Market fighter is a rival's mole, cheap for their Power.
 export function plantMole(run) {
-  if (!run.houses?.length || !run.market.length || moleOf(run) || run.market.some((f) => f.mole)) return;
+  const candidates = (run.market ?? []).filter((f) => !f.companion);
+  if (!run.houses?.length || !candidates.length || moleOf(run) || candidates.some((f) => f.mole)) return;
   const r = espRng(run);
   if (next(r) >= ESPIONAGE.plant) return;
-  const f = pick(r, run.market);
+  const f = pick(r, candidates);
   const house = pick(r, run.houses);
   f.mole = { master: house.id, since: null, clues: 0, tell: pick(r, MOLE_TELLS), cut: Math.max(1, Math.round(ESPIONAGE.plantDiscount * (CIRCUITS[Math.min(run.topTier, CIRCUITS.length) - 1].price ?? 4))) };
 }
@@ -229,5 +230,5 @@ export function espionageAtMatch(run, m, { consume = true } = {}) {
 export function espionageOdds(run, opp) {
   const m = { a: { boosts: [] }, b: { f: structuredClone(opp), boosts: [] } };
   espionageAtMatch(run, m, { consume: false });
-  return { opp: m.b.f, boostsA: m.a.boosts, boostsB: m.b.boosts, vengeanceB: Boolean(m.b.vengeance) };
+  return { opp: m.b.f, boostsA: m.a.boosts, boostsB: m.b.boosts, vengeanceB: Boolean(m.b.vengeance), playbook: Boolean(m.playbook) };
 }

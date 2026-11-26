@@ -6,8 +6,7 @@ const HUMOR_ICON = { choleric: '🔥', sanguine: '💨', melancholic: '🪨', ph
 import { effectiveInjuries, mortalDanger, deathGateAt, killMarks, signatureOf, opponentHasSignature } from '../fight.js';
 import { classAbility } from '../narrate.js';
 import { portrait } from './portrait.js';
-import { powerParts } from '../run.js';
-import { WANTS } from '../quests.js';
+import { powerParts, PERSONAL_TRAITS, LORE_KEEPSAKES, wantLabel, wantGoal } from '../run.js';
 
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const HEX_COLOR = /^#[0-9a-f]{3,6}$/i;
@@ -41,7 +40,7 @@ export const ICON = {
 };
 
 export const BUILDING_ICON = {
-  bed: '🛏', lyre: '🎭', dumbbell: '🏋', cross: '⚕', eye: '👁', chain: '⛓', anvil: '⚒', paw: '🐾', temple: '🏛', swords: '⚔', goblet: '🍷', forge: '🔥',
+  bed: '🛏', lyre: '🎭', dumbbell: '🏋', cross: '⚕', eye: '👁', chain: '⛓', anvil: '⚒', paw: '🐾', temple: '🏛', swords: '⚔', goblet: '🍷', forge: '🔥', shrine: '⚱',
 };
 
 export function button(label, action, data = {}, blocker = null, cls = 'btn small', help = null) {
@@ -100,10 +99,21 @@ function signatureChip(f, opponent = null) {
 }
 const signedNum = (n) => (n >= 0 ? `+${n}` : `−${-n}`);
 
+function isClassDisarmed(c, live) {
+  if (!c?.classDisabledRound) return false;
+  if (live?.round != null) return c.classDisabledRound === live.round;
+  if (c.lostRound != null && (c.lostRound >= c.classDisabledRound || (c.lostRound === 1 && (c.roundsWon ?? 0) >= 1 && c.classDisabledRound <= 2))) return false;
+  return true;
+}
+
 // In a fight, `fresh` wounds (the newest injuries) appear only at `freshAt` seconds, when the story reaches the blow.
 export function fighterCard(f, { combatant = null, live = null, fresh = 0, freshAt = 0, opponent = null, morale = null, actions = '', tag = '', compact = false, stress = true, notes = '', anchor = false } = {}) {
-  const off = (slot) => (combatant?.disabled.includes(slot) ? ' off' : '');
+  const disarmed = isClassDisarmed(combatant, live);
+  const classOff = Boolean(combatant?.disabled?.includes('class') || combatant?.classDisabled || disarmed);
+  const off = (slot) => (slot === 'class' ? (classOff ? ' off' : '') : (combatant?.disabled?.includes(slot) ? ' off' : ''));
   const trait = f.kindTrait ? TRAITS[f.kindTrait] : null;
+  const pTrait = f.personalTrait ? PERSONAL_TRAITS?.[f.personalTrait] : null;
+  const keepsake = f.keepsake ? LORE_KEEPSAKES?.[f.keepsake] : null;
   const clsName = f.cls ? CLASSES[f.cls].name + (f.weapon ? ` · ${WEAPONS[f.weapon].name}` : '') : '';
   const abilityDesc = f.cls === 'fighter' ? WEAPONS[f.weapon].desc : CLASSES[f.cls]?.desc;
   const injuries = f.injuries.map((i, n) => {
@@ -126,32 +136,35 @@ export function fighterCard(f, { combatant = null, live = null, fresh = 0, fresh
   const winsBy = Object.entries(f.arenaWins ?? {}).filter(([, n]) => n > 0);
   const totalWins = winsBy.reduce((n, [, w]) => n + w, 0) + ((f.titles ?? []).includes('Master of the Games') ? 1 : 0);
   const wins = totalWins ? `<span class="chip wins" title="Wins by arena: ${esc(winsBy.map(([t, n]) => `${CIRCUITS[t - 1]?.name ?? 'Grand Tournament'}: ${n}`).join(' · '))}">🏅 ${totalWins} win${totalWins === 1 ? '' : 's'}</span>` : '';
-  const want = f.want && WANTS[f.want.id] ? `<span class="chip want tip" title="${esc(`They want: ${WANTS[f.want.id].goal(f.want)}. Met: their spirits lift, +2 Renown and +2 XP; left too long, they sulk. The Quests panel shows the time left.`)}">💬 ${esc(WANTS[f.want.id].label(f.want))}</span>` : '';
+  const want = f.want ? `<span class="chip want tip" title="${esc(`They want: ${wantGoal(f.want)}. Met: their spirits lift, +2 Renown and +2 XP; left too long, they sulk. The Quests panel shows the time left.`)}">💬 ${esc(wantLabel(f.want))}</span>` : '';
   const spy = f.spy ? `<span class="chip spy tip" title="The Emperor's spy you chose to keep. Whatever your house hides, the palace hears.">👁 Writes to the palace</span>` : '';
   const bond = f.bond ? `<span class="chip bond" title="Bonded with ${esc(f.bond.name)}: +8 comfort while both are in the house. A partner 3+ levels higher teaches 1 XP a week. If one dies, the other grieves.">🤝 ${esc(f.bond.name)}</span>` : '';
   const kills = f.kills ? `<span class="chip kills" title="Opponents killed in the arena. ${KILL_MARKS.map((k) => `${k.at} kills: ${k.name} (${k.desc})`).join(' ')}">💀 ${f.kills}</span>` : '';
   return `
-    <article ${anchor ? `id="card-${esc(f.id)}" ` : ''}class="card kind-${esc(f.kind)}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
+    <article ${anchor ? `id="card-${esc(f.id)}" ` : ''}class="card kind-${esc(f.kind)}${f.companion ? ' companion' : ''}${f.alive ? '' : ' dead'}${danger ? ' danger' : ''}${compact ? ' compact' : ''}">
       ${tag ? `<div class="card-tag">${tag}</div>` : ''}
       <div class="card-head">
-        <div class="id-row">${portrait(f, compact ? 44 : 52)}<div class="who"><h3><span class="nm">${esc(f.name)}</span></h3><div class="kind">${levelLine} ${KINDS[f.kind].name} · ${clsName}</div></div></div>
+        <div class="id-row">${portrait(f, compact ? 44 : 52)}<div class="who"><h3><span class="nm">${esc(f.name)}</span>${f.handle ? ` <small class="handle">· ${esc(f.handle)}</small>` : ''}</h3><div class="kind">${levelLine} ${KINDS[f.kind].name} · ${clsName}</div></div></div>
         <div class="badges">
           ${powerBadge(f, live)}
           ${(() => {
             const gSpd = gearSpd(f);
-            const bSpd = f.cls === 'ornitharius' && (f.decor?.bird ?? 0) >= 1 ? COMBAT.ornithariusSpeedCap : 0;
+            const birdActive = !classOff && combatant?.arena !== 'ironRules';
+            const bSpd = birdActive && f.cls === 'ornitharius' && (f.decor?.bird ?? 0) >= 1 ? COMBAT.ornithariusSpeedCap : 0;
             return `<div class="badge speed" title="Speed decides who strikes first (Speed + d6) and makes them harder to wound. ${f.speed}${gSpd ? ` ${gSpd > 0 ? '+' : '−'} ${Math.abs(gSpd)} from gear` : ''}${bSpd ? ` + ${bSpd} from Birds of Prey` : ''}.">${ICON.speed}<b>${f.speed + gSpd + bSpd}</b></div>`;
           })()}
         </div>
       </div>
       <div class="traits">
         ${trait ? `<span class="chip trait tip${off('kind')}" title="${esc(trait.desc)}">${trait.name}</span>` : ''}
-        ${f.cls ? `<span class="chip ability tip${off('class')}" title="${esc(abilityDesc)}">${classAbility(f)}</span>` : ''}
+        ${pTrait ? `<span class="chip trait personal-trait tip" title="${esc(pTrait.desc)}">✦ ${esc(pTrait.name)}</span>` : ''}
+        ${f.cls ? `<span class="chip ability tip${off('class')}" title="${esc(abilityDesc)}${disarmed ? ' (Disarmed)' : ''}">${classAbility(f)}</span>` : ''}
         ${signatureChip(f, opponent)}
         ${f.humor ? `<span class="chip humor tip" title="${esc(HUMORS[f.humor].desc)}">${HUMOR_ICON[f.humor]} ${HUMORS[f.humor].name}</span>` : ''}${f.humor && f.humourDrift && HUMORS[f.humourDrift.to] ? `<span class="chip small drift tip" title="Their room is changing their temper: ${HUMOUR_DRIFT.weeks} weeks as the main Temperament piece turns them ${HUMORS[f.humourDrift.to].name}.">→ ${HUMOR_ICON[f.humourDrift.to]} ${f.humourDrift.weeks}/${HUMOUR_DRIFT.weeks}</span>` : ''}
+        ${keepsake ? `<span class="chip keepsake tip" title="${esc(keepsake.desc)}">🏺 ${esc(keepsake.name)}</span>` : ''}
         ${want}${spy}${wins}${bond}${titles}${marks}${scars}${augs}${perks}${gear}${kills}
       </div>
-      ${compact ? '' : `<details class="more card-more" data-key="what-${esc(f.id)}"><summary>ⓘ What they do</summary><div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div></details>`}
+      ${compact ? '' : `<details class="more card-more" data-key="what-${esc(f.id)}"><summary>ⓘ What they do</summary><div class="trait-text">${trait ? `<div><b>${trait.name}:</b> ${esc(trait.desc)}</div>` : ''}${pTrait ? `<div><b>${esc(pTrait.name)}:</b> ${esc(pTrait.desc)}</div>` : ''}${f.cls ? `<div><b>${classAbility(f)}:</b> ${esc(abilityDesc)}</div>` : ''}${keepsake ? `<div><b>${esc(keepsake.name)}:</b> ${esc(keepsake.desc)}</div>` : ''}${gearBonus(f) ? `<div><b>Gear:</b> ${esc(gearBonus(f))}</div>` : ''}${f.humor ? `<div><b>${HUMORS[f.humor].name}:</b> ${esc(HUMORS[f.humor].desc)}</div>` : ''}</div></details>`}
       ${f.notice ? `<div class="notice">⚠ ${esc(f.notice)}</div>` : ''}
       <div class="status-row">
         <span class="gate-wrap">Death Gate ${deathGate(f)}</span>
@@ -170,6 +183,7 @@ function gearSummary(g) {
   if (g.speed) bits.push(`${g.speed > 0 ? '+' : '−'}${Math.abs(g.speed)} Speed`);
   if (g.injure) bits.push(`+${g.injure / 1000}% to injure`);
   if (g.guard) bits.push(`−${g.guard / 1000}% to be injured`);
+  if (g.win) bits.push(`${g.win > 0 ? '+' : '−'}${Math.abs(g.win) / 1000}% win chance`);
   return bits.join(', ');
 }
 
@@ -187,12 +201,17 @@ function moraleChip(f, info = null) {
 }
 
 export const gearSpd = (f) => [f.gear?.weapon, f.gear?.armor].filter(Boolean).reduce((n, k) => n + (GEAR[k].speed ?? 0), 0);
-// Gear effects that the badges don't show: injure chance and armour.
+// Gear effects that the badges don't show: injure chance, armour, and win chance.
 function gearBonus(f) {
   const items = [f.gear?.weapon, f.gear?.armor].filter(Boolean).map((k) => GEAR[k]);
   const injure = items.reduce((n, g) => n + (g.injure ?? 0), 0);
   const guard = items.reduce((n, g) => n + (g.guard ?? 0), 0);
-  return [injure ? `+${injure / 1000}% to injure` : '', guard ? `−${guard / 1000}% to be injured (armour)` : ''].filter(Boolean).join(', ');
+  const win = items.reduce((n, g) => n + (g.win ?? 0), 0);
+  return [
+    injure ? `+${injure / 1000}% to injure` : '',
+    guard ? `−${guard / 1000}% to be injured (armour)` : '',
+    win ? `${win > 0 ? '+' : '−'}${Math.abs(win) / 1000}% win chance` : '',
+  ].filter(Boolean).join(', ');
 }
 
 // Thumbs up or down (playtest #8: "more aligned, and tell the crowd's suggestion apart from your choices"): the crowd's

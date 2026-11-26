@@ -184,7 +184,7 @@ test('the new pieces are bought and placed like any decor', () => {
 });
 
 test('save version 5: a version-4 career loads with the new decor slots', () => {
-  assert.equal(SAVE_VERSION, 7);
+  assert.equal(SAVE_VERSION, 8);
   const { run, f } = fighter(10);
   const old = JSON.parse(serialize(run));
   old.version = 4;

@@ -2,15 +2,17 @@
 // careful: rests and heals, builds for training and Morale, equips gear, picks perks, uses every arena,
 //          skips bad matchups and throws in the towel when a fighter is in danger.
 // careful also bets on clear favourites, hosts the Senate and passes policies once it has a Patron Lounge, and raises a
-//          freshly fallen fighter at the Unnatural Temple of Vulcan (building it then, if it must).
-// reckless: trains one star nonstop, heals only with the Surgeon, fights only the top arena, always Presses, never towels.
+//          freshly fallen fighter at the Temple of Hades (or Unnatural Temple of Vulcan as fallback).
+//          In v8.0.0: drafts 2 free Core Companions in Week 0, recruits remaining Core Companions when beds & Gold allow,
+//          uses Temple of Fortuna Lv 2's free monthly re-tune, borrows emergency debt when needed, and repays debt when solvent.
+// reckless: drafts 2 free Core Companions in Week 0, trains one star nonstop, heals only with the Surgeon, fights only the top arena, always Presses, never towels.
 
-import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE, FORTUNE, ESPIONAGE, decorComfort } from '../src/data.js';
+import { STRESS, BUILDINGS, GEAR, DECOR, ECONOMY, MORALE, CONSUMABLES, BET, LOUNGE, FORTUNE, ESPIONAGE, KINDS, FAVOR_DEBT, decorComfort } from '../src/data.js';
 import { EVENT_BY_ID } from '../src/events.js';
 import { isMonthStart, isWinter, weeksUntilWinter } from '../src/calendar.js';
 import { coupBonus } from '../src/plot.js';
 import { playRound, throwTowel, mortalDanger, canThrowTowel, suggestTactic, effectiveInjuries, signatureBlocker, useSignature } from '../src/fight.js';
-import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap, plotsFree } from '../src/ludus.js';
+import { rosterCap, trainCap, medbaySlots, buildBlocker, upgradeBlocker, upgrade, decorCap, plotsFree, maxLevel } from '../src/ludus.js';
 import {
   createRun, boutFor, unlockedTiers, marketPrice, recruit, recruitBlocker, setJob, jobBlocker, advanceWeek, startMatch, finishMatch,
   fightBlocker, skipBlocker, skipBout, forfeitBout, surgeon, surgeonBlocker, choosePerk, buyGear, buyGearBlocker,
@@ -20,6 +22,11 @@ import {
   betOdds, betCap, betBlocker, placeBet, hostBlocker, host, enactBlocker, enact, raisable, reanimateBlocker, reanimate,
   summonsBlocker, answerSummons, refuseSummons, effectivePower, effectiveSpeed, chooseFortune, fortuneBlocker, passFortune,
   tributeDue, tributePaid,
+  CORE_COMPANIONS, LORE_KEEPSAKES, companionPrice, companionBlocker, draftCompanion, recruitCompanion,
+  retunePrice, retuneBlocker, retuneTrait, retuneHumor,
+  reviveHadesPrice, hadesRaisable, reviveHadesBlocker, reviveHades,
+  favorLoanPrincipal, borrowFavorBlocker, borrowFavor, payFavorDebtBlocker, payFavorDebt,
+  activeHouseDebts, houseLoanPrincipal, borrowHouseBlocker, borrowHouse, payHouseDebtBlocker, payHouseDebt,
 } from '../src/run.js';
 import { estimateOdds } from '../src/odds.js';
 import { RELICS, perkTags, tagCount } from '../src/fortune.js';
@@ -106,18 +113,191 @@ function spend(run, reserve, opts = {}) {
   tryUp('entertainment');
   tryUp('armourer');
   if (opts.oracle !== false && run.topTier >= 3 && run.gold - BUILDINGS.oracle.cost[1] >= reserve + 8) tryUp('oracle');
+  // v8: Temple of Fortuna (Lv 2 unlocks 1 free monthly re-tune for traits and temperaments), built once core upgrades are done.
+  if (opts.temple !== false && run.topTier >= 2 && plotsFree(run) > 1 && run.gold - BUILDINGS.temple.cost[0] >= reserve + 8) tryBuild('temple');
+  if (opts.temple !== false && run.topTier >= 3 && run.gold - BUILDINGS.temple.cost[1] >= reserve + 10) tryUp('temple');
   if (run.roster.length >= rosterCap(run)) tryBuild('quarters');
   // The Patron Lounge (5.2.0) comes last, and only while a plot is to spare for more Fighter Quarters.
   if (opts.lounge !== false && plotsFree(run) > 1) tryBuild('lounge');
 }
 
-// The Unnatural Temple of Vulcan (5.3.0): when a fighter has just died in the arena, build the Temple if need be and raise them.
-function raiseTheDead(run, opts) {
+// v8.0.0: Core Companion draft order (Varok Power 6 + Vaelen Speed 5 first by default; overridable via opts.draftOrder).
+const DEFAULT_DRAFT_ORDER = ['orc', 'elf', 'basa', 'unit91', 'android'];
+const RECKLESS_DRAFT_ORDER = ['orc', 'basa', 'unit91', 'android', 'elf'];
+const PREFERRED_TRAIT = {
+  orc: 'bloodlust',
+  elf: 'egoArmour',
+  human: 'underdog',
+  android: 'quantumAnalyzer',
+  basa: 'rampage',
+  vampire: 'bloodDrinker',
+};
+
+function draftStartingCompanions(run, strategy, opts = {}) {
+  if (opts.companions === false || run.week !== 0) return;
+  const order = opts.draftOrder
+    ?? (strategy === 'reckless' ? RECKLESS_DRAFT_ORDER : DEFAULT_DRAFT_ORDER);
+  for (const cid of order) {
+    if (!Object.hasOwn(CORE_COMPANIONS, cid)) continue;
+    if (!opts.usePatronBunk && run.roster.length >= rosterCap(run)) break;
+    if (!companionBlocker(run, cid, { draft: true })) {
+      draftCompanion(run, cid);
+      usage(run).companionsDrafted += 1;
+    }
+  }
+}
+
+function recruitCoreCompanions(run, want, reserve, opts = {}) {
+  if (opts.companions === false) return;
+  const baseOrder = opts.draftOrder ?? DEFAULT_DRAFT_ORDER;
+  const order = opts.plot
+    ? ['elf', ...baseOrder.filter((id) => id !== 'elf')]
+    : baseOrder;
+  let recruited = false;
+  for (const cid of order) {
+    if (!Object.hasOwn(CORE_COMPANIONS, cid)) continue;
+    const cap = cid === 'elf' && opts.plot ? rosterCap(run) : want;
+    if (run.roster.length >= cap) continue;
+    const price = companionPrice(run, cid, { draft: false });
+    if (run.gold - price >= reserve && !companionBlocker(run, cid, { draft: false })) {
+      recruitCompanion(run, cid);
+      usage(run).companionsRecruited += 1;
+      recruited = true;
+    }
+  }
+  if (recruited) pickPerks(run);
+}
+
+// v8.0.0: Temple of Fortuna Lv 2 grants 1 free monthly re-tune (retunePrice(run) === 0).
+function useFortunaRetune(run, opts = {}) {
+  if (opts.temple === false || maxLevel(run, 'temple') < 2 || retunePrice(run) > 0) return;
+  const living = [...run.roster]
+    .filter((f) => f.kind !== 'revenant' && !retuneBlocker(run, f.id))
+    .sort((a, b) => effectivePower(b) - effectivePower(a));
+  for (const f of living) {
+    const target = PREFERRED_TRAIT[f.kind];
+    if (target && f.kindTrait !== target && KINDS[f.kind]?.traits.includes(target)) {
+      retuneTrait(run, f.id, target);
+      usage(run).fortunaRetunes += 1;
+      return;
+    }
+  }
+  for (const f of living) {
+    if (!f.humourDrift && f.humor === 'melancholic') {
+      retuneHumor(run, f.id, 'sanguine');
+      usage(run).fortunaRetunes += 1;
+      return;
+    }
+  }
+}
+
+// v8.0.0: Emergency borrowing: zero-usury life-debt Rival House first; off-winter with healthy Favour (>=45) prefer a
+// Palatine loan (avoids creditor combat liens and earns +3 Favour rebate on timely repayment); else Rival House or Palatine fallback.
+function maybeBorrowEmergency(run, shortfall, opts = {}, { minFavor = 35, allowFavorBeforeWinter = true } = {}) {
+  if (opts.debt === false || shortfall <= 0 || run.status !== 'active') return false;
+  const houses = [...(run.houses ?? [])]
+    .filter((h) => !borrowHouseBlocker(run, h.id))
+    .sort((a, b) => Number((b.owed ?? 0) > 0) - Number((a.owed ?? 0) > 0) || houseLoanPrincipal(run, b) - houseLoanPrincipal(run, a));
+  if (houses.length && (houses[0].owed ?? 0) > 0) {
+    borrowHouse(run, houses[0].id);
+    usage(run).houseLoans += 1;
+    return true;
+  }
+  const nearWinter = !isWinter(run.week) && !tributePaid(run) && weeksUntilWinter(run.week) <= 4;
+  const canFavor = run.favor >= Math.max(minFavor, FAVOR_DEBT.loanMinFavor) && !borrowFavorBlocker(run, 'loan');
+  if (canFavor && ((!nearWinter && run.favor >= 35) || (allowFavorBeforeWinter && run.favor >= 60))) {
+    borrowFavor(run, 'loan');
+    usage(run).favorLoans += 1;
+    return true;
+  }
+  if (houses.length) {
+    borrowHouse(run, houses[0].id);
+    usage(run).houseLoans += 1;
+    return true;
+  }
+  if ((!nearWinter || allowFavorBeforeWinter) && canFavor) {
+    borrowFavor(run, 'loan');
+    usage(run).favorLoans += 1;
+    return true;
+  }
+  return false;
+}
+
+// v8.0.0: Repay Palatine Favour debt & Rival House debts whenever solvent while keeping a winter-tribute buffer.
+function repayDebts(run, saveForTribute) {
+  const buffer = Math.max(6, saveForTribute);
+  if (run.favorDebt?.owed > 0 && run.gold > buffer) {
+    const avail = run.gold - buffer;
+    if (avail >= run.favorDebt.owed || (run.favorDebt.monthsElapsed ?? 0) >= 1) {
+      const pay = Math.floor(Math.min(avail, run.favorDebt.owed));
+      if (pay >= 1 && !payFavorDebtBlocker(run, pay)) {
+        payFavorDebt(run, pay);
+        usage(run).favorRepaid += 1;
+      }
+    }
+  }
+  const creditors = [...activeHouseDebts(run)]
+    .sort((a, b) => (b.debt.monthsUnpaid ?? 0) - (a.debt.monthsUnpaid ?? 0) || a.debt.owed - b.debt.owed);
+  for (const h of creditors) {
+    if (run.gold <= buffer) break;
+    const pay = Math.floor(Math.min(run.gold - buffer, h.debt.owed));
+    if (pay >= 1 && !payHouseDebtBlocker(run, h.id, pay)) {
+      payHouseDebt(run, h.id, pay);
+      usage(run).houseRepaid += 1;
+    }
+  }
+}
+
+function emergencyTributeLoan(run, opts = {}) {
+  if (opts.debt === false || isWinter(run.week) || tributePaid(run)) return;
+  if (weeksUntilWinter(run.week) > 2) return;
+  const due = tributeDue(run);
+  if (run.gold >= due) return;
+  // Avoid taking a Palatine loan right before winter unless it actually covers the tribute (defaulting with Favour debt adds extra penalty).
+  const palatineCovers = run.gold + favorLoanPrincipal(run) >= due;
+  maybeBorrowEmergency(run, due - run.gold, opts, { minFavor: 35, allowFavorBeforeWinter: palatineCovers });
+}
+
+const fallenValue = (f) => (f.titles?.length ?? 0) * 4 + (f.level ?? 1) * 2 + (f.companion || f.coreId ? 3 : 0) + (f.wasPlotChampion ? 5 : 0) + (f.power ?? 0);
+const isHadesWorthy = (f) => Boolean(f.companion || f.coreId || (f.level ?? 1) >= 2 || (f.titles?.length ?? 0) >= 1 || f.wasPlotChampion);
+
+// v8.0.0 Temple of Hades revival triage (whole living revival) + 5.3.0 Unnatural Temple of Vulcan fallback (Revenants).
+function raiseTheDead(run, saveForTribute, opts) {
+  if (opts.hades !== false) {
+    const worthyFresh = run.fallen.filter((f) => (f.arena || f.body) && !f.raised && !f.revived && f.kind !== 'revenant'
+      && run.week - f.diedWeek <= BUILDINGS.hades.per[0] && isHadesWorthy(f));
+    if (worthyFresh.length && !maxLevel(run, 'hades') && !buildBlocker(run, 'hades')
+        && run.gold - BUILDINGS.hades.cost[0] >= Math.max(4, saveForTribute)) {
+      buildRoom(run, 'hades');
+    }
+    if (maxLevel(run, 'hades') > 0) {
+      const candidates = [...hadesRaisable(run)].filter(isHadesWorthy).sort((a, b) => fallenValue(b) - fallenValue(a));
+      for (const f of candidates) {
+        if (run.roster.length >= rosterCap(run)) break;
+        const cost = reviveHadesPrice(run, f);
+        const keep = Math.max(0, saveForTribute);
+        const star = Boolean((f.titles?.length ?? 0) >= 1 || (f.level ?? 1) >= 3 || f.wasPlotChampion || f.companion || f.coreId);
+        if (star && run.gold < cost + keep) {
+          maybeBorrowEmergency(run, cost + keep - run.gold, opts, { minFavor: 40, allowFavorBeforeWinter: false });
+          if (run.status !== 'active') return;
+        }
+        if (!reviveHadesBlocker(run, f.id) && run.gold - cost >= keep) {
+          reviveHades(run, f.id);
+          usage(run).hadesRevivals += 1;
+        }
+      }
+    }
+  }
   if (opts.vulcan === false) return;
-  const fresh = run.fallen.filter((f) => f.arena && !f.raised && f.kind !== 'revenant' && run.week - f.diedWeek <= BUILDINGS.vulcan.per[0]);
+  const fresh = run.fallen.filter((f) => f.arena && !f.raised && !f.revived && f.kind !== 'revenant'
+    && !(opts.hades !== false && (f.companion || f.coreId))
+    && run.week - f.diedWeek <= BUILDINGS.vulcan.per[0]);
   if (!fresh.length) return;
-  if (!buildBlocker(run, 'vulcan') && run.gold - BUILDINGS.vulcan.cost[0] >= 15) buildRoom(run, 'vulcan');
-  for (const f of [...raisable(run)].sort((a, b) => b.power - a.power)) if (!reanimateBlocker(run, f.id) && run.gold >= 20) reanimate(run, f.id);
+  if (!buildBlocker(run, 'vulcan') && run.gold - BUILDINGS.vulcan.cost[0] >= Math.max(15, saveForTribute)) buildRoom(run, 'vulcan');
+  for (const f of [...raisable(run)].sort((a, b) => b.power - a.power)) {
+    if (opts.hades !== false && (f.companion || f.coreId)) continue; // avoid −15/−25 Morale shock on Core Companions
+    if (!reanimateBlocker(run, f.id) && run.gold >= Math.max(20, saveForTribute)) reanimate(run, f.id);
+  }
 }
 
 // The Patron Lounge: host the Senate whenever Gold allows, and keep the most useful policy in force.
@@ -160,10 +340,16 @@ function equipAll(run, reserve) {
 
 // 7.4: with clues of a mole, investigate one fighter a week (named suspects first, then the unhappiest); the careful
 // event order executes an unmasked mole.
-// 7.6: what each career used of the 7.1–7.4 systems (scripts/checks.js reports it). Kept out of the save.
+// 7.6 / 8.0: what each career used of the 7.1–7.4 and 8.0 systems (scripts/checks.js reports it). Kept out of the save.
 const usageOf = new WeakMap();
 export const usage = (run) => {
-  if (!usageOf.has(run)) usageOf.set(run, { covertOps: 0, woundItems: 0, temperament: 0, investigations: 0, molesUnmasked: 0, molesMet: 0 });
+  if (!usageOf.has(run)) {
+    usageOf.set(run, {
+      covertOps: 0, woundItems: 0, temperament: 0, investigations: 0, molesUnmasked: 0, molesMet: 0,
+      companionsDrafted: 0, companionsRecruited: 0, fortunaRetunes: 0, hadesRevivals: 0,
+      favorLoans: 0, favorRepaid: 0, houseLoans: 0, houseRepaid: 0,
+    });
+  }
   return usageOf.get(run);
 };
 const WOUND_ITEMS = ['viperVenom', 'bloodThinner', 'blindingPowder'];
@@ -180,15 +366,21 @@ function covertOps(run, reserve) {
   usage(run).covertOps += 1;
 }
 
+const isDislikedDecor = (f, k) => {
+  const def = f?.coreId ? CORE_COMPANIONS[f.coreId] : null;
+  const ks = def?.keepsake ? LORE_KEEPSAKES[def.keepsake] : null;
+  return Boolean(ks?.dislikedItems?.includes(k));
+};
+
 // 7.6: a deliberate Temperament choice for the strongest fighter, by what they need: a temper prone to fear
 // (Melancholic, Phlegmatic) gets a Skull Rack (scars turn Enraged); one whose Morale falls short of Inspired gets a Wine
-// Amphora (the most comfort); otherwise nothing.
+// Amphora (the most comfort); otherwise nothing. Avoids Core Companion disliked decor (v8.0.0).
 function temperStar(run, reserve) {
   const star = [...run.roster].filter((f) => f.kind !== 'revenant').sort((a, b) => effectivePower(b) - effectivePower(a))[0];
   if (!star || Object.keys(DECOR).some((k) => DECOR[k].humor && star.decor[k] > 0)) return;
   const item = ['melancholic', 'phlegmatic'].includes(star.humor) ? 'skullRack'
     : moraleTarget(run, star).target < MORALE.inspired ? 'wineAmphora' : null;
-  if (!item) return;
+  if (!item || isDislikedDecor(star, item)) return;
   if (!run.inventory.decor[item] && (buyDecorBlocker(run, item) || run.gold - DECOR[item].price < reserve)) return;
   if (!run.inventory.decor[item]) buyDecor(run, item);
   if (!assignDecorBlocker(run, star.id, item)) {
@@ -225,10 +417,11 @@ function keepHappy(run, reserve = 6) {
     if (!run.inventory.decor.rockGarden) buyDecor(run, 'rockGarden');
     if (!assignDecorBlocker(run, f.id, 'rockGarden')) assignDecor(run, f.id, 'rockGarden');
   }
-  // Place decor where Morale is heading below Inspired, preferring decor that also helps in combat.
+  // Place decor where Morale is heading below Inspired, preferring decor that also helps in combat and skipping disliked items.
   for (const f of run.roster) {
     for (let guard = 0; guard < 6 && moraleTarget(run, f).target < MORALE.inspired; guard++) {
-      const item = Object.keys(DECOR).find((k) => DECOR[k].helps(f) && f.decor[k] < decorCap(run)) ?? Object.keys(DECOR).find((k) => decorComfort(DECOR[k]) > 0 && !DECOR[k].humor && f.decor[k] < decorCap(run)); // for Morale: comfort, no change of temper
+      const item = Object.keys(DECOR).find((k) => !isDislikedDecor(f, k) && DECOR[k].helps(f) && f.decor[k] < decorCap(run))
+        ?? Object.keys(DECOR).find((k) => !isDislikedDecor(f, k) && decorComfort(DECOR[k]) > 0 && !DECOR[k].humor && f.decor[k] < decorCap(run)); // for Morale: comfort, no change of temper
       if (!item) break;
       if (!run.inventory.decor[item]) {
         if (buyDecorBlocker(run, item) || run.gold - DECOR[item].price < reserve) break;
@@ -242,9 +435,17 @@ function keepHappy(run, reserve = 6) {
 
 function carefulWeek(run, opts) {
   pickPerks(run);
-  const saveForTribute = !isWinter(run.week) && !tributePaid(run) && weeksUntilWinter(run.week) <= 8 ? tributeDue(run) : 0;
+  draftStartingCompanions(run, 'careful', opts);
+  const untilWinter = weeksUntilWinter(run.week);
+  const saveForTribute = !isWinter(run.week) && !tributePaid(run) && untilWinter <= 8
+    ? tributeDue(run) + (untilWinter <= 4 ? 4 : 0)
+    : 0;
+  repayDebts(run, saveForTribute);
+  emergencyTributeLoan(run, opts);
+  if (run.status !== 'active') return;
   if (opts.build !== false) spend(run, Math.max(6, saveForTribute), opts);
   else for (const b of run.buildings) if (b.type === 'trainer' && !upgradeBlocker(run, b.id)) upgrade(run, b.id);
+  useFortunaRetune(run, opts);
   if (opts.gear !== false) equipAll(run, Math.max(4, saveForTribute));
   if (opts.morale !== false) keepHappy(run, Math.max(6, saveForTribute));
   if (opts.morale !== false && opts.temper !== false) temperStar(run, Math.max(8, saveForTribute));
@@ -252,16 +453,25 @@ function carefulWeek(run, opts) {
   // system is still measured; the careful bot plays soundly.
   if (opts.spy !== false && opts.ops === true) covertOps(run, Math.max(8, saveForTribute));
   useLounge(run, opts);
-  raiseTheDead(run, opts);
+  raiseTheDead(run, saveForTribute, opts);
+  if (run.status !== 'active') return;
 
-  // Roster: enough fighters to cover every arena, plus a spare.
+  // Emergency credit if the roster is wiped out and coffers cannot afford a replacement fighter.
+  if (run.roster.length === 0 && run.gold < 4) {
+    maybeBorrowEmergency(run, 4 - run.gold, opts, { minFavor: 30, allowFavorBeforeWinter: true });
+    if (run.status !== 'active') return;
+  }
+
+  // Roster: enough fighters to cover every arena, plus a spare (Core Companions first when beds & Gold allow).
   const want = Math.min(rosterCap(run), unlockedTiers(run).length + 2);
+  const recruitReserve = () => (run.roster.length === 0 ? 0 : Math.max(4, saveForTribute));
+  recruitCoreCompanions(run, want, recruitReserve(), opts);
   // A plot-playing bot (v6) takes any political prisoner it's offered (it can read their record better than most players).
   const offers = [...run.market, ...(run.liaisonOffers ?? [])].sort((a, b) => (opts.plot ? Number(Boolean(b.political)) - Number(Boolean(a.political)) : 0) || b.power - a.power);
   for (const f of offers) {
     if (run.roster.length >= (f.political && opts.plot ? rosterCap(run) : want)) continue;
     const price = recruitPrice(run, f);
-    if (run.gold - price >= 4 && !recruitBlocker(run, f.id)) recruit(run, f.id);
+    if (run.gold - price >= recruitReserve() && !recruitBlocker(run, f.id)) recruit(run, f.id);
   }
 
   // Jobs: heal the injured; the strongest fighters who can safely train get the Trainer Rooms.
@@ -296,6 +506,11 @@ function playMatch(run, f, tier, towel, items = false, tactic = 'smart', bet = f
     pickPerks(run);
     const bout = boutFor(run, tier);
     const fighter = run.roster.find((x) => x.id === f.id);
+    if (!fighter || fightBlocker(run, fighter.id, tier)) {
+      if (!withdrawBlocker(run, tier)) return withdraw(run, tier);
+      if (tier === run.topTier) forfeitBout(run);
+      return summary;
+    }
     if (towel && effectiveInjuries(fighter) >= 2 && !(bout.top && bout.boss) && !withdrawBlocker(run, tier)) return withdraw(run, tier);
     summary = playOneMatch(run, fighter, tier, towel, items, tactic, bet);
   }
@@ -343,8 +558,13 @@ function playOneMatch(run, f, tier, towel, items = false, tactic = 'smart', bet 
     if (towel && !m.over && canThrowTowel(m) && mortalDanger(m.a) && m.a.roundsWon <= m.b.roundsWon && !bout.boss) throwTowel(m);
   }
   const summary = finishMatch(run, m);
-  // Thumbs up or down: the careful bot gives the crowd what it wants; the reckless one always kills.
-  if (run.mercy) resolveMercy(run, tactic === 'press' ? 'kill' : run.mercy.crowd);
+  // Thumbs up or down: the careful bot gives the crowd what it wants (unless killing would push Solace-4 mutinous); reckless always kills.
+  if (run.mercy) {
+    const aliveF = run.roster.find((x) => x.id === f.id);
+    const avoidMutiny = tactic !== 'press' && aliveF?.personalTrait === 'crackedGovernor'
+      && run.mercy.crowd === 'kill' && (aliveF.morale ?? 50) - 15 < MORALE.mutinous;
+    resolveMercy(run, tactic === 'press' ? 'kill' : (avoidMutiny ? 'spare' : run.mercy.crowd));
+  }
   return summary;
 }
 
@@ -422,8 +642,9 @@ function carefulBouts(run, n, opts) {
   }
 }
 
-function recklessWeek(run) {
+function recklessWeek(run, opts = {}) {
   pickPerks(run);
+  draftStartingCompanions(run, 'reckless', opts);
   for (const b of run.buildings) if (b.type === 'trainer' && !upgradeBlocker(run, b.id)) upgrade(run, b.id);
   const best = [...run.market].sort((a, b) => b.power - a.power)[0];
   if (best && run.roster.length < 2 && !recruitBlocker(run, best.id)) recruit(run, best.id);
@@ -532,7 +753,7 @@ export function playCareer(seed, strategy = 'careful', { oddsSamples = 150, maxW
       continue;
     }
     if (strategy === 'careful') carefulWeek(run, opts);
-    else recklessWeek(run);
+    else recklessWeek(run, opts);
     if (run.status !== 'active') break; // the week's own actions can end a career (an event judging Favour)
     advanceWeek(run);
     if (moleOf(run)) usage(run).molesMet += 1; // weeks with a mole in the house (7.6)

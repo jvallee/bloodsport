@@ -3,38 +3,49 @@
 import { createRng, deriveSeed, int, pick, randomSeed } from '../rng.js';
 import {
   ECONOMY, STRESS, STARTING_BUILDINGS, XP, MORALE, FAVOR, TRIBUTE, INJURY_BY_TAG,
-  HOUSES, PATRONS, BRACKET, SHORT, FORTUNE,
+  HOUSES, PATRONS, BRACKET, SHORT, FORTUNE, COMPANIONS, FAVOR_DEBT,
 } from '../data.js';
 import { RELICS, relicSum } from '../fortune.js';
 import { CELL_IDS } from '../plot.js';
 import { EVENT_BY_ID } from '../events.js';
 import { isTournamentWeek, isMonthStart, dateOf, WEEKS_PER_YEAR } from '../calendar.js';
-import { prestigeLevelFor, trainCost, healRate, stressRelief, ensureEstateSlots } from '../ludus.js';
+import { prestigeLevelFor, trainCost, healRate, stressRelief, ensureEstateSlots, maxLevel } from '../ludus.js';
 import {
   SAVE_VERSION, emptyDecor, emptyItems, createFighter, newId, takenNames, clampStress, log,
   findFighter, chronicle, isTraining, releaseTalk, assertOk, decorCalm, trainStress, netTrainStress,
   unlockedTiers, arenaName, trainGain, hasDecree, hasUnlock, heatDecrees, idleBlocker,
   clearHealedMedbay, changeFavor, checkLoss,
 } from './helpers.js';
-import { plotActive, joinPlot, plotMonth, postponeCoup, rollPlot } from './plotEngine.js';
+import { plotActive, joinPlot, plotMonth, postponeCoup, rollPlot, changeSuspicion } from './plotEngine.js';
 import {
   makeHouses, standings, rivalsCompete, drawBrackets, openArena, arenaMovesOn, archrival,
-  rivalMonth, rivalPoach, bondOverFightDay, tendBonds, issueDemand, judgeDemand,
+  rivalMonth, rivalPoach, bondOverFightDay, tendBonds, issueDemand, judgeDemand, favorDebtMonth,
 } from './houses.js';
 import {
   refreshMarket, refreshLiaison, refreshArmourer, cousinWeek, trainBlocker, switchToRest, resumeTraining, moraleTarget,
-  meditate, driftHumour,
+  meditate, driftHumour, draftCompanion,
 } from './roster.js';
 import { checkQuests, wantsMonth, rebelQuestsMonth } from './questsEngine.js';
 import { fortuneMonth, loseWager, relicInPool } from './fortuneEngine.js';
 import { rollEvent } from './eventsEngine.js';
-import { summonsMonth } from './tournaments.js';
+import { summonsMonth, checkStuckMilestones } from './tournaments.js';
 import { unrestWeek } from './unrest.js';
 import { espionageWeek, plantMole } from './espionage.js';
 
 // ---------- Career setup ----------
 
 export function createRun(seed = randomSeed(), setup = {}) {
+  if (setup.companions != null) {
+    assertOk(!Array.isArray(setup.companions) ? 'setup.companions must be an array.' : null);
+    for (const item of setup.companions.slice(0, COMPANIONS.startPicks)) {
+      const validStr = typeof item === 'string' && item.length > 0;
+      const validObj = Boolean(
+        item && typeof item === 'object' && !Array.isArray(item)
+        && Object.hasOwn(item, 'coreId') && typeof item.coreId === 'string' && item.coreId.length > 0,
+      );
+      assertOk(!validStr && !validObj ? 'Invalid starter companion entry: expected a companion id string or { coreId } object.' : null);
+    }
+  }
   const housesRng = createRng(deriveSeed(seed, 6));
   const run = {
     version: SAVE_VERSION,
@@ -49,6 +60,7 @@ export function createRun(seed = randomSeed(), setup = {}) {
       unlocks: [...(setup.unlocks ?? [])],
       legends: [...(setup.legends ?? [])],
       colour: setup.colour ?? null,
+      ...(Array.isArray(setup.companions) && setup.companions.length ? { companions: structuredClone(setup.companions) } : {}),
     },
     gold: ECONOMY.startGold + (setup.short ? SHORT.startGold : 0),
     prestige: ECONOMY.startPrestige + (setup.short ? SHORT.startPrestige : 0),
@@ -101,6 +113,12 @@ export function createRun(seed = randomSeed(), setup = {}) {
   refreshMarket(run);
   log(run, `You take charge of a bottom-tier Ludus in ${arenaName(1)}.`);
   applyPatron(run);
+  if (Array.isArray(setup.companions) && setup.companions.length) {
+    for (const item of setup.companions.slice(0, COMPANIONS.startPicks)) {
+      if (typeof item === 'string') draftCompanion(run, item);
+      else draftCompanion(run, item.coreId, item);
+    }
+  }
   archrival(run);
   return run;
 }
@@ -159,10 +177,20 @@ export function advanceWeek(run) {
   assertOk(advanceBlocker(run));
   const tournamentEnds = Boolean(run.bouts);
   const relief = stressRelief(run);
+  const drillmasterVacant = (run.week ?? 0) < (run.staffDialogue?.trainer?.dismissedUntilWeek ?? 0);
+  let loggedVacantYard = false;
   for (const f of run.roster) {
     if (isTraining(f.job)) {
-      const cannot = trainBlocker(run, f, { checkGold: false }) ?? (run.gold < trainCost(run) ? `not enough Gold for the trainer's fee (${trainCost(run)}).` : null);
-      if (cannot) switchToRest(run, f, cannot);
+      if (drillmasterVacant) {
+        if (!loggedVacantYard) {
+          log(run, 'Training yard stands without a drillmaster this week; trainees rest instead.', 'warn');
+          loggedVacantYard = true;
+        }
+        f.job = 'rest';
+      } else {
+        const cannot = trainBlocker(run, f, { checkGold: false }) ?? (run.gold < trainCost(run) ? `not enough Gold for the trainer's fee (${trainCost(run)}).` : null);
+        if (cannot) switchToRest(run, f, cannot);
+      }
     }
     if (isTraining(f.job)) {
       const cost = trainCost(run);
@@ -248,6 +276,9 @@ export function advanceWeek(run) {
     wantsMonth(run);
     rivalMonth(run);
     rebelQuestsMonth(run);
+    if (run.topTier >= 3 && !maxLevel(run, 'gallery') && run.plot && !run.plot.ended && run.roster.some((f) => f.personalTrait === 'fallenHouse')) {
+      changeSuspicion(run, 1, 'House Aethelgard\'s name draws whispers in the upper tiers');
+    }
   }
   if (run.plot?.hidden && --run.plot.hidden <= 0) { delete run.plot.hidden; log(run, 'The stranger in the Medbay slipped away before dawn.', 'event'); }
   if (!d.winter && d.month === 'December' && d.weekOfMonth === 1) if (!tributePaid(run)) log(run, `The Emperor's tribute of ${tributeDue(run)} Gold is due at the start of winter.`, 'warn');
@@ -256,6 +287,7 @@ export function advanceWeek(run) {
     collectTribute(run);
     for (const f of run.roster) f.topStreak = 0;
   }
+  if (monthStart) favorDebtMonth(run);
   if (isTournamentWeek(run.week)) {
     run.bouts = Object.fromEntries(unlockedTiers(run).map((t) => [t, 'open']));
     drawBrackets(run);
@@ -264,6 +296,7 @@ export function advanceWeek(run) {
   }
   if (tournamentEnds) rivalsCompete(run);
   if (tournamentEnds) bondOverFightDay(run);
+  if (tournamentEnds) checkStuckMilestones(run);
   if (tournamentEnds && plotActive(run) && run.plot.coup) postponeCoup(run);
   cousinWeek(run);
   checkQuests(run);
@@ -355,5 +388,8 @@ function collectTribute(run) {
     log(run, `You can't pay the ${due} Gold tribute. The Emperor takes what you have, and remembers.`, 'bad');
     run.gold = 0;
     changeFavor(run, FAVOR.unpaidTribute, 'unpaid tribute');
+    if (run.favorDebt?.owed > 0 && (run.favorDebt.monthsElapsed ?? 0) > FAVOR_DEBT.termMonths) {
+      changeFavor(run, FAVOR_DEBT.winterDefaultExtraFavor, 'unpaid Palatine loan at the winter audit');
+    }
   }
 }
