@@ -354,3 +354,7 @@ Built by the designer (bloodsport-v8.0.0-narrative.patch) with its design spec i
 balance gates (`npm run check`) on their own machine and reported that they pass; the patch's handoff quoted a `--quick` run
 of 23/24 with careful at 23% (300 careers). Tests: 851 pass. The 24 gates themselves are unchanged; `checks.js` adds a v8
 system-usage report.
+
+Confirmed in the cloud session too (`npm run check`, 300 careers, on the released 8.0.0): **24/24**. First career 27%, full
+Legacy 44% (Heat 1 29%, Heat 3 13%), Long Road 25%, loyalist +19 over careful, rebel careers: coup 13%, martyr 7%, treason
+2%. Boss win per attempt 89 · 62 · 33 · 40 · 15.
