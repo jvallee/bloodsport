@@ -2,6 +2,38 @@
 
 What changed from version to version, newest first. Each frozen version can still be played at its own address. Rules and exact numbers are in `docs/fight-rules.md`; the reasons behind playtest changes are in `docs/playtest-N-changes.md`.
 
+## 8.0.1 (2026-11-27): fixes, a guide to your first Boss, and dialogue polish
+
+Built on 8.0.0. Saves from 8.0.0 load as they are (the save format stays **8**).
+
+- **Nothing in this version changes a dice roll.** Bot careers played from the same seeds on 8.0.0 and on 8.0.1 stay in step week by week, and the balance run gives the same numbers as 8.0.0, with all 24 gates passing (`docs/roadmap-v2.md`, "v8.0.1").
+- **Fixes:**
+  - Market: after Week 0, Core Companions you did not draft switch to paid **Recruit Companion** buttons, even if you drafted fewer than two. (They stayed on greyed-out free-draft buttons.)
+  - Recruiting a Core Companion with an option that does not exist no longer takes your Gold.
+  - Made-up item, decor, policy, covert-op, building, plot and tactic names are refused cleanly. (One of them turned Gold into "NaN" in the text client.)
+  - A bracket can no longer be skipped for Gold once you have won a round in it: fight on, or withdraw.
+  - No talking to a fighter in the middle of a match, or after the career has ended.
+  - **A fighter who cannot withdraw from a Final can no longer be made Mutinous while they wait for it.** Under the Emperor's Gaze, or with the rising set for the Grand Final, a loss of Morale (an ally's death, an execution, a harsh word) stops at the Mutinous line for that fighter, so the Final can always be fought. Before the Final nothing changes: Morale falls as it did, and you can withdraw. The Final's own result costs what it always did. A save from 8.0.0 that is already stuck this way is put right when it loads.
+  - The mole's theft of two Gold no longer depends on the wording of its clue.
+  - Fight-day Power counts covert ops (Doctored wine and the rest). (For an Overtrained fighter the Power shown can still differ from the fight's; that is older than this version and still open.)
+  - A demand names its sender and keeps it for the month: the Palatine in the first three arenas, the Emperor from the Imperial Coliseum on (the banner, the text client and the house log).
+  - Text client: rooms built there stock the Armourer and the Liaison as on the page; Core Companions are listed in the Market and can be recruited (`recruit-companion`); fight-day Power and whole-tournament odds match the page; ending the week warns about overtraining and about fighters who could still fight (`--force` to go on); `help` lists both.
+- **Tutorial: guided to your first Boss.**
+  - Before Week 0 closes with a free Core Companion draft unused and a bed to spare, the steward asks whether you meant it. The text client notes it.
+  - Galen-VII's guide runs on past the first month to the first Boss, with the stakes in numbers: Boss prep, then Boss day. It ends when that Boss is won, lost or forfeited.
+  - While the guide runs, an event card, a Fortune hand or a level-up becomes the step on show, because the week waits until it is settled. For a verdict on a beaten opponent the bar says what to settle first.
+  - The bar shows a step counter and a checklist.
+  - On the Long Road the steward no longer says "Your first fight is done" a second time after Tournament 2.
+  - On the page, at most one steward tip a week. The tutorial glow lights one button per card. "Skip tutorial" now also skips steps added in later versions.
+- **Dialogue (first drafts, marked PLACEHOLDER; listed in `docs/text-to-rewrite.md`, section 24):**
+  - Two lore slips fixed: Varok's brothers (land, legion, priesthood), and Vaelen's line no longer gives the Palatine Engine a part in the Revolution.
+  - Androids no longer talk like film robots (four last words, two replies). Two voiced exclamation marks and four em dashes are gone.
+  - Auxiliaries speak for their kind: a greeting, a reading of the arena, their past, a first-fight line and a tournament-result line each for humans, Basa, Orcs, androids, Elves and vampires. What they say of their past keeps to each kind's existing backstory.
+  - Each Core Companion has two more greetings: one for low spirits, one for earned trust.
+  - The stock "nods and returns to the yard" gives way to a direction for each scene.
+  - Three lines corrected against the rules: the steward's ledger no longer recites "/100"; Varok no longer warns of a feud after a kill the crowd asked for (the rules start none); and the thumb-up line only says the stands wanted blood when they did.
+- **Known, and left for a later version:** scrub the chalk mark off once and it never comes back, so the hidden plot stalls there (as in 8.0.0). The fix changes how careers play out and failed one balance gate, so it waits for a version of its own.
+
 ## 8.0.0 (2026-11-25): Palatina, Core Companions, branching dialogue, interactive staff, Hades and debt
 
 Built on top of version 7.14.0:

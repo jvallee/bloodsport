@@ -1315,3 +1315,9 @@ All numbers live in `src/data.js` (`COMPANIONS`, `FORTUNE_RETUNE`, `HADES`, `FAV
   - **3+ mo (Blood-Debt Foreclosure):** opponent +3 Power, opponent +10% win, opponent +10% injure, **50% purse garnish** on wins, and **forced-kill crowd** on every mercy offer against that house.
   - *Spare forgiveness:* sparing a creditor house's fighter against a `'kill'` crowd when **`monthsUnpaid >= 1`** forgives `min(owed, 5 + 2 × tier)` Gold of debt (a fresh 0-month lien is not forgiven by an ordinary Death-Gate spare).
 
+## 8.0.1: fixes (two rule changes, no number changes)
+
+Each is a fix to a rule that did not work as written; no balance number moved.
+
+- **Skipping a bracket.** Once a fighter has won a round in the top arena's bracket, the bout can no longer be skipped for Gold: fight on, or withdraw. (Before, skipping was a free way out after a won round.)
+- **Morale and a fighter who cannot withdraw.** A fighter who is through to a bracket Final and cannot withdraw from it (the Emperor's Gaze is the Final's arena rule, or the rising is set for the Grand Final and they are its champion) is never pushed below the Mutinous line (Morale 20) by a loss of Morale while they wait for that Final. A Mutinous fighter refuses to fight, and with no withdrawing the week could not end. Before the Final nothing changes, and once the Final is under way the lock is over: its own result (a loss, a capitulation) moves Morale as any bout's does. The floor never raises Morale, with one exception: a save from 8.0.0 that already holds such a fighter below the line has them lifted to it on load, so the Final can be fought. Every Morale change by an amount that can reach a fighter mid-bracket goes through one function (`bumpMorale` in `src/run/helpers.js`), including the effects of dialogue choices; the weekly drift and the few direct writes left (listed in `tests/v801-fixes.test.js`) cannot happen while a bracket is open.

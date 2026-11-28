@@ -1,7 +1,7 @@
 // Intro story and guided tutorial steps. Pure: picks the step to show from the game state.
 
 import { STRESS, MORALE, UNREST, ESPIONAGE } from "./data.js";
-import { currentBout, trainGain, tributePaid, espState } from "./run.js";
+import { currentBout, boutFor, bossLossFavor, trainGain, tributePaid, espState } from "./run.js";
 import { weeksUntilWinter } from "./calendar.js";
 import { trainCap as trainCapFor } from "./ludus.js";
 import { mortalDanger } from "./fight.js";
@@ -33,12 +33,22 @@ export const INTRO = [
   },
 ];
 
-// The tutorial month (playtest #8: "more hand-holding for the first month"). The steward walks a new Lanista through it one
-// step at a time. Each step is done when its goal is met, not by clicking "Got it"; it shows in a bar at the top (it never
-// blocks the page) and `focus` makes the button to press glow. `tab`: where the step happens.
+const firstBossDone = (r) => Boolean(r?.arenas?.[1]?.conquered)
+  || (r?.history ?? []).some((h) => h.tier === 1 && Boolean(h.boss || h.forfeit));
+// True on the house's first fight day once a bout has been fought (8.0.1: it was "at most two bouts so far", which
+// said "your first fight is done" again after Tournament 2 on the Long Road).
+const firstFightDay = (r) => {
+  const fought = (r?.history ?? []).filter((h) => !h.skipped && !h.forfeit);
+  return fought.length > 0 && fought.every((h) => h.week === r.week);
+};
+
+// The tutorial month & guide through the first Boss. The steward walks a new Lanista through it one step at a time.
+// Each step is done when its goal is met, not by clicking "Got it"; it shows in a bar at the top (it never blocks the page)
+// and `focus` makes the button to press glow. `tab`: where the step happens.
 export const GUIDE = [
   {
     id: "recruit",
+    label: "Recruit",
     when: (r) => (r.roster.length < 1 || (r.roster.length === 1 && r.roster[0].companion)) && r.week === 0,
     goal: (r) => r.roster.length >= (r.roster.some((f) => f.companion) ? 2 : 1),
     tab: "market",
@@ -47,6 +57,7 @@ export const GUIDE = [
   },
   {
     id: "jobs",
+    label: "Assign jobs",
     when: (r) => r.roster.length > 0 && r.week === 0,
     goal: (r) => r.roster.some((f) => f.job === "trainPower" || f.job === "trainSpeed"),
     tab: "ludus",
@@ -55,6 +66,7 @@ export const GUIDE = [
   },
   {
     id: "endweek",
+    label: "End Week 0",
     when: (r) => r.week === 0 && r.roster.length > 0,
     goal: (r) => r.week > 0,
     tab: "ludus",
@@ -64,6 +76,7 @@ export const GUIDE = [
   },
   {
     id: "tofight",
+    label: "To fight day",
     when: (r) => r.week > 0 && !r.boutPending && !r.history.length,
     goal: (r) => r.boutPending || r.history.length > 0,
     tab: "ludus",
@@ -72,6 +85,7 @@ export const GUIDE = [
   },
   {
     id: "bout",
+    label: "First bout",
     when: (r) => r.boutPending && !r.history.length,
     goal: (r) => r.history.length > 0,
     tab: "ludus",
@@ -80,13 +94,140 @@ export const GUIDE = [
   },
   {
     id: "firstweekend",
-    when: (r) => r.history.some((h) => !h.skipped && !h.forfeit) && Boolean(r.bouts) && r.history.length <= 2,
+    label: "First month's end",
+    when: (r) => firstFightDay(r) && Boolean(r.bouts) && !firstBossDone(r),
     goal: (r) => !r.bouts,
     tab: "ludus",
     focus: '[data-action="advance"]',
     text: "Your first fight is done. Win or lose, it paid Gold and XP. If anyone came back hurt, set their job to <b>Medbay</b>: wounds stay until they heal. Then <b>End week</b>: a new month brings new gladiators to the Market and a new tournament. From here on, you're the Lanista; I'll only speak up when there's something new.",
   },
+  // Guided to the first Boss (8.0.1). PLACEHOLDER wording in Galen-VII's voice.
+  // `settles`: the step is about a card or choice that blocks everything else. It is shown first (nextGuideStep),
+  // whenever that happens before the first Boss (its goal is only met once it no longer applies, so it is never
+  // marked done), it joins the checklist only while it is on show, and the bar does not also say "First: ..." about
+  // it. `covers`: tips (STEPS ids) the step replaces, marked done the moment it is shown.
+  {
+    id: "eventcard",
+    label: "House event",
+    settles: "event",
+    when: (r) => !firstBossDone(r) && Boolean(r.event),
+    goal: (r) => !r.event,
+    tab: "ludus",
+    focus: '[data-action="event-choice"]',
+    text: "A card has come in from the house. Each choice says what it costs and what it gives, in plain numbers. Choose one. The week waits until you do.",
+  },
+  {
+    id: "fortunehand",
+    label: "Fortune",
+    settles: "fortune",
+    covers: ["fortune"],
+    when: (r) => !firstBossDone(r) && Boolean(r.fortune),
+    goal: (r) => !r.fortune,
+    tab: "ludus",
+    focus: '[data-action="fortune"], [data-action="fortune-pass"]',
+    text: "The month turns, and Fortune deals a hand. Take one card, spin again up to three times for rising Gold, or pass for a little coin. The week waits until you decide.",
+  },
+  {
+    id: "perkchoice",
+    label: "Level up",
+    settles: "perk",
+    when: (r) => !firstBossDone(r) && !r.fortune && r.roster.some((f) => f.pendingPerks?.length),
+    goal: (r) => !r.roster.some((f) => f.pendingPerks?.length),
+    tab: "ludus",
+    focus: '[data-action="perk"]',
+    text: "One of ours has levelled up. Pick a perk on their card before the week can proceed. Several stronger perks expect both Power and Speed, which is my quiet argument for balance.",
+  },
+  {
+    id: "bossprep",
+    label: "Boss prep",
+    when: (r) => !firstBossDone(r) && !r.fortune && !r.boutPending && r.history.length > 0 && !r.roster.some((f) => f.pendingPerks?.length) && Boolean(r.arenas?.[1]) && boutFor(r, 1).boss,
+    goal: (r) => firstBossDone(r) || (r.boutPending && Boolean(r.arenas?.[1]) && boutFor(r, 1).boss),
+    tab: "ludus",
+    focus: '[data-action="advance-tournament"]',
+    text: (r) => `Next on the Dirt Pits card is the <b>Boss Tournament</b>. Bosses cannot be skipped, and a loss costs <b>${Math.abs(bossLossFavor(1, r))} Imperial Favour</b>. Mend any wounds, rest anyone nearing ${STRESS.overtrained} Stress, and advance to fight day when you are ready.`,
+  },
+  {
+    id: "bossday",
+    label: "First Boss",
+    when: (r) => !firstBossDone(r) && r.boutPending && Boolean(r.arenas?.[1]) && boutFor(r, 1).boss,
+    goal: (r) => firstBossDone(r),
+    tab: "ludus",
+    focus: '[data-action="fight"]',
+    text: (r) => `Boss day in the Dirt Pits. Read the odds before you commit: a win earns a <b>Title</b> (+1 Power) and opens the Bronze Arena, while a loss costs <b>${Math.abs(bossLossFavor(1, r))} Imperial Favour</b>. Send your steadier hand.`,
+  },
 ];
+
+// Pure: the guide step to show now, or null. A step that settles a blocking card or choice is tried before the rest,
+// so the bar says what to do this minute; otherwise the steps run in their written order.
+export function nextGuideStep(done, run) {
+  return nextStep(GUIDE.filter((g) => g.settles), done, run) ?? nextStep(GUIDE.filter((g) => !g.settles), done, run);
+}
+
+// Pure: walks the guide past every step whose goal is already met. Returns the step to show (or null) and the ids to
+// mark done: each finished step, and the tips covered by a step the moment it is shown. The page and the text client
+// both use this.
+export function advanceGuide(done, run) {
+  const seen = [...(Array.isArray(done) ? done : [])];
+  const completed = [];
+  const mark = (ids) => { for (const id of ids) if (!seen.includes(id)) { seen.push(id); completed.push(id); } };
+  for (;;) {
+    const step = nextGuideStep(seen, run);
+    if (step) mark(step.covers ?? []);
+    if (!step || !step.goal(run)) return { step, completed };
+    mark([step.id]);
+  }
+}
+
+// Pure: what must be settled before the guide's button will work (a verdict, an event card, a Fortune hand or a
+// pending perk), or null. Nothing is said when the step on show is the one that settles it.
+// The page and the text client both put "First: " before the line, so the line does not say it again.
+const GUIDE_BLOCKERS = {
+  mercy: "Decide the beaten opponent's fate: spare or kill.",
+  event: 'Settle the house event card.',
+  fortune: 'Choose a Fortune card, or pass.',
+  perk: "Pick the pending level-up perk on your fighter's card.",
+};
+export function guideBlocker(run, step = null) {
+  if (!run || run.status !== 'active') return null;
+  const pending = run.mercy ? 'mercy'
+    : run.event ? 'event'
+      : run.fortune ? 'fortune'
+        : (run.roster ?? []).some((f) => f.pendingPerks?.length) ? 'perk' : null;
+  if (!pending || step?.settles === pending) return null;
+  return GUIDE_BLOCKERS[pending];
+}
+
+// Pure: step counter and compact checklist for the guide. The checklist is the written steps, ticked up to the one
+// the walk is at. A step that settles a card or choice joins it only while it is on show, just before that one.
+// Between two written steps (a card comes in after the first month's end and before Boss prep applies) the walk is
+// at the step after the last one whose goal is met, so the counter never runs to the end and back.
+export function guideProgress(run, done = []) {
+  const doneList = Array.isArray(done) ? done : [];
+  const written = GUIDE.filter((g) => !g.settles);
+  const current = nextGuideStep(doneList, run);
+  const resume = current?.settles ? nextStep(written, doneList, run) : current;
+  let reached = written.length - 1;
+  while (current && reached >= 0 && !written[reached].goal(run)) reached -= 1;
+  const at = resume ? written.indexOf(resume) : reached + 1;
+  const items = written.map((g, i) => ({ id: g.id, label: g.label ?? g.id, done: doneList.includes(g.id) || i < at, current: current?.id === g.id }));
+  if (current?.settles) items.splice(at, 0, { id: current.id, label: current.label ?? current.id, done: false, current: true });
+  const currentIdx = items.findIndex((x) => x.current);
+  return { index: currentIdx >= 0 ? currentIdx + 1 : items.length, total: items.length, items };
+}
+
+// Pure: normalises saved tutorial preferences and keeps prior "Skip tutorial" choices skipped across newly added steps.
+const LEGACY_GUIDE_IDS = ['recruit', 'jobs', 'endweek', 'tofight', 'bout', 'firstweekend'];
+export function migrateTutorialPrefs(raw = {}) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const list = Array.isArray(src.tutorial)
+    ? [...new Set(src.tutorial.filter((x) => typeof x === 'string'))]
+    : [];
+  const allLegacySkipped = LEGACY_GUIDE_IDS.every((id) => list.includes(id))
+    && STEPS.every((s) => list.includes(s.id))
+    && FIGHT_STEPS.every((s) => list.includes(s.id));
+  const tutorialOff = typeof src.tutorialOff === 'boolean' ? src.tutorialOff : allLegacySkipped;
+  return { ...src, tutorial: list, tutorialOff };
+}
 
 // Ludus steps, in order; the first one whose condition holds (and isn't done) is shown.
 export const STEPS = [

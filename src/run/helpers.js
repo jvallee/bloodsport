@@ -23,6 +23,7 @@ export {
 export function applyDialogueChoice(run, f, sceneId, choiceId, extraHooks = {}) {
   return rawApplyDialogueChoice(run, f, sceneId, choiceId, {
     onGainXp: (target, n) => { if (run && target && n > 0) gainXp(run, target, n); },
+    onMorale: (target, n) => { if (run && target) bumpMorale(run, target, n); },
     onChangeFavor: (n, why) => { if (run && n) changeFavor(run, n, why || 'conversation'); },
     RefusedClass: Refused,
     ...extraHooks,
@@ -101,7 +102,43 @@ export function chronicle(run, f, text) {
   f.story = [...(f.story ?? []), { week: run.week, text }].slice(-12);
 }
 
-export const bumpMorale = (f, n) => { f.morale = clamp(f.morale + n, 0, 100); };
+// The Boss rule in force for a tier's next bout, or null (8.0.1: one source for boutFor and the bracket lock below).
+export function bossRuleFor(run, tier) {
+  const arena = run.arenas?.[tier];
+  if (!arena) return null;
+  if (tier === GRAND_TIER) return arena.debuff;
+  return arena.stage === 2 && tier > 1 ? arena.debuff : null;
+}
+
+// Why the fighter who is through to a tier's bracket Final cannot withdraw, or null (8.0.1). One source for
+// withdrawBlocker (src/run/tournaments.js) and for the Morale floor in bumpMorale.
+export function bracketLockReason(run, tier) {
+  const b = run.bouts?.[tier] ? run.brackets?.[tier] : null;
+  if (!b?.fighterId || !(b.round >= 2)) return null;
+  if (bossRuleFor(run, tier) === 'emperorsGaze') return "The Emperor's Gaze is on the Final: you cannot withdraw.";
+  if (tier === GRAND_TIER && run.plot?.coup && !run.plot.ended && b.fighterId === run.plot.champion) {
+    return 'The rising is set for the Final: your champion cannot withdraw now.';
+  }
+  return null;
+}
+
+// True while a fighter is through to a bracket Final they cannot withdraw from and has yet to fight it. Once that
+// Final is under way the lock is over: its own result moves Morale as any bout's does.
+export function lockedIntoBracket(run, fighterId) {
+  const at = isInActiveBracket(run, fighterId);
+  if (!at || !bracketLockReason(run, at.tier)) return false;
+  return !(run.inMatch && run.matchInfo?.fighterId === fighterId && run.matchInfo.tier === at.tier);
+}
+
+// The one place Morale moves by an amount (8.0.1). A fighter who cannot withdraw from a bracket Final is never pushed
+// below the Mutinous line: a Mutinous fighter refuses to fight, and with no way out the week could not end. The floor
+// only stops a fall; it never raises Morale. (50: the dialogue engine's value for an actor with no Morale yet.)
+export function bumpMorale(run, f, n) {
+  const before = f.morale ?? 50;
+  let after = clamp(before + n, 0, 100);
+  if (n < 0 && after < MORALE.mutinous && lockedIntoBracket(run, f.id)) after = Math.min(before, MORALE.mutinous);
+  f.morale = after;
+}
 export const isTraining = (job) => job === 'trainPower' || job === 'trainSpeed';
 export const jobCount = (run, job, exceptId) => run.roster.filter((f) => f.id !== exceptId && f.job === job).length;
 export const monthOf = (week) => `${dateOf(week).year}-${dateOf(week).month}`;

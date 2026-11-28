@@ -1302,6 +1302,13 @@ main { padding: 16px 18px 28px; max-width: 1380px; margin: 0 auto; }
 .guide .portrait { flex-shrink: 0; }
 .guide-body { flex: 1; }
 .guide-name { color: var(--gold-bright); font-size: 13px; font-weight: 600; letter-spacing: 0.04em; }
+.guide-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 3px; }
+.guide-step { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.guide-checklist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; font-size: 11px; color: var(--muted); }
+.guide-item { padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(255, 236, 206, 0.12); }
+.guide-item.done { color: var(--good); border-color: rgba(120, 210, 150, 0.35); }
+.guide-item.current { color: var(--gold-bright); border-color: var(--gold); background: rgba(217, 180, 90, 0.12); }
+.guide-blocker { margin-top: 6px; padding: 4px 8px; border-left: 2px solid var(--gold); background: rgba(217, 180, 90, 0.1); font-size: 12.5px; color: var(--gold-bright); }
 .guide-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 .steward-note { align-items: center; justify-content: flex-start; padding: 9px 13px; }
 .tut-focus { box-shadow: 0 0 0 2px var(--gold), 0 0 20px rgba(217, 180, 90, 0.65); animation: tut-pulse 1.4s ease-in-out infinite; }

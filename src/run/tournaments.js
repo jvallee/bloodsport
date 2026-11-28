@@ -11,7 +11,7 @@ import { CELL_IDS } from '../plot.js';
 import { SUMMONS_LINES } from '../quests.js';
 import { lastWordsFor } from '../voices.js';
 import {
-  createMatch, kindActive, effectiveInjuries, killMarks, meleeOnly, deathGateAt, hypeOf,
+  createMatch, computePower, kindActive, effectiveInjuries, killMarks, meleeOnly, deathGateAt, hypeOf,
   playRound, throwTowel, canThrowTowel, mortalDanger, suggestTactic,
 } from '../fight.js';
 import { estimateOdds } from '../odds.js';
@@ -21,7 +21,7 @@ import {
   GRAND_TIER, DEBUFF_IDS, createFighter, newId, remember, takenNames, clampStress, log,
   findFighter, chronicle, bumpMorale, talk, assertOk, effectivePower, arenaName, championTitle, isChampionOf,
   crownChampion, isShort, hasDecree, hasPolicy, bossLossFavor, winsOf, foughtThisWeek, xpFor,
-  gainXp, activeModalOrPendingBlocker, isInActiveBracket, nextStage, addPrestige, clearHealedMedbay,
+  gainXp, activeModalOrPendingBlocker, isInActiveBracket, bracketLockReason, nextStage, addPrestige, clearHealedMedbay,
   removeFighter, changeFavor, checkLoss, unlockedTiers, queueMilestone, pruneFighterDialogue, createDialogueState,
 } from './helpers.js';
 import { plotActive, changeSuspicion, addContact, resolveCoup } from './plotEngine.js';
@@ -121,7 +121,7 @@ export function answerSummons(run, id, order) {
   let line;
   if (won) {
     changeFavor(run, SUMMONS.winFavor + (fighter.personalTrait === 'fourthSon' ? 1 : 0), 'won on the Imperial sand at his summons');
-    if (fighter.personalTrait === 'fourthSon') bumpMorale(fighter, 5);
+    if (fighter.personalTrait === 'fourthSon') bumpMorale(run, fighter, 5);
     summary.renown = SUMMONS.winRenown + (fighter.keepsake === 'fourthSonHonour' ? 1 : 0);
     chronicle(run, fighter, `Summoned to ${arenaName(SUMMONS.tier)} by the Emperor, and beat ${opp.name}.`);
     line = SUMMONS_LINES.won(fighter.name);
@@ -133,7 +133,7 @@ export function answerSummons(run, id, order) {
     const wasBondedTo = fighter.bond?.id ?? null;
     removeFighter(run, fighter, { fallen: { arena: true } });
     for (const f of run.roster) {
-      bumpMorale(f, MORALE.allyDeath);
+      bumpMorale(run, f, MORALE.allyDeath);
       queueMilestone(run, f, { id: 'summons_after_ally_died', priority: 100, ctx: { deadId: fighter.id, deadName: fighter.name, bonded: f.id === wasBondedTo || f.bond?.id === fighter.id, order } });
     }
     log(run, `${fighter.name} died on the Imperial sand. The house mourns; their gear returns to the storeroom.`, 'bad');
@@ -233,6 +233,12 @@ export function freeFightDay(run) {
   return { tiers, fighters };
 }
 
+export function fightPowers(run, f, tier = run.topTier) {
+  const m = createMatch({ a: f, b: opponentFor(run, tier), rng: createRng(0), ...matchOptions(run, f, tier) });
+  espionageAtMatch(run, m, { consume: false });
+  return { mine: computePower(m.a, m.b, 1).total, theirs: computePower(m.b, m.a, 1).total };
+}
+
 export function startMatch(run, id, tier = run.topTier) {
   assertOk(fightBlocker(run, id, tier));
   const bout = boutFor(run, tier);
@@ -262,8 +268,8 @@ export function recordMatchProgress(run, match) {
 
 export function useItemBlocker(run, match, key) {
   if (!run.inMatch || !match || match.over) return 'Items are used during a match.';
-  if (match.itemsUsed?.includes(key)) return `Already used a ${CONSUMABLES[key]?.name ?? 'that item'} this fight (one of each kind per fight).`;
-  if (!CONSUMABLES[key]) return 'Unknown item.';
+  if (!Object.hasOwn(CONSUMABLES, key)) return 'Unknown item.';
+  if (match.itemsUsed?.includes(key)) return `Already used a ${CONSUMABLES[key].name} this fight (one of each kind per fight).`;
   if (!run.inventory.items[key]) return `No ${CONSUMABLES[key].name} in the storeroom.`;
   return null;
 }
@@ -364,7 +370,9 @@ export function skipBlocker(run) {
   const blocked = activeModalOrPendingBlocker(run);
   if (blocked) return blocked;
   if (!run.boutPending) return 'No bout to skip this week.';
-  if (currentBout(run).boss) return 'Bosses cannot be skipped. Fight or forfeit.';
+  const bout = currentBout(run);
+  if (bout.boss) return 'Bosses cannot be skipped. Fight or forfeit.';
+  if (bracketOf(run, bout.tier)?.round > 0) return 'You are already in the bracket. Fight or withdraw.';
   return null;
 }
 
@@ -481,7 +489,7 @@ export function finishMatch(run, match) {
         + (plotActive(run) && run.plot.crowdUntil > run.week ? 1 : 0)
         + (fighter.keepsake === 'fourthSonHonour' && decorWorks(match) ? 1 : 0);
     }
-    if (bloodied) bumpMorale(fighter, BLOODIED.morale);
+    if (bloodied) bumpMorale(run, fighter, BLOODIED.morale);
     if (match.result.reason === 'death') {
       const before = killMarks(fighter).length;
       fighter.kills = (fighter.kills ?? 0) + 1;
@@ -493,13 +501,13 @@ export function finishMatch(run, match) {
       }
     }
     if (fighter.personalTrait === 'cursedIntellect' && (crushing || gap >= ECONOMY.crushingGap)) {
-      bumpMorale(fighter, -5);
+      bumpMorale(run, fighter, -5);
     } else {
-      bumpMorale(fighter, crushing || champion ? MORALE.crowdJeers : MORALE.win);
+      bumpMorale(run, fighter, crushing || champion ? MORALE.crowdJeers : MORALE.win);
     }
     if (fighter.personalTrait === 'fourthSon' && (tier === 4 || tier === GRAND_TIER || run.demand?.id === 'kill')) {
       changeFavor(run, 1, "Fourth-Son's Stripes");
-      bumpMorale(fighter, 5);
+      bumpMorale(run, fighter, 5);
     }
     if (champion) {
       log(run, `The crowd boos ${fighter.name}, a champion of this arena picking on its newcomers.`, 'warn');
@@ -528,7 +536,7 @@ export function finishMatch(run, match) {
   } else {
     const earlyBoss = Boolean(bout.boss && bracket && bracket.round < 2);
     summary.gold = earlyBoss ? (BRACKET.earlyBossLossGold ?? 0) : bout.lossGold;
-    bumpMorale(fighter, match.result.reason === 'towel' ? MORALE.towel : MORALE.loss);
+    bumpMorale(run, fighter, match.result.reason === 'towel' ? MORALE.towel : MORALE.loss);
     const bribed = (match.bribe || hasRelic(run, 'referee')) && match.result.reason === 'towel';
     summary.bribed = Boolean(bribed);
     if (match.result.reason === 'towel' && !bribed) summary.renown = RENOWN.towel;
@@ -652,7 +660,7 @@ export function finishMatch(run, match) {
     summary.eulogy = `Here lies ${fighter.name}: ${fWins} win${fWins === 1 ? '' : 's'}${fighter.kills ? `, ${fighter.kills} kill${fighter.kills === 1 ? '' : 's'}` : ''}${fighter.titles.length ? `, ${fighter.titles.join(', ')}` : ''}.`;
     summary.story = (fighter.story ?? []).slice(-4).map((e) => e.text); // 7.8: their last chapters, for the fight screen
     removeFighter(run, fighter, { fallen: { arena: true } });
-    for (const f of run.roster) bumpMorale(f, MORALE.allyDeath);
+    for (const f of run.roster) bumpMorale(run, f, MORALE.allyDeath);
     log(run, `${fighter.name} died in ${bout.name}. The house mourns; their gear returns to the storeroom.`, 'bad');
   } else {
     gainXp(run, fighter, summary.xp);
@@ -745,7 +753,7 @@ function finishBracketMatch(run, match, fighter, opp, tier, bracket, newInjuries
   if (bloodied) {
     summary.renown += BLOODIED.renown;
     summary.xp += BLOODIED.xp;
-    bumpMorale(fighter, BLOODIED.morale);
+    bumpMorale(run, fighter, BLOODIED.morale);
     const favorBefore = run.favor;
     changeFavor(run, FAVOR.spectacleWin, 'a Bloodied Victory (won with 2+ injuries)');
     summary.favor = run.favor - favorBefore;
@@ -898,7 +906,7 @@ export function resolveMercy(run, choice) {
       }
     }
     if (fighter?.personalTrait === 'crackedGovernor') {
-      bumpMorale(fighter, 10);
+      bumpMorale(run, fighter, 10);
       fighter.stress = clampStress(fighter.stress - 15);
     }
   } else {
@@ -924,7 +932,7 @@ export function resolveMercy(run, choice) {
     if (fighter?.personalTrait === 'crackedGovernor') {
       fighter.jailbreakBoost = 1;
       fighter.stress = clampStress(fighter.stress + 20);
-      bumpMorale(fighter, -15);
+      bumpMorale(run, fighter, -15);
       // Prevent mid-bracket softlock (e.g. under emperorsGaze / coup Final where withdrawal is blocked).
       if (isInActiveBracket(run, fighter.id) && fighter.morale < MORALE.mutinous) fighter.morale = MORALE.mutinous;
     }
@@ -959,7 +967,7 @@ export function resolveMercy(run, choice) {
   if (choice === crowd || (choice === 'spare' && fighter.perks.includes('merciful'))) {
     out.renown += MERCY.crowdRenown;
     out.morale = MERCY.crowdMorale;
-    bumpMorale(fighter, MERCY.crowdMorale);
+    bumpMorale(run, fighter, MERCY.crowdMorale);
     log(run, `The crowd roars its approval for ${fighter.name}.`, 'good');
   }
   fighter.renown += out.renown;
@@ -1023,12 +1031,7 @@ export function withdrawBlocker(run, tier) {
   const b = bracketOf(run, tier);
   if (!b?.fighterId || b.round === 0) return 'Nothing to withdraw from.';
   if (!findFighter(run, b.fighterId)) return 'No such fighter in the bracket.';
-  const bout = boutFor(run, tier);
-  if (bout.debuff === 'emperorsGaze' && b.round >= 2) return "The Emperor's Gaze is on the Final: you cannot withdraw.";
-  if (tier === GRAND_TIER && run.plot?.coup && !run.plot.ended && b.round >= 2 && b.fighterId === run.plot.champion) {
-    return 'The rising is set for the Final: your champion cannot withdraw now.';
-  }
-  return null;
+  return bracketLockReason(run, tier);
 }
 
 export function withdraw(run, tier) {

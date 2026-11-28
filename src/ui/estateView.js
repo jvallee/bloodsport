@@ -887,19 +887,19 @@ function renderRoomView(run, estateUi) {
 
   const KEEPSAKE_HINTS = {
     unit91: {
-      low: 'Something still and quiet—ordered stone, never open flame or trophies of death.',
+      low: 'Something still and quiet: ordered stone, never open flame or trophies of death.',
       high: 'Raked stone in a calm corner, with no crackling fire, skulls, or wine jars nearby.',
     },
     basa: {
-      low: 'Warm water and quiet stone that recall the tide—never an iron beast-cage.',
+      low: 'Warm water and quiet stone that recall the tide; never an iron beast-cage.',
       high: 'Steaming bathwater beside raked coastal stone; keep every barred cage out of his sight.',
     },
     orc: {
-      low: "Honour for the gods and the legions' colours—never crude iron spikes.",
+      low: "Honour for the gods and the legions' colours; never crude iron spikes.",
       high: 'An altar to swear by and a standard from the field; keep crude spiked bedding out.',
     },
     android: {
-      low: 'Still stone or a quiet altar beside something alive that sings—never grinding steel or trophies of death.',
+      low: 'Still stone or a quiet altar beside something alive that sings; never grinding steel or trophies of death.',
       high: 'Quiet raked stone or a small altar and a living songbird beside the cot; keep sharpening-wheels and skulls away.',
     },
     elf: {

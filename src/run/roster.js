@@ -126,7 +126,7 @@ export function cousinWeek(run) {
   run.liaisonOffers = (run.liaisonOffers ?? []).filter((f) => f.id !== c.f);
   const asker = cousinAsker(run);
   if (asker) {
-    bumpMorale(asker, COUSIN.missMorale);
+    bumpMorale(run, asker, COUSIN.missMorale);
     chronicle(run, asker, `Their cousin${c.name ? `, ${c.name},` : ''} was executed in the city cells.`);
   }
   log(run, `${c.name ?? 'The prisoner'} is executed in the city cells${asker ? ` (${asker.name} ${COUSIN.missMorale} Morale)` : ''}.`, 'bad');
@@ -140,7 +140,7 @@ function cousinSaved(run, f) {
   c.done = 'saved';
   const asker = cousinAsker(run);
   if (asker) {
-    bumpMorale(asker, COUSIN.savedMorale);
+    bumpMorale(run, asker, COUSIN.savedMorale);
     chronicle(run, asker, `You bought their cousin, ${f.name}, out of the cells.`);
   }
   cousinSay(run, 'saved', { fighter: COUSIN_LINES.saved, steward: COUSIN_LINES.savedSteward(f.name) });
@@ -277,6 +277,17 @@ export function seasonCompanion(run, f) {
   return f;
 }
 
+export function freeDraftPicks(run) {
+  if (!run || run.status !== 'active' || run.week !== 0) return null;
+  const freeLeft = Math.max(0, COMPANIONS.startPicks - recruitedCompanionIds(run).length);
+  const hasPatronFighter = ['veteran', 'defector', 'liberator'].includes(run.setup?.patron);
+  const extraBunk = hasPatronFighter && (run.patronBunk ?? 0) < 1 ? 1 : 0;
+  const bedsLeft = Math.max(0, rosterCap(run) + extraBunk - (run.roster?.length ?? 0));
+  const poolCount = getCompanionPool(run).length;
+  const remaining = Math.min(freeLeft, bedsLeft, poolCount);
+  return remaining > 0 ? { remaining, freeLeft, bedsLeft, poolCount } : null;
+}
+
 export function companionPrice(run, coreId, { draft = false } = {}) {
   const count = recruitedCompanionIds(run).length;
   if (draft && (run?.week ?? 0) === 0 && count < COMPANIONS.startPicks) return 0;
@@ -336,13 +347,13 @@ export function draftCompanion(run, coreId, optsOrCls = {}, weapon = null, kindT
 export function recruitCompanion(run, coreId, opts = {}) {
   assertOk(companionBlocker(run, coreId, { draft: false }));
   const price = companionPrice(run, coreId, { draft: false });
-  run.gold -= price;
   const f = createCompanion(run, coreId, {
     cls: opts.cls,
     weapon: opts.weapon,
     kindTrait: opts.kindTrait || opts.trait,
     humor: opts.humor,
   });
+  run.gold -= price;
   seasonCompanion(run, f);
   run.recruitedCompanions = [...new Set([...(run.recruitedCompanions ?? []), coreId])];
   run.roster.push(f);
@@ -825,12 +836,12 @@ export function reviveHades(run, id) {
   f.stress = lv >= 2 ? 0 : HADES.stressLv1;
   f.injuries = lv >= 2 ? [] : [{ tag: 'concussed', weight: 1, weeksLeft: HEAL_WEEKS.concussed }];
   f.hadesReturned = (f.hadesReturned ?? 0) + 1;
-  if (lv >= 2) bumpMorale(f, HADES.lv2Morale);
+  if (lv >= 2) bumpMorale(run, f, HADES.lv2Morale);
   if (f.bond?.id) {
     const mate = findFighter(run, f.bond.id);
     if (mate && !mate.bond) {
       mate.bond = { id: f.id, name: f.name, since: run.week };
-      bumpMorale(mate, 10);
+      bumpMorale(run, mate, 10);
     } else if (!mate || mate.bond?.id !== f.id) {
       delete f.bond;
     }
@@ -888,7 +899,7 @@ export function restoreRevenant(run, id) {
       if (mate && mate.alive !== false && mate.kind !== 'revenant' && !mate.bond) {
         f.bond = { id: mate.id, name: mate.name, since: fallen.bond.since ?? run.week };
         mate.bond = { id: f.id, name: f.name, since: fallen.bond.since ?? run.week };
-        bumpMorale(mate, 10);
+        bumpMorale(run, mate, 10);
       } else if (mate && mate.bond?.id === f.id) {
         f.bond = structuredClone(fallen.bond);
       }
@@ -970,7 +981,7 @@ export function reanimate(run, id) {
     f.dialogue = createDialogueState(coreId);
     queueMilestone(run, f, { id: 'vulcan_revenant_shock', priority: 100, ctx: { coreId, name: f.name } });
     for (const mate of run.roster) {
-      bumpMorale(mate, mate.id === oldBondId ? COMPANIONS.vulcanBondShockMorale : COMPANIONS.vulcanShockMorale);
+      bumpMorale(run, mate, mate.id === oldBondId ? COMPANIONS.vulcanBondShockMorale : COMPANIONS.vulcanShockMorale);
       queueMilestone(run, mate, { id: 'vulcan_revenant_shock', priority: 100, ctx: { coreId, name: f.name } });
     }
   }
@@ -1057,7 +1068,7 @@ export function checkKeepsakes(run, f, placedItem = null) {
 export function buyDecorBlocker(run, item) {
   const idle = idleBlocker(run);
   if (idle) return idle;
-  if (!DECOR[item]) return 'Unknown decor item.';
+  if (!Object.hasOwn(DECOR, item)) return 'Unknown decor item.';
   if (run.gold < DECOR[item].price) return `Needs ${DECOR[item].price} Gold.`;
   return null;
 }
@@ -1073,7 +1084,7 @@ export function assignDecorBlocker(run, id, item, slot = null) {
   if (idle) return idle;
   const f = findFighter(run, id);
   if (!f) return 'No such fighter.';
-  if (!DECOR[item]) return 'Unknown decor item.';
+  if (!Object.hasOwn(DECOR, item)) return 'Unknown decor item.';
   if (!run.inventory.decor[item]) return `No ${DECOR[item].name} in the storeroom. Buy one first.`;
   if (f.decor[item] >= decorCap(run)) return `Quarters fit ${decorCap(run)} of each item. Upgrade Fighter Quarters for more.`;
   if (slot) {
@@ -1115,7 +1126,7 @@ export function buyAndAssignDecorBlocker(run, id, item, slot = null) {
   if (idle) return idle;
   const f = findFighter(run, id);
   if (!f) return 'No such fighter.';
-  if (!DECOR[item]) return 'Unknown decor item.';
+  if (!Object.hasOwn(DECOR, item)) return 'Unknown decor item.';
   if (f.decor[item] >= decorCap(run)) return `Quarters fit ${decorCap(run)} of each item. Upgrade Fighter Quarters for more.`;
   if (slot) {
     const s = roomSlotById(slot);
@@ -1137,7 +1148,7 @@ export function moveDecorBlocker(run, id, item, slot) {
   if (idle) return idle;
   const f = findFighter(run, id);
   if (!f) return 'No such fighter.';
-  if (!DECOR[item] || !(f.decor?.[item] > 0)) return 'That decor item is not in their room.';
+  if (!Object.hasOwn(DECOR, item) || !(f.decor?.[item] > 0)) return 'That decor item is not in their room.';
   const s = roomSlotById(slot);
   if (!s) return 'Unknown room anchor.';
   if (s.zone !== decorZoneOf(item)) return `${DECOR[item].name} belongs on a ${decorZoneOf(item)} anchor.`;
@@ -1161,7 +1172,7 @@ export function removeDecorBlocker(run, id, item) {
   if (idle) return idle;
   const f = findFighter(run, id);
   if (!f) return 'No such fighter.';
-  if (!f.decor[item]) return 'Nothing to remove.';
+  if (!Object.hasOwn(DECOR, item) || !f.decor[item]) return 'Nothing to remove.';
   return null;
 }
 
@@ -1262,7 +1273,7 @@ export function unequipAll(run) {
 export function buyItemBlocker(run, key) {
   const idle = idleBlocker(run);
   if (idle) return idle;
-  if (!CONSUMABLES[key]) return 'Unknown item.';
+  if (!Object.hasOwn(CONSUMABLES, key)) return 'Unknown item.';
   if (run.gold < CONSUMABLES[key].price) return `Needs ${CONSUMABLES[key].price} Gold.`;
   return null;
 }
@@ -1361,7 +1372,7 @@ export function retire(run, id) {
   if (f.want?.id === 'retire') talk(run, `want-done-${f.id}-${f.want.since}`, [{ speaker: 'fighter', fighterId: f.id, text: WANTS.retire.thanks(f.want) }]);
   removeFighter(run, f);
   addPrestige(run, RETIRE.prestige);
-  for (const x of run.roster) bumpMorale(x, RETIRE.morale);
+  for (const x of run.roster) bumpMorale(run, x, RETIRE.morale);
   const legend = { name: f.name, kind: f.kind, humor: f.humor, id: f.id, cls: f.cls, power: f.power, titles: f.titles, kills: f.kills ?? 0, renown: f.renown, level: f.level, wins: winsOf(run, f), story: f.story, seed: run.seed, ...(f.returned ? { returned: f.returned, carried: f.carried } : {}) };
   run.retired = [...(run.retired ?? []), legend];
   log(run, `${f.name} retires to the Hall of Champions. +${RETIRE.prestige} Prestige, and the roster takes heart.`, 'good');

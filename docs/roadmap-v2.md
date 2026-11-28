@@ -358,3 +358,27 @@ system-usage report.
 Confirmed in the cloud session too (`npm run check`, 300 careers, on the released 8.0.0): **24/24**. First career 27%, full
 Legacy 44% (Heat 1 29%, Heat 3 13%), Long Road 25%, loyalist +19 over careful, rebel careers: coup 13%, martyr 7%, treason
 2%. Boss win per attempt 89 · 62 · 33 · 40 · 15.
+
+
+### v8.0.1 (fixes, the guide to the first Boss, dialogue polish)
+
+No change in 8.0.1 moves a dice roll. Lockstep against 8.0.0: 42 seeds in each of eight groups (careful, reckless, rebel, loyalist, brawler, long, legacy, heat3; heat1 was not traced), 336 careers, every RNG stream's state and the numeric game state compared week by week: none diverged.
+
+`npm run check` (300 careers), same machine, Node 24:
+- 8.0.0: 24/24. First career 27%, Full Legacy 44%, Long Road 25%, loyalist margin +19, brawler 27%.
+- 8.0.1: 24/24. The whole report is identical to 8.0.0's, line for line.
+
+No balance number was changed. The two 8.0.1 rule changes (no skipping a bracket after a won round; the Morale floor
+for a fighter who cannot withdraw from a Final) are in `docs/fight-rules.md`, "8.0.1"; neither changed a bot career in
+these runs.
+
+**Held back: the chalk mark.** In 8.0.0, after "Scrub it off" the chalk-mark card is never dealt again, so the plot
+stays in its first stage for the whole career and the second refusal that should end it ("cold") cannot happen. The
+one-line fix (deal the card again while the plot is in `mark` and refusals are under `PLOT.refusalsToCold`) was built
+and measured for 8.0.1, then left out because it fails one gate. Every bot that scrubs the mark is affected: careful
+and the bots built on it (long, legacy, the Heat runs, brawler).
+- `npm run check` with the fix: 23/24. Fails "The evil road is easier" at +21 (the limit is 20; 8.0.0 gives +19): the loyalist is unchanged at 47%, so the careful bot wins about 2 points less on those 150 seeds. First career 27%, Full Legacy 39%, Long Road 26%, brawler 30%.
+- Quick run with the fix: `career-sim 200 --quick --check` gives 24/24 (8.0.0 gives 23/24 there, failing "No dominant relic" at +20). First career 26% against 21%, Long Road 26% against 20%, loyalist margin +16 against +20.
+- Lockstep with the fix: all 210 careers of the careful-based groups (careful, brawler, long, legacy, heat3) first diverge in the week the card returns; the 126 reckless, rebel and loyalist careers do not diverge.
+
+It needs a version of its own, with a decision on the gate.

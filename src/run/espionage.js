@@ -44,7 +44,7 @@ export function espionageWeek(run) {
   const r = espRng(run);
   if (next(r) < ESPIONAGE.clue) {
     const text = pick(r, MOLE_CLUES);
-    if (/Two Gold/.test(text)) run.gold = Math.max(0, run.gold - 2);
+    if (text === MOLE_CLUES[0]) run.gold = Math.max(0, run.gold - 2);
     st.clues = [...st.clues, { week: run.week, text }].slice(-8);
     mole.mole.clues = (mole.mole.clues ?? 0) + 1;
     if (!st.suspects) {
@@ -109,7 +109,7 @@ export function investigate(run, id) {
     log(run, `${f.name} is unmasked: they report to ${masterName(run, f.mole.master)}.`, 'event');
     return true;
   }
-  bumpMorale(f, ESPIONAGE.offended);
+  bumpMorale(run, f, ESPIONAGE.offended);
   log(run, `${f.name} is searched, questioned half the night, and found clean. They don't forget it (${ESPIONAGE.offended} Morale).`, 'warn');
   return false;
 }
@@ -146,7 +146,7 @@ export function resolveMole(run, how, ev, out) {
     house.glory = Math.max(0, house.glory + ESPIONAGE.executeGlory);
   }
   removeFighter(run, f, { fallen: { body: true, spy: true } });
-  for (const x of run.roster) bumpMorale(x, ESPIONAGE.executeMorale);
+  for (const x of run.roster) bumpMorale(run, x, ESPIONAGE.executeMorale);
   talk(run, `mole-${f.id}`, [{ speaker: 'steward', text: AFTERMATH_LINES.executed }]);
   out.push(`${f.name} is executed in the yard`, `everyone ${ESPIONAGE.executeMorale} Morale`);
 }
@@ -157,14 +157,15 @@ export const opTarget = (run) => (run.arenas?.[run.topTier] ? opponentFor(run, r
 const doubleAgent = (run) => run.roster.some((f) => f.mole?.turned);
 
 export function opChance(run, type) {
-  const op = ESPIONAGE.ops[type];
+  const op = Object.hasOwn(ESPIONAGE.ops, type) ? ESPIONAGE.ops[type] : null;
+  if (!op) return 0;
   return op.chance + (op.galleryBonus && maxLevel(run, 'gallery') ? op.galleryBonus : 0) + (op.agentBonus && doubleAgent(run) ? op.agentBonus : 0);
 }
 
 export function covertOpBlocker(run, type) {
   const blocked = activeModalOrPendingBlocker(run);
   if (blocked) return blocked;
-  const op = ESPIONAGE.ops[type];
+  const op = Object.hasOwn(ESPIONAGE.ops, type) ? ESPIONAGE.ops[type] : null;
   if (!op) return 'Unknown covert op.';
   if (!maxLevel(run, 'liaison') && !maxLevel(run, 'gallery')) return 'Needs a Liaison or the Whispering Gallery.';
   if (espState(run).opMonth === monthOf(run.week)) return 'One covert op a month.';

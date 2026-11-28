@@ -1,7 +1,7 @@
 // App state, saving, coach tips and event wiring. Game rules live in run.js / fight.js; markup in src/ui/.
 
 import { mortalDanger, canThrowTowel, suggestTactic, hypeOf } from './fight.js';
-import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betQuote, spareFavorWhy, owedLeft, keepsBuyIn, overtrainedByWeek, demandMet, espionageOdds, freeFightDay, resolveDialogueTree, houseOf, debtPenaltyFor } from './run.js';
+import { createRun, matchOptions, serialize, deserialize, opponentFor, fightBlocker, bracketView, betQuote, spareFavorWhy, owedLeft, keepsBuyIn, overtrainedByWeek, demandMet, espionageOdds, freeFightDay, freeDraftPicks, resolveDialogueTree, houseOf, debtPenaltyFor, demandFromEmperor } from './run.js';
 import { VILLA_PLOTS, CRYPT_HADES_SLOT, plotById, isPlotUnlocked, resolveEstateSlots, maxLevel, plotsFree } from './ludus.js';
 import { applyGameAction, isGameAction } from './game.js';
 import { buildReport } from './debug.js';
@@ -12,11 +12,11 @@ import { saveFailedBanner, loadFailedModal, summaryKey, otherTabBanner, resultNo
 import { fightKey } from './ui/keys.js';
 import { loadIndex, saveCareer, loadCareerText, removeCareer, newCareerBlocker, freshId, scenesKey, makeRoom, careerKey } from './careers.js';
 import { estimateOdds, oddsKey } from './odds.js';
-import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, freeFightModal, weekDock, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
+import { topbar, endBanner, summaryBanner, tutorialCard, dialogueModal, resultModal, guideBar, stewardNote, today, ludusTab, estateTab, marketTab, codexTab, helpModal, noticePager, nextBar, bugModal, eventCard, fortunePanel, fortuneDealKey, setupModal, careersModal, overtrainModal, freeFightModal, draftModal, weekDock, legacyPanel, achievementNotice, roomTabs } from './ui/views.js';
 import { loadLegacy, checkAchievements, recordCareer, recordLegends, dailySeed, dailySetup, careerSetup } from './legacy.js';
 import { nextHint } from './hints.js';
 import { ENTRIES, SECTIONS, discover, discoverMatch, isUnlocked, hasLore, progress, loadCodex } from './codex.js';
-import { GUIDE, STEPS, FIGHT_STEPS, nextStep } from './tutorial.js';
+import { GUIDE, STEPS, FIGHT_STEPS, nextStep, advanceGuide, guideBlocker, guideProgress, migrateTutorialPrefs } from './tutorial.js';
 import { SPEAKERS, SCENES, dueScene, dueRebel, rebelScene, dueRebelStage, newsSnapshot, stewardNews, demandMetScene, demandMissedScene, endingScene, returnScene, isStaffId, getStaffActor } from './dialogue.js';
 import { DEMANDS, DEMAND, CIRCUITS, SUMMONS } from './data.js';
 import { snapshot, monthDigest } from './digest.js';
@@ -34,8 +34,10 @@ let run = null;
 let careers = { active: null, list: [] }; // every saved career (src/careers.js); careerId is the one being played
 let careerId = null;
 let careersOpen = false; // the Careers dialog
+let draftWarn = null; // End Week 0 with free Core Companion drafts and beds still open (v8.0.1)
 let freeFightWarn = null; // End week on fight day with fighters who could still fight: freeFightDay(run) (7.9.2)
 let overtrainWarn = null; // End week would overtrain these fighters: [{ id, name, stress }] (asked every time)
+let tipWeek = -1; // At most one queued STEPS tutorial tip per week (v8.0.1)
 let match = null;
 let summaries = []; // this week's match results, newest last
 let noticePage = 0;
@@ -59,7 +61,7 @@ function finishReveal() {
 let roundStartedAt = 0; // when the latest round began playing (auto-play waits for its story to finish, not for a fresh wait)
 const reducedMotion = () => Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 const ui = { animateRound: 0, showMath: false, auto: false, open: {} }; // open: fold-outs the player opened or closed, by data-key
-let prefs = { tutorial: [], showMath: false, introSeen: false, sound: true };
+let prefs = { tutorial: [], tutorialOff: false, showMath: false, introSeen: false, sound: true };
 let codex = loadCodex(null);
 let codexShownNew = []; // entries highlighted as new while the Codex tab is open
 let scene = null; // the dialogue scene showing: { id, beat } (src/dialogue.js)
@@ -98,7 +100,7 @@ const storage = {
 
 function loadPrefs() {
   try { prefs = { ...prefs, ...JSON.parse(storage.get(PREFS_KEY) ?? '{}') }; } catch { /* keep defaults */ }
-  if (!Array.isArray(prefs.tutorial)) prefs.tutorial = [];
+  prefs = migrateTutorialPrefs(prefs);
   ui.showMath = prefs.showMath;
   setFightPace(prefs.pace);
   setSound(prefs.sound !== false);
@@ -157,16 +159,13 @@ function oddsFor(f, tier = run.topTier, opp = opponentFor(run, tier), legOpts = 
 
 // The tutorial month (GUIDE): the steward's current step, done the moment its goal is met.
 function guideStep() {
-  if (run.status !== 'active' || scene) return null;
-  for (;;) {
-    const step = nextStep(GUIDE, prefs.tutorial, run);
-    if (!step || !step.goal(run)) return step;
-    prefs.tutorial.push(step.id);
-    savePrefs();
-  }
+  if (prefs.tutorialOff || run.status !== 'active' || scene) return null;
+  const { step, completed } = advanceGuide(prefs.tutorial, run);
+  if (completed.length) { prefs.tutorial.push(...completed); savePrefs(); }
+  return step;
 }
-// The steward's tips wait for the tutorial month, any other dialog, and for the fight screen to close.
-const tutorialStep = () => (run.status === 'active' && !scene && !match && !showHelp && !setupChoice && !run.event && !run.mercy && !guideStep() ? nextStep(STEPS, prefs.tutorial, run) : null);
+// The steward's tips wait for the guide, any other dialog, the fight screen, and at most one tip per week.
+const tutorialStep = () => (!prefs.tutorialOff && tipWeek !== run.week && run.status === 'active' && !scene && !match && !showHelp && !setupChoice && !run.event && !run.mercy && !guideStep() ? nextStep(STEPS, prefs.tutorial, run) : null);
 
 // ---------- Dialogue (src/dialogue.js) ----------
 
@@ -234,7 +233,7 @@ function checkScene() {
   const demandKey = run.demand ? `demand-${run.demand.week}` : null;
   if (demandKey && !scenesSeen().includes(demandKey)) {
     markSceneSeen(demandKey);
-    const isEmperor = run.topTier >= 4;
+    const isEmperor = demandFromEmperor(run);
     const demandSpeaker = isEmperor ? 'emperor' : 'rightHand';
     const demandText = isEmperor ? DEMANDS[run.demand.id].say : (DEMANDS[run.demand.id].sayRightHand ?? DEMANDS[run.demand.id].say);
     const sender = isEmperor ? 'The Emperor\'s demand' : 'Legate Vane\'s Palatine docket';
@@ -269,7 +268,7 @@ function closeScene() {
   scene = null;
   if (then === 'setup') setupChoice = { patron: '', heat: 0, colour: run.setup?.colour ?? 'crimson' }; // the opening came first; now choose a patron
 }
-const fightTutorial = () => (match ? nextStep(FIGHT_STEPS, prefs.tutorial, match) : null);
+const fightTutorial = () => (!prefs.tutorialOff && match ? nextStep(FIGHT_STEPS, prefs.tutorial, match) : null);
 
 // ---------- Rendering ----------
 
@@ -304,6 +303,7 @@ function activeModal() {
   if (bug) return 'bug';
   if (loadFailed) return 'loadFailed';
   if (careersOpen) return 'careers';
+  if (draftWarn) return 'draft';
   if (freeFightWarn) return 'freefight';
   if (overtrainWarn) return 'overtrain';
   if (setupChoice) return 'setup';
@@ -329,8 +329,10 @@ function resetCareerUiState() {
   scene = null;
   talkUi = null;
   eventResult = null;
+  draftWarn = null;
   overtrainWarn = null;
   freeFightWarn = null;
+  tipWeek = -1;
   setupChoice = null;
   showHelp = false;
   careersOpen = false;
@@ -361,7 +363,7 @@ function render() {
   else body = ludusTab(run, oddsFor, mobilePane);
   checkScene();
   const guide = guideStep();
-  const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : freeFightWarn ? freeFightModal(freeFightWarn) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : talkUi ? talkModal(run, talkUi) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal(helpTab) : tutorialCard(tutorialStep());
+  const modal = loadFailed ? loadFailedModal(loadFailed) : careersOpen ? careersModal(careers, careerId) : draftWarn ? draftModal(draftWarn) : freeFightWarn ? freeFightModal(freeFightWarn) : overtrainWarn ? overtrainModal(overtrainWarn) : setupChoice ? setupModal(legacy, setupChoice) : talkUi ? talkModal(run, talkUi) : scene ? dialogueModal(scene.id, sceneBeats(), scene.beat) : eventResult ? resultModal(eventResult.title, eventResult.lines) : showHelp ? helpModal(helpTab) : tutorialCard(tutorialStep());
   // Notifications: this week's results (newest first), one page at a time. (The steward's tips open as a dialogue.)
   const notices = [...resultNotes.map((r, i) => resultNotice(r, i)), ...stewardNotes.map(stewardNote), ...achieved.map(achievementNotice), ...[...summaries].reverse().map(summaryBanner)].filter(Boolean);
   noticePage = Math.min(noticePage, Math.max(0, notices.length - 1));
@@ -382,7 +384,8 @@ function render() {
   const fortune = fortunePanel(run, { animate: fortuneDealKey(run) !== dealtHand });
   if (fortune) dealtHand = fortuneDealKey(run);
   document.body.dataset.house = run.setup?.colour ?? '';
-  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${otherTab ? otherTabBanner() : saveFailed ? saveFailedBanner() : ''}${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run) : nextBar(nextHint(run), tab)}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${weekDock(run, Boolean(match))}${modal}`;
+  const guideExtra = guide ? { progress: guideProgress(run, prefs.tutorial), blocker: guideBlocker(run, guide) } : null;
+  app.innerHTML = `${topbar(run, tab, codex.fresh.length, prefs.sound !== false)}<main>${otherTab ? otherTabBanner() : saveFailed ? saveFailedBanner() : ''}${run.status !== 'active' ? endBanner(run, legacy) : ''}${guide ? guideBar(guide, tab === guide.tab, run, guideExtra) : nextBar(nextHint(run), tab)}${eventCard(run)}${fortune}${noticePager(notices, noticePage)}${body}</main>${weekDock(run, Boolean(match))}${modal}`;
   const stickyHead = app.querySelector('.sticky-head');
   if (stickyHead) document.documentElement.style.setProperty('--head-h', `${stickyHead.offsetHeight + 8}px`);
   for (const d of app.querySelectorAll('details[data-key]')) if (d.dataset.key in ui.open) d.open = ui.open[d.dataset.key];
@@ -406,7 +409,18 @@ function render() {
     document.querySelector(scrollAfterRender)?.scrollIntoView({ block: 'start' });
     scrollAfterRender = null;
   }
-  if (guide?.focus && tab === guide.tab) for (const el of app.querySelectorAll(guide.focus)) if (!el.disabled) el.classList.add('tut-focus');
+  if (guide?.focus && tab === guide.tab) {
+    const litCards = new Set();
+    for (const el of app.querySelectorAll(guide.focus)) {
+      if (el.disabled) continue;
+      const card = el.closest('.card');
+      if (card) {
+        if (litCards.has(card)) continue;
+        litCards.add(card);
+      }
+      el.classList.add('tut-focus');
+    }
+  }
   if (modal) {
     const focusTarget = app.querySelector('.modal [autofocus]:not([disabled])')
       ?? app.querySelector('.modal .talk-choice:not([disabled])')
@@ -597,10 +611,22 @@ const actions = {
   },
   'setup-cancel': () => { setupChoice = null; },
   'replay-seed': () => { if (roomForCareer()) newRun(run.seed, run.setup); },
+  'draft-market': () => { draftWarn = null; tab = 'market'; },
+  'draft-go': () => {
+    const via = draftWarn?.via ?? 'advance';
+    draftWarn = null;
+    if (via === 'advance-tournament') {
+      summaries = []; achieved = []; stewardNotes = []; resultNotes = [];
+      monthBefore = { snap: snapshot(run), mark: run.log.length };
+      gameAction('advance-tournament');
+      return;
+    }
+    if (endWeekChecks({ drafts: false })) { summaries = []; achieved = []; stewardNotes = []; resultNotes = []; gameAction('advance'); }
+  },
   'freefight-back': () => { freeFightWarn = null; mobilePane = 'bout'; scrollAfterRender = '.panel.bout'; },
   'freefight-go': () => { // End the week as asked; the overtraining check still comes next
     freeFightWarn = null;
-    if (endWeekChecks({ fights: false })) { summaries = []; achieved = []; stewardNotes = []; resultNotes = []; gameAction('advance'); }
+    if (endWeekChecks({ drafts: false, fights: false })) { summaries = []; achieved = []; stewardNotes = []; resultNotes = []; gameAction('advance'); }
   },
   'overtrain-back': () => { overtrainWarn = null; },
   'overtrain-go': (d) => { // End the week as planned, or with the named fighters resting
@@ -650,9 +676,9 @@ const actions = {
   },
   help: () => { showHelp = !showHelp; helpTab = 'play'; },
   'help-tab': (d) => { helpTab = d.tab === 'rules' ? 'rules' : 'play'; },
-  'tutorial-done': (d) => { prefs.tutorial.push(d.step); savePrefs(); },
-  'tutorial-skip': () => { prefs.tutorial = [...GUIDE, ...STEPS, ...FIGHT_STEPS].map((s) => s.id); savePrefs(); },
-  'tutorial-replay': () => { prefs.tutorial = []; showHelp = false; savePrefs(); },
+  'tutorial-done': (d) => { prefs.tutorial.push(d.step); if (STEPS.some((s) => s.id === d.step)) tipWeek = run.week; savePrefs(); },
+  'tutorial-skip': () => { prefs.tutorial = [...GUIDE, ...STEPS, ...FIGHT_STEPS].map((s) => s.id); prefs.tutorialOff = true; savePrefs(); },
+  'tutorial-replay': () => { prefs.tutorial = []; prefs.tutorialOff = false; tipWeek = -1; showHelp = false; savePrefs(); },
   'scene-next': () => { if (scene && scene.beat < sceneBeats().length - 1) scene.beat += 1; else closeScene(); },
   'scene-reply': (d) => { // your answer: its lines play next
     const beats = sceneBeats();
@@ -853,13 +879,17 @@ const before = {
     summaries = []; achieved = []; stewardNotes = []; resultNotes = []; return true;
   },
   'advance-tournament': () => {
+    const unusedDraft = freeDraftPicks(run);
+    if (unusedDraft) { draftWarn = { ...unusedDraft, via: 'advance-tournament' }; return false; }
     summaries = []; achieved = []; stewardNotes = []; resultNotes = [];
     monthBefore = { snap: snapshot(run), mark: run.log.length };
     return true;
   },
 };
-// Before ending the week: fighters left unused on fight day (7.9.2), then fighters a week from Overtrained. True: go ahead.
-function endWeekChecks({ fights = true } = {}) {
+// Before ending the week: unused Week-0 free drafts (v8.0.1), fighters left unused on fight day (7.9.2), then fighters a week from Overtrained. True: go ahead.
+function endWeekChecks({ drafts = true, fights = true } = {}) {
+  const unusedDraft = drafts ? freeDraftPicks(run) : null;
+  if (unusedDraft) { draftWarn = { ...unusedDraft, via: 'advance' }; return false; }
   const free = fights ? freeFightDay(run) : null;
   if (free) { freeFightWarn = free; return false; }
   const at = overtrainedByWeek(run);
@@ -974,6 +1004,7 @@ document.addEventListener('click', (e) => {
     if (topModal === 'setup') { setupChoice = null; render(); return; }
     if (topModal === 'overtrain') { overtrainWarn = null; render(); return; }
     if (topModal === 'freefight') { freeFightWarn = null; render(); return; }
+    if (topModal === 'draft') { draftWarn = null; render(); return; }
     if (topModal === 'bug' && !bug?.error) { bug = null; bugStatus = ''; renderBug(); return; }
     return;
   }

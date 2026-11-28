@@ -162,7 +162,7 @@ export const RIVAL_LINES = {
 
 // ---------- The Emperor's summons (the designer, 5.4.2) ----------
 // PLACEHOLDER lines. The rules (and the steward's line) must stay accurate.
-// 7.4 Mole clues and market tells (PLACEHOLDER words).
+// 7.4 Mole clues and market tells (PLACEHOLDER words). Index 0 triggers the 2-Gold lockbox theft in espionage.js.
 export const MOLE_CLUES = [
   'Two Gold are missing from the lockbox, and the lock is not broken. Whoever took them had a key, or was given one.',
   'Your last opponent knew your fighters\' opening stance before the horn. They smiled when they saw it.',

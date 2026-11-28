@@ -15,7 +15,7 @@ import { maxLevel, effectAt, oracleLevel } from '../ludus.js';
 import {
   GRAND_TIER, DEBUFF_IDS, COMBAT_PERKS, createFighter, newId, remember, takenNames, log, chronicle,
   monthOf, talk, assertOk, effectivePower, unlockedTiers, arenaName, isShort, hasDecree, lionsPower,
-  hasPolicy, idleBlocker, nextStage, changeFavor, gainXp, queueMilestone,
+  hasPolicy, idleBlocker, nextStage, changeFavor, gainXp, queueMilestone, bossRuleFor,
 } from './helpers.js';
 import { plotActive, changeSuspicion } from './plotEngine.js';
 
@@ -95,7 +95,7 @@ export function boutFor(run, tier = run.topTier) {
   const below = run.topTier - tier;
   const arena = run.arenas[tier];
   if (tier === GRAND_TIER) {
-    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: arenaPower(run, GRAND_TIER), oppDecor: GRAND.oppDecor, debuff: arena.debuff, conquered: false };
+    return { tier, top, below: 0, name: GRAND.name, stage: 3, boss: true, buyIn: GRAND.buyIn, winGold: GRAND.winGold, winPrestige: GRAND.winPrestige, lossGold: GRAND.lossGold, oppPower: arenaPower(run, GRAND_TIER), oppDecor: GRAND.oppDecor, debuff: bossRuleFor(run, tier), conquered: false };
   }
   const c = CIRCUITS[tier - 1];
   const s = arena.stage;
@@ -109,7 +109,7 @@ export function boutFor(run, tier = run.topTier) {
     winGold: Math.round(Math.max(Math.ceil(c.winGold[s] * ECONOMY.lowerArenaGold ** below), c.lossGold + ECONOMY.lowerWinOverLoss) * (fest?.gold ?? 1) * (isShort(run) ? SHORT.purse : 1) * (hasPolicy(run, 'breadAndCircuses') ? 1.25 : 1)),
     winPrestige: Math.round(Math.max(below ? ECONOMY.lowerArenaMinPrestige : 0, Math.floor(c.winPrestige[s] * ECONOMY.lowerArenaPrestige ** below)) * (fest?.prestige ?? 1) * (isShort(run) ? SHORT.prestige : 1) * (s === 2 && hasPolicy(run, 'unleashLions') ? 2 : 1)),
     festival: fest?.id ?? null,
-    lossGold: c.lossGold, oppPower: arenaPower(run, tier, s), oppDecor: c.oppDecor, debuff: s === 2 && tier > 1 ? arena.debuff : null,
+    lossGold: c.lossGold, oppPower: arenaPower(run, tier, s), oppDecor: c.oppDecor, debuff: bossRuleFor(run, tier),
     conquered: arena.conquered,
   };
 }
@@ -283,9 +283,21 @@ export function arenaMovesOn(run, tier) {
   log(run, `${arenaName(tier)} held its ${held} without your house. Next month: ${STAGES[arena.stage]}, against ${arena.opponent.name}.`);
 }
 
-export function fightPowers(run, f, tier = run.topTier) {
-  const m = createMatch({ a: f, b: opponentFor(run, tier), rng: createRng(0), ...matchOptions(run, f, tier) });
-  return { mine: computePower(m.a, m.b, 1).total, theirs: computePower(m.b, m.a, 1).total };
+// Match options for one leg of a bracket still to come (8.0.1: the page's and the text client's "whole tournament"
+// odds both read this helper): the leg's own house grudge and debt, and whether it is an early round.
+export function bracketLegOptions(run, f, tier, opp, isFinal) {
+  const base = matchOptions(run, f, tier);
+  const oppHouse = run.arenas[tier] ? houseOf(run, opp) : null;
+  const debt = debtPenaltyFor(oppHouse);
+  const opts = {
+    ...base,
+    earlyRound: !isFinal,
+    grudge: !run.arenas[tier] ? 0 : oppHouse?.feud > 0 ? 1 : oppHouse?.owed > 0 ? -1 : 0,
+    vengeance: Boolean(run.arenas[tier]) && oppHouse?.vengeance > 0,
+  };
+  if (debt) opts.debt = debt;
+  else delete opts.debt;
+  return opts;
 }
 
 export function matchOptions(run, f, tier = run.topTier) {
@@ -523,7 +535,7 @@ export const activePolicies = (run) => (run.policies ?? []).filter((p) => p.unti
 export function enactBlocker(run, id) {
   const idle = idleBlocker(run);
   if (idle) return idle;
-  const p = LOUNGE.policies[id];
+  const p = Object.hasOwn(LOUNGE.policies, id) ? LOUNGE.policies[id] : null;
   if (!p) return 'Unknown policy.';
   if (!maxLevel(run, 'lounge')) return 'Build the Patron Lounge first.';
   if (hasPolicy(run, id)) return `${p.name} is already in force.`;
@@ -554,13 +566,19 @@ const DEMAND_MET = {
 
 export const demandMet = (run) => Boolean(run.demand) && DEMAND_MET[run.demand.id](run.history.filter((x) => x.week >= run.demand.week));
 
+// Who sends this month's demand (8.0.1): Legate Vane's Palatine docket in Tiers 1 to 3, the Emperor from Tier 4. One
+// source for the page banner, the demand scene, the text client and the log. A demand keeps the sender it was issued
+// by (`tier`: the house's top arena that week); a demand saved without it falls back to the top arena now.
+export const demandFromEmperor = (run) => (run.demand?.tier ?? run.topTier) >= 4;
+export const demandSender = (run) => (demandFromEmperor(run) ? 'The Emperor' : 'The Palatine');
+
 export function issueDemand(run) {
   if (run.demand || run.week < DEMAND.fromWeek || isWinter(run.week)) return;
   run.rng.emperor ??= createRng(deriveSeed(run.seed, 9));
   if (next(run.rng.emperor) >= DEMAND.chance) return;
   const options = Object.keys(DEMANDS).filter((id) => id !== 'twoArenas' || unlockedTiers(run).length >= 2);
-  run.demand = { id: pick(run.rng.emperor, options), week: run.week };
-  log(run, `The Emperor demands: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.`, 'event');
+  run.demand = { id: pick(run.rng.emperor, options), week: run.week, tier: run.topTier };
+  log(run, `${demandSender(run)} demands: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.`, 'event');
 }
 
 export function judgeDemand(run) {
@@ -570,11 +588,11 @@ export function judgeDemand(run) {
   if (met) {
     run.gold += DEMAND.goldPerTier * tier;
     changeFavor(run, DEMAND.favor, "the Emperor's demand, met");
-    log(run, `The Emperor is pleased: +${DEMAND.goldPerTier * tier} Gold from the palace.`, 'good');
+    log(run, `${demandSender(run)} is pleased: +${DEMAND.goldPerTier * tier} Gold from the palace.`, 'good');
   } else {
     changeFavor(run, DEMAND.missFavor, "the Emperor's demand, unmet");
   }
-  run.demandResult = { id: run.demand.id, issued: run.demand.week, met, gold: met ? DEMAND.goldPerTier * tier : 0, favor: met ? DEMAND.favor : DEMAND.missFavor };
+  run.demandResult = { id: run.demand.id, issued: run.demand.week, tier: run.demand.tier ?? run.topTier, met, gold: met ? DEMAND.goldPerTier * tier : 0, favor: met ? DEMAND.favor : DEMAND.missFavor };
   run.demand = null;
 }
 
