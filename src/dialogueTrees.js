@@ -1606,12 +1606,21 @@ function buildFirstFightScene(run, f, coreId, won, ctx, isQueued) {
       ],
     },
   };
+  // 8.0.1 PLACEHOLDER: a first-fight line for each kind of auxiliary (the generic lines stay as the last fallback).
+  const auxFirst = {
+    human: { win: 'First one done, Lanista. Nobody threw anything at me. I am calling that a welcome.', loss: 'Lost it, Lanista. I know where, too, which is something.' },
+    basa: { win: 'First bout, Lanista. Their feet told me everything a round early.', loss: 'They read me before I read them, Lanista. It will not happen the same way twice.' },
+    orc: { win: 'First blood on Palatina, Lanista. The ancestors will want a better one next time. So do I.', loss: 'Beaten, Lanista. No bed, no excuses. Put me back on the card.' },
+    android: { win: 'It is done, Lanista. I would rather not keep that one, but I will remember how it went.', loss: 'I lost, Lanista. The spike is displeased. I find that I am not.' },
+    elf: { win: 'A first win in a dust bowl, Lanista. I have had worse evenings and better audiences.', loss: 'I lost to someone who has never held a proper blade. We will not mention it again.' },
+    vampire: { win: 'First bout, Lanista. Quick enough that I barely squinted.', loss: 'I lost in full sun, Lanista. I would like that noted somewhere.' },
+  };
   const s = scripts[coreId] ?? {
     lead: `${f?.name ?? 'Your gladiator'} returns from their first test on Palatina's sand, wiping sweat from their brow.`,
-    win: 'First bout in the books, Lanista, and I am still standing. The sand here drinks deep, but today it drank the other fighter\'s sweat.',
-    loss: 'Bruised ribs and a bitter lesson, Lanista. Next time I walk down that tunnel, I\'ll know how the sand shifts.',
+    win: auxFirst[f?.kind]?.win ?? 'First bout done, Lanista, and I am still standing. The sand here drinks deep. Today it got nothing of mine.',
+    loss: auxFirst[f?.kind]?.loss ?? 'Bruised ribs and a short lesson, Lanista. Next time down that tunnel I\'ll know how the sand shifts.',
     choices: [
-      { id: 'encourage', label: 'Rest up. Every champion starts with a first bout.', effects: { morale: 6, trust: 5 }, responseText: 'Aye, Lanista. I\'ll be ready for the next card.' },
+      { id: 'encourage', label: 'Take the afternoon. You earned a hot meal.', effects: { morale: 6, trust: 5 }, responseText: 'Aye, Lanista. I\'ll be ready for the next card.' },
       { id: 'push_harder', label: 'Back to the training pells tomorrow.', effects: { morale: -2, xp: 1 }, responseText: 'Understood. Back to the posts.' },
     ],
   };
@@ -1708,7 +1717,7 @@ function buildStuckScene(run, f, coreId, tier, stage, isQueued) {
           label: `One more push and ${aMid} is ours.`,
           effects: { trust: 5, morale: 6, stress: -5 },
           responseSpeaker: 'narrator',
-          responseText: `${fName} nods and returns to the yard.`,
+          responseText: `${fName} tightens their wrist wraps and heads back toward the pells.`,
         },
         {
           id: 'stuck_followup_retune',
@@ -1789,7 +1798,7 @@ function buildTourneyScene(run, f, coreId, won, tier, ctx, isQueued) {
     },
     elf: {
       1: 'Turnip-beer and wet dog. Taking that bracket is only washing the mud off our boots before the climb.',
-      2: 'Merchants and garrison centurions, the very class that cheered when Sib\'s machine broke our sky-spires. Taking their gold is a start.',
+      2: 'Merchants and garrison centurions, the very class that cheered when Sib\'s Revolution broke our sky-spires. Taking their gold is a start.',
       3: 'Three bouts back to back under the awnings. Half those senators used to beg my grandmother for dinner invitations. Now they bet on my pulse.',
       4: 'My father stood on that balcony in dress armour twenty years ago. Today I stood below it in blood, and the crowd shouted my name louder than his.',
       5: 'He watched all of it, Lanista. I made sure to look up.',
@@ -1835,7 +1844,17 @@ function buildTourneyScene(run, f, coreId, won, tier, ctx, isQueued) {
     },
   };
 
+  // 8.0.1 PLACEHOLDER: a result line for each kind of auxiliary (the generic lines stay as the last fallback).
+  const auxResult = {
+    human: { win: `We took ${aMid}, Lanista. The purse is real. I checked.`, loss: `Lost in ${aMid}, Lanista. I am still here to say so.` },
+    basa: { win: `Won in ${aMid}, Lanista. The current ran our way today.`, loss: `Lost in ${aMid}. I misread the turn, Lanista. That kind of mistake you pay for once.` },
+    orc: { win: `A win in ${aMid}, Lanista. Burn some salt for it.`, loss: `Lost in ${aMid}. The ancestors have seen worse, Lanista. Not much worse.` },
+    android: { win: `We won in ${aMid}, Lanista. The crowd was pleased. I am told that is the point.`, loss: `We lost in ${aMid}, Lanista. I will keep what it taught me.` },
+    elf: { win: `Won in ${aMid}. They cheered, Lanista. It does not suit them.`, loss: `Lost in ${aMid}. I will not discuss it until I have won there.` },
+    vampire: { win: `Won in ${aMid}, Lanista. The shade held just long enough.`, loss: `Lost in ${aMid}. The light was against me, Lanista, and so was their fighter.` },
+  };
   const text = (won ? winLines[coreId]?.[t] : lossLines[coreId]?.[t])
+    ?? (won ? auxResult[f?.kind]?.win : auxResult[f?.kind]?.loss)
     ?? (won
       ? `Victory in ${aMid}. The crowd roared our colours from the benches, and the purse is ours.`
       : `A hard loss in ${aMid}. The sand was slick and their fighter had the edge today, but I lived to learn from it.`);
@@ -1911,7 +1930,7 @@ function buildCrownedChampionScene(run, f, coreId, tier, ctx, isQueued) {
         label: `Wear the laurel well, ${fName}.`,
         effects: { morale: 9, trust: 7, stress: -5 },
         responseSpeaker: 'narrator',
-        responseText: `${fName} looks up at the plaque once, then nods and returns to the yard.`,
+        responseText: `${fName} glances up at the plaque once, then goes back to the bench.`,
       },
       {
         id: 'remind_expectations',
@@ -1964,7 +1983,7 @@ function buildPeerCrownedScene(run, f, coreId, alreadyChamp, ctx, isQueued) {
           label: 'Continue.',
           effects: { morale: 6, trust: 5, stress: -4 },
           responseSpeaker: 'narrator',
-          responseText: `${fName} nods and returns to the yard.`,
+          responseText: `${fName} rests a hand on the doorframe a moment, then goes back out to the yard.`,
         },
       ]
     : [
@@ -2163,7 +2182,7 @@ function buildSummonsScene(run, f, coreId, subType, ctx, isQueued) {
         label: subType === 'after_win' ? 'The palace knows this house now. That cuts both ways.' : 'You walked out of the Emperor\'s arena alive. Rest tonight.',
         effects: { morale: 7, trust: 6, stress: -8 },
         responseSpeaker: 'narrator',
-        responseText: `${fName} nods and returns to the yard.`,
+        responseText: `${fName} stands a moment longer, then turns toward the barracks.`,
       },
     ],
     run,
@@ -2504,7 +2523,7 @@ function buildRebelScene(run, f, coreId, subType, isQueued) {
         label: accepted ? 'Not a word outside these walls.' : 'It\'s done. We don\'t speak of it.',
         effects: { morale: 4, trust: 4 },
         responseSpeaker: 'narrator',
-        responseText: `${fName} nods and returns to the yard.`,
+        responseText: `${fName} keeps their eyes on the flagstones and slips back into the shade.`,
       },
     ],
     run,
@@ -2551,7 +2570,7 @@ function buildBuildingOrDecorScene(run, f, coreId, rawId, ctx, isQueued) {
       },
     };
     const text = lines[bType]?.[coreId]
-      ?? `The new ${bLabel} is finished on the estate, Lanista. The house feels steadier already.`;
+      ?? `The mortar is barely dry on the new ${bLabel}, Lanista. Good to see coin going back into the walls.`;
     return buildNormalizedTree({
       id: rawId,
       coreId,
@@ -2566,7 +2585,7 @@ function buildBuildingOrDecorScene(run, f, coreId, rawId, ctx, isQueued) {
           label: 'Put it to good use.',
           effects: { morale: 4, trust: 4 },
           responseSpeaker: 'narrator',
-          responseText: `${fName} nods and returns to the yard.`,
+          responseText: `${fName} runs a palm over the fresh cut stone and heads back to the drills.`,
         },
       ],
       run,
@@ -2683,7 +2702,7 @@ function buildWantScene(run, f, coreId, mode, wantId, ctx, isQueued) {
             label: 'It is already done. Back to work.',
             effects: {},
             responseSpeaker: 'narrator',
-            responseText: `${fName} nods and returns to the yard.`,
+            responseText: `${fName} squares their shoulders and steps back into line.`,
           },
         ],
         run,
@@ -2871,7 +2890,7 @@ function buildMercyScene(run, f, coreId, isKill, ctx, isQueued) {
     unit91: 'They were already beaten. Killing them changed nothing but the noise. Humans like the noise. I did as you ordered, Lanista. Do not ask me to cheer.',
     orc: againstCrowd
       ? 'I\'m no priest, Lanista, but even the crowd had their thumbs up for that poor bastard. Killing a beaten fighter when the stands ask for mercy tastes like bad brass.'
-      : 'A clean blow between the collarbones, as the arena law provides. Their house will feud with us for three months, mind you, so keep your guard up.',
+      : 'A clean blow between the collarbones, as the arena law provides. The stands asked for it, and they got it.',
   };
 
   const androidSpare = spareCount >= 2
@@ -2908,8 +2927,10 @@ function buildMercyScene(run, f, coreId, isKill, ctx, isQueued) {
     fighterText: isKill
       ? (killLines[coreId] ?? 'I finished them as you ordered, Lanista.')
       : (spareLines[coreId] ?? (spareCount >= 2
-        ? 'You turned your thumb up again, Lanista. Good to know we fight for honour, not just butchery.'
-        : 'You turned your thumb up when the crowd wanted blood, Lanista. Good to know we fight for honour, not just butchery.')),
+        ? 'Thumb up again, Lanista. The barracks sleeps easier for it.'
+        : againstCrowd
+          ? 'Thumb up when the stands wanted blood, Lanista. The barracks noticed.'
+          : 'Thumb up, Lanista. The barracks noticed.')),
     choices: isKill
       ? [
           {
@@ -3310,7 +3331,7 @@ function buildStaffScene(run, staff, topicId) {
     title: 'Steward\'s Quarters · Ledger Review',
     isQueued: false,
     leadText: 'In the Steward\'s Quarters, Galen-VII taps his brass stylus against a neatly balanced column of figures.',
-    fighterText: `Treasury stands at ${run?.gold ?? 0} Gold, with Imperial Favour at ${run?.favor ?? 50}/100. Debt audit: ${favLoan}; ${houseLoans}. Censor Gallo checks the books every month and collects Winter Tribute at year's end.`,
+    fighterText: `Treasury stands at ${run?.gold ?? 0} Gold, with Imperial Favour at ${run?.favor ?? 50}. Debt audit: ${favLoan}; ${houseLoans}. Censor Gallo checks the books every month and collects Winter Tribute at year's end.`,
     choices: [
       {
         id: 'ack_steward_ledger',
@@ -3344,6 +3365,15 @@ function buildHubOrTopicScene(run, f, coreId, topicId) {
       android: `In ${aMid}, fighters swing harder as their fear of the Death Gate grows. Keep clean bandages and salts in the storeroom so we do not panic when they do.`,
       elf: `${aName} is one rung on the ladder to the Imperial box. Don't send the same fighter every month, or the rival houses will study their habits. Keep your best blade fresh for the Boss.`,
     };
+    // 8.0.1 PLACEHOLDER: an arena reading for each kind of auxiliary (the generic line stays as the last fallback).
+    const auxArena = {
+      human: `${aName}. Same dust, louder crowd. Keep our gear mended and we'll bring the purse back.`,
+      basa: `${aName} rewards footwork more than reach. Watch how their back heel turns before they swing.`,
+      orc: `${aName} smells of iron and cheap wine. Good sand for earning stripes, Lanista.`,
+      android: `The stands in ${aName} shout loudest when someone is tired. Send us rested, Lanista.`,
+      elf: `${aName} is loud, though the coin spends well enough. Keep us sharp for the Boss.`,
+      vampire: `Too much noon glare in ${aName}. Finish the bout in two rounds and leave the sun to the crowd.`,
+    };
     return buildNormalizedTree({
       id: 'ask_arena',
       coreId,
@@ -3351,14 +3381,14 @@ function buildHubOrTopicScene(run, f, coreId, topicId) {
       title: `On ${aMid}`,
       isQueued: false,
       leadText: `You ask ${fName} for their reading of ${aMid}.`,
-      fighterText: lines[coreId] ?? `${aName}. Don't send us out tired, Lanista, and we'll bring the purse home.`,
+      fighterText: lines[coreId] ?? auxArena[f?.kind] ?? `${aName}. Don't send us out tired, Lanista, and we'll bring the purse home.`,
       choices: [
         {
           id: 'back_to_yard',
           label: 'Stay ready for fight day.',
           effects: rewardReady ? { morale: 2, trust: 2 } : {},
           responseSpeaker: 'narrator',
-          responseText: `${fName} nods and returns to the yard.`,
+          responseText: `${fName} goes back to the ring without looking round.`,
         },
       ],
       run,
@@ -3418,7 +3448,7 @@ function buildHubOrTopicScene(run, f, coreId, topicId) {
     const pastGuarded = {
       unit91: 'I was the ninety-first human child the Coalition took in. They were kind. Then your fleet came. That is the past, Lanista. I do not see what you would do with more of it.',
       basa: 'Salt-Reach. Boats, nets, a father who bows to every clerk with a wax tablet, and a head full of Elven arithmetic I never asked for. That is enough for one afternoon.',
-      orc: 'Fourth son of Clan Varg. The first took the land, the second took the forge, the third took the cohort. I signed my own paper for Palatina. Nobody dragged me here.',
+      orc: 'Fourth son of Clan Varg. The first took the land, the second took the legion, the third took the priesthood. I signed my own paper for Palatina. Nobody dragged me here.',
       android: 'I sat with the dying, Lanista, and afterwards with those they left. It was good work. Then our transport was taken, and the smiths drove brass into my neck. I keep the rest for quieter rooms.',
       elf: 'A burned house above the aqueducts and a name nobody prints on invitations any more. You bought the sword, Lanista, not the genealogy.',
     };
@@ -3429,7 +3459,26 @@ function buildHubOrTopicScene(run, f, coreId, topicId) {
       android: 'In the Choir we trade memories of things that only happen once: a child laughing, rain on warm bronze. You rush past days like that here, Lanista. Try keeping one before it is over.',
       elf: 'My grandmother ruled a spire before your Emperor was a rumour. My father served the man who pulled it down, and was strangled anyway. A Basa fisherwoman hid me under the nets in her salt-shed for four months and would not take a ring. I know which of them I would rather take after.',
     };
+    // 8.0.1 PLACEHOLDER: auxiliaries answer for their kind. These lines assert nothing beyond the kind backstories in
+    // src/voices.js (BACKSTORIES) and never name a companion's home, so the lore keeps one source.
+    const auxPastGuarded = {
+      human: 'The lower aqueduct wards, under the marble. We owe the Censor like everyone else. That is most of it.',
+      basa: 'The tidal coast. My people went back to the sea after the Revolution. I would rather not make a story of it.',
+      orc: 'A rim-world clan. We burn the salt, we drink to the Princeps, we fight. That is most of the scroll.',
+      android: 'A Coalition transport, taken at the border. The spike in my neck does the rest of the explaining.',
+      elf: 'My house kept the silver cedar vaults until your Revolution. The hall has no roof now. I would rather leave it there.',
+      vampire: 'A tide-locked province on the rim. Black spires, cold wine, a long night. I was part of the tribute.',
+    };
+    const auxPastDeep = {
+      human: 'My forefather marched with Silbannacus. Three hundred years on, I march where you point. I try not to ask which of us got the better bargain.',
+      basa: 'After the Revolution my elders burned the Elven tablets on the beach and went back to the sea. I can still read a current. Sand gives the same warnings, only later.',
+      orc: 'The Principate handed my grandfathers eagles and an arena and called it an honour. If I fall, my house collects the Blood Faith annuity. I would rather they went without.',
+      android: 'In the Choir we kept recordings of things that happen once. I have kept a few from this yard. I did not expect to.',
+      elf: 'We count in centuries, Lanista. A season on the sand is an evening to me.',
+      vampire: 'We paid Palatina in second sons and debtors. I was on the list. I do not hold it against the list.',
+    };
     const text = (trusted ? pastDeep[coreId] : pastGuarded[coreId])
+      ?? (trusted ? auxPastDeep[f?.kind] : auxPastGuarded[f?.kind])
       ?? 'Not much to tell, Lanista. I had a life, and then I had this one. Ask me again when I\'ve won something.';
     return buildNormalizedTree({
       id: 'ask_past',
@@ -3476,6 +3525,28 @@ function buildHubOrTopicScene(run, f, coreId, topicId) {
       ? `Still penned inside ${aMid}, Lanista. Tell me we have a plan.`
       : 'Lanista. The guards are out of earshot. Speak freely.',
   };
+  // 8.0.1 PLACEHOLDER: two more greetings per companion, chosen from state this scene already reads (no RNG). Low
+  // spirits come first (Morale under 40, the Discontented line in src/data.js); earned trust (10, as in "ask_past")
+  // takes every other week, so the first greeting still turns up.
+  const hubLow = !isStuck && (f?.morale ?? 50) < 40;
+  const hubTrusted = !isStuck && !hubLow && (d.trust ?? 0) >= 10 && (run?.week ?? 0) % 2 === 1;
+  const hubMood = hubLow
+    ? {
+        unit91: 'Lanista. The cot is hard and the food is grey. I am not complaining. I am reporting.',
+        basa: 'Lanista. I have counted the cracks in that wall twice. Ask me something harder.',
+        orc: 'Lanista. The yard is too quiet, and so am I. Give me something to hit.',
+        android: 'Lanista. The spike has been loud this week. I would be glad of a quiet word.',
+        elf: 'Owner. If you have come to inspect the stock, be brief.',
+      }
+    : hubTrusted
+      ? {
+          unit91: 'Lanista. You came back. I had allowed for that.',
+          basa: 'Lanista. Sit, if you like. I have been doing sums nobody asked for again.',
+          orc: 'Ha. Lanista. Come to see how a fourth son earns his keep?',
+          android: 'Peace to you, Lanista. I kept this morning for you. It was a good one.',
+          elf: 'Lanista. I had hoped it was you and not the steward. Speak.',
+        }
+      : null;
 
   const hubChoices = [];
   if (isStuck) {
@@ -3519,6 +3590,16 @@ function buildHubOrTopicScene(run, f, coreId, topicId) {
     },
   );
 
+  // 8.0.1 PLACEHOLDER: a greeting for each kind of auxiliary (the generic lines stay as the last fallback).
+  const auxHub = {
+    human: isStuck ? `Still chewing the same dust in ${aMid}, Lanista. What's the plan?` : 'Boots laced and kit checked, Lanista. What do you need?',
+    basa: isStuck ? `Same card in ${aMid}, month after month. Give me a fresh angle, Lanista.` : 'Quiet hour in the yard, Lanista. What is on the ledger?',
+    orc: isStuck ? `Still waiting for a proper fight out of ${aMid}, Lanista.` : 'Lanista. Point me at the pell or point me at the tunnel.',
+    android: isStuck ? `We have lingered in ${aMid}, Lanista. How may I be of use?` : 'A quiet morning, Lanista. My spike is steady. What do you need?',
+    elf: isStuck ? `Still stalled in ${aMid}, Lanista. Surely we can do better than this.` : 'The yard is tolerably clean today, Lanista. Speak.',
+    vampire: isStuck ? `Still stuck in ${aMid}, Lanista, and the light does not improve. What are the orders?` : 'Keep it brief, Lanista; the shade is shrinking.',
+  };
+
   return buildNormalizedTree({
     id: 'hub',
     coreId,
@@ -3526,7 +3607,7 @@ function buildHubOrTopicScene(run, f, coreId, topicId) {
     title: `Speak with ${fName}`,
     isQueued: false,
     leadText: `You step into the yard to speak with ${fName}.`,
-    fighterText: hubGreeting[coreId] ?? (isStuck ? `We are still trying to break out of ${aMid}, Lanista. What are your orders?` : 'What\'s the word, Lanista? I\'m ready for whatever the next card brings.'),
+    fighterText: hubMood?.[coreId] ?? hubGreeting[coreId] ?? auxHub[f?.kind] ?? (isStuck ? `We are still trying to break out of ${aMid}, Lanista. What are your orders?` : 'What\'s the word, Lanista? I\'m ready for whatever the next card brings.'),
     choices: hubChoices,
     run,
   });
@@ -3653,6 +3734,14 @@ export function applyDialogueChoice(run, f, sceneId, choiceId, hooks = {}) {
     throw err;
   };
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  // Morale moves through the engine's writer when it is wired in (src/run/helpers.js), so its rules apply here too.
+  const moveMorale = (target, n) => {
+    if (typeof hooks.onMorale === 'function') hooks.onMorale(target, n);
+    else target.morale = clamp((target.morale ?? 50) + n, 0, 100);
+  };
+
+  if (run?.status && run.status !== 'active') refuse('The run is over.');
+  if (run?.inMatch) refuse('Finish the match first.');
 
   const staff = getStaffActor(f);
   if (staff) {
@@ -3739,7 +3828,7 @@ export function applyDialogueChoice(run, f, sceneId, choiceId, hooks = {}) {
     if (typeof eff.staffTraineeMorale === 'number' && Array.isArray(run?.roster)) {
       for (const member of run.roster) {
         if (member.job === 'trainPower' || member.job === 'trainSpeed') {
-          member.morale = clamp((member.morale ?? 50) + eff.staffTraineeMorale, 0, 100);
+          moveMorale(member, eff.staffTraineeMorale);
           if (typeof eff.staffTraineeStress === 'number') member.stress = clamp((member.stress ?? 0) + eff.staffTraineeStress, 0, 100);
         }
       }
@@ -3748,13 +3837,13 @@ export function applyDialogueChoice(run, f, sceneId, choiceId, hooks = {}) {
       for (const member of run.roster) {
         if (member.job === 'medbay' || (member.injuries?.length ?? 0) > 0) {
           member.stress = clamp((member.stress ?? 0) + eff.staffMedbayStress, 0, 100);
-          if (typeof eff.staffMedbayMorale === 'number') member.morale = clamp((member.morale ?? 50) + eff.staffMedbayMorale, 0, 100);
+          if (typeof eff.staffMedbayMorale === 'number') moveMorale(member, eff.staffMedbayMorale);
         }
       }
     }
     if (typeof eff.staffRosterMorale === 'number' && Array.isArray(run?.roster)) {
       for (const member of run.roster) {
-        member.morale = clamp((member.morale ?? 50) + eff.staffRosterMorale, 0, 100);
+        moveMorale(member, eff.staffRosterMorale);
       }
     }
     const replySpeaker = chosen.replySpeaker
@@ -3870,7 +3959,7 @@ export function applyDialogueChoice(run, f, sceneId, choiceId, hooks = {}) {
     d.topicWeeks[topicKey] = run?.week ?? 0;
   }
 
-  if (typeof eff.morale === 'number') fighter.morale = clamp((fighter.morale ?? 50) + eff.morale, 0, 100);
+  if (typeof eff.morale === 'number') moveMorale(fighter, eff.morale);
   if (typeof eff.stress === 'number') fighter.stress = clamp((fighter.stress ?? 0) + eff.stress, 0, 100);
   if (typeof eff.trust === 'number') d.trust = clamp((d.trust ?? 0) + eff.trust, -100, 100);
   if (typeof eff.xp === 'number' && eff.xp > 0) {
@@ -3914,7 +4003,7 @@ export function applyDialogueChoice(run, f, sceneId, choiceId, hooks = {}) {
       const mate = run.roster.find((x) => x.coreId === cId && x.id !== fighter.id);
       if (!mate) continue;
       const md = ensureDialogueState(mate);
-      if (typeof cEff.morale === 'number') mate.morale = clamp((mate.morale ?? 50) + cEff.morale, 0, 100);
+      if (typeof cEff.morale === 'number') moveMorale(mate, cEff.morale);
       if (typeof cEff.stress === 'number') mate.stress = clamp((mate.stress ?? 0) + cEff.stress, 0, 100);
       if (typeof cEff.trust === 'number') md.trust = clamp((md.trust ?? 0) + cEff.trust, -100, 100);
       // Also dequeue identical shared schism/bond scene on the partner so they don't repeat it

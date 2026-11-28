@@ -198,10 +198,10 @@ export function ensureRoomLayout(f) {
 }
 
 // A secret building (5.4.0: the Whispering Gallery) exists for the house only once the resistance has asked for it.
-export const buildingKnown = (run, type) => Boolean(BUILDINGS[type]) && (!BUILDINGS[type].secret || Boolean(run.plot?.galleryAsked) || ofType(run, type).length > 0);
+export const buildingKnown = (run, type) => Object.hasOwn(BUILDINGS, type) && (!BUILDINGS[type].secret || Boolean(run.plot?.galleryAsked) || ofType(run, type).length > 0);
 
 export function buildBlocker(run, type, slot = null) {
-  const def = BUILDINGS[type];
+  const def = Object.hasOwn(BUILDINGS, type) ? BUILDINGS[type] : null;
   if (!def || !buildingKnown(run, type)) return 'Unknown building.';
   if (run.status !== 'active') return 'The run is over.';
   if (run.inMatch) return 'A match is in progress.';
@@ -211,7 +211,7 @@ export function buildBlocker(run, type, slot = null) {
   const canUseCrypt = type === 'hades' && (!slot || slot === CRYPT_HADES_SLOT) && !buildingAtSlot(run, CRYPT_HADES_SLOT);
   if (plotsFree(run) <= 0 && !canUseCrypt) return 'No free plots. Raise your Prestige level for more.';
   if (slot && slot !== CRYPT_HADES_SLOT) {
-    const p = PLOT_BY_ID[slot];
+    const p = Object.hasOwn(PLOT_BY_ID, slot) ? PLOT_BY_ID[slot] : null;
     if (!p) return 'Unknown plot.';
     if (p.unlockLv > run.prestigeLevel) return `Plot unlocks at Prestige level ${p.unlockLv}.`;
     if (buildingAtSlot(run, slot)) return 'That plot already has a building.';

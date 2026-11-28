@@ -290,7 +290,7 @@ export function rebelScene(run, f) {
 export function demandMetScene(goal, favor, gold) {
   return [
     { speaker: "rightHand", text: "Good. That is what the Palatine asked for, and you gave it to us. My office remembers those who deliver." },
-    { speaker: "steward", text: `Demand met: ${goal}. When fight day ends he pays +${favor} Favour and ${gold} Gold.` },
+    { speaker: "steward", text: `Demand met: ${goal}. When fight day ends the Palatine pays +${favor} Favour and ${gold} Gold.` },
   ];
 }
 export function demandMissedScene(goal, favor) {

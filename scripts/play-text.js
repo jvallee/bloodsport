@@ -9,7 +9,7 @@
 import { createInterface } from 'node:readline';
 import { dailySeed, dailySetup, ALL_UNLOCKS, careerXp, levelFor, LEGACY_LEVELS } from '../src/legacy.js';
 import { pathToFileURL } from 'node:url';
-import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURE, CLASS_RESONANCE, signatureDef, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort, ESPIONAGE, UNREST, HADES, FAVOR_DEBT } from '../src/data.js';
+import { FORTUNE, LOUNGE, DEMANDS, DEMAND, CIRCUITS, SUMMONS, RENOWN, STRESS, MORALE, KINDS, TRAITS, CLASSES, WEAPONS, INJURY_BY_TAG, DECOR, PERKS, GEAR, XP, BUILDINGS, BOSS_DEBUFFS, ECONOMY, FAVOR, PRESTIGE_LEVELS, CONSUMABLES, TACTICS, HUMORS, SCARS, AUGMENTS, BRACKET, HOUSES, SIGNATURE, CLASS_RESONANCE, signatureDef, MERCY, ROUND_TACTICS, HYPE, HUMOUR_DRIFT, decorComfort, ESPIONAGE, UNREST, HADES, FAVOR_DEBT, COMPANIONS } from '../src/data.js';
 import { applyGameAction } from '../src/game.js';
 import { PREFECT } from '../src/plot.js';
 import { cityHeadlines } from '../src/gazette.js';
@@ -22,18 +22,19 @@ import * as runApi from '../src/run.js';
 import {
   createRun, boutFor, unlockedTiers, arenaName, arenaPower, marketPrice, circuitInfo, recruit, release, setJob, advanceWeek, advanceToTournament,
   advanceBlocker, buyItem, useItem, buyDecor, assignDecor, removeDecor, buyGear, equip, unequip, surgeon, surgeonPrice, choosePerk, moraleTarget, moraleState,
-  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed, chooseFortune, fortuneBlocker, rerollFortune, rerollPrice, passFortune,
-  matchOptions, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
+  startMatch, finishMatch, skipBout, forfeitBout, tributeDue, tributePaid, payTribute, sellGear, chooseEvent, eventChoiceBlocker, eventNames, houseOf, standings, augment, retire, upcomingBouts, treatFirst, opponentFor, hasBracket, bracketOf, withdraw, effectivePower, fightPowers, recruitBlocker, fightBlocker, GRAND_TIER, resolveMercy, powerParts, effectiveSpeed, chooseFortune, fortuneBlocker, rerollFortune, rerollPrice, passFortune,
+  matchOptions, bracketLegOptions, demandSender, pray, exhibition, recruitPrice, placeBet, host, enact, hostPrice, hostBlocker, enactBlocker, activePolicies, demandMet,
   bossLossFavor, raisable, reanimate, reanimateBlocker, reanimatePrice, spareFavor, spareFavorWhy, owedLeft, purseGold, keepsBuyIn, stewardTask, stewardRewardText, risingProgress, archrival, checkQuests, answerSummons, refuseSummons, rite,
-  wantGoal, draftCompanion, retuneClass, retuneTrait, retuneHumor, reviveHades, restoreRevenant, restoreRevenantPrice,
-  borrowFavor, payFavorDebt, borrowHouse, payHouseDebt, activeHouseDebts, resolveDialogueTree, applyDialogueChoice, espionageOdds,
+  wantGoal, buildRoom, upgradeRoom, getCompanionPool, recruitedCompanionIds, freeDraftPicks, companionPrice, companionBlocker, draftCompanion, recruitCompanion,
+  retuneClass, retuneTrait, retuneHumor, reviveHades, restoreRevenant, restoreRevenantPrice,
+  borrowFavor, payFavorDebt, borrowHouse, payHouseDebt, activeHouseDebts, resolveDialogueTree, applyDialogueChoice, espionageOdds, overtrainedByWeek, freeFightDay,
 } from '../src/run.js';
 const getSummonsPower = (run) => (typeof runApi.summonsPower === 'function' ? runApi.summonsPower(run) : arenaPower(run, SUMMONS.tier, 0));
-import { build, upgrade, buildBlocker, buildingKnown, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
+import { buildBlocker, buildingKnown, upgradeBlocker, plotCount, rosterCap, trainCap, trainCost, oracleLevel, maxLevel, levelInfo, effectAt } from '../src/ludus.js';
 import { formatDate, weeksUntilTournament, weeksUntilWinter, isWinter, nextFestival, dateOf } from '../src/calendar.js';
 import { estimateOdds, describeOdds, oddsKey } from '../src/odds.js';
 import { narrateStory, narrateRound, resultText, adviceFor, classAbility, slotName } from '../src/narrate.js';
-import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep, stepText } from '../src/tutorial.js';
+import { INTRO, GUIDE, STEPS, FIGHT_STEPS, nextStep, stepText, advanceGuide, guideBlocker, guideProgress } from '../src/tutorial.js';
 import { SCENES, SPEAKERS, dueScene, dueRebel, rebelScene, dueRebelStage, demandMetScene, demandMissedScene, isStaffId, getStaffActor } from '../src/dialogue.js';
 import { WANTS, REBEL_QUESTS } from '../src/quests.js';
 import { ENTRIES, SECTIONS, createCodex, discover, discoverMatch, isUnlocked, hasLore, progress, gearText, slotLabel } from '../src/codex.js';
@@ -60,7 +61,8 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   skip-tutorial                 stop the steward's tutorial (the tutorial month and the tips)
   ok                            dismiss the current tutorial card
   recruit <id> | release <id>
-  draft <coreId>                draft a Core Companion (unit91|basa|orc|android|elf) in Week 0
+  draft <coreId> [cls]          draft a Core Companion (unit91|basa|orc|android|elf) in Week 0
+  recruit-companion <coreId> [cls]  recruit a Core Companion for Gold after Week 0
   talk <id|staff:trainer|staff:doctor|staff:steward> [scene] [choice] [--confirm]  speak with a fighter or house staff
   retune <id> <class|trait|humor> <value> [weapon]  Shrine/Temple of Fortuna re-tuning
   hades <id>                    Temple of Hades: revive a fallen fighter whole
@@ -106,7 +108,7 @@ export const HELP = `Commands (ids like f3 and b2 are shown in brackets):
   skip | forfeit                skip your top arena's Tournament 1/2, or forfeit its Boss
   next [tactic] | capitulate    during a fight: play the next round with a tactic (steady, press, guard, feint; default: the suggestion), or capitulate ("towel" also works)
   math                          toggle the round-by-round maths in fight narration
-  end-week | to-tournament      run one week of jobs, or keep ending weeks until the next tournament`;
+  end-week [--force] | to-tournament  run one week of jobs (--force: past the overtraining and unused-fighter warnings), or keep ending weeks until the next tournament`;
 
 export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) {
   const run = createRun(seed, setup);
@@ -118,6 +120,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
   const withReplies = (beats) => beats.flatMap((b) => (b.replies ? [b, { speaker: 'narrator', text: `(You could answer: ${b.replies.map((r) => `"${r.label}"`).join(' / ')}. You say: "${b.replies[0].label}")` }, ...b.replies[0].then] : [b]));
   const sceneText = (id, beats = SCENES[id]) => `\n${withReplies(beats).filter((b) => b.speaker !== 'narrator' || !b.title).map((b) => { const who = b.fighter?.name ?? b.speakerName ?? SPEAKERS[b.speaker]?.name ?? ''; return `${who ? `${who}: ` : ''}${b.title ? `[${b.title}] ` : ''}${(b.text ?? b.html).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}`; }).join('\n')}`;
   const done = []; // dismissed tutorial steps
+  let tutorialOff = false;
   const oddsCache = new Map();
   let match = null;
   let showMath = false;
@@ -126,25 +129,28 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
 
   // The tutorial month (GUIDE) comes first: each step is done when its goal is met. Then the steward's tips (STEPS).
   function guideNow() {
-    if (run.status !== 'active') return null;
-    for (;;) {
-      const g = nextStep(GUIDE, done, run);
-      if (!g || !g.goal(run)) return g;
-      done.push(g.id);
-    }
+    if (tutorialOff || run.status !== 'active') return null;
+    const { step, completed } = advanceGuide(done, run);
+    done.push(...completed);
+    return step;
   }
-  const currentStep = () => (run.status !== 'active' ? null : guideNow() ?? nextStep(STEPS, done, run));
+  const currentStep = () => (tutorialOff || run.status !== 'active' ? null : guideNow() ?? nextStep(STEPS, done, run));
   function tutorialCard() {
     const step = currentStep();
     shownStep = step?.id ?? null;
     if (!step) return '';
-    return step.goal ? `-- Your steward (tutorial month) --\n${plain(stepText(step, run))}` : `-- Tutorial: ${step.title} (\`ok\` to dismiss) --\n${plain(step.body)}`;
+    if (step.goal) {
+      const prog = guideProgress(run, done);
+      const blocker = guideBlocker(run, step);
+      return `-- Your steward (tutorial month) · Step ${prog.index}/${prog.total} --\n${plain(stepText(step, run))}${blocker ? `\nFirst: ${blocker}` : ''}`;
+    }
+    return `-- Tutorial: ${step.title} (\`ok\` to dismiss) --\n${plain(step.body)}`;
   }
 
   // ---------- Views ----------
 
-  function oddsFor(f, tier, opp = opponentFor(run, tier)) {
-    const opts = matchOptions(run, f, tier);
+  function oddsFor(f, tier, opp = opponentFor(run, tier), extraOpts = null) {
+    const opts = extraOpts ?? matchOptions(run, f, tier);
     const spy = espionageOdds(run, opp);
     const key = JSON.stringify([oddsKey(f, { playbook: spy.playbook }), spy, opts]);
     if (!oddsCache.has(key)) {
@@ -266,8 +272,15 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       // In a bracket, the match odds are for the next match only; the whole tournament is every match left, multiplied.
       const ob = hasBracket(tier) && state === 'open' ? bracketOf(run, tier) : null;
       const left = ob ? [...ob.foes.slice(ob.round), arena.opponent] : [];
-      const whole = left.length > 1 ? describeOdds({ win: left.reduce((p, x) => p * oddsFor(f, tier, x).win, 1), injury: 0, death: 0 }, oracleLevel(run)) : null;
-      lines.push(`     ${f.name} [${f.id}]: Power ${effectivePower(f)} vs ${effectivePower(nextOpp)} · Speed ${effectiveSpeed(f)} vs ${effectiveSpeed(nextOpp)} · ${ob ? `next match (${BRACKET.rounds[ob.round]})` : 'match'} ${o.win}${pct(o.winPct)}${whole ? ` · whole tournament ${whole.win}${pct(whole.winPct)}` : ''} · Injury ${o.injury}${pct(o.injuryPct)} · Death ${o.death}${pct(o.deathPct)}${warn.length ? ` · ${warn.join(', ')}` : ''}${blocker ? ` · can't fight: ${blocker}` : ''}`);
+      const whole = left.length > 1
+        ? describeOdds({
+          win: left.reduce((p, x, idx) => p * oddsFor(f, tier, x, bracketLegOptions(run, f, tier, x, idx === left.length - 1)).win, 1),
+          injury: 0,
+          death: 0,
+        }, oracleLevel(run))
+        : null;
+      const fp = fightPowers(run, f, tier);
+      lines.push(`     ${f.name} [${f.id}]: Power ${fp.mine} vs ${fp.theirs} · Speed ${effectiveSpeed(f)} vs ${effectiveSpeed(nextOpp)} · ${ob ? `next match (${BRACKET.rounds[ob.round]})` : 'match'} ${o.win}${pct(o.winPct)}${whole ? ` · whole tournament ${whole.win}${pct(whole.winPct)}` : ''} · Injury ${o.injury}${pct(o.injuryPct)} · Death ${o.death}${pct(o.deathPct)}${warn.length ? ` · ${warn.join(', ')}` : ''}${blocker ? ` · can't fight: ${blocker}` : ''}`);
     }
     const midBracket = b?.fighterId && b.round > 0 && state === 'open';
     if (bout.top && run.boutPending && !midBracket) lines.push(`     ${bout.boss ? `Bosses can't be skipped: fight or \`forfeit\` (${bossLossFavor(tier, run) + FAVOR.forfeitExtra} Favour).` : `Or \`skip\` (+${ECONOMY.skipGold} Gold, the roster rests).`}`);
@@ -310,12 +323,14 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     if (match) return fightStatus();
     lowerShown = 0;
     const out = [header()];
+    const freeDraft = freeDraftPicks(run);
+    if (freeDraft) out.push(`Note: ${freeDraft.remaining} free Core Companion draft pick${freeDraft.remaining === 1 ? '' : 's'} left in Week 0 (\`market\` to inspect, \`draft <coreId>\` to claim before ending Week 0).`);
     if (run.summons) out.push(`\n⚜ THE EMPEROR SUMMONS one of your fighters to the Imperial Coliseum (a regular, Power ${getSummonsPower(run)}) on this month's fight day: \`summons <id> <yield|death>\` then, or \`refuse-summons\` (${SUMMONS.refuseFavor} Favour).`);
     if (run.cousin && !run.cousin.done) {
       const left = Math.max(0, run.cousin.until - run.week);
       out.push(`\n⛓ THE CELLS: ${run.cousin.name ?? 'A fighter\'s cousin'} is executed in ${plural(left, 'week')} unless bought from the Liaison.`);
     }
-    if (run.demand) out.push(`\n⚜ THE EMPEROR DEMANDS: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.${demandMet(run) ? ' (done)' : ''}`);
+    if (run.demand) out.push(`\n⚜ ${`${demandSender(run).toUpperCase()} DEMANDS`}: ${DEMANDS[run.demand.id].goal}, by the end of this month's fight day.${demandMet(run) ? ' (done)' : ''}`);
     // The Emperor's word on a demand met, and on one missed (as on the page; playtest LLM-11: only the page had them).
     if (run.demand && demandMet(run) && !scenesSeen.includes(`demand-met-${run.demand.week}`)) {
       scenesSeen.push(`demand-met-${run.demand.week}`);
@@ -401,6 +416,21 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
 
   function marketView() {
     const out = [`-- Market · ${circuitInfo(run).name} · from ${marketPrice(run)} Gold (seasoned fighters cost more) · roster ${run.roster.length}/${rosterCap(run)} --`];
+    const compPool = getCompanionPool(run);
+    if (compPool.length) {
+      const draftedCount = recruitedCompanionIds(run).length;
+      const freeLeft = Math.max(0, COMPANIONS.startPicks - draftedCount);
+      const isFree = run.week === 0 && freeLeft > 0;
+      out.push(isFree
+        ? `Core Companions (Week 0 free draft: ${freeLeft} remaining; \`draft <coreId> [cls]\`):`
+        : 'Core Companions (`recruit-companion <coreId> [cls]`):');
+      for (const f of compPool) {
+        const price = companionPrice(run, f.coreId, { draft: isFree });
+        const why = companionBlocker(run, f.coreId, { draft: isFree });
+        out.push(`  [${f.coreId}] ${identity(f)} · ${isFree ? 'Free (0 Gold)' : `${price} Gold`} · Power ${f.power} · Speed ${f.speed}${why ? ` · unavailable: ${why}` : ''}\n     ${abilities(f)}`);
+      }
+      out.push('');
+    }
     out.push('New fighters arrive at the start of every month, stronger as you climb the tiers.');
     for (const f of run.market) {
       const why = recruitBlocker(run, f.id);
@@ -596,6 +626,7 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       return `Fight narration: ${showMath ? 'every roll' : 'the story'}.`;
     },
     'skip-tutorial': () => {
+      tutorialOff = true;
       done.push(...[...GUIDE, ...STEPS, ...FIGHT_STEPS].map((x) => x.id));
       shownStep = null;
       return 'Tutorial skipped.';
@@ -781,12 +812,12 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
     },
     build: ([type]) => {
       need([type].filter(Boolean), 1, 'build <type>');
-      const b = build(run, type);
+      const b = buildRoom(run, type);
       return `Built: ${BUILDINGS[type].name} [${b.id}]. Gold ${run.gold}.`;
     },
     upgrade: ([id]) => {
       need([id].filter(Boolean), 1, 'upgrade <buildingId>');
-      const b = upgrade(run, id);
+      const b = upgradeRoom(run, id);
       return `${BUILDINGS[b.type].name} is now level ${b.level}. Gold ${run.gold}.`;
     },
     fight: ([id, tier]) => {
@@ -832,11 +863,17 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       if (arch) lines.push(`  Your rival house: ${arch.name} (Glory ${arch.glory})${c ? `, champion ${c.f.name} (${c.wins} wins and ${c.losses} losses against you)` : ''}.`);
       return lines.length > 1 ? lines.join('\n') : '-- Quests --\n  Nothing asked of you yet.';
     },
-    draft: ([coreId]) => {
-      need([coreId].filter(Boolean), 1, 'draft <unit91|basa|orc|android|elf>');
+    draft: ([coreId, cls]) => {
+      need([coreId].filter(Boolean), 1, 'draft <unit91|basa|orc|android|elf> [cls]');
       idle();
-      const f = draftCompanion(run, coreId);
+      const f = draftCompanion(run, coreId, cls ? { cls } : {});
       return `Drafted ${f.name} [${f.id}].\n\n${look()}`;
+    },
+    'recruit-companion': ([coreId, cls]) => {
+      need([coreId].filter(Boolean), 1, 'recruit-companion <unit91|basa|orc|android|elf> [cls]');
+      idle();
+      const f = recruitCompanion(run, coreId, cls ? { cls } : {});
+      return `Recruited ${f.name} [${f.id}]. Gold ${run.gold}.\n\n${look()}`;
     },
     talk: (args) => {
       const confirmed = args.includes('--confirm');
@@ -1006,16 +1043,37 @@ export function createSession(seed = 1, { oddsSamples = 400, setup = {} } = {}) 
       forfeitBout(run);
       return look();
     },
-    'end-week': () => {
+    'end-week': (args = []) => {
       idle();
+      const forced = args.includes('--force') || args.includes('force');
+      if (!forced) {
+        const why = advanceBlocker(run);
+        if (!why) {
+          const ot = overtrainedByWeek(run);
+          if (ot.length) {
+            const list = ot.map((x) => `${x.name} (${x.stress} Stress)`).join(', ');
+            return `Warning: ending the week will overtrain ${list} (−1 Power in fights). Rest them or run \`end-week --force\`.`;
+          }
+          const free = freeFightDay(run);
+          if (free) {
+            const arenas = free.tiers.map((t) => arenaName(t)).join(', ');
+            const who = free.fighters.map((f) => f.name).join(', ');
+            return `Warning: ${who} can still fight in ${arenas} today. Send them or run \`end-week --force\`.`;
+          }
+        }
+      }
+      const unusedDraft = freeDraftPicks(run);
       advanceWeek(run);
-      return look();
+      const note = unusedDraft ? `Note: ${unusedDraft.remaining} Week-0 free Core Companion draft${unusedDraft.remaining === 1 ? '' : 's'} went unused; remaining companions now recruit for Gold.\n\n` : '';
+      return `${note}${look()}`;
     },
     'to-tournament': () => {
       idle();
+      const unusedDraft = freeDraftPicks(run);
       const weeks = advanceToTournament(run);
       if (!weeks) throw new Error(advanceBlocker(run) ?? 'Already at a tournament.');
-      return `${plural(weeks, 'week')} ${weeks === 1 ? 'passes' : 'pass'}.\n\n${look()}`;
+      const note = unusedDraft ? `Note: ${unusedDraft.remaining} Week-0 free Core Companion draft${unusedDraft.remaining === 1 ? '' : 's'} went unused; remaining companions now recruit for Gold.\n` : '';
+      return `${note}${plural(weeks, 'week')} ${weeks === 1 ? 'passes' : 'pass'}.\n\n${look()}`;
     },
   };
 

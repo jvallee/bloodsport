@@ -13,7 +13,7 @@ import {
   buyItemBlocker, raisable, reanimatePrice, reanimateBlocker, spareFavor, spareFavorWhy, owedLeft, winsOf, purseGold, stewardTask, stewardRewardText, risingProgress,
   trainGain, renameBlocker, dominantTemperament, espState, canNarrow, investigateBlocker, opTarget, opChance, covertOpBlocker,
   recruitedCompanionIds, getCompanionPool, companionPrice, companionBlocker,
-  retunePrice, retuneBlocker, respecPrice, respecPerkBlocker, matchOptions,
+  retunePrice, retuneBlocker, respecPrice, respecPerkBlocker, bracketLegOptions, demandSender, demandFromEmperor,
   hadesPrice, reviveHadesPrice, hadesKeepWeeks, hadesRaisable, reviveHadesBlocker, restoreRevenantPrice, restoreRevenantBlocker, vulcanKeepWeeks,
   debtPenaltyFor, favorWritGold, favorLoanPrincipal, borrowFavorBlocker, payFavorDebtBlocker,
   activeHouseDebts, houseLoanPrincipal, borrowHouseBlocker, payHouseDebtBlocker,
@@ -406,6 +406,15 @@ export function freeFightModal(free) {
   return dialogueBox({ speaker: 'steward', title: 'Fighters still free', html }, actions, 'ask');
 }
 
+// 8.0.1 PLACEHOLDER wording: the steward's warning before Week 0 closes with a free Core Companion draft unused.
+export function draftModal(warn) {
+  if (!warn) return '';
+  const n = warn.remaining;
+  const html = `<p>You still have <b>${n} free Core Companion draft${n === 1 ? '' : 's'}</b> left in Week 0, and open beds waiting in the quarters. Once this week closes, the remaining companions must be recruited for Gold.</p>`;
+  const actions = '<button class="btn small primary" data-action="draft-market" autofocus>Go to the Market</button><span class="ask-choices"><button class="btn" data-action="draft-go">End the week anyway</button></span>';
+  return dialogueBox({ speaker: 'steward', title: 'Free companions waiting', html }, actions, 'ask');
+}
+
 export function resultModal(title, lines) {
   // A gamble's outcome leads, in large type (playtest: "It went badly" was buried mid-sentence).
   const text = lines.map((l) => l.text).join(' ');
@@ -539,7 +548,7 @@ function weekPanel(run) {
       ${festivalNote(run)}
       ${tribute}
       ${run.summons ? `<div class="demand summons">⚜ <b>The Emperor's summons:</b> on this month's fight day, send one of your fighters to the Imperial Coliseum against one of its regulars (Power ${getSummonsPower(run)}), or refuse him and lose ${-SUMMONS.refuseFavor} Favour.</div>` : ''}
-      ${run.demand ? `<div class="demand${demandMet(run) ? ' met' : ''}">⚜ <b>The Emperor demands:</b> ${esc(DEMANDS[run.demand.id].goal)}, by the end of this month's fight day. ${demandMet(run) ? '✔ Done: he will be pleased.' : `Reward: +${DEMAND.favor} Favour and Gold; missing it costs ${-DEMAND.missFavor} Favour.`}</div>` : ''}
+      ${run.demand ? `<div class="demand${demandMet(run) ? ' met' : ''}">⚜ <b>${demandSender(run)} demands:</b> ${esc(DEMANDS[run.demand.id].goal)}, by the end of this month's fight day. ${demandMet(run) ? (demandFromEmperor(run) ? '✔ Done: he will be pleased.' : "✔ Done: the Legate's office will remember it.") : `Reward: +${DEMAND.favor} Favour and Gold; missing it costs ${-DEMAND.missFavor} Favour.`}</div>` : ''}
       <div class="row">
         ${run.bouts ? button('End week', 'advance', {}, blocked, 'btn primary') : `${button(`⚔ To fight day <small>(${weeksUntilTournament(run.week)} wk${weeksUntilTournament(run.week) === 1 ? '' : 's'})</small>`, 'advance-tournament', {}, blocked, 'btn primary')}
         ${button('End week', 'advance', {}, blocked, 'btn')}`}
@@ -826,21 +835,6 @@ function oddsRow(run, f, tier, oddsFor) {
   </div>`;
 }
 
-function bracketLegOptions(run, f, tier, opp, isFinal) {
-  const base = matchOptions(run, f, tier, opp);
-  const oppHouse = run.arenas[tier] ? houseOf(run, opp) : null;
-  const debt = debtPenaltyFor(oppHouse);
-  const opts = {
-    ...base,
-    earlyRound: !isFinal,
-    grudge: !run.arenas[tier] ? 0 : oppHouse?.feud > 0 ? 1 : oppHouse?.owed > 0 ? -1 : 0,
-    vengeance: Boolean(run.arenas[tier]) && oppHouse?.vengeance > 0,
-  };
-  if (debt) opts.debt = debt;
-  else delete opts.debt;
-  return opts;
-}
-
 // Odds of winning every match left in a bracket: the product of each match's odds (injuries carried over aren't
 // counted, so it's optimistic).
 function bracketOdds(run, f, tier, oddsFor, pct) {
@@ -989,7 +983,7 @@ function companionMarketFold(run) {
   const cards = pool.map((f) => {
     const def = CORE_COMPANIONS[f.coreId];
     const kDef = LORE_KEEPSAKES[def?.keepsake];
-    const isFree = freeLeft > 0;
+    const isFree = run.week === 0 && freeLeft > 0;
     const price = companionPrice(run, f.coreId, { draft: isFree });
     const why = companionBlocker(run, f.coreId, { draft: isFree });
     const action = isFree ? 'draft-companion' : 'recruit-companion';
@@ -1199,8 +1193,14 @@ const TAB_NAMES = { ludus: 'Ludus', estate: 'Estate', market: 'Market', codex: '
 // One line of the steward's news, as a notice.
 export const stewardNote = (text) => `<div class="tip steward-note" role="status">${npcPortrait('steward', 36)}<div><span class="guide-name">Galen-VII:</span> ${esc(text)}</div></div>`;
 
-export function guideBar(step, onTab, run = null) {
-  return `<div class="guide" role="status">${npcPortrait('steward', 44)}<div class="guide-body"><div class="guide-name">Galen-VII</div><div>${stepText(step, run)}</div></div>
+export function guideBar(step, onTab, run = null, extra = null) {
+  const prog = extra?.progress;
+  const counter = prog?.total ? `<span class="guide-step">Step ${prog.index} of ${prog.total}</span>` : '';
+  const checklist = prog?.items?.length
+    ? `<div class="guide-checklist">${prog.items.map((x) => `<span class="guide-item ${x.done ? 'done' : x.current ? 'current' : ''}">${x.done ? '✓ ' : x.current ? '→ ' : ''}${esc(x.label)}</span>`).join('')}</div>`
+    : '';
+  const blocker = extra?.blocker ? `<div class="guide-blocker"><b>First:</b> ${esc(extra.blocker)}</div>` : '';
+  return `<div class="guide" role="status">${npcPortrait('steward', 44)}<div class="guide-body"><div class="guide-head"><div class="guide-name">Galen-VII</div>${counter}</div><div>${stepText(step, run)}</div>${blocker}${checklist}</div>
     <div class="guide-actions">${onTab ? '' : `<button class="btn small primary" data-action="tab" data-tab="${step.tab}">Go to the ${TAB_NAMES[step.tab]}</button>`}<button class="link small" data-action="tutorial-skip">Skip tutorial</button></div></div>`;
 }
 

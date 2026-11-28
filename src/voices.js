@@ -57,10 +57,10 @@ const LAST_WORDS_KIND = {
     sanguine: 'Still beats the aqueduct ledgers, Lanista.',
   },
   android: {
-    choleric: 'Combat loop... terminated. Salvage the blade, not the frame.',
-    melancholic: 'Probability of survival: zero. Acceptable.',
-    phlegmatic: 'Power cells failing. Tell the next unit to watch their left.',
-    sanguine: 'Well fought. Logging this one under... entertainment.',
+    choleric: 'Keep the blade clean. Somebody else will need it before evening.',
+    melancholic: 'Keep the sound of the rain for me. It was my favourite part.',
+    phlegmatic: 'Tell the next one in line to guard their left. I was always slow there.',
+    sanguine: 'Well fought. Keep that round in the ledger; it was a good one.',
   },
   elf: {
     choleric: 'Don\'t let a pit-fighter touch my blade.',
@@ -69,7 +69,7 @@ const LAST_WORDS_KIND = {
     sanguine: 'At least the sky here burns properly.',
   },
   orc: {
-    choleric: 'The ancestors are watching. Let them drink!',
+    choleric: 'The ancestors are watching. Let them drink.',
     melancholic: 'A clean cut. Better than dying in a bed.',
     phlegmatic: 'Tell the blood-priests I paid my share.',
     sanguine: 'Good blood. Good sand. Take the purse, Lanista.',
@@ -132,8 +132,8 @@ const BACKSTORIES = {
     ],
     memory: 'Spoke of the Free Android Coalition\'s Choir of Ephemera, and the Imperial jailbreak spike driven into their neck.',
     replies: [
-      { label: 'Then file it with me.', then: 'Noted. You are an unusual administrator for an organic, Lanista. I will keep my servos calibrated for you.' },
-      { label: 'A machine that wins lives longer than one that mourns.', then: 'Statistically accurate. Returning to diagnostic standby.' },
+      { label: 'Then file it with me.', then: 'Noted. You are an unusual Lanista, keeping a ledger for complaints. I will try to give you fewer of them.' },
+      { label: 'A machine that wins lives longer than one that mourns.', then: 'True enough. Still, someone ought to remember the ones who did not.' },
     ],
   },
   elf: {
@@ -152,11 +152,11 @@ const BACKSTORIES = {
     lead: (name) => `By the courtyard brazier, ${name} is burning a pinch of salt and muttering an old clan chant.`,
     lines: [
       'In my clan, nobody dies in a bed if they can help it. When the Principate reached our rim-worlds, it handed our grandfathers eagles and an arena. We still burn the salt before a bout, and we still drink to the Princeps.',
-      'Fourth sons sell themselves to the ludi on Palatina to earn our stripes. If I fall on the sand, at least my house collects the Blood Faith annuity and my grandfathers get a proper show.',
+      'Younger sons sell themselves to the ludi on Palatina to earn our stripes. If I fall on the sand, at least my house collects the Blood Faith annuity and my grandfathers get a proper show.',
     ],
     memory: 'Spoke of the Rim-World Orc clans under the Principate, burning salt by the brazier for their stripes.',
     replies: [
-      { label: 'I\'d rather you lived to wear the stripes yourself.', then: 'Ha! Spoken like a Lanista who hates buying new greaves. I\'ll try to oblige.' },
+      { label: 'I\'d rather you lived to wear the stripes yourself.', then: 'Spoken like a Lanista who hates buying new greaves. I\'ll try to oblige.' },
       { label: 'Make sure the ancestors see a victory, not a funeral.', then: 'Even better. The clan elders like winners twice as much.' },
     ],
   },

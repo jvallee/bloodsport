@@ -4,7 +4,7 @@ import { createRng, deriveSeed } from '../rng.js';
 import { MORALE, FAVOR, HUMORS } from '../data.js';
 import {
   SAVE_VERSION, GRAND_TIER, LOG_CAP, emptyDecor, emptyItems, humorFor, allOpponents,
-  clamp, findFighter, unlockedTiers, createDialogueState, ensureDialogueState,
+  clamp, findFighter, unlockedTiers, createDialogueState, ensureDialogueState, lockedIntoBracket,
 } from './helpers.js';
 import { makeHouses, openArena } from './houses.js';
 import { finishMatch } from './tournaments.js';
@@ -195,6 +195,11 @@ export function deserialize(text) {
   validateRun(run);
   normalizeRun(run);
   backfillFighters(run);
+  // 8.0.1: 8.0.0 could save a fighter below the Mutinous line while locked into a Final they could not withdraw from:
+  // they refused to fight, and the week could not end. Lift such a fighter to the line so the Final can be fought.
+  for (const f of run.roster) {
+    if ((f.morale ?? MORALE.start) < MORALE.mutinous && lockedIntoBracket(run, f.id)) f.morale = MORALE.mutinous;
+  }
   // A match in progress resumes after a reload (7.5.1): the saved fight rolls the career's fight dice again, so nothing
   // is undone or re-rolled. An older save without the stored fight counts as capitulating (or dying if already felled).
   if (run.inMatch) {

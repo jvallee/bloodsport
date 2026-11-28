@@ -8,7 +8,7 @@ export {
   bossLossFavor, hasDecree, hasUnlock, heatDecrees, hasPolicy, unlockedTiers, isGrand,
   circuitInfo, arenaName, isShort, trainGain, marketPrice, liaisonOffer, recruitPrice,
   cheapestRecruitPrice, cleanName, winsOf, foughtThisWeek, xpFor,
-  activeModalOrPendingBlocker, isInActiveBracket, nextStage, addPrestige,
+  activeModalOrPendingBlocker, isInActiveBracket, bracketLockReason, lockedIntoBracket, nextStage, addPrestige,
   clearHealedMedbay, removeFighter, queueMilestone, pruneFighterDialogue,
   CORE_COMPANIONS, PERSONAL_TRAITS, LORE_KEEPSAKES, CORE_WANTS, CORE_BOND_TREES, ESTATE_STAFF,
   createDialogueState, ensureDialogueState, enqueueMilestone, pruneStaleDialogue, resolveDialogueTree, evaluateKeepsake,
@@ -28,16 +28,16 @@ export { markPolitical, risingProgress } from './run/plotEngine.js';
 export {
   houseOf, houseForArena, standings, arenaPower, summonsPower, boutFor, currentBout,
   upcomingBouts, hasBracket, drawBrackets, crushingGapFor, bracketOf, bracketRound,
-  bracketView, bracketInfo, opponentFor, opponentSpeed, fightPowers, matchOptions,
+  bracketView, bracketInfo, opponentFor, opponentSpeed, matchOptions, bracketLegOptions,
   archrival, bondmate, hostPrice, hostBlocker, host, activePolicies, enactBlocker, enact,
-  demandMet, debtPenaltyFor, favorWritGold, favorLoanPrincipal, borrowFavorBlocker, borrowFavor,
+  demandMet, demandFromEmperor, demandSender, debtPenaltyFor, favorWritGold, favorLoanPrincipal, borrowFavorBlocker, borrowFavor,
   payFavorDebtBlocker, payFavorDebt, favorDebtMonth, activeHouseDebts, houseLoanPrincipal,
   borrowHouseBlocker, borrowHouse, payHouseDebtBlocker, payHouseDebt,
 } from './run/houses.js';
 
 export {
   buildRoom, upgradeRoom, recruitedCompanionIds, createCompanion, getCompanionPool, seasonCompanion,
-  companionPrice, companionBlocker, draftCompanion, recruitCompanion,
+  freeDraftPicks, companionPrice, companionBlocker, draftCompanion, recruitCompanion,
   recruitBlocker, recruit, releaseBlocker, release,
   trainBlocker, jobBlocker, stewardPlanBlocker, stewardPlan, setJob,
   moraleTarget, moraleState, perkBlocker, choosePerk, prayPrice, prayBlocker, pray,
@@ -69,7 +69,7 @@ export { eventNames, eventChoiceBlocker, chooseEvent } from './run/eventsEngine.
 
 export {
   SUMMONS_ORDERS, summonsBlocker, answerSummons, refuseSummonsBlocker, refuseSummons,
-  fightBlocker, startMatch, recordMatchProgress, useItemBlocker, useItem,
+  fightPowers, fightBlocker, startMatch, recordMatchProgress, useItemBlocker, useItem,
   betOdds, betCap, betPayout, betQuote, freeFightDay, betBlocker, placeBet, purseGold,
   skipBlocker, skipBout, forfeitBlocker, forfeitBout, keepsBuyIn, finishMatch,
   spareFavor, spareFavorWhy, owedLeft, mercyBlocker, resolveMercy,

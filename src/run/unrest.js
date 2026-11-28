@@ -71,7 +71,7 @@ export function unrestWeek(run) {
   for (const f of run.roster.filter(isAgitated)) {
     const partner = bondmate(run, f);
     if (partner) {
-      bumpMorale(partner, UNREST.bondDrag);
+      bumpMorale(run, partner, UNREST.bondDrag);
       log(run, `${f.name} mutters in the mess hall about chains and keys; ${partner.name} listens, and starts to nod (${UNREST.bondDrag} Morale).`, 'warn');
     }
   }

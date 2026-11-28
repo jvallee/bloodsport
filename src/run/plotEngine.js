@@ -225,7 +225,7 @@ export function applyPlotEffects(run, eff, ev, out) {
     const who = findFighter(run, ev[eff.champion]);
     if (who) { p.champion = who.id; chronicle(run, who, 'Swore to strike the blow when the Emperor comes to the games.'); out.push(`${who.name} is with you`); }
   }
-  if (eff.cool && f) bumpMorale(f, -eff.cool);
+  if (eff.cool && f) bumpMorale(run, f, -eff.cool);
   if (eff.mark) { const o = run.arenas[run.topTier]?.opponent; if (o) o.rebel = true; }
   if (eff.contact === 'new') addContact(run, ev.name, pick(run.rng.plot, CELL_IDS), ev.id);
   if (eff.freeAsker && f) {

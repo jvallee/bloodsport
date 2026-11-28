@@ -707,6 +707,7 @@ export const opponentUnleashesNext = (m) => !m.over && opponentUnleashes(m, m.ro
 
 export function playRound(m, { stance = 'steady' } = {}) {
   if (m.over) throw new Error('The match is over.');
+  if (!Object.hasOwn(TACTICS, stance)) throw new Refused(`Unknown tactic "${stance}".`);
   if (TACTICS[stance]?.clutch && !mortalDanger(m.a)) throw new Refused(`${TACTICS[stance].name} is only for the Death Gate.`);
   const round = (m.round += 1);
   const { a: A, b: B, rng } = m;
