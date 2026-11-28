@@ -382,3 +382,5 @@ and the bots built on it (long, legacy, the Heat runs, brawler).
 - Lockstep with the fix: all 210 careers of the careful-based groups (careful, brawler, long, legacy, heat3) first diverge in the week the card returns; the 126 reckless, rebel and loyalist careers do not diverge.
 
 It needs a version of its own, with a decision on the gate.
+Confirmed in the cloud session (`npm run check`, 300 careers, on the released 8.0.1): **24/24**, and the gate report is
+identical to 8.0.0's line for line. Bot careers are identical to 8.0.0's too.
